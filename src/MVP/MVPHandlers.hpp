@@ -1,0 +1,250 @@
+#ifndef INC_MVP_HANDLERS_HPP_
+#define INC_MVP_HANDLERS_HPP_
+
+#include <MVP/MVPParam.hpp>
+
+#define MVP0  0
+#define MVP1  1
+#define MVP2  2
+#define MVP3  3
+#define MVP4  4
+#define MVP5  5
+#define MVP6  6
+#define MVP7  7
+#define MVP8  8
+#define MVP9  9
+#define MVP10 10
+#define MVP11 11
+#define MVP12 12
+#define MVP13 13
+#define MVP14 14
+#define MVP15 15
+#define MVP16 16
+#define MVP17 17
+#define MVP18 18
+#define MVP19 19
+#define MVP20 20
+#define MVP21 21
+#define MVP22 22
+#define MVP23 23
+#define MVP24 24
+#define MVP25 25
+#define MVP26 26
+#define MVP27 27
+#define MVP28 28
+#define MVP29 29
+#define MVP30 30
+#define MVP31 31
+#define MVP32 32
+#define MVP33 33
+#define MVP34 34
+#define MVP35 35
+#define MVP36 36
+#define MVP37 37
+#define MVP38 38
+#define MVP39 39
+#define MVP40 40
+#define MVP41 41
+#define MVP42 42
+#define MVP43 43
+#define MVP44 44
+#define MVP45 45
+#define MVP46 46
+#define MVP47 47
+#define MVP48 48
+#define MVP49 49
+#define MVP50 50
+
+#define MVP_CONNECTED()         void mvpOnConnected()
+#define MVP_DISCONNECTED()      void mvpOnDisconnected()
+
+#define MVP_WRITE_2(Pin)        void mvpWidgetWrite ## Pin (uint8_t MVP_UNUSED &pin, const MVPParam MVP_UNUSED &param)
+#define MVP_WRITE(Pin)          MVP_WRITE_2(Pin)
+
+#define MVP_PIN_WRITE_2(Pin)    void mvpWidgetPinWrite ## Pin (uint8_t MVP_UNUSED &pin, const MVPParam MVP_UNUSED &param)
+#define MVP_PIN_WRITE(Pin)      MVP_PIN_WRITE_2(Pin)
+
+#define MVP_PIN_READ_2(Pin)     void mvpWidgetPinRead ## Pin (uint8_t MVP_UNUSED &pin, const MVPParam MVP_UNUSED &param)
+#define MVP_PIN_READ(Pin)       MVP_PIN_READ_2(Pin)
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void mvpNoHandler();
+
+MVP_CONNECTED();
+MVP_DISCONNECTED();
+
+MVP_WRITE(  );
+MVP_WRITE( 0);
+MVP_WRITE( 1);
+MVP_WRITE( 2);
+MVP_WRITE( 3);
+MVP_WRITE( 4);
+MVP_WRITE( 5);
+MVP_WRITE( 6);
+MVP_WRITE( 7);
+MVP_WRITE( 8);
+MVP_WRITE( 9);
+MVP_WRITE(10);
+MVP_WRITE(11);
+MVP_WRITE(12);
+MVP_WRITE(13);
+MVP_WRITE(14);
+MVP_WRITE(15);
+MVP_WRITE(16);
+MVP_WRITE(17);
+MVP_WRITE(18);
+MVP_WRITE(19);
+MVP_WRITE(20);
+MVP_WRITE(21);
+MVP_WRITE(22);
+MVP_WRITE(23);
+MVP_WRITE(24);
+MVP_WRITE(25);
+MVP_WRITE(26);
+MVP_WRITE(27);
+MVP_WRITE(28);
+MVP_WRITE(29);
+MVP_WRITE(30);
+MVP_WRITE(31);
+MVP_WRITE(32);
+MVP_WRITE(33);
+MVP_WRITE(34);
+MVP_WRITE(35);
+MVP_WRITE(36);
+MVP_WRITE(37);
+MVP_WRITE(38);
+MVP_WRITE(39);
+MVP_WRITE(40);
+MVP_WRITE(41);
+MVP_WRITE(42);
+MVP_WRITE(43);
+MVP_WRITE(44);
+MVP_WRITE(45);
+MVP_WRITE(46);
+MVP_WRITE(47);
+MVP_WRITE(48);
+MVP_WRITE(49);
+MVP_WRITE(50);
+
+MVP_PIN_WRITE(  );
+MVP_PIN_WRITE( 0);
+MVP_PIN_WRITE( 1);
+MVP_PIN_WRITE( 2);
+MVP_PIN_WRITE( 3);
+MVP_PIN_WRITE( 4);
+MVP_PIN_WRITE( 5);
+MVP_PIN_WRITE( 6);
+MVP_PIN_WRITE( 7);
+MVP_PIN_WRITE( 8);
+MVP_PIN_WRITE( 9);
+MVP_PIN_WRITE(10);
+MVP_PIN_WRITE(11);
+MVP_PIN_WRITE(12);
+MVP_PIN_WRITE(13);
+MVP_PIN_WRITE(14);
+MVP_PIN_WRITE(15);
+MVP_PIN_WRITE(16);
+MVP_PIN_WRITE(17);
+MVP_PIN_WRITE(18);
+MVP_PIN_WRITE(19);
+MVP_PIN_WRITE(20);
+MVP_PIN_WRITE(21);
+MVP_PIN_WRITE(22);
+MVP_PIN_WRITE(23);
+MVP_PIN_WRITE(24);
+MVP_PIN_WRITE(25);
+MVP_PIN_WRITE(26);
+MVP_PIN_WRITE(27);
+MVP_PIN_WRITE(28);
+MVP_PIN_WRITE(29);
+MVP_PIN_WRITE(30);
+MVP_PIN_WRITE(31);
+MVP_PIN_WRITE(32);
+MVP_PIN_WRITE(33);
+MVP_PIN_WRITE(34);
+MVP_PIN_WRITE(35);
+MVP_PIN_WRITE(36);
+MVP_PIN_WRITE(37);
+MVP_PIN_WRITE(38);
+MVP_PIN_WRITE(39);
+MVP_PIN_WRITE(40);
+MVP_PIN_WRITE(41);
+MVP_PIN_WRITE(42);
+MVP_PIN_WRITE(43);
+MVP_PIN_WRITE(44);
+MVP_PIN_WRITE(45);
+MVP_PIN_WRITE(46);
+MVP_PIN_WRITE(47);
+MVP_PIN_WRITE(48);
+MVP_PIN_WRITE(49);
+MVP_PIN_WRITE(50);
+
+MVP_PIN_READ(  );
+MVP_PIN_READ( 0);
+MVP_PIN_READ( 1);
+MVP_PIN_READ( 2);
+MVP_PIN_READ( 3);
+MVP_PIN_READ( 4);
+MVP_PIN_READ( 5);
+MVP_PIN_READ( 6);
+MVP_PIN_READ( 7);
+MVP_PIN_READ( 8);
+MVP_PIN_READ( 9);
+MVP_PIN_READ(10);
+MVP_PIN_READ(11);
+MVP_PIN_READ(12);
+MVP_PIN_READ(13);
+MVP_PIN_READ(14);
+MVP_PIN_READ(15);
+MVP_PIN_READ(16);
+MVP_PIN_READ(17);
+MVP_PIN_READ(18);
+MVP_PIN_READ(19);
+MVP_PIN_READ(20);
+MVP_PIN_READ(21);
+MVP_PIN_READ(22);
+MVP_PIN_READ(23);
+MVP_PIN_READ(24);
+MVP_PIN_READ(25);
+MVP_PIN_READ(26);
+MVP_PIN_READ(27);
+MVP_PIN_READ(28);
+MVP_PIN_READ(29);
+MVP_PIN_READ(30);
+MVP_PIN_READ(31);
+MVP_PIN_READ(32);
+MVP_PIN_READ(33);
+MVP_PIN_READ(34);
+MVP_PIN_READ(35);
+MVP_PIN_READ(36);
+MVP_PIN_READ(37);
+MVP_PIN_READ(38);
+MVP_PIN_READ(39);
+MVP_PIN_READ(40);
+MVP_PIN_READ(41);
+MVP_PIN_READ(42);
+MVP_PIN_READ(43);
+MVP_PIN_READ(44);
+MVP_PIN_READ(45);
+MVP_PIN_READ(46);
+MVP_PIN_READ(47);
+MVP_PIN_READ(48);
+MVP_PIN_READ(49);
+MVP_PIN_READ(50);
+
+typedef void (*MVPWriteHandler)(uint8_t MVP_UNUSED &pin, const MVPParam MVP_UNUSED &param);
+typedef void (*MVPPinWriteHandler)(uint8_t MVP_UNUSED &pin, const MVPParam MVP_UNUSED &param);
+typedef void (*MVPPinReadHandler)(uint8_t MVP_UNUSED &pin, const MVPParam MVP_UNUSED &param);
+
+MVPWriteHandler getMVPWriteHandler(uint8_t pin);
+MVPPinWriteHandler getMVPPinWriteHandler(uint8_t pin);
+MVPPinReadHandler getMVPPinReadHandler(uint8_t pin);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* INC_MVP_HANDLERS_HPP_ */

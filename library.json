@@ -1,0 +1,32 @@
+{
+    "name": "MVP",
+    "version": "0.2.0",
+    "description": "An IoT Market Enabler! It supports  WiFi, Ethernet, Zigbee, Modbus, Serial. Works with boards like ESP8266, ESP32, Raspberry Pi...",
+    "keywords": "esp8266, esp32, http, mqtt, zigbee, modbus, sensors, control, device, smartphone, mobile, app, web, cloud, communication, protocol, iot, wifi, ethernet, serial",
+    "authors":
+    {
+      "name":  "Quoc Hung",
+      "url":   "https://github.com/hung-eoh",
+      "maintainer": true
+    },
+    "repository":
+    {
+      "type": "git",
+      "url": "https://github.com/eoh-jsc/mvp-lib.git"
+    },
+    "homepage": "https://eoh.io",
+    "export": {
+      "exclude": [
+        "linux",
+        "extras",
+        "tests"
+      ]
+    },
+    "build": {
+      "extraScript": "scripts/after_install.py"
+    },
+    "frameworks": "*",
+    "platforms": "*",
+    "examples": "examples/*/*.ino"
+  }
+  
