@@ -85,6 +85,18 @@ bool MVPStrNCmp(const char* str, const char(&str2)[size]) {
     return !strncmp(str, str2, size);
 }
 
+#if !_GLIBCXX_USE_C99_STDLIB
+    #include <sstream>
+
+    template<typename T>
+    std::string to_string(const T& n)
+    {
+        std::ostringstream ss;
+        ss << n;
+        return ss.str();
+    }
+#endif
+
 #include <MVP/MVPDebug.hpp>
 
 #endif /* INC_MVP_UTILITY_HPP_ */

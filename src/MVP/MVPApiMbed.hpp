@@ -139,7 +139,7 @@ void MVPApi<Proto, Flash>::processArduinoPinRequest(const std::vector<std::strin
 	cJSON* item = cJSON_GetObjectItem(root, "value");
 	if (cJSON_IsNumber(item)) {
 		MVPParam param;
-		uint8_t pin = std::stoi(str);
+		uint8_t pin = atoi(str.c_str());
 		switch (this->mvpPinReport.findPinMode(pin)) {
 			case PWM:
 			case ANALOG:

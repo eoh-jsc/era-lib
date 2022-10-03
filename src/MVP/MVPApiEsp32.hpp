@@ -3,6 +3,10 @@
 
 #include <MVP/MVPApi.hpp>
 
+#ifndef SOC_ADC_MAX_CHANNEL_NUM
+	#define SOC_ADC_MAX_CHANNEL_NUM                 (10)
+#endif
+
 template <class Proto, class Flash>
 void MVPApi<Proto, Flash>::handleReadPin(cJSON* root) {
 	if (!cJSON_IsArray(root)) {
@@ -116,7 +120,7 @@ void MVPApi<Proto, Flash>::processArduinoPinRequest(const std::vector<std::strin
 	if (cJSON_IsNumber(item)) {
 		MVPParam param;
 		int8_t channel {0};
-		uint8_t pin = std::stoi(str);
+		uint8_t pin = atoi(str.c_str());
 		switch (this->mvpPinReport.findPinMode(pin)) {
 			case PWM:
 			case ANALOG:

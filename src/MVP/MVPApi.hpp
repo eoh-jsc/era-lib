@@ -49,10 +49,6 @@ private:
     friend class MVPModbus< MVPApi<Proto, Flash> >;
 	typedef MVPModbus< MVPApi<Proto, Flash> > Modbus;
 #endif
-#if defined(MVP_ZIGBEE)
-	friend class MVPZigbee< MVPApi<Proto, Flash> >;
-	typedef MVPZigbee< MVPApi<Proto, Flash> > Zigbee;
-#endif
 
 public:
     MVPApi(Flash& _flash)

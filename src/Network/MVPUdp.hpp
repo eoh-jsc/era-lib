@@ -68,10 +68,10 @@ public:
             return item->valuestring;
         }
         else if (cJSON_IsNumber(item)) {
-            return std::to_string(item->valuedouble);
+            return to_string(item->valuedouble);
         }
         else if (cJSON_IsBool(item)) {
-            return std::to_string(item->valueint);
+            return to_string(item->valueint);
         }
         return "";
     }
