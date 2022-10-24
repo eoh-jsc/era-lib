@@ -3,11 +3,12 @@
 
 #include <Utility/MVPQueue.hpp>
 
-#define MAXIMUM_MODBUS_DEVICES 20
-#define BAUD_SPEED_DEFAULT 9600
-#define REQUEST_DELAY_DEFAULT 1000
+#define MAXIMUM_MODBUS_DEVICES  20
+#define BAUD_SPEED_DEFAULT      9600
+#define REQUEST_DELAY_DEFAULT   1000
 #define MODBUS_DELAY_DEFAULT 	10000
-#define PUSH_DELAY_DEFAULT 	60000
+#define PUSH_DELAY_DEFAULT 	    60000
+#define MIN_DELAY_DEFAULT		1000
 
 typedef struct __SensorDelay_t {
 	int delay;

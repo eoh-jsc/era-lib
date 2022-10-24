@@ -1,7 +1,5 @@
-#ifndef INC_MVP_WIFI_HPP_
-#define INC_MVP_WIFI_HPP_
-
-#include <WiFi.h>
+#ifndef INC_MVP_WIFI_ESP32_HPP_
+#define INC_MVP_WIFI_ESP32_HPP_
 
 #if ESP_IDF_VERSION_MAJOR < 4
 void MVPPnP::onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info) {
@@ -113,4 +111,4 @@ void MVPPnP::onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info) {
 }
 #endif
 
-#endif /* INC_MVP_WIFI_HPP_ */
+#endif /* INC_MVP_WIFI_ESP32_HPP_ */

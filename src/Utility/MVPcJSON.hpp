@@ -7,8 +7,6 @@
 
 #define MAX_CJSON_PARSE    10
 
-using namespace std;
-
 CJSON_PUBLIC(cJSON*) cJSON_ParseWithLimit(const char *value, size_t limit = MAX_CJSON_PARSE);
 CJSON_PUBLIC(cJSON*) cJSON_AddNumberWithDecimalToObject(cJSON* const object, const char* const name, const double number, int decimal);
 CJSON_PUBLIC(cJSON*) cJSON_CreateNumberWithDecimalToObject(const double number, int decimal);

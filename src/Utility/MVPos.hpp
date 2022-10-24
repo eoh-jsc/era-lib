@@ -1,6 +1,8 @@
 #ifndef INC_MVP_OS_HPP_
 #define INC_MVP_OS_HPP_
 
+#ifdef INC_FREERTOS_H
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "freertos/xtensa_api.h"
@@ -58,5 +60,7 @@ osStatus_t osTimerStart(TimerHandle_t timer_id, uint32_t ticks);
 osStatus_t osTimerStop(TimerHandle_t timer_id);
 uint32_t osTimerIsRunning(TimerHandle_t timer_id);
 osStatus_t osTimerDelete(TimerHandle_t timer_id);
+
+#endif
 
 #endif /* INC_MVP_OS_HPP_ */

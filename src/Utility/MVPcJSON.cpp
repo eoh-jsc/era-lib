@@ -1,6 +1,8 @@
 #include <Utility/MVPcJSON.hpp>
 #include <Utility/MVPUtility.hpp>
 
+using namespace std;
+
 /* Utility for array list handling. */
 static void suffix_object(cJSON *prev, cJSON *item) {
     prev->next = item;
@@ -9,7 +11,7 @@ static void suffix_object(cJSON *prev, cJSON *item) {
 
 CJSON_PUBLIC(cJSON*) cJSON_ParseWithLimit(const char *value, size_t limit) {
     cJSON* root = nullptr;
-    for (int i = 0; i < limit; ++i) {
+    for (size_t i = 0; i < limit; ++i) {
         root = cJSON_Parse(value);
         if (root != nullptr && cJSON_GetErrorPtr() == nullptr) {
             break;
@@ -20,50 +22,52 @@ CJSON_PUBLIC(cJSON*) cJSON_ParseWithLimit(const char *value, size_t limit) {
 }
 
 CJSON_PUBLIC(cJSON*) cJSON_AddNumberWithDecimalToObject(cJSON* const object, const char* const name, const double number, int decimal) {
-	char number_buffer[26]{ 0 };
-	char number_format[10]{ 0 };
-	char number_length[10]{ 0 };
 	if (round(number) == number || decimal <= 0) {
 		return cJSON_AddNumberToObject(object, name, number);
     }
-	for (int i = 0; i < 26; ++i) {
-		if (std::abs(number * std::pow(10, i)) < 1.f) {
-			--decimal;
-        }
-		else {
-			break;
-        }
-		if (!decimal) {
-			break;
-        }
+
+	char number_buffer[26] {0};
+	char number_format[10] {0};
+	unsigned int number_length {0};
+	double n = number;
+	long long d = (long long)number;
+
+	do {
+		++number_length;
+		d /= 10;
+	} while (d);
+
+	while (std::abs(n) < 1.f && --decimal) {
+		n *= 10;
 	}
-	sprintf(number_length, "%d", static_cast<int>(std::floor(std::abs(number))));
-	sprintf(number_format, "%%.%dg", decimal + strlen(number_length));
-	sprintf(number_buffer, number_format, number);
+
+	snprintf(number_format, sizeof(number_format), "%%.%dg", decimal + number_length);
+	snprintf(number_buffer, sizeof(number_buffer), number_format, number);
 	return cJSON_AddRawNumberToObject(object, name, number_buffer);
 }
 
 CJSON_PUBLIC(cJSON*) cJSON_CreateNumberWithDecimalToObject(const double number, int decimal) {
-	char number_buffer[26]{ 0 };
-	char number_format[10]{ 0 };
-	char number_length[10]{ 0 };
 	if (round(number) == number || decimal <= 0) {
 		return cJSON_CreateNumber(number);
     }
-	for (int i = 0; i < 26; ++i) {
-		if (std::abs(number * std::pow(10, i)) < 1.f) {
-			--decimal;
-        }
-		else {
-			break;
-        }
-		if (!decimal) {
-			break;
-        }
+
+	char number_buffer[26] {0};
+	char number_format[10] {0};
+	unsigned int number_length {0};
+	double n = number;
+	long long d = (long long)number;
+
+	do {
+		++number_length;
+		d /= 10;
+	} while (d);
+
+	while (std::abs(n) < 1.f && --decimal) {
+		n *= 10;
 	}
-	sprintf(number_length, "%d", static_cast<int>(std::floor(std::abs(number))));
-	sprintf(number_format, "%%.%dg", decimal + strlen(number_length));
-	sprintf(number_buffer, number_format, number);
+
+	snprintf(number_format, sizeof(number_format), "%%.%dg", decimal + number_length);
+	snprintf(number_buffer, sizeof(number_buffer), number_format, number);
 	return cJSON_CreateRawNumber(number_buffer);
 }
 

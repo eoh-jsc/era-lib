@@ -19,7 +19,7 @@ bool MVPModbus<Api>::waitResponse(ModbusConfig_t& param, uint8_t* modbusData) {
         this->failWrite = 0;
     }
 
-    unsigned long tick = MVPMillis();
+    unsigned long prevMillis = MVPMillis();
 
     do
     {
@@ -35,7 +35,7 @@ bool MVPModbus<Api>::waitResponse(ModbusConfig_t& param, uint8_t* modbusData) {
             }
         }
         MVPDelay(10);
-    } while (MVPRemainingTime(tick, MAX_TIMEOUT_MODBUS));
+    } while (MVPRemainingTime(prevMillis, MAX_TIMEOUT_MODBUS));
     return false;
 }
 

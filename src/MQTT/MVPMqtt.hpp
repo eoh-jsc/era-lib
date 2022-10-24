@@ -2,7 +2,6 @@
 #define INC_MVP_MQTT_HPP_
 
 #include <string>
-#include <WiFi.h>
 #include <Utility/MVPUtility.hpp>
 #include <Utility/MVPcJSON.hpp>
 #include <MVP/MVPDefine.hpp>
@@ -32,7 +31,8 @@ class MVPMqtt
 
 public:
     MVPMqtt()
-        : host(MVP_MQTT_HOST)
+        : client(NULL)
+        , host(MVP_MQTT_HOST)
         , port(MVP_MQTT_PORT)
         , username(MVP_MQTT_USERNAME)
         , password(MVP_MQTT_PASSWORD)
@@ -41,8 +41,24 @@ public:
     {
         memset(this->willTopic, 0, sizeof(this->willTopic));
     }
+    MVPMqtt(Client& _client)
+        : client(NULL)
+        , host(MVP_MQTT_HOST)
+        , port(MVP_MQTT_PORT)
+        , username(MVP_MQTT_USERNAME)
+        , password(MVP_MQTT_PASSWORD)
+        , bufferSize(MVP_BUFFER_SIZE)
+        , mutex(NULL)
+    {
+        this->setClient(&_client);
+        memset(this->willTopic, 0, sizeof(this->willTopic));
+    }
     ~MVPMqtt()
     {}
+
+    void setClient(Client* _client) {
+        this->client = _client;
+    }
 
     void config(const char* _host, uint16_t _port, const char* _user, const char* _password);
     bool connect();
@@ -69,7 +85,7 @@ protected:
 private:
     bool subscribeTopic(const char* baseTopic, const char* topic, QoST qos);
 
-    Client client;
+    Client* client;
     MQTT mqtt{MVP_BUFFER_SIZE};
     const char* host;
     uint16_t port;
@@ -89,11 +105,11 @@ void MVPMqtt<Client, MQTT>::config(const char* _host, uint16_t _port, const char
     this->username = _user;
     this->password = _password;
     ClearArray(this->willTopic);
-    strcat(this->willTopic, this->mvpTopic);
-    strcat(this->willTopic, LWT_TOPIC);
+    FormatString(this->willTopic, this->mvpTopic);
+    FormatString(this->willTopic, LWT_TOPIC);
     this->mqtt.setKeepAlive(60);
     this->mqtt.setWill(this->willTopic, OFFLINE_MESSAGE, LWT_RETAINED, LWT_QOS);
-    this->mqtt.begin(this->host, this->port, this->client);
+    this->mqtt.begin(this->host, this->port, *this->client);
 }
 
 template <class Client, class MQTT>
@@ -128,8 +144,8 @@ void MVPMqtt<Client, MQTT>::run() {
 template <class Client, class MQTT>
 bool MVPMqtt<Client, MQTT>::subscribeTopic(const char* baseTopic, const char* topic, QoST qos) {
     char topicName[MAX_TOPIC_LENGTH] {0};
-	strcat(topicName, baseTopic);
-	strcat(topicName, topic);
+	FormatString(topicName, baseTopic);
+	FormatString(topicName, topic);
     return this->mqtt.subscribe(topicName, qos);
 }
 

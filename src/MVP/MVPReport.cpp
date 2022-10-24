@@ -1,6 +1,8 @@
 #include <MVP/MVPReport.hpp>
 #include <Utility/MVPUtility.hpp>
 
+using namespace std;
+
 MVPReport::MVPReport()
 	: numReport(0)
 {}

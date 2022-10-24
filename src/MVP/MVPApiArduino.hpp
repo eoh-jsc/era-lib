@@ -3,9 +3,6 @@
 
 #include <MVP/MVPApi.hpp>
 
-#define MVP_MODEL_TYPE                "MVP"
-#define MVP_BOARD_TYPE                "Arduino"
-
 template <class Proto, class Flash>
 void MVPApi<Proto, Flash>::handleReadPin(cJSON* root) {
 	if (!cJSON_IsArray(root)) {

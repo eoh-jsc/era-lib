@@ -1,8 +1,10 @@
-#ifndef INC_MVP_FLASH_HPP_
-#define INC_MVP_FLASH_HPP_
+#ifndef INC_MVP_FLASH_ESP8266_HPP_
+#define INC_MVP_FLASH_ESP8266_HPP_
 
-#include <SPIFFS.h>
+#include <LittleFS.h>
 #include <Preferences.h>
+
+#define SPIFFS LittleFS
 
 class MVPFlash
 {
@@ -26,7 +28,7 @@ private:
 
 void MVPFlash::begin() {
     SPIFFS.end();
-    if (!SPIFFS.begin(true)) {
+    if (!SPIFFS.begin()) {
         MVP_LOG(TAG, "MVP flash init FAILED");
     }
     this->preferences.end();
@@ -36,7 +38,7 @@ void MVPFlash::begin() {
 }
 
 char* MVPFlash::readFlash(const char* filename) {
-    File file = SPIFFS.open(filename, FILE_READ);
+    File file = SPIFFS.open(filename, "r");
     if (!file) {
         return nullptr;
     }
@@ -64,7 +66,7 @@ void MVPFlash::writeFlash(const char *filename, const char* buf) {
     if (buf == nullptr) {
         return;
     }
-    File file = SPIFFS.open(filename, FILE_WRITE);
+    File file = SPIFFS.open(filename, "w");
     if (!file) {
         return;
     }
@@ -76,4 +78,4 @@ size_t MVPFlash::writeFlash(const char* key, const void* value, size_t len) {
     return preferences.putBytes(key, value, len);
 }
 
-#endif /* INC_MVP_FLASH_HPP_ */
+#endif /* INC_MVP_FLASH_ESP8266_HPP_ */

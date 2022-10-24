@@ -296,7 +296,7 @@ MVPDataBuff::operator char* () const {
 	memset(ptr, 0, this->len);
 	const iterator e = this->end();
 	for (iterator it = this->begin(); it < e; ++it) {
-		strcat(ptr, it);
+		snprintf(ptr + strlen(ptr), this->len - strlen(ptr), it);
 	}
 	return ptr;
 }

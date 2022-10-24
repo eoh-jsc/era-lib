@@ -1,0 +1,8 @@
+#ifndef INC_MVP_SIMPLE_MODBUS_ESP32_HPP_
+#define INC_MVP_SIMPLE_MODBUS_ESP32_HPP_
+
+#define MVP_MODBUS
+
+#include <MVPSimpleEsp32.hpp>
+
+#endif /* INC_MVP_SIMPLE_MODBUS_ESP32_HPP_ */

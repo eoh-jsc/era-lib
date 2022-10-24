@@ -35,7 +35,7 @@ void MVPApplication::parseConfig(char* ptr)
     size_t len = strlen(ptr);
     int part = 0;
     size_t position = 0;
-    for (int i = 0; i < len; ++i) {
+    for (size_t i = 0; i < len; ++i) {
         if (ptr[i] == ';') {
             part++;
             this->processParseConfig(part, ptr + position, i - position);
@@ -126,13 +126,13 @@ void MVPApplication::processParseConfigBaudSpeed(char* ptr, size_t len)
 				this->baudSpeed = atoi(token);
 				break;
 			case ParseDelayT::PARSE_REQUEST_DELAY:
-				this->requestDelay.delay = (atoi(token) < REQUEST_DELAY_DEFAULT ? REQUEST_DELAY_DEFAULT : atoi(token));
+				this->requestDelay.delay = (atoi(token) < MIN_DELAY_DEFAULT ? MIN_DELAY_DEFAULT : atoi(token));
 				break;
 			case ParseDelayT::PARSE_MODBUS_DELAY:
-				this->modbusDelay.delay = (atoi(token) < MODBUS_DELAY_DEFAULT ? MODBUS_DELAY_DEFAULT : atoi(token));
+				this->modbusDelay.delay = (atoi(token) < MIN_DELAY_DEFAULT ? MIN_DELAY_DEFAULT : atoi(token));
 				break;
 			case ParseDelayT::PARSE_PUSH_DELAY:
-				this->pushDelay.delay = (atoi(token) < PUSH_DELAY_DEFAULT ? PUSH_DELAY_DEFAULT : atoi(token));
+				this->pushDelay.delay = (atoi(token) < MIN_DELAY_DEFAULT ? MIN_DELAY_DEFAULT : atoi(token));
 				break;
 			default:
 				break;
@@ -155,7 +155,7 @@ void MVPApplication::processParseConfigSensorDelay(char* ptr, size_t len)
     this->sensorDelay.clear();
 
     SensorDelay_t sensor {};
-    for (int i = 0; i < len; ++i) { 
+    for (size_t i = 0; i < len; ++i) { 
         buff[buffLen++] = ptr[i];
 
         if (ptr[i] == ',') {
@@ -185,7 +185,7 @@ void MVPApplication::processParseConfigSensorReadWrite(char* ptr, size_t len)
 
     this->modbusConfigParam.clear();
 
-    for (int i = 0; i < len; ++i) {
+    for (size_t i = 0; i < len; ++i) {
         if (ptr[i] == '.') {
             ModbusConfig_t config {};
             this->parseOneConfigSensorReadWrite(ptr + position, i - position, config);
@@ -205,7 +205,7 @@ void MVPApplication::parseOneConfigSensorReadWrite(char* ptr, size_t len, Modbus
     size_t configIndex {0};
     int configParam[20] {0};
 
-    for (int i = 0; i < len; ++i) {
+    for (size_t i = 0; i < len; ++i) {
         buff[position++] = ptr[i];
         if (ptr[i] == ',') {
             buff[--position] = '\0';
@@ -234,7 +234,7 @@ void MVPApplication::actOneConfigSensorReadWrite(int* ptr, size_t len, ModbusCon
     config.len1 = ptr[5];
     config.len2 = ptr[6];
 
-    for (int i = 0; i < len - 7; ++i) {
+    for (size_t i = 0; i < len - 7; ++i) {
         config.extra[i] = ptr[i + 7];
     }
 }
@@ -243,7 +243,7 @@ void MVPApplication::processParseConfigLocalAlarm(char* ptr, size_t len)
 {
     size_t position = 0;
 
-    for (int i = 0; i < len; ++i) {
+    for (size_t i = 0; i < len; ++i) {
         if (ptr[i] == '.') {
             this->parseOneConfigLocalAlarm(ptr + position, i - position);
             position = i + 1;
@@ -260,7 +260,7 @@ void MVPApplication::processParseStationContactPhone(char* ptr, size_t len)
 {
     size_t position = 0;
 
-    for (int i = 0; i < len; ++i) {
+    for (size_t i = 0; i < len; ++i) {
         if (ptr[i] == '.') {
             this->parseOneConfigPhoneNumber(ptr + position, i - position);
             position = i + 1;
@@ -310,7 +310,7 @@ void MVPApplication::processParseConfigAliasData(char* ptr, size_t len)
 
     this->modbusConfigAliasParam.clear();
     
-    for (int i = 0; i < len; ++i) {
+    for (size_t i = 0; i < len; ++i) {
         if (ptr[i] == '.') {
             ModbusConfigAlias_t config {};
             this->processOneConfigAlias(ptr + position, i - position, config);
@@ -330,7 +330,7 @@ void MVPApplication::processOneConfigAlias(char* ptr, size_t len, ModbusConfigAl
 
     size_t position {0};
 
-    for (int i = 0; i < len - 1; ++i) {
+    for (size_t i = 0; i < len - 1; ++i) {
         if (ptr[i] == ',' && ptr[i + 1] == '-') {
             position = i + 1;
             this->parseOneConfigAlias(ptr, i + 1, config);
@@ -352,7 +352,7 @@ void MVPApplication::parseOneConfigAlias(char* ptr, size_t len, ModbusConfigAlia
     bool isAlias {false};
     char key[37] {0};
 
-    for (int i = 0; i < len; ++i) {
+    for (size_t i = 0; i < len; ++i) {
         buff[position++] = ptr[i];
         if (ptr[i] == ',') {
             buff[--position] = '\0';
@@ -387,7 +387,7 @@ void MVPApplication::processParseAction(char* ptr, size_t len, ModbusConfigAlias
 
     config.readActionCount = 0;
 
-    for (int i = 0; i < len; ++i) {
+    for (size_t i = 0; i < len; ++i) {
         if (ptr[i] == '-') {
             ++numHyphen;
 
@@ -408,7 +408,7 @@ void MVPApplication::parseOneAction(char* ptr, size_t len, ModbusConfigAlias_t& 
     size_t configIndex {0};
     int configParam[20] {0};
 
-    for (int i = 0; i < len; ++i) {
+    for (size_t i = 0; i < len; ++i) {
         buff[position++] = ptr[i];
         if (ptr[i] == ',') {
             buff[--position] = '\0';
@@ -429,7 +429,7 @@ void MVPApplication::actOneAction(int* ptr, size_t len, ModbusConfigAlias_t& con
     action.id = ptr[0];
     action.len1 = ptr[1];
     action.len2 = ptr[2];
-    for (int i = 0; i < len - 3; ++i) {
+    for (size_t i = 0; i < len - 3; ++i) {
         action.extra[i] = ptr[i + 3];
     }
 }

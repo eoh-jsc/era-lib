@@ -18,8 +18,8 @@ uint32_t MVPRandomNumber(uint32_t min, uint32_t max);
 size_t MVPFreeRam();
 void MVPRestart(bool async);
 
-void MVPGuardLock(MVPMutex_t& mutex);
-void MVPGuardUnlock(MVPMutex_t& mutex);
+void MVPGuardLock(MVPMutex_t& mutex) MVP_WEAK;
+void MVPGuardUnlock(MVPMutex_t& mutex) MVP_WEAK;
 
 char* MVPStrdup(const char* str);
 MillisTime_t MVPRemainingTime(MillisTime_t prevMillis, MillisTime_t timeout);
@@ -76,6 +76,22 @@ void ClearStruct(T& arr, int size) {
 template <typename T, int size>
 void ClearArray(T(&arr)[size]) {
     memset(arr, 0, size);
+}
+
+template <typename... Args>
+void FormatString(char* buf, size_t len, Args... tail) {
+    if (buf == nullptr) {
+        return;
+    }
+    snprintf(buf + strlen(buf), len - strlen(buf), tail...);
+}
+
+template <int size>
+void FormatString(char(&buf)[size], const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+    vsnprintf(buf + strlen(buf), size - strlen(buf), format, args);
+    va_end(args);
 }
 
 bool MVPStrCmp(const char* str, const char* str2);

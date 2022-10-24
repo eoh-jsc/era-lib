@@ -33,10 +33,10 @@ public:
 		return _e;
 	}
 
-	T get() {
-		int r = this->r;
-		while (r == this->w) {}
-		T _e = this->e[r];
+	T& get() {
+		int _r = this->r;
+		while (_r == this->w) {}
+		T& _e = this->e[_r];
 		this->r = inc(this->r);
 		return _e;
 	}
@@ -55,8 +55,8 @@ public:
 		return (this->r == this->w);
 	}
 
-    operator T() {
-        return (this->readable() ? this->get() : T());
+    operator T&() {
+        return this->get();
     }
 
 	T operator=(const T& _e) {

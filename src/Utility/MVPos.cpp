@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include <Utility/MVPos.hpp>
 
+#ifdef INC_FREERTOS_H
+
 void osDelay(uint32_t ticks) {
     if (ticks != 0U) {
         vTaskDelay(ticks / portTICK_PERIOD_MS);
@@ -10,11 +12,7 @@ void osDelay(uint32_t ticks) {
 uint32_t osThreadGetStackSpace(TaskHandle_t thread_id) {
 	uint32_t sz;
 
-	if (thread_id == NULL) {
-		sz = 0U;
-	} else {
-		sz = (uint32_t)(uxTaskGetStackHighWaterMark(thread_id) * sizeof(StackType_t));
-	}
+	sz = (uint32_t)(uxTaskGetStackHighWaterMark(thread_id) * sizeof(StackType_t));
 
 	return (sz);
 }
@@ -410,3 +408,5 @@ osStatus_t osTimerDelete(TimerHandle_t timer_id) {
 
 	return (stat);
 }
+
+#endif

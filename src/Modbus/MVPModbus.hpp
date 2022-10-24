@@ -6,12 +6,8 @@
 #include <MVP/MVPParam.hpp>
 #include <Utility/MVPUtility.hpp>
 #include <Modbus/MVPParse.hpp>
+#include "MVPModbusConfig.hpp"
 #include "MVPDefineModbus.hpp"
-
-#define MODBUS_RXD_Pin      16
-#define MODBUS_TXD_Pin      17
-#define MODBUS_BUFFER_SIZE  256
-#define MAX_TIMEOUT_MODBUS  1500
 
 using namespace std;
 
@@ -31,10 +27,11 @@ class MVPModbus
     typedef struct __ModbusAction_t {
         char* key;
     } ModbusAction_t;
+    typedef void* TaskHandle_t;
     typedef void* QueueMessage_t;
     const char* TAG = "Modbus";
-    const char* FILENAME_CONFIG = "/modbus/config.txt";
-    const char* FILENAME_CONTROL = "/modbus/control.txt";
+    const char* FILENAME_CONFIG = FILENAME_MODBUS_CONFIG;
+    const char* FILENAME_CONTROL = FILENAME_MODBUS_CONTROL;
 
 public:
     MVPModbus()
@@ -46,13 +43,16 @@ public:
         , _writeModbusTask(NULL)
         , messageHandle(NULL)
         , mutex(NULL)
+#if defined(LINUX)
+        , fd(0)
+#endif
     {}
     ~MVPModbus()
     {}
 
 protected:
     void begin() {
-        this->dataBuff.allocate(1024);
+        this->dataBuff.allocate(MODBUS_DATA_BUFFER_SIZE);
         this->configModbus();
         this->initModbusConfig();
         this->initModbusTask();
@@ -67,6 +67,29 @@ protected:
             }
             MVPDelay(10);
         }
+    }
+
+    void runRead() {
+        if (!MVPRemainingTime(this->modbusConfig.modbusDelay.prevMillis, this->modbusConfig.modbusDelay.delay)) {
+            this->modbusConfig.modbusDelay.prevMillis = MVPMillis();
+            this->readModbusConfig();
+        }
+    }
+
+    void runWrite() {
+        if (!this->isRequest()) {
+            return;
+        }
+        ModbusAction_t& req = this->getRequest();
+        if (req.key == nullptr) {
+            return;
+        }
+        this->actionModbus(req.key);
+        if (this->isEmptyRequest()) {
+            this->executeNow();
+        }
+        free(req.key);
+        req.key = nullptr;
     }
 
     void parseModbusConfig(char* ptr, bool isControl = false) {
@@ -110,29 +133,6 @@ protected:
     static void writeModbusTask(void* args);
 
 private:
-    void runRead() {
-        if (!MVPRemainingTime(this->modbusConfig.modbusDelay.prevMillis, this->modbusConfig.modbusDelay.delay)) {
-            this->modbusConfig.modbusDelay.prevMillis = MVPMillis();
-            this->readModbusConfig();
-        }
-    }
-
-    void runWrite() {
-        if (!this->isRequest()) {
-            return;
-        }
-        ModbusAction_t req = this->getRequest();
-        if (req.key == nullptr) {
-            return;
-        }
-        this->actionModbus(req.key);
-        if (this->isEmptyRequest()) {
-            this->executeNow();
-        }
-        free(req.key);
-        req.key = nullptr;
-    }
-
     void initModbusConfig() {
         char* ptr = nullptr;
         ptr = static_cast<Api*>(this)->readFromFlash(FILENAME_CONFIG);
@@ -166,7 +166,7 @@ private:
 		return this->queue.readable();
 	}
 
-	ModbusAction_t getRequest() {
+	ModbusAction_t& getRequest() {
 		return this->queue;
 	}
 
@@ -186,6 +186,9 @@ private:
     TaskHandle_t _writeModbusTask;
     QueueMessage_t messageHandle;
     MVPMutex_t mutex;
+#if defined(LINUX)
+    int fd;
+#endif
 };
 
 template <class Api>
@@ -194,7 +197,7 @@ void MVPModbus<Api>::readModbusConfig() {
         return;
     }
     this->dataBuff.clear();
-    for (int i = 0; i < this->modbusConfig.readConfigCount; ++i) {
+    for (size_t i = 0; i < this->modbusConfig.readConfigCount; ++i) {
         ModbusConfig_t& param = *this->modbusConfig.modbusConfigParam[i];
         this->sendModbusRead(param);
     }
@@ -408,7 +411,7 @@ template <class Api>
 void MVPModbus<Api>::modbusCRC(vector<uint8_t>& cmd) {
     uint16_t crc = 0xFFFF;
 
-    for (int pos = 0; pos < cmd.size(); pos++) {
+    for (size_t pos = 0; pos < cmd.size(); pos++) {
         crc ^= (uint16_t)cmd.at(pos);
 
         for (int i = 8; i != 0; i--) {
@@ -419,7 +422,7 @@ void MVPModbus<Api>::modbusCRC(vector<uint8_t>& cmd) {
             else {
                 crc >>= 1;
             }
-        }					
+        }
     }
     
     cmd.push_back(crc & 0xFF);

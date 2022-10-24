@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <string>
+#include <Utility/MVPFlashDef.hpp>
 #include <MVP/MVPConfig.hpp>
 #include <MVP/MVPHandlers.hpp>
 #include <MVP/MVPApi.hpp>
@@ -29,7 +30,7 @@ class MVPProto
 
     char MVP_TOPIC[MAX_TOPIC_LENGTH];
 	const char* TAG = "Protocol";
-    const char* FILENAME_CONFIG = "/pin/config.txt";
+    const char* FILENAME_CONFIG = FILENAME_PIN_CONFIG;
     const char* BASE_TOPIC = "eoh/chip";
     const char* MVP_AUTH;
     friend class MVPApi< MVPProto<Transp, Flash>, Flash >;
@@ -53,7 +54,7 @@ public:
 
     void begin(const char* auth) {
 		this->MVP_AUTH = auth;
-        snprintf(this->MVP_TOPIC, sizeof(this->MVP_TOPIC), "%s/%s", BASE_TOPIC, auth);
+        FormatString(this->MVP_TOPIC, "%s/%s", BASE_TOPIC, auth);
         this->transp.setAuth(auth);
 		this->transp.setTopic(this->MVP_TOPIC);
 		this->transp.onMessage(this->messageCb);
@@ -326,8 +327,8 @@ bool MVPProto<Transp, Flash>::sendInfo() {
 
     char topic[MAX_TOPIC_LENGTH] {0};
 	char* payload = cJSON_PrintUnformatted(root);
-    strcat(topic, this->MVP_TOPIC);
-    strcat(topic, "/info");
+    FormatString(topic, this->MVP_TOPIC);
+    FormatString(topic, "/info");
 	
 	if (payload != nullptr) {
 		status = this->transp.publishData(topic, payload);
@@ -368,27 +369,27 @@ bool MVPProto<Transp, Flash>::sendPinData(MVPRsp_t& rsp) {
 	bool status {false};
 	char* payload = nullptr;
 	char topicName[MAX_TOPIC_LENGTH] {0};
-	strcat(topicName, this->MVP_TOPIC);
-	strcat(topicName, "/pin/data");
+	FormatString(topicName, this->MVP_TOPIC);
+	FormatString(topicName, "/pin/data");
 	cJSON* root = cJSON_CreateObject();
 	if (root == nullptr) {
 		return false;
 	}
 	switch (rsp.type) {
 	case Base::MVPTypeRspT::MVP_RESPONSE_VIRTUAL_PIN:
-		snprintf(name, sizeof(name), "virtual_pin_%d", (int)rsp.id);
+		FormatString(name, "virtual_pin_%d", (int)rsp.id);
 		break;
 	case Base::MVPTypeRspT::MVP_RESPONSE_DIGITAL_PIN:
-		snprintf(name, sizeof(name), "digital_pin_%d", (int)rsp.id);
+		FormatString(name, "digital_pin_%d", (int)rsp.id);
 		break;
 	case Base::MVPTypeRspT::MVP_RESPONSE_ANALOG_PIN:
-		snprintf(name, sizeof(name), "analog_pin_%d", (int)rsp.id);
+		FormatString(name, "analog_pin_%d", (int)rsp.id);
 		break;
 	case Base::MVPTypeRspT::MVP_RESPONSE_PWM_PIN:
-		snprintf(name, sizeof(name), "pwm_pin_%d", (int)rsp.id);
+		FormatString(name, "pwm_pin_%d", (int)rsp.id);
 		break;
 	case Base::MVPTypeRspT::MVP_RESPONSE_INTERRUPT_PIN:
-		snprintf(name, sizeof(name), "interrupt_pin_%d", (int)rsp.id);
+		FormatString(name, "interrupt_pin_%d", (int)rsp.id);
 		break;
 	default:
 		cJSON_Delete(root);
@@ -409,18 +410,16 @@ bool MVPProto<Transp, Flash>::sendPinData(MVPRsp_t& rsp) {
 
 template <class Transp, class Flash>
 bool MVPProto<Transp, Flash>::sendConfigIdData(MVPRsp_t& rsp) {
-	char name[50] {0};
 	bool status {false};
 	char* payload = nullptr;
 	char topicName[MAX_TOPIC_LENGTH] {0};
-	strcat(topicName, this->MVP_TOPIC);
-	strcat(topicName, "/config_value");
+	FormatString(topicName, this->MVP_TOPIC);
+	FormatString(topicName, "/config/%d/value", (int)rsp.id);
 	cJSON* root = cJSON_CreateObject();
 	if (root == nullptr) {
 		return false;
 	}
-	snprintf(name, sizeof(name), "%d", (int)rsp.id);
-	cJSON_AddNumberToObject(root, name, rsp.param);
+	cJSON_AddNumberToObject(root, "v", rsp.param);
 	payload = cJSON_PrintUnformatted(root);
 	if (payload != nullptr) {
 		status = this->transp.publishData(topicName, payload);
@@ -440,8 +439,8 @@ bool MVPProto<Transp, Flash>::sendConfigIdMultiData(MVPRsp_t& rsp) {
 		return false;
 	}
 	char topicName[MAX_TOPIC_LENGTH] {0};
-	strcat(topicName, this->MVP_TOPIC);
-	strcat(topicName, "/config_value");
+	FormatString(topicName, this->MVP_TOPIC);
+	FormatString(topicName, "/config_value");
 	status = this->transp.publishData(topicName, payload);
 	free(payload);
 	payload = nullptr;
@@ -456,8 +455,8 @@ bool MVPProto<Transp, Flash>::sendModbusData(MVPRsp_t& rsp) {
 		return false;
 	}
 	char topicName[MAX_TOPIC_LENGTH] {0};
-	strcat(topicName, this->MVP_TOPIC);
-	strcat(topicName, "/data");
+	FormatString(topicName, this->MVP_TOPIC);
+	FormatString(topicName, "/data");
 	status = this->transp.publishData(topicName, payload);
 	free(payload);
 	payload = nullptr;
@@ -473,8 +472,8 @@ bool MVPProto<Transp, Flash>::sendZigbeeData(MVPRsp_t& rsp) {
 		return false;
 	}
 	char topicName[MAX_TOPIC_LENGTH] {0};
-	strcat(topicName, this->MVP_TOPIC);
-	strcat(topicName, topic);
+	FormatString(topicName, this->MVP_TOPIC);
+	FormatString(topicName, topic);
 	status = this->transp.publishData(topicName, payload);
 	free(topic);
 	free(payload);
@@ -536,11 +535,12 @@ void MVPProto<Transp, Flash>::sendCommandModbus(MVPRsp_t& rsp, MVPDataBuff* data
 	int mbFailed {0};
 	int mbTotal {0};
 	size_t index {0};
-	char* mbData = (char*)MVP_CALLOC(data->getLen() + 1, sizeof(char));
+	size_t dataLen = data->getLen() + 1;
+	char* mbData = (char*)MVP_CALLOC(dataLen, sizeof(char));
 	if (mbData == nullptr) {
 		return;
 	}
-	char* mbAck = (char*)MVP_CALLOC(data->getLen() + 1, sizeof(char));
+	char* mbAck = (char*)MVP_CALLOC(dataLen, sizeof(char));
 	if (mbAck == nullptr) {
 		return;
 	}
@@ -556,10 +556,10 @@ void MVPProto<Transp, Flash>::sendCommandModbus(MVPRsp_t& rsp, MVPDataBuff* data
 		}
 		else {
 			if (index++ % 2 == 0) {
-				strcat(mbData, it);
+				FormatString(mbData, dataLen, it);
 			}
 			else {
-				strcat(mbAck, it);
+				FormatString(mbAck, dataLen, it);
 			}
 		}
 	}

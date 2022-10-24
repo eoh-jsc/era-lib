@@ -4,8 +4,6 @@
 #include <functional>
 #include <MVP/MVPDefine.hpp>
 
-using namespace std;
-
 class MVPReport
 {
 public:

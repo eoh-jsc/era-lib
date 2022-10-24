@@ -9,7 +9,7 @@
 #include <MVP/MVPApiEsp32.hpp>
 #include <MQTT/MVPMqtt.hpp>
 #include <Modbus/MVPModbusEsp32.hpp>
-#include <Utility/MVPFlash.hpp>
+#include <Utility/MVPFlashEsp32.hpp>
 #include <PnP/MVPState.hpp>
 
 #define MVP_MODEL_TYPE                "MVP"
@@ -65,7 +65,7 @@ typedef struct __MVPConfig_t {
 
 static WebServer server(80);
 static DNSServer dnsServer;
-static const byte DNS_PORT = 53;
+static const uint16_t DNS_PORT = 53;
 static MVPConfig_t mvpConfig{};
 static const MVPConfig_t mvpDefault = {
     .magic = 0x27061995,
@@ -88,7 +88,7 @@ enum ConfigFlagT {
     CONFIG_FLAG_API = 0x04
 };
 
-#include <Network/MVPUdp.hpp>
+#include <Network/MVPUdpEsp32.hpp>
 
 static WiFiUDP Udp;
 static MVPUdp<WiFiUDP> mvpUdp(Udp);
@@ -114,10 +114,10 @@ public:
     void config(const char* auth,
                 const char* host = MVP_MQTT_HOST,
                 uint16_t port = MVP_MQTT_PORT,
-                const char* user = MVP_MQTT_USERNAME,
+                const char* username = MVP_MQTT_USERNAME,
                 const char* password = MVP_MQTT_PASSWORD) {
         Base::begin(auth);
-        this->transp.config(host, port, user, password);
+        this->transp.config(host, port, username, password);
     }
 
     void begin(const char* auth,
@@ -125,13 +125,13 @@ public:
                 const char* pass,
                 const char* host = MVP_MQTT_HOST,
                 uint16_t port = MVP_MQTT_PORT,
-                const char* user = MVP_MQTT_USERNAME,
+                const char* username = MVP_MQTT_USERNAME,
                 const char* password = MVP_MQTT_PASSWORD) {
         WiFi.onEvent(this->wifiCb);
         WiFi.mode(WIFI_STA);
         this->connectWiFi(ssid, pass);
         Base::init();
-        this->config(auth, host, port, user, password);
+        this->config(auth, host, port, username, password);
         if (Base::connect()) {
             MVPState::set(StateT::STATE_CONNECTED);
         }
@@ -142,17 +142,9 @@ public:
 
     void begin(const char* ssid,
                 const char* pass) {
-        WiFi.onEvent(this->wifiCb);
-        WiFi.mode(WIFI_STA);
-        this->connectWiFi(ssid, pass);
-        Base::init();
-        this->config(MQTT_CLIENT_ID, MVP_MQTT_HOST, MVP_MQTT_PORT, MVP_MQTT_USERNAME, MVP_MQTT_PASSWORD);
-        if (Base::connect()) {
-            MVPState::set(StateT::STATE_CONNECTED);
-        }
-        else {
-            MVPState::set(StateT::STATE_SWITCH_TO_AP);
-        }
+        this->begin(MQTT_CLIENT_ID, ssid, pass,
+                    MVP_MQTT_HOST, MVP_MQTT_PORT,
+                    MVP_MQTT_USERNAME, MVP_MQTT_PASSWORD);
     }
 
     void begin(const char* auth = nullptr);
@@ -727,10 +719,10 @@ void MVPPnP::connectWiFi(const char* ssid, const char* pass) {
     } else {
         WiFi.begin(ssid);
     }
-    unsigned long tick = MVPMillis();
+    unsigned long prevMillis = MVPMillis();
     while (WiFi.status() != WL_CONNECTED) {
         MVPDelay(500);
-        if (!MVPRemainingTime(tick, WIFI_NET_CONNECT_TIMEOUT)) {
+        if (!MVPRemainingTime(prevMillis, WIFI_NET_CONNECT_TIMEOUT)) {
             WiFi.disconnect();
             return;
         }
@@ -738,7 +730,7 @@ void MVPPnP::connectWiFi(const char* ssid, const char* pass) {
     MVP_LOG(TAG, "Connected to WiFi");
 
     IPAddress localIP = WiFi.localIP();
-    UNUSED(localIP);
+    MVP_FORCE_UNUSED(localIP);
     MVP_LOG(TAG, "IP: %s", localIP.toString().c_str());
 }
 
@@ -814,13 +806,13 @@ void MVPPnP::getImeiChip(char* ptr, size_t size) {
 #endif
 }
 
-#include <Network/MVPWiFi.hpp>
+#include <Network/MVPWiFiEsp32.hpp>
 
 template <class Proto, class Flash>
 void MVPApi<Proto, Flash>::addInfo(cJSON* root) {
     cJSON_AddStringToObject(root, "board", MVP_BOARD_TYPE);
     cJSON_AddStringToObject(root, "model", MVP_MODEL_TYPE);
-	cJSON_AddStringToObject(root, "template_id", static_cast<Proto*>(this)->MVP_AUTH);
+	cJSON_AddStringToObject(root, "auth_token", static_cast<Proto*>(this)->MVP_AUTH);
     cJSON_AddStringToObject(root, "firmware_version", MVP_FIRMWARE_VERSION);
     cJSON_AddStringToObject(root, "ssid", WiFi.SSID().c_str());
     cJSON_AddStringToObject(root, "bssid", WiFi.BSSIDstr().c_str());

@@ -1,6 +1,8 @@
 #include <MVP/MVPTimer.hpp>
 #include <Utility/MVPUtility.hpp>
 
+using namespace std;
+
 MVPTimer::MVPTimer()
     : numTimer(0)
 {}
