@@ -1,5 +1,5 @@
-# EoH Platform MVP Library
+# ERa Library
 
-An IoT Market Enabler! It supports WiFi, Ethernet, Zigbee, Modbus, Serial. Works with boards like ESP8266, ESP32, Raspberry Pi...
+An IoT Market Enabler! It supports WiFi, Ethernet, Zigbee, Modbus, Serial. Works with boards like Arduino, ESP8266, ESP32, STM32, Raspberry Pi...
 
 Website: https://eoh.io
