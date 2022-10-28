@@ -56,7 +56,7 @@
 #pragma GCC visibility pop
 #endif
 
-#include <MVP/MVPDefine.hpp>
+#include <ERa/ERaDefine.hpp>
 #include <Utility/cJSON.hpp>
 
 /* define our own boolean type */
@@ -176,9 +176,9 @@ static void * CJSON_CDECL internal_realloc(void *pointer, size_t size)
     return realloc(pointer, size);
 }
 #else
-#define internal_malloc MVP_MALLOC
+#define internal_malloc ERA_MALLOC
 #define internal_free free
-#define internal_realloc MVP_REALLOC
+#define internal_realloc ERA_REALLOC
 #endif
 
 /* strlen of character literals resolved at compile time */

@@ -1,8 +1,8 @@
-#define MVP_AUTH_TOKEN "MVP2706"
+#define ERA_AUTH_TOKEN "ERA2706"
 
 #include <Arduino.h>
-#include <MVP.hpp>
-#include <MVP/MVPTimer.hpp>
+#include <ERa.hpp>
+#include <ERa/ERaTimer.hpp>
 
 const char ssid[] = "YOUR_SSID";
 const char pass[] = "YOUR_PASSWORD";
@@ -11,9 +11,9 @@ void setup() {
     /* Setup debug console */
     Serial.begin(115200);
 
-    mvp.begin(ssid, pass);
+    ERa.begin(ssid, pass);
 }
 
 void loop() {
-    mvp.run();
+    ERa.run();
 }

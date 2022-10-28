@@ -1,33 +1,52 @@
 {
-    "name": "EoH Platform",
-    "version": "0.3.0",
-    "description": "An IoT Market Enabler! It supports WiFi, Ethernet, Zigbee, Modbus, Serial. Works with boards like ESP8266, ESP32, Raspberry Pi...",
-    "keywords": "mvp, esp8266, esp32, http, mqtt, zigbee, modbus, sensors, control, device, smartphone, mobile, app, web, cloud, communication, protocol, iot, wifi, ethernet, serial",
-    "authors":
+  "name": "ERa",
+  "version": "0.4.0",
+  "description": "An IoT Market Enabler! It supports WiFi, Ethernet, Zigbee, Modbus, Serial. Works with boards like Arduino, ESP8266, ESP32, STM32, Raspberry Pi...",
+  "keywords": "ERa, esp8266, esp32, http, mqtt, zigbee, modbus, sensors, control, device, smartphone, mobile, app, web, cloud, communication, protocol, iot, wifi, ethernet, serial",
+  "authors":
+  {
+    "name":  "EoH Ltd",
+    "email": "info@eoh.io",
+    "url":   "https://github.com/eoh-jsc",
+    "maintainer": true
+  },
+  "repository":
+  {
+    "type": "git",
+    "url": "https://github.com/eoh-jsc/era-lib.git"
+  },
+  "homepage": "https://eoh.io",
+  "dependencies": [
     {
-      "name":  "EoH Ltd",
-      "email": "info@eoh.io",
-      "url":   "https://github.com/eoh-jsc",
-      "maintainer": true
+      "owner": "vshymanskyy",
+      "name": "Preferences",
+      "version": "*",
+      "platforms": ["espressif8266"]
     },
-    "repository":
     {
-      "type": "git",
-      "url": "https://github.com/eoh-jsc/mvp-lib.git"
+      "owner": "stm32duino",
+      "name": "STM32duino FreeRTOS",
+      "version": "*",
+      "platforms": ["ststm32"]
     },
-    "homepage": "https://eoh.io",
-    "export": {
-      "exclude": [
-        "linux",
-        "extras",
-        "tests"
-      ]
-    },
-    "build": {
-      "extraScript": "scripts/after_install.py"
-    },
-    "frameworks": "*",
-    "platforms": "*",
-    "examples": "examples/*/*.ino"
-  }
-  
+    {
+      "owner": "vshymanskyy",
+      "name": "TinyGSM",
+      "version": "*",
+      "platforms": ["ststm32"]
+    }
+  ],
+  "export": {
+    "exclude": [
+      "linux",
+      "extras",
+      "tests"
+    ]
+  },
+  "build": {
+    "extraScript": "scripts/after_install.py"
+  },
+  "frameworks": "*",
+  "platforms": "*",
+  "examples": "examples/*/*.ino"
+}

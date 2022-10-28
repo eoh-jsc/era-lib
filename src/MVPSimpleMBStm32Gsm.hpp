@@ -1,8 +1,0 @@
-#ifndef INC_MVP_SIMPLE_MODBUS_STM32_GSM_HPP_
-#define INC_MVP_SIMPLE_MODBUS_STM32_GSM_HPP_
-
-#define MVP_MODBUS
-
-#include <MVPSimpleStm32Gsm.hpp>
-
-#endif /* INC_MVP_SIMPLE_MODBUS_STM32_GSM_HPP_ */

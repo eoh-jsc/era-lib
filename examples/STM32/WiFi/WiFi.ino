@@ -1,9 +1,9 @@
 #define TINY_GSM_MODEM_ESP8266
-#define MVP_AUTH_TOKEN "MVP2706"
+#define ERA_AUTH_TOKEN "ERA2706"
 
 #include <Arduino.h>
-#include <MVPSimpleStm32WiFi.hpp>
-#include <MVP/MVPTimer.hpp>
+#include <ERaSimpleStm32WiFi.hpp>
+#include <ERa/ERaTimer.hpp>
 #include <TinyGsmClient.h>
 
 HardwareSerial SerialWiFi(PC7, PC6);
@@ -19,9 +19,9 @@ void setup() {
     /* Set GSM module baud rate */
     SerialWiFi.begin(115200);
 
-    mvp.begin(modem, ssid, pass);
+    ERa.begin(modem, ssid, pass);
 }
 
 void loop() {
-    mvp.run();
+    ERa.run();
 }

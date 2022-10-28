@@ -7,11 +7,11 @@
 #define TINY_GSM_MODEM_SIM800
 // #define TINY_GSM_MODEM_SIM900
 
-#define MVP_AUTH_TOKEN "MVP2706"
+#define ERA_AUTH_TOKEN "ERA2706"
 
 #include <Arduino.h>
-#include <MVPSimpleStm32Gsm.hpp>
-#include <MVP/MVPTimer.hpp>
+#include <ERaSimpleStm32Gsm.hpp>
+#include <ERa/ERaTimer.hpp>
 #include <TinyGsmClient.h>
 
 HardwareSerial SerialGsm(PC7, PC6);
@@ -44,9 +44,9 @@ void setup() {
     /* Set GSM module baud rate */
     SerialGsm.begin(115200);
 
-    mvp.begin(modem, apn, user, pass, pwrPin);
+    ERa.begin(modem, apn, user, pass, pwrPin);
 }
 
 void loop() {
-    mvp.run();
+    ERa.run();
 }

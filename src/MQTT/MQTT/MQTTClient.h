@@ -3,7 +3,8 @@
 
 // include functional API if possible. remove min and max macros for some
 // platforms as they will be defined again by Arduino later
-#if defined(ESP8266) || (defined ESP32)
+#if defined(ESP8266) || defined(ESP32)
+#include <string>
 #include <functional>
 #define MQTT_HAS_FUNCTIONAL 1
 #elif defined(__has_include)
@@ -14,6 +15,7 @@
 #if defined(max)
 #undef max
 #endif
+#include <string>
 #include <functional>
 #define MQTT_HAS_FUNCTIONAL 1
 #else
@@ -45,10 +47,10 @@ typedef struct {
 
 class MQTTClient;
 
-typedef void (*MQTTClientCallbackSimple)(String &topic, String &payload);
+typedef void (*MQTTClientCallbackSimple)(std::string &topic, std::string &payload);
 typedef void (*MQTTClientCallbackAdvanced)(MQTTClient *client, char topic[], char bytes[], int length);
 #if MQTT_HAS_FUNCTIONAL
-typedef std::function<void(String &topic, String &payload)> MQTTClientCallbackSimpleFunction;
+typedef std::function<void(std::string &topic, std::string &payload)> MQTTClientCallbackSimpleFunction;
 typedef std::function<void(MQTTClient *client, char topic[], char bytes[], int length)>
     MQTTClientCallbackAdvancedFunction;
 #endif
@@ -143,14 +145,14 @@ class MQTTClient {
   }
   bool connect(const char clientID[], const char username[], const char password[], bool skip = false);
 
-  bool publish(const String &topic) { return this->publish(topic.c_str(), ""); }
+  bool publish(const std::string &topic) { return this->publish(topic.c_str(), ""); }
   bool publish(const char topic[]) { return this->publish(topic, ""); }
-  bool publish(const String &topic, const String &payload) { return this->publish(topic.c_str(), payload.c_str()); }
-  bool publish(const String &topic, const String &payload, bool retained, int qos) {
+  bool publish(const std::string &topic, const std::string &payload) { return this->publish(topic.c_str(), payload.c_str()); }
+  bool publish(const std::string &topic, const std::string &payload, bool retained, int qos) {
     return this->publish(topic.c_str(), payload.c_str(), retained, qos);
   }
-  bool publish(const char topic[], const String &payload) { return this->publish(topic, payload.c_str()); }
-  bool publish(const char topic[], const String &payload, bool retained, int qos) {
+  bool publish(const char topic[], const std::string &payload) { return this->publish(topic, payload.c_str()); }
+  bool publish(const char topic[], const std::string &payload, bool retained, int qos) {
     return this->publish(topic, payload.c_str(), retained, qos);
   }
   bool publish(const char topic[], const char payload[]) {
@@ -164,12 +166,12 @@ class MQTTClient {
   }
   bool publish(const char topic[], const char payload[], int length, bool retained, int qos);
 
-  bool subscribe(const String &topic) { return this->subscribe(topic.c_str()); }
-  bool subscribe(const String &topic, int qos) { return this->subscribe(topic.c_str(), qos); }
+  bool subscribe(const std::string &topic) { return this->subscribe(topic.c_str()); }
+  bool subscribe(const std::string &topic, int qos) { return this->subscribe(topic.c_str(), qos); }
   bool subscribe(const char topic[]) { return this->subscribe(topic, 0); }
   bool subscribe(const char topic[], int qos);
 
-  bool unsubscribe(const String &topic) { return this->unsubscribe(topic.c_str()); }
+  bool unsubscribe(const std::string &topic) { return this->unsubscribe(topic.c_str()); }
   bool unsubscribe(const char topic[]);
 
   bool loop();

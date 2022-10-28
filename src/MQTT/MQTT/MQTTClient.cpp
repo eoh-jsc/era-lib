@@ -138,12 +138,12 @@ static void MQTTClientHandler(lwmqtt_client_t * /*client*/, void *ref, lwmqtt_st
 #endif
 
   // create topic string
-  String str_topic = String(terminated_topic);
+  std::string str_topic(terminated_topic);
 
   // create payload string
-  String str_payload;
+  std::string str_payload;
   if (message.payload != nullptr) {
-    str_payload = String((const char *)message.payload);
+    str_payload.append((const char *)message.payload);
   }
 
   // call simple callback
