@@ -21,19 +21,22 @@
       "owner": "vshymanskyy",
       "name": "Preferences",
       "version": "*",
-      "platforms": ["espressif8266"]
+      "platforms": ["espressif8266"],
+      "frameworks": ["arduino"]
     },
     {
       "owner": "stm32duino",
       "name": "STM32duino FreeRTOS",
       "version": "*",
-      "platforms": ["ststm32"]
+      "platforms": ["ststm32"],
+      "frameworks": ["arduino"]
     },
     {
       "owner": "vshymanskyy",
       "name": "TinyGSM",
       "version": "*",
-      "platforms": ["ststm32"]
+      "platforms": ["ststm32"],
+      "frameworks": ["arduino"]
     }
   ],
   "export": {
