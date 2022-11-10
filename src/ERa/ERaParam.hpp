@@ -17,6 +17,14 @@ public:
 		, valuedouble(0)
 		, valuestring(nullptr)
 	{}
+	template <typename T>
+	ERaParam(T value)
+		: valueint(0)
+		, valuedouble(0)
+		, valuestring(nullptr)
+	{
+		add(value);
+	}
 	~ERaParam()
 	{}
 
@@ -30,11 +38,13 @@ public:
 		add(value);
 	}
 
-	operator bool() const { return this->valueint; }
-	operator int() const { return this->valueint; }
+	template <typename T>
+	operator T() const { return static_cast<T>(this->valueint); }
+
 	operator float() const { return static_cast<float>(this->valuedouble); }
 	operator double() const { return this->valuedouble; }
 	operator char*() const { return this->valuestring; }
+	operator const char*() const { return this->valuestring; }
 
 protected:
 private:

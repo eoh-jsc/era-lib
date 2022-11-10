@@ -19,7 +19,7 @@ bool ERaModbus<Api>::waitResponse(ModbusConfig_t& param, uint8_t* modbusData) {
         this->failWrite = 0;
     }
 
-    unsigned long prevMillis = ERaMillis();
+    unsigned long startMillis = ERaMillis();
 
     do
     {
@@ -35,7 +35,7 @@ bool ERaModbus<Api>::waitResponse(ModbusConfig_t& param, uint8_t* modbusData) {
             }
         }
         ERaDelay(10);
-    } while (ERaRemainingTime(prevMillis, MAX_TIMEOUT_MODBUS));
+    } while (ERaRemainingTime(startMillis, MAX_TIMEOUT_MODBUS));
     return false;
 }
 

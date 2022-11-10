@@ -27,11 +27,11 @@ with open(join(cwd, './platformio.ini'), 'r+') as f:
     if find(lines, "espressif32") == True:
         replace(f, lines, "monitor_speed", "monitor_speed = 115200\n");
         replace(f, lines, "upload_speed", "upload_speed = 921600\n");
-        replace(f, lines, "upload_port", "upload_port = COM6\n");
+        replace(f, lines, "upload_port", "; upload_port = *\n");
         replace(f, lines, "board_build.partitions", "board_build.partitions = .pio/libdeps/$PIOENV/ERa/era_partition.csv\n");
     elif find(lines, "espressif8266") == True:
         replace(f, lines, "monitor_speed", "monitor_speed = 115200\n");
         replace(f, lines, "upload_speed", "upload_speed = 921600\n");
-        replace(f, lines, "upload_port", "upload_port = COM6\n");
+        replace(f, lines, "upload_port", "; upload_port = *\n");
     elif find(lines, "ststm32") == True:
         replace(f, lines, "upload_protocol", "upload_protocol = stlink\n");

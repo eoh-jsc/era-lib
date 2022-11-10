@@ -720,10 +720,10 @@ void ERaPnP::connectWiFi(const char* ssid, const char* pass) {
     } else {
         WiFi.begin(ssid);
     }
-    unsigned long prevMillis = ERaMillis();
+    unsigned long startMillis = ERaMillis();
     while (WiFi.status() != WL_CONNECTED) {
         ERaDelay(500);
-        if (!ERaRemainingTime(prevMillis, WIFI_NET_CONNECT_TIMEOUT)) {
+        if (!ERaRemainingTime(startMillis, WIFI_NET_CONNECT_TIMEOUT)) {
             WiFi.disconnect();
             return;
         }

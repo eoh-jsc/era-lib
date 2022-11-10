@@ -9,14 +9,6 @@ class ERaReport
 public:
 	typedef std::function<void(void*)> ReportCallback_p_t;
 
-	typedef struct __ReportData_t {
-		float prevValue;
-		float value;
-		unsigned int configId;
-        uint8_t pin;
-        uint8_t pinMode;
-	} ReportData_t;
-
 	typedef struct __ScaleData_t {
 		bool enable;
 		float min;
@@ -24,6 +16,15 @@ public:
 		float rawMin;
 		float rawMax;
 	} ScaleData_t;
+
+	typedef struct __ReportData_t {
+		float prevValue;
+		float value;
+		ERaReport::ScaleData_t scale;
+		unsigned int configId;
+        uint8_t pin;
+        uint8_t pinMode;
+	} ReportData_t;
 
 private:
 	typedef std::function<void(void)> ReportCallback_t;
@@ -38,7 +39,6 @@ private:
 		ERaReport::ReportCallback_p_t callback_p;
 		void* param;
 		ERaReport::ReportData_t data;
-		ERaReport::ScaleData_t scale;
 		bool enable;
 		bool updated;
 		bool called;

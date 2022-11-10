@@ -24,7 +24,7 @@ void ERaGuardLock(ERaMutex_t& mutex) ERA_WEAK;
 void ERaGuardUnlock(ERaMutex_t& mutex) ERA_WEAK;
 
 char* ERaStrdup(const char* str);
-MillisTime_t ERaRemainingTime(MillisTime_t prevMillis, MillisTime_t timeout);
+MillisTime_t ERaRemainingTime(MillisTime_t startMillis, MillisTime_t timeout);
 
 template<typename T>
 const T& ERaMin(const T& a, const T& b) {

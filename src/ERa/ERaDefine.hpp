@@ -29,9 +29,6 @@
 
 #define ERA_FORCE_UNUSED(x)     ((void)(x))
 
-#define TOGGLE                  0x2
-#define PWM                     0x27
-
 #if defined(ARDUINO) && defined(ESP32)
     #define SEND_UART(huart, command, length)   while(uart_write_bytes(huart, reinterpret_cast<char*>(command), length) < 0)
     #define WAIT_SEND_UART_DONE(huart)          uart_wait_tx_done(huart, 5000)

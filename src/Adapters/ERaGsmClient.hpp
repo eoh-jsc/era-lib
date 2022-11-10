@@ -29,10 +29,10 @@ public:
     {}
 
     bool connectNetwork(const char* apn, const char* user, const char* pass) {
-        unsigned long prevMillis = ERaMillis();
+        unsigned long startMillis = ERaMillis();
         while (!this->connectGPRS(apn, user, pass)) {
             ERaDelay(500);
-            if (!ERaRemainingTime(prevMillis, GSM_NET_CONNECT_TIMEOUT)) {
+            if (!ERaRemainingTime(startMillis, GSM_NET_CONNECT_TIMEOUT)) {
                 return false;
             }
         }

@@ -349,7 +349,6 @@ bool ERaProto<Transp, Flash>::sendData(ERaRsp_t& rsp) {
 		case Base::ERaTypeRspT::ERA_RESPONSE_DIGITAL_PIN:
 		case Base::ERaTypeRspT::ERA_RESPONSE_ANALOG_PIN:
 		case Base::ERaTypeRspT::ERA_RESPONSE_PWM_PIN:
-		case Base::ERaTypeRspT::ERA_RESPONSE_INTERRUPT_PIN:
 			return this->sendPinData(rsp);
 		case Base::ERaTypeRspT::ERA_RESPONSE_CONFIG_ID:
 			return this->sendConfigIdData(rsp);
@@ -366,6 +365,41 @@ bool ERaProto<Transp, Flash>::sendData(ERaRsp_t& rsp) {
 
 template <class Transp, class Flash>
 bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
+	int pMode = this->eraPinReport.findPinMode((int)rsp.id);
+	switch (rsp.type) {
+		case Base::ERaTypeRspT::ERA_RESPONSE_VIRTUAL_PIN:
+			if (pMode == VIRTUAL) {
+				rsp.id = this->eraPinReport.findConfigId((int)rsp.id);
+				sendConfigIdData(rsp);
+				return true;
+			}
+			break;
+		case Base::ERaTypeRspT::ERA_RESPONSE_DIGITAL_PIN:
+			if ((pMode == OUTPUT) || (pMode == INPUT) ||
+				(pMode == INPUT_PULLUP) || (pMode == INPUT_PULLDOWN)) {
+				rsp.id = this->eraPinReport.findConfigId((int)rsp.id);
+				sendConfigIdData(rsp);
+				return true;
+			}
+			break;
+		case Base::ERaTypeRspT::ERA_RESPONSE_ANALOG_PIN:
+			if (pMode == ANALOG) {
+				rsp.id = this->eraPinReport.findConfigId((int)rsp.id);
+				sendConfigIdData(rsp);
+				return true;
+			}
+			break;
+		case Base::ERaTypeRspT::ERA_RESPONSE_PWM_PIN:
+			if (pMode == PWM) {
+				rsp.id = this->eraPinReport.findConfigId((int)rsp.id);
+				sendConfigIdData(rsp);
+				return true;
+			}
+			break;
+		default:
+			break;
+	}
+
 	char name[50] {0};
 	bool status {false};
 	char* payload = nullptr;
@@ -388,9 +422,6 @@ bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
 		break;
 	case Base::ERaTypeRspT::ERA_RESPONSE_PWM_PIN:
 		FormatString(name, "pwm_pin_%d", (int)rsp.id);
-		break;
-	case Base::ERaTypeRspT::ERA_RESPONSE_INTERRUPT_PIN:
-		FormatString(name, "interrupt_pin_%d", (int)rsp.id);
 		break;
 	default:
 		cJSON_Delete(root);

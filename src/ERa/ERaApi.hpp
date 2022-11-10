@@ -42,11 +42,10 @@ protected:
 		ERA_RESPONSE_DIGITAL_PIN = 1,
 		ERA_RESPONSE_ANALOG_PIN = 2,
 		ERA_RESPONSE_PWM_PIN = 3,
-		ERA_RESPONSE_INTERRUPT_PIN = 4,
-		ERA_RESPONSE_CONFIG_ID = 5,
-		ERA_RESPONSE_CONFIG_ID_MULTI = 6,
-		ERA_RESPONSE_MODBUS_DATA = 7,
-		ERA_RESPONSE_ZIGBEE_DATA = 8
+		ERA_RESPONSE_CONFIG_ID = 4,
+		ERA_RESPONSE_CONFIG_ID_MULTI = 5,
+		ERA_RESPONSE_MODBUS_DATA = 6,
+		ERA_RESPONSE_ZIGBEE_DATA = 7
 	};
 
 private:
@@ -98,14 +97,6 @@ public:
 	void pwmWrite(int pin, int value) {
 		ERaRsp_t rsp;
 		rsp.type = ERaTypeRspT::ERA_RESPONSE_PWM_PIN;
-		rsp.id = pin;
-		rsp.param = value;
-		static_cast<Proto*>(this)->sendCommand(rsp);
-	}
-
-	void interruptWrite(int pin, bool value) {
-		ERaRsp_t rsp;
-		rsp.type = ERaTypeRspT::ERA_RESPONSE_INTERRUPT_PIN;
 		rsp.id = pin;
 		rsp.param = value;
 		static_cast<Proto*>(this)->sendCommand(rsp);
@@ -169,17 +160,17 @@ protected:
 		}
 	}
 
-	void callERaPinWriteHandler(uint8_t pin, const ERaParam& param) {
+	void callERaPinWriteHandler(uint8_t pin, const ERaParam& param, const ERaParam& raw) {
 		ERaPinWriteHandler handle = getERaPinWriteHandler(pin);
 		if (handle != nullptr) {
-			handle(pin, param);
+			handle(pin, param, raw);
 		}
 	}
 
-	void callERaPinReadHandler(uint8_t pin, const ERaParam& param) {
+	void callERaPinReadHandler(uint8_t pin, const ERaParam& param, const ERaParam& raw) {
 		ERaPinReadHandler handle = getERaPinReadHandler(pin);
 		if (handle != nullptr) {
-			handle(pin, param);
+			handle(pin, param, raw);
 		}
 	}
 
@@ -234,10 +225,14 @@ private:
 		if (rp == nullptr) {
 			return;
 		}
-		ERaParam param;
-		param = rp->value;
+		ERaParam raw(rp->value);
+		ERaParam param(rp->value);
+		if (rp->scale.enable) {
+			raw = ERaMapNumberRange(rp->value, rp->scale.min, rp->scale.max,
+											rp->scale.rawMin, rp->scale.rawMax);
+		}
 		this->configIdWrite(rp->configId, rp->value);
-		this->callERaPinReadHandler(rp->pin, param);
+		this->callERaPinReadHandler(rp->pin, param, raw);
 	}
 
 	ReportPinCallback_t reportPinCb = [=](void* args) {

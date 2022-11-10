@@ -50,6 +50,8 @@
     #define ERA_BUFFER_SIZE         1024
 #endif
 
+#define ERA_MAX_GPIO_PIN            200
+
 #define LIMIT_CONNECT_BROKER_MQTT   10
 
 #define INFO_BOARD                  "board"

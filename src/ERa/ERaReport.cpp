@@ -197,11 +197,11 @@ void ERaReport::updateReport(unsigned int id, float value) {
 		return;
 	}
 
-	if (this->report[id].scale.enable) {
-		value = ERaMapNumberRange(value, this->report[id].scale.rawMin,
-									this->report[id].scale.rawMax,
-									this->report[id].scale.min,
-									this->report[id].scale.max);
+	if (this->report[id].data.scale.enable) {
+		value = ERaMapNumberRange(value, this->report[id].data.scale.rawMin,
+									this->report[id].data.scale.rawMax,
+									this->report[id].data.scale.min,
+									this->report[id].data.scale.max);
 	}
 	this->report[id].data.value = value;
     if (!this->report[id].updated) {
@@ -275,15 +275,15 @@ void ERaReport::setScale(unsigned int id, float min, float max, float rawMin, fl
 	}
 	if ((max == 0) || (rawMax == 0) ||
 		(max <= min) || (rawMax <= rawMin)) {
-		this->report[id].scale.enable = false;
+		this->report[id].data.scale.enable = false;
 		return;
 	}
 
-	this->report[id].scale.enable = true;
-	this->report[id].scale.min = min;
-	this->report[id].scale.max = max;
-	this->report[id].scale.rawMin = rawMin;
-	this->report[id].scale.rawMax = rawMax;
+	this->report[id].data.scale.enable = true;
+	this->report[id].data.scale.min = min;
+	this->report[id].data.scale.max = max;
+	this->report[id].data.scale.rawMin = rawMin;
+	this->report[id].data.scale.rawMax = rawMax;
 	this->report[id].reportableChange = ERaMapNumberRange(this->report[id].reportableChange,
 										0.0f, rawMax - rawMin, 0.0f, max - min);
 }
@@ -293,7 +293,7 @@ ERaReport::ScaleData_t* ERaReport::getScale(unsigned int id) {
 		return nullptr;
 	}
 
-	return &this->report[id].scale;
+	return &this->report[id].data.scale;
 }
 
 void ERaReport::enableAll() {

@@ -58,8 +58,8 @@ public:
     int read(uint8_t *buf, size_t size) override {
         uint8_t* begin = buf;
         uint8_t* end = buf + size;
-        unsigned long prevMillis = ERaMillis();
-        while ((begin < end) && (ERaMillis() - prevMillis < this->timeout)) {
+        unsigned long startMillis = ERaMillis();
+        while ((begin < end) && (ERaMillis() - startMillis < this->timeout)) {
             int c = this->stream->read();
             if (c < 0) {
                 continue;

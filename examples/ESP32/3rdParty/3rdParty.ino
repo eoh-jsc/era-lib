@@ -1,3 +1,15 @@
+/*************************************************************
+  Download latest ERa library here:
+    https://github.com/eoh-jsc/era-lib/releases/latest
+    https://www.arduino.cc/reference/en/libraries/era
+    https://registry.platformio.org/libraries/eoh-ltd/ERa/installation
+
+    ERa website:                https://e-ra.io
+    ERa blog:                   https://iotasia.org
+    ERa forum:                  https://forum.eoh.io
+    Follow us:                  https://www.fb.com/EoHPlatform
+ *************************************************************/
+
 #include <Arduino.h>
 #include <ERa.hpp>
 #include <ERa/ERaTimer.hpp>
@@ -5,6 +17,7 @@
 #define LED_PIN        33
 #define BUTTON_PIN     32
 
+// You should get Auth Token in the ERa App or ERa Dashboard
 const char auth[] = "ERA2706";
 const char ssid[] = "WIFI_SSID";
 const char pass[] = "WIFI_PASS";

@@ -6,6 +6,11 @@
 #include <Utility/ERaUtility.hpp>
 #include <ERa/ERaReport.hpp>
 
+#define TOGGLE                  0x2
+#define PWM                     0x27
+#define VIRTUAL                 0xFF
+#define ERA_VIRTUAL             (int)(-1)
+
 template <class Report>
 class ERaPin
 {
@@ -18,6 +23,7 @@ class ERaPin
         unsigned long delay;
         ERaPin::ReadPinHandler_t readPin;
         typename Report::iterator report;
+		unsigned int configId;
         uint8_t pin;
         uint8_t pinMode;
         uint8_t channel; /* for pwm mode */
@@ -144,6 +150,10 @@ public:
         return iterator(this, this->setupPinReport(_pin, pinMode, readPin, interval, minInterval, maxInterval, minChange, cb, configId));
     }
 
+    iterator setPinVirtual(uint8_t _pin, unsigned int configId) {
+        return iterator(this, this->setupPinVirtual(_pin, configId));
+    }
+
     iterator setPWMPinReport(uint8_t _pin, uint8_t pinMode, uint8_t channel, ERaPin::ReadPinHandler_t readPin,
                         unsigned long interval, unsigned long minInterval, unsigned long maxInterval, float minChange,
                         typename Report::ReportCallback_p_t cb) {
@@ -173,6 +183,7 @@ public:
 	void disableAll();
     int findPinMode(uint8_t _pin);
     int findChannelPWM(uint8_t _pin);
+    int findConfigId(uint8_t _pin);
 	int findChannelFree();
 
 protected:
@@ -182,6 +193,7 @@ private:
     int setupPinReport(uint8_t _pin, uint8_t pinMode, ERaPin::ReadPinHandler_t readPin, unsigned long interval,
                         unsigned long minInterval, unsigned long maxInterval, float minChange, typename Report::ReportCallback_p_t cb,
                         unsigned int configId);
+    int setupPinVirtual(uint8_t _pin, unsigned int configId);
     int setupPWMPinReport(uint8_t _pin, uint8_t pinMode, uint8_t channel, ERaPin::ReadPinHandler_t readPin,
                         unsigned long interval, unsigned long minInterval, unsigned long maxInterval, float minChange,
                         typename Report::ReportCallback_p_t cb);
@@ -193,7 +205,9 @@ private:
     int findPinOfChannel(uint8_t channel);
 
 	bool isValidPin(unsigned int id) {
-		return ((this->pin[id].readPin != nullptr) || (this->pin[id].pinMode == PWM));
+		return ((this->pin[id].readPin != nullptr) ||
+                (this->pin[id].pinMode == PWM) ||
+                (this->pin[id].pinMode == VIRTUAL));
 	}
 
     Report& report;
@@ -208,6 +222,9 @@ void ERaPin<Report>::run() {
 		if (!this->isValidPin(i)) {
 			continue;
 		}
+        if (this->pin[i].pinMode == VIRTUAL) {
+            continue;
+        }
 		if (currentMillis - this->pin[i].prevMillis < this->pin[i].delay) {
 			continue;
 		}
@@ -258,6 +275,7 @@ int ERaPin<Report>::setupPinReport(uint8_t _pin, uint8_t pinMode, ERaPin::ReadPi
     else {
         this->pin[id].report = this->report.setReporting(minInterval, maxInterval, minChange, cb, _pin, pinMode);
     }
+    this->pin[id].configId = 0;
     this->pin[id].pin = _pin;
     this->pin[id].pinMode = pinMode;
     this->pin[id].channel = 0;
@@ -297,8 +315,34 @@ int ERaPin<Report>::setupPinReport(uint8_t _pin, uint8_t pinMode, ERaPin::ReadPi
     else {
         this->pin[id].report = this->report.setReporting(minInterval, maxInterval, minChange, cb, _pin, pinMode, configId);
     }
+    this->pin[id].configId = configId;
     this->pin[id].pin = _pin;
     this->pin[id].pinMode = pinMode;
+    this->pin[id].channel = 0;
+    this->pin[id].enable = true;
+	this->numPin++;
+	return id;
+}
+
+template <class Report>
+int ERaPin<Report>::setupPinVirtual(uint8_t _pin, unsigned int configId) {
+    int id = this->findPinExist(_pin);
+    if (id < 0) {
+        id = this->findPinFree();
+    }
+	if (id < 0) {
+		return -1;
+	}
+    
+    this->pin[id].prevMillis = ERaMillis();
+    this->pin[id].delay = 0;
+    this->pin[id].readPin = nullptr;
+    if (this->pin[id].report) {
+        this->pin[id].report.deleteReport();
+    }
+    this->pin[id].configId = configId;
+    this->pin[id].pin = _pin;
+    this->pin[id].pinMode = VIRTUAL;
     this->pin[id].channel = 0;
     this->pin[id].enable = true;
 	this->numPin++;
@@ -336,6 +380,7 @@ int ERaPin<Report>::setupPWMPinReport(uint8_t _pin, uint8_t pinMode, uint8_t cha
     else {
         this->pin[id].report = this->report.setReporting(minInterval, maxInterval, minChange, cb, _pin, pinMode);
     }
+    this->pin[id].configId = 0;
     this->pin[id].pin = _pin;
     this->pin[id].pinMode = pinMode;
     this->pin[id].channel = channel;
@@ -375,6 +420,7 @@ int ERaPin<Report>::setupPWMPinReport(uint8_t _pin, uint8_t pinMode, uint8_t cha
     else {
         this->pin[id].report = this->report.setReporting(minInterval, maxInterval, minChange, cb, _pin, pinMode, configId);
     }
+    this->pin[id].configId = configId;
     this->pin[id].pin = _pin;
     this->pin[id].pinMode = pinMode;
     this->pin[id].channel = channel;
@@ -600,6 +646,19 @@ int ERaPin<Report>::findChannelPWM(uint8_t _pin) {
             if (this->pin[i].pin == _pin &&
                 this->pin[i].pinMode == PWM) {
                 return this->pin[i].channel;
+            }
+        }
+    }
+    
+    return -1;
+}
+
+template <class Report>
+int ERaPin<Report>::findConfigId(uint8_t _pin) {
+    for (int i = 0; i < MAX_PINS; ++i) {
+        if (this->isValidPin(i)) {
+            if (this->pin[i].pin == _pin) {
+                return this->pin[i].configId;
             }
         }
     }

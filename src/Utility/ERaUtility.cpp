@@ -288,8 +288,8 @@ char* ERaStrdup(const char* str) {
     return copy;
 }
 
-MillisTime_t ERaRemainingTime(MillisTime_t prevMillis, MillisTime_t timeout) {
-    int32_t remainingTime = prevMillis + timeout - ERaMillis();
+MillisTime_t ERaRemainingTime(MillisTime_t startMillis, MillisTime_t timeout) {
+    int32_t remainingTime = startMillis + timeout - ERaMillis();
     return (remainingTime > 0 ? remainingTime : 0);
 }
 

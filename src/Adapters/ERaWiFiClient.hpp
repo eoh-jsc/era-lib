@@ -29,10 +29,10 @@ public:
     {}
 
     bool connectNetwork(const char* ssid, const char* pass) {
-        unsigned long prevMillis = ERaMillis();
+        unsigned long startMillis = ERaMillis();
         while (!this->connectWiFi(ssid, pass)) {
             ERaDelay(500);
-            if (!ERaRemainingTime(prevMillis, WIFI_NET_CONNECT_TIMEOUT)) {
+            if (!ERaRemainingTime(startMillis, WIFI_NET_CONNECT_TIMEOUT)) {
                 return false;
             }
         }

@@ -1,3 +1,15 @@
+/*************************************************************
+  Download latest ERa library here:
+    https://github.com/eoh-jsc/era-lib/releases/latest
+    https://www.arduino.cc/reference/en/libraries/era
+    https://registry.platformio.org/libraries/eoh-ltd/ERa/installation
+
+    ERa website:                https://e-ra.io
+    ERa blog:                   https://iotasia.org
+    ERa forum:                  https://forum.eoh.io
+    Follow us:                  https://www.fb.com/EoHPlatform
+ *************************************************************/
+
 /* Select your apn */
 #define APN_VIETTEL
 // #define APN_VINAPHONE
@@ -7,6 +19,7 @@
 #define TINY_GSM_MODEM_SIM800
 // #define TINY_GSM_MODEM_SIM900
 
+// You should get Auth Token in the ERa App or ERa Dashboard
 #define ERA_AUTH_TOKEN "ERA2706"
 
 #include <Arduino.h>

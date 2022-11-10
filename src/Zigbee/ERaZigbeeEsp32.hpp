@@ -66,7 +66,7 @@ ResultT ERaToZigbee<Zigbee>::waitResponse(Response_t rspWait, void* value) {
     }
     uint8_t cmdStatus = ZnpCommandStatusT::INVALID_PARAM;
 
-    unsigned long prevMillis = ERaMillis();
+    unsigned long startMillis = ERaMillis();
 
     do {
         if (osMessageQueueGet((QueueHandle_t)(static_cast<Zigbee*>(this)->messageHandle), &event, NULL, 1) == osOK) {
@@ -91,7 +91,7 @@ ResultT ERaToZigbee<Zigbee>::waitResponse(Response_t rspWait, void* value) {
             }
         }
         ERaDelay(10);
-    } while (ERaRemainingTime(prevMillis, rspWait.timeout));
+    } while (ERaRemainingTime(startMillis, rspWait.timeout));
     return ((cmdStatus != ZnpCommandStatusT::INVALID_PARAM) ? static_cast<ResultT>(cmdStatus) : ResultT::RESULT_TIMEOUT);
 }
 

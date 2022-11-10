@@ -27,6 +27,9 @@ void ERaApi<Proto, Flash>::handleReadPin(cJSON* root) {
 		}
 		item = cJSON_GetObjectItem(current, "value_type");
 		if (cJSON_IsString(item)) {
+#if defined(FORCE_VIRTUAL_PIN)
+			this->eraPinReport.setPinVirtual(pin.pin, pin.configId);
+#else
 			if (ERaStrCmp(item->valuestring, "boolean")) {
 				pin.pinMode = this->getPinMode(current, INPUT);
 				this->getPinConfig(current, pin);
@@ -44,6 +47,10 @@ void ERaApi<Proto, Flash>::handleReadPin(cJSON* root) {
 												pin.report.minInterval, pin.report.maxInterval, pin.report.reportableChange, this->reportPinConfigCb,
 												pin.configId).setScale(pin.scale.min, pin.scale.max, pin.scale.rawMin, pin.scale.rawMax);
 			}
+			else if (ERaStrCmp(item->valuestring, "virtual")) {
+				this->eraPinReport.setPinVirtual(pin.pin, pin.configId);
+			}
+#endif
 		}
 	}
 }
@@ -72,6 +79,9 @@ void ERaApi<Proto, Flash>::handleWritePin(cJSON* root) {
 		}
 		item = cJSON_GetObjectItem(current, "value_type");
 		if (cJSON_IsString(item)) {
+#if defined(FORCE_VIRTUAL_PIN)
+			this->eraPinReport.setPinVirtual(pin.pin, pin.configId);
+#else
 			if (ERaStrCmp(item->valuestring, "boolean")) {
 				pin.pinMode = this->getPinMode(current, OUTPUT);
 				this->getPinConfig(current, pin);
@@ -89,6 +99,10 @@ void ERaApi<Proto, Flash>::handleWritePin(cJSON* root) {
                                                 pin.report.minInterval, pin.report.maxInterval, pin.report.reportableChange, this->reportPinConfigCb,
                                                 pin.configId).setScale(pin.scale.min, pin.scale.max, pin.scale.rawMin, pin.scale.rawMax);
 			}
+			else if (ERaStrCmp(item->valuestring, "virtual")) {
+				this->eraPinReport.setPinVirtual(pin.pin, pin.configId);
+			}
+#endif
 		}
 	}
 }
@@ -111,16 +125,22 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const std::vector<std::strin
 	uint8_t pin = atoi(str.c_str());
 	cJSON* item = cJSON_GetObjectItem(root, "value");
 	if (cJSON_IsNumber(item)) {
-		ERaParam param;
+		ERaParam raw;
+		ERaParam param(item->valuedouble);
 		float value = item->valuedouble;
+		int pMode = this->eraPinReport.findPinMode(pin);
 		const ERaReport::ScaleData_t* scale = this->eraPinReport.findScale(pin);
 		if ((scale != nullptr) && scale->enable) {
 			value = ERaMapNumberRange((float)item->valuedouble, scale->min, scale->max, scale->rawMin, scale->rawMax);
 		}
-		switch (this->eraPinReport.findPinMode(pin)) {
+		switch (pMode) {
 			case PWM:
 			case ANALOG:
                 ::analogWrite(pin, value);
+				break;
+			case VIRTUAL:
+			case ERA_VIRTUAL:
+				this->callERaWriteHandler(pin, param);
 				break;
 			default:
 				pinMode(pin, OUTPUT);
@@ -132,8 +152,10 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const std::vector<std::strin
 				}
 				break;
 		}
-		param = item->valuedouble;
-		this->callERaPinWriteHandler(pin, param);
+		if (pMode != ERA_VIRTUAL) {
+			raw = value;
+			this->callERaPinWriteHandler(pin, param, raw);
+		}
 	}
 
 	cJSON_Delete(root);
@@ -205,7 +227,7 @@ void ERaApi<Proto, Flash>::handlePinRequest(const std::vector<std::string>& arra
             continue;
         }
         if (getGPIOPin(current, "digital_pin", pin.pin)) {
-			ERaParam param;
+			ERaParam param(current->valueint);
             pinMode(pin.pin, OUTPUT);
 			if (current->valueint == TOGGLE) {
 				::digitalWrite(pin.pin, !digitalRead(pin.pin));
@@ -213,9 +235,8 @@ void ERaApi<Proto, Flash>::handlePinRequest(const std::vector<std::string>& arra
 			else {
             	::digitalWrite(pin.pin, current->valueint ? HIGH : LOW);
 			}
-			param = current->valueint;
             this->digitalWrite(pin.pin, digitalRead(pin.pin));
-			this->callERaPinWriteHandler(pin.pin, param);
+			this->callERaPinWriteHandler(pin.pin, param, param);
             continue;
         }
 		if (getGPIOPin(current, "pwm_pin", pin.pin)) {
