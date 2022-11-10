@@ -8,13 +8,13 @@ Step 3: Install WiringPi library:
     http://wiringpi.com/download-and-install/
 
 Step 4: Download library and build ERa:
-    ```bash
-    $ git clone https://github.com/eoh-jsc/era-lib.git
-    $ cd era-lib/linux
-    $ make clean all target=raspberry
-    ```
+```bash
+$ git clone https://github.com/eoh-jsc/era-lib.git
+$ cd era-lib/linux
+$ make clean all target=raspberry
+```
 
 Step 5: Run ERa with your token:
-    ```bash
-    $ sudo ./era --token=YourAuthToken
-    ```
+```bash
+$ sudo ./era --token=YourAuthToken
+```
