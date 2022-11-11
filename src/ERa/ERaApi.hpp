@@ -352,10 +352,10 @@ uint8_t ERaApi<Proto, Flash>::getPinMode(const cJSON* const root, const uint8_t 
 	else if (ERaStrCmp(item->valuestring, "input")) {
 		mode = INPUT;
 	}
-	else if (ERaStrCmp(item->valuestring, "pullup")) {
+	else if (ERaStrCmp(item->valuestring, "pull_up")) {
 		mode = INPUT_PULLUP;
 	}
-	else if (ERaStrCmp(item->valuestring, "pulldown")) {
+	else if (ERaStrCmp(item->valuestring, "pull_down")) {
 		mode = INPUT_PULLDOWN;
 	}
 	else if (ERaStrCmp(item->valuestring, "analog")) {
