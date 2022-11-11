@@ -12,21 +12,27 @@
 #if defined(ERA_MODBUS)
     template <class Api>
     void ERaModbus<Api>::initModbusTask() {
+    #if !defined(ERA_NO_RTOS)
         xTaskCreate(this->modbusTask, "modbusTask", 1024 * 5, this, 17, (::TaskHandle_t*)(&this->_modbusTask));
         xTaskCreate(this->writeModbusTask, "writeModbusTask", 1024 * 5, this, 17, (::TaskHandle_t*)(&this->_writeModbusTask));
         vTaskStartScheduler();
+    #endif
     }
 
     template <class Api>
     void ERaModbus<Api>::modbusTask(void* args) {
+    #if !defined(ERA_NO_RTOS)
         ERaModbus* modbus = (ERaModbus*)args;
         modbus->run(true);
+    #endif
     }
 
     template <class Api>
     void ERaModbus<Api>::writeModbusTask(void* args) {
+    #if !defined(ERA_NO_RTOS)
         ERaModbus* modbus = (ERaModbus*)args;
         modbus->run(false);
+    #endif
     }
 #endif
 
@@ -39,6 +45,11 @@ void ERaProto<Transp, Flash>::initERaTask() {
 
 template <class Transp, class Flash>
 void ERaProto<Transp, Flash>::runERaTask() {
+#if defined(ERA_MODBUS) &&  \
+    defined(ERA_NO_RTOS)
+	Base::ERaModbus::runRead();
+	Base::ERaModbus::runWrite();
+#endif
 }
 
 template <class Proto, class Flash>

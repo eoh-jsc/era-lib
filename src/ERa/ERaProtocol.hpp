@@ -71,9 +71,8 @@ public:
     }
 
 	void run() {
-        this->transp.run();
+		Base::run();
 		this->runERaTask();
-		Base::eraPinReport.run();
 	}
 
 	void processRequest(std::string& topic, const std::string& payload) {

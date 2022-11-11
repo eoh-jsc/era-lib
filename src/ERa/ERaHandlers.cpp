@@ -25,6 +25,7 @@ void eraWidgetPinRead(uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param,
 
 ERA_CONNECTED() __attribute__((weak, alias("eraNoHandler")));
 ERA_DISCONNECTED() __attribute__((weak, alias("eraNoHandler")));
+ERA_WAITING() __attribute__((weak, alias("eraNoHandler")));
 
 ERA_ON_WRITE( 0);
 ERA_ON_WRITE( 1);

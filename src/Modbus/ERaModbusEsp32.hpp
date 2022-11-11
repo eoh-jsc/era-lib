@@ -58,6 +58,12 @@ bool ERaModbus<Api>::waitResponse(ModbusConfig_t& param, uint8_t* modbusData) {
                     break;
             }
         }
+#if defined(ERA_NO_RTOS)
+        else {
+            eraOnWaiting();
+            static_cast<Api*>(this)->run();
+        }
+#endif
         ERaDelay(10);
     } while (ERaRemainingTime(startMillis, MAX_TIMEOUT_MODBUS));
     return false;

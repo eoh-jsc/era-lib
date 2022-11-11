@@ -15,9 +15,8 @@
 #define ERA_AUTH_TOKEN "ERA2706"
 
 #include <Arduino.h>
-#include <ERaSimpleStm32WiFi.hpp>
+#include <ERa.hpp>
 #include <ERa/ERaTimer.hpp>
-#include <TinyGsmClient.h>
 
 HardwareSerial SerialWiFi(PC7, PC6);
 TinyGsm modem(SerialWiFi);

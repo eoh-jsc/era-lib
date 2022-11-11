@@ -1,5 +1,5 @@
-#ifndef INC_ERA_MODBUS_ESP32_HPP_
-#define INC_ERA_MODBUS_ESP32_HPP_
+#ifndef INC_ERA_MODBUS_WIRING_PI_HPP_
+#define INC_ERA_MODBUS_WIRING_PI_HPP_
 
 #include <wiringSerial.h>
 #include <Modbus/ERaModbus.hpp>
@@ -24,6 +24,10 @@ bool ERaModbus<Api>::waitResponse(ModbusConfig_t& param, uint8_t* modbusData) {
     do
     {
         if (!serialDataAvail(this->fd)) {
+#if defined(ERA_NO_RTOS)
+            eraOnWaiting();
+            static_cast<Api*>(this)->run();
+#endif
             ERaDelay(10);
             continue;
         }
@@ -49,4 +53,4 @@ void ERaModbus<Api>::sendCommand(const vector<uint8_t>& data) {
     serialFlush(this->fd);
 }
 
-#endif /* INC_ERA_MODBUS_ESP32_HPP_ */
+#endif /* INC_ERA_MODBUS_WIRING_PI_HPP_ */

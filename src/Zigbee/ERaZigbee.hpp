@@ -59,6 +59,12 @@ public:
         , timerJoin()
         , device(InfoDevice_t::instance)
         , coordinator(InfoCoordinator_t::instance)
+        , _zigbeeTask(NULL)
+        , _controlZigbeeTask(NULL)
+        , _responseZigbeeTask(NULL)
+#if defined(LINUX)
+        , fd(0)
+#endif
     {}
     ~ERaZigbee()
     {}
@@ -70,6 +76,7 @@ protected:
         this->timerPing = this->timer.setInterval(PING_INTERVAL, [=](void* args) {
             this->zigbeeTimerCallback(args);
         }, &this->timerPing);
+        this->initZigbeeTask();
     }
 
     void run() {
@@ -139,6 +146,18 @@ protected:
         }
     }
 
+    void initZigbeeTask();
+
+#if defined(LINUX)
+    static void* zigbeeTask(void* args);
+    static void* controlZigbeeTask(void* args);
+    static void* responseZigbeeTask(void* args);
+#else
+    static void zigbeeTask(void* args);
+    static void controlZigbeeTask(void* args);
+    static void responseZigbeeTask(void* args);
+#endif
+
 private:
     void configZigbee();
     void initZigbee(bool format, bool invalid = false);
@@ -204,6 +223,12 @@ private:
 
     InfoDevice_t*& device;
     InfoCoordinator_t*& coordinator;
+    TaskHandle_t _zigbeeTask;
+    TaskHandle_t _controlZigbeeTask;
+    TaskHandle_t _responseZigbeeTask;
+#if defined(LINUX)
+    int fd;
+#endif
 };
 
 template <class Api>

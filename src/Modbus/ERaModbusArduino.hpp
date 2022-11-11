@@ -21,10 +21,13 @@ bool ERaModbus<Api>::waitResponse(ModbusConfig_t& param, uint8_t* modbusData) {
 
     unsigned long startMillis = ERaMillis();
 
-    do
-    {
+    do {
         length = Serial1.available();
         if (!length) {
+#if defined(ERA_NO_RTOS)
+            eraOnWaiting();
+            static_cast<Api*>(this)->run();
+#endif
             ERaDelay(10);
             continue;
         }

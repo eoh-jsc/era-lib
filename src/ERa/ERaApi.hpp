@@ -153,6 +153,11 @@ protected:
 	void handlePinRequest(const std::vector<std::string>& arrayTopic, const std::string& payload);
 	void processArduinoPinRequest(const std::vector<std::string>& arrayTopic, const std::string& payload);
 
+	void run() {
+        static_cast<Proto*>(this)->transp.run();
+		this->eraPinReport.run();
+	}
+
 	void callERaWriteHandler(uint8_t pin, const ERaParam& param) {
 		ERaWriteHandler handle = getERaWriteHandler(pin);
 		if (handle != nullptr) {

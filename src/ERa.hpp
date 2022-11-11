@@ -6,7 +6,13 @@
 #elif defined(ARDUINO) && defined(ESP8266)
     #include <ERaSimpleEsp8266.hpp>
 #elif defined(ARDUINO) && defined(STM32F4xx)
-    #include <ERaSimpleStm32Gsm.hpp>
+    #define ERA_NO_RTOS
+    #include <TinyGsmClient.h>
+    #if defined(TINY_GSM_MODEM_HAS_WIFI)
+        #include <ERaSimpleMBStm32WiFi.hpp>
+    #else
+        #include <ERaSimpleMBStm32Gsm.hpp>
+    #endif
 #else
     #warning "Please include a board-specific header file!"
 #endif

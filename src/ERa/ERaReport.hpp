@@ -1,6 +1,7 @@
 #ifndef INC_ERA_REPORT_HPP_
 #define INC_ERA_REPORT_HPP_
 
+#include <stdint.h>
 #include <functional>
 #include <ERa/ERaDefine.hpp>
 

@@ -1,6 +1,8 @@
 #ifndef INC_ERA_SIMPLE_ESP8266_HPP_
 #define INC_ERA_SIMPLE_ESP8266_HPP_
 
+#define ERA_NO_RTOS
+
 #include <PnP/ERaPnPEsp8266.hpp>
 
 #if defined(ERA_MODBUS)

@@ -1,18 +1,16 @@
-#ifndef INC_ERA_ZIGBEE_STM32_HPP_
-#define INC_ERA_ZIGBEE_STM32_HPP_
+#ifndef INC_ERA_ZIGBEE_WIRING_PI_HPP_
+#define INC_ERA_ZIGBEE_WIRING_PI_HPP_
 
 #include <Zigbee/ERaZigbee.hpp>
 
-HardwareSerial SerialZB(PB11, PB10);
-
 template <class Api>
 void ERaZigbee<Api>::configZigbee() {
-    SerialZB.begin(9600);
+    this->fd = serialOpen("/dev/ttyAMA0", 115200);
 }
 
 template <class Api>
 void ERaZigbee<Api>::handleZigbeeData() {
-    int length = SerialZB.available();
+    int length = serialDataAvail(this->fd);
     if (!length) {
         return;
     }
@@ -20,7 +18,7 @@ void ERaZigbee<Api>::handleZigbeeData() {
     uint8_t receive[length < 256 ? 256 : length] {0};
     uint8_t payload[length < 256 ? 256 : length] {0};
     do {
-        receive[position] = SerialZB.read();
+        receive[position] = serialGetchar(this->fd);
     } while (++position < length);
     this->processZigbee(receive, length, (length < 256 ? 256 : length), payload, 0, 0);
 }
@@ -49,7 +47,7 @@ ResultT ERaToZigbee<Zigbee>::waitResponse(Response_t rspWait, void* value) {
     unsigned long startMillis = ERaMillis();
 
     do {
-        int length = SerialZB.available();
+        int length = serialDataAvail(static_cast<Zigbee*>(this)->fd);
         if (!length) {
             ERaDelay(10);
             continue;
@@ -58,7 +56,7 @@ ResultT ERaToZigbee<Zigbee>::waitResponse(Response_t rspWait, void* value) {
         uint8_t receive[length < 256 ? 256 : length] {0};
         uint8_t payload[length < 256 ? 256 : length] {0};
         do {
-            receive[position] = SerialZB.read();
+            receive[position] = serialGetchar(static_cast<Zigbee*>(this)->fd);
         } while (++position < length);
         if (static_cast<Zigbee*>(this)->processZigbee(receive, length, (length < 256 ? 256 : length), payload, 0, 0, &cmdStatus, &rspWait, value)) {
             return ((cmdStatus != ZnpCommandStatusT::INVALID_PARAM) ? static_cast<ResultT>(cmdStatus) : ResultT::RESULT_SUCCESSFUL);
@@ -70,14 +68,16 @@ ResultT ERaToZigbee<Zigbee>::waitResponse(Response_t rspWait, void* value) {
 
 template <class Zigbee>
 void ERaToZigbee<Zigbee>::sendByte(uint8_t byte) {
-    SerialZB.write(byte, 1);
-    SerialZB.flush();
+    serialPutchar(static_cast<Zigbee*>(this)->fd, byte);
+    serialFlush(static_cast<Zigbee*>(this)->fd);
 }
 
 template <class Zigbee>
 void ERaToZigbee<Zigbee>::sendCommand(const vector<uint8_t>& data) {
-    SerialZB.write(data.data(), data.size());
-    SerialZB.flush();
+    for (const auto& var : data) {
+        serialPutchar(static_cast<Zigbee*>(this)->fd, var);
+    }
+    serialFlush(static_cast<Zigbee*>(this)->fd);
 }
 
-#endif /* INC_ERA_ZIGBEE_STM32_HPP_ */
+#endif /* INC_ERA_ZIGBEE_WIRING_PI_HPP_ */

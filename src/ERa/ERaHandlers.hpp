@@ -108,6 +108,7 @@
 
 #define ERA_CONNECTED()         void eraOnConnected()
 #define ERA_DISCONNECTED()      void eraOnDisconnected()
+#define ERA_WAITING()			void eraOnWaiting()
 
 #define ERA_WRITE_2(Pin)        void eraWidgetWrite ## Pin (uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param)
 #define ERA_WRITE(Pin)          ERA_WRITE_2(Pin)
@@ -126,6 +127,7 @@ void eraNoHandler();
 
 ERA_CONNECTED();
 ERA_DISCONNECTED();
+ERA_WAITING();
 
 ERA_WRITE(  );
 ERA_WRITE( 0);
