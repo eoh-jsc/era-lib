@@ -1,5 +1,6 @@
 #include <string.h>
 #include "MQTTLinux.hpp"
+#include <ERa/ERaDefine.hpp>
 
 static void MQTTLinuxClientHandler(lwmqtt_client_t * /*client*/, void *ref, lwmqtt_string_t topic,
                               lwmqtt_message_t message) {
@@ -63,8 +64,8 @@ static void MQTTLinuxClientHandler(lwmqtt_client_t * /*client*/, void *ref, lwmq
 MQTTLinuxClient::MQTTLinuxClient(int bufSize) {
   // allocate buffers
   this->bufSize = (size_t)bufSize;
-  this->readBuf = (uint8_t *)malloc((size_t)bufSize + 1);
-  this->writeBuf = (uint8_t *)malloc((size_t)bufSize);
+  this->readBuf = (uint8_t *)ERA_MALLOC((size_t)bufSize + 1);
+  this->writeBuf = (uint8_t *)ERA_MALLOC((size_t)bufSize);
 }
 
 MQTTLinuxClient::~MQTTLinuxClient() {
@@ -158,7 +159,7 @@ void MQTTLinuxClient::setWill(const char topic[], const char payload[], bool ret
   this->clearWill();
 
   // allocate will
-  this->will = (lwmqtt_will_t *)malloc(sizeof(lwmqtt_will_t));
+  this->will = (lwmqtt_will_t *)ERA_MALLOC(sizeof(lwmqtt_will_t));
   memset(this->will, 0, sizeof(lwmqtt_will_t));
 
   // set topic

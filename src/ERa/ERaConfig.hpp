@@ -42,16 +42,6 @@
     #define ERA_MQTT_PASSWORD       ""
 #endif
 
-#if !defined(ERA_MQTT_BUFFER_SIZE)
-    #define ERA_MQTT_BUFFER_SIZE    1024
-#endif
-
-#if !defined(ERA_BUFFER_SIZE)
-    #define ERA_BUFFER_SIZE         1024
-#endif
-
-#define ERA_MAX_GPIO_PIN            200
-
 #define LIMIT_CONNECT_BROKER_MQTT   10
 
 #define INFO_BOARD                  "board"
@@ -70,5 +60,7 @@
 #define INFO_MB_IS_BATTERY          "is_battery"
 #define INFO_MB_RSSI                "rssi"
 #define INFO_MB_WIFI_USING          "wifi_is_using"
+
+#include <ERa/ERaDetect.hpp>
 
 #endif /* INC_ERA_CONFIG_HPP_ */

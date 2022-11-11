@@ -54,6 +54,7 @@ public:
 
     void begin(const char* auth) {
 		this->ERA_AUTH = auth;
+		ClearArray(this->ERA_TOPIC);
         FormatString(this->ERA_TOPIC, "%s/%s", BASE_TOPIC, auth);
         this->transp.setAuth(auth);
 		this->transp.setTopic(this->ERA_TOPIC);
@@ -142,11 +143,11 @@ template <class Transp, class Flash>
 void ERaProto<Transp, Flash>::printBanner() {
 	ERA_LOG(TAG, ERA_NEWLINE
 		"  ____  ____         	 " ERA_NEWLINE
-		" / _   / _  \\       	 " ERA_NEWLINE
-		"/____ / / __/ ___    	 " ERA_NEWLINE
+		" / _   / _  \\  _     	 " ERA_NEWLINE
+		"/____ / / __/ /.\\    	 " ERA_NEWLINE
 		" / _ /  _ \\  / _ \\ 	 " ERA_NEWLINE
 		"/___/__//_/`/_/ \\_\\	 " ERA_NEWLINE
-		"                 (v" ERA_FIRMWARE_VERSION ")"
+		"                (v" ERA_FIRMWARE_VERSION ")"
 		ERA_NEWLINE
 		"Connection successful!!!" ERA_NEWLINE
 	);

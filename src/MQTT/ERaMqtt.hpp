@@ -5,8 +5,8 @@
 #include <Utility/ERaUtility.hpp>
 #include <Utility/ERacJSON.hpp>
 #include <ERa/ERaDefine.hpp>
-#include <ERa/ERaApi.hpp>
 #include <ERa/ERaConfig.hpp>
+#include <ERa/ERaApi.hpp>
 #include "MQTT/MQTT.h"
 
 using namespace std;
@@ -36,7 +36,6 @@ public:
         , port(ERA_MQTT_PORT)
         , username(ERA_MQTT_USERNAME)
         , password(ERA_MQTT_PASSWORD)
-        , bufferSize(ERA_BUFFER_SIZE)
         , mutex(NULL)
     {
         memset(this->willTopic, 0, sizeof(this->willTopic));
@@ -47,7 +46,6 @@ public:
         , port(ERA_MQTT_PORT)
         , username(ERA_MQTT_USERNAME)
         , password(ERA_MQTT_PASSWORD)
-        , bufferSize(ERA_BUFFER_SIZE)
         , mutex(NULL)
     {
         this->setClient(&_client);
@@ -65,10 +63,6 @@ public:
     void run();
     bool publishData(const char* topic, const char* payload);
 
-    void setBufferSize(int size) {
-        this->bufferSize = size;
-    }
-
     void setTopic(const char* topic) {
         this->eraTopic = topic;
     }
@@ -84,6 +78,7 @@ public:
 protected:
 private:
     bool subscribeTopic(const char* baseTopic, const char* topic, QoST qos);
+    bool publishLWT();
 
     Client* client;
     MQTT mqtt{ERA_MQTT_BUFFER_SIZE};
@@ -93,7 +88,6 @@ private:
     const char* password;
     const char* eraTopic;
     const char* eraAuth;
-    int bufferSize;
     char willTopic[MAX_TOPIC_LENGTH];
     ERaMutex_t mutex;
 };
@@ -128,7 +122,7 @@ bool ERaMqtt<Client, MQTT>::connect() {
     subscribeTopic(this->eraTopic, "/pin/down", QoST::QOS0);
     subscribeTopic(this->eraTopic, "/down", QoST::QOS0);
 
-    this->mqtt.publish(this->willTopic, ONLINE_MESSAGE, LWT_RETAINED, LWT_QOS);
+    this->publishLWT();
 
     return true;
 }
@@ -143,10 +137,19 @@ void ERaMqtt<Client, MQTT>::run() {
 
 template <class Client, class MQTT>
 bool ERaMqtt<Client, MQTT>::subscribeTopic(const char* baseTopic, const char* topic, QoST qos) {
+    bool status {false};
     char topicName[MAX_TOPIC_LENGTH] {0};
 	FormatString(topicName, baseTopic);
 	FormatString(topicName, topic);
-    return this->mqtt.subscribe(topicName, qos);
+
+    ERaGuardLock(this->mutex);
+    if (this->mqtt.connected()) {
+        ERA_LOG(TAG, "Subscribe: %s, QoS: %d", topicName, qos);
+        status = this->mqtt.subscribe(topicName, qos);
+    }
+    ERaGuardUnlock(this->mutex);
+
+    return status;
 }
 
 template <class Client, class MQTT>
@@ -157,6 +160,20 @@ bool ERaMqtt<Client, MQTT>::publishData(const char* topic, const char* payload) 
     if (this->mqtt.connected()) {
         ERA_LOG(TAG, "Publish %s: %s", topic, payload);
         status = this->mqtt.publish(topic, payload);
+    }
+    ERaGuardUnlock(this->mutex);
+
+    return status;
+}
+
+template <class Client, class MQTT>
+bool ERaMqtt<Client, MQTT>::publishLWT() {
+    bool status {false};
+
+    ERaGuardLock(this->mutex);
+    if (this->mqtt.connected()) {
+        ERA_LOG(TAG, "Publish %s: %s", this->willTopic, ONLINE_MESSAGE);
+        status = this->mqtt.publish(this->willTopic, ONLINE_MESSAGE, LWT_RETAINED, LWT_QOS);
     }
     ERaGuardUnlock(this->mutex);
 

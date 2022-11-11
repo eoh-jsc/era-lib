@@ -1,6 +1,7 @@
 #ifndef INC_ERA_HANDLERS_HPP_
 #define INC_ERA_HANDLERS_HPP_
 
+#include <ERa/ERaDetect.hpp>
 #include <ERa/ERaParam.hpp>
 
 #define ERA0  0

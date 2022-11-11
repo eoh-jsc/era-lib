@@ -1,4 +1,5 @@
 #include "MQTTClient.h"
+#include <ERa/ERaDefine.hpp>
 
 inline void lwmqtt_arduino_timer_set(void *ref, uint32_t timeout) {
   // cast timer reference
@@ -161,8 +162,8 @@ static void MQTTClientHandler(lwmqtt_client_t * /*client*/, void *ref, lwmqtt_st
 MQTTClient::MQTTClient(int bufSize) {
   // allocate buffers
   this->bufSize = (size_t)bufSize;
-  this->readBuf = (uint8_t *)malloc((size_t)bufSize + 1);
-  this->writeBuf = (uint8_t *)malloc((size_t)bufSize);
+  this->readBuf = (uint8_t *)ERA_MALLOC((size_t)bufSize + 1);
+  this->writeBuf = (uint8_t *)ERA_MALLOC((size_t)bufSize);
 }
 
 MQTTClient::~MQTTClient() {
@@ -270,7 +271,7 @@ void MQTTClient::setWill(const char topic[], const char payload[], bool retained
   this->clearWill();
 
   // allocate will
-  this->will = (lwmqtt_will_t *)malloc(sizeof(lwmqtt_will_t));
+  this->will = (lwmqtt_will_t *)ERA_MALLOC(sizeof(lwmqtt_will_t));
   memset(this->will, 0, sizeof(lwmqtt_will_t));
 
   // set topic
