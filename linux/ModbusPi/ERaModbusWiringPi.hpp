@@ -6,11 +6,17 @@
 
 template <class Api>
 void ERaModbus<Api>::configModbus() {
-    this->fd = serialOpen("/dev/ttyAMA0", 9600);
+    if (this->fd < 0) {
+        this->fd = serialOpen("/dev/ttyAMA0", 9600);
+    }
 }
 
 template <class Api>
 bool ERaModbus<Api>::waitResponse(ModbusConfig_t& param, uint8_t* modbusData) {
+    if (this->fd < 0) {
+        return false;
+    }
+
     int length {0};
 
     if (this->total++ > 99) {
@@ -27,14 +33,20 @@ bool ERaModbus<Api>::waitResponse(ModbusConfig_t& param, uint8_t* modbusData) {
 #if defined(ERA_NO_RTOS)
             eraOnWaiting();
             static_cast<Api*>(this)->run();
+            if (ModbusState::is(ModbusStateT::STATE_MB_PARSE)) {
+                break;
+            }
 #endif
             ERaDelay(10);
             continue;
         }
-        length = 0;
+
         do {
             modbusData[length] = serialGetchar(this->fd);
         } while ((++length < 256) && serialDataAvail(this->fd));
+
+        ERaLogHex("MB <<", modbusData, length);
+
         if (modbusData[0] == param.addr && modbusData[1] == param.func) {
             if (this->checkReceiveCRC(param, modbusData)) {
                 return true;
@@ -47,6 +59,11 @@ bool ERaModbus<Api>::waitResponse(ModbusConfig_t& param, uint8_t* modbusData) {
 
 template <class Api>
 void ERaModbus<Api>::sendCommand(const vector<uint8_t>& data) {
+    if (this->fd < 0) {
+        return;
+    }
+
+    ERaLogHex("MB >>", data.data(), data.size());
     for (const auto& var : data) {
         serialPutchar(this->fd, var);
     }

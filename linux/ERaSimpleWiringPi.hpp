@@ -3,6 +3,7 @@
 
 #include <ERaLinuxClient.hpp>
 #include <ModbusPi/ERaModbusWiringPi.hpp>
+#include <ZigbeePi/ERaZigbeeWiringPi.hpp>
 
 #if defined(ERA_MODBUS)
     template <class Api>
@@ -26,10 +27,35 @@
     }
 #endif
 
+#if defined(ERA_ZIGBEE)
+    template <class Api>
+    void ERaZigbee<Api>::initZigbeeTask() {
+
+    }
+
+    template <class Api>
+    void* ERaZigbee<Api>::zigbeeTask(void* args) {
+
+    }
+
+    template <class Api>
+    void* ERaZigbee<Api>::controlZigbeeTask(void* args) {
+        
+    }
+
+    template <class Api>
+    void* ERaZigbee<Api>::responseZigbeeTask(void* args) {
+        
+    }
+#endif
+
 template <class Transp, class Flash>
 void ERaProto<Transp, Flash>::initERaTask() {
 #if defined(ERA_MODBUS)
 	Base::ERaModbus::begin();
+#endif
+#if defined(ERA_ZIGBEE)
+	Base::ERaZigbee::begin();
 #endif
 }
 

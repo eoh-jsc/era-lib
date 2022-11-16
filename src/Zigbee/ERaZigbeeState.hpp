@@ -27,4 +27,6 @@ namespace ZigbeeState {
     }
 };
 
+using namespace std;
+
 #endif /* INC_ERA_ZIGBEE_STATE_HPP_ */

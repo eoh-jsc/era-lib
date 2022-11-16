@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <cmath>
+#include <algorithm>
 #include <ERa/ERaParam.hpp>
 #include <ERa/ERaTimer.hpp>
 #include <Utility/ERaUtility.hpp>
@@ -36,15 +37,18 @@ class ERaZigbee
 	const OptionsAFT Options = OptionsAFT::DEFAULT_OP;
 	const uint8_t Radius = 2 * BEACON_MAX_DEPTH; // 0x1E
 
+    const uint16_t DefaultPanId = 0x2706;
     const ZBChannelT DefaultChannel = ZBChannelT::CHANNEL_11;
     const ZBChannelT ChannelList[16] = {ZBChannelT::CHANNEL_11, ZBChannelT::CHANNEL_12, ZBChannelT::CHANNEL_13, ZBChannelT::CHANNEL_14, ZBChannelT::CHANNEL_15,
                                         ZBChannelT::CHANNEL_16, ZBChannelT::CHANNEL_17, ZBChannelT::CHANNEL_18, ZBChannelT::CHANNEL_19, ZBChannelT::CHANNEL_20,
                                         ZBChannelT::CHANNEL_21, ZBChannelT::CHANNEL_22, ZBChannelT::CHANNEL_23, ZBChannelT::CHANNEL_24, ZBChannelT::CHANNEL_25,
                                         ZBChannelT::CHANNEL_26};
+    const uint8_t DefaultExtPanId[8] = {0xDD, 0xDD, 0xDD, 0xDD, 0xDD, 0xDD, 0xDD, 0xDD};
     const uint8_t TcLinkKey[32] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
                             0x5a, 0x69, 0x67, 0x42, 0x65, 0x65, 0x41, 0x6c, 0x6c, 0x69, 0x61, 0x6e, 0x63, 0x65, 0x30, 0x39,
                             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}; /* ZigBeeAlliance09 */
 
+    typedef void* TaskHandle_t;
     typedef void* QueueMessage_t;
     friend class ERaToZigbee< ERaZigbee<Api> >;
     friend class ERaFromZigbee< ERaZigbee<Api> >;
@@ -53,25 +57,38 @@ class ERaZigbee
 
 public:
     ERaZigbee()
-        : stream(NULL)
-        , messageHandle(NULL)
+        : messageHandle(NULL)
         , timerPing()
         , timerJoin()
         , device(InfoDevice_t::instance)
         , coordinator(InfoCoordinator_t::instance)
+#if defined(ARDUINO)
+        , stream(NULL)
+#elif defined(LINUX)
+        , fd(-1)
+#endif
         , _zigbeeTask(NULL)
         , _controlZigbeeTask(NULL)
         , _responseZigbeeTask(NULL)
-#if defined(LINUX)
-        , fd(0)
-#endif
     {}
     ~ERaZigbee()
     {}
 
+#if defined(ARDUINO)
+    void setZigbeeStream(Stream& _stream) {
+        this->stream = &_stream;
+    }
+#elif defined(LINUX)
+    void setZigbeeStream(int _fd) {
+        this->fd = _fd;
+    }
+#endif
+
 protected:
     void begin() { 
         this->configZigbee();
+        InfoDevice_t::getInstance();
+        InfoCoordinator_t::getInstance();
         this->initZigbee(false);
         this->timerPing = this->timer.setInterval(PING_INTERVAL, [=](void* args) {
             this->zigbeeTimerCallback(args);
@@ -213,7 +230,6 @@ private:
 	}
 
 	ERaQueue<ZigbeeAction_t, 10> queue;
-    Stream* stream;
     QueueMessage_t messageHandle;
 
     ERaTimer timer;
@@ -223,12 +239,14 @@ private:
 
     InfoDevice_t*& device;
     InfoCoordinator_t*& coordinator;
+#if defined(ARDUINO)
+    Stream* stream;
+#elif defined(LINUX)
+    int fd;
+#endif
     TaskHandle_t _zigbeeTask;
     TaskHandle_t _controlZigbeeTask;
     TaskHandle_t _responseZigbeeTask;
-#if defined(LINUX)
-    int fd;
-#endif
 };
 
 template <class Api>
@@ -313,6 +331,7 @@ bool ERaZigbee<Api>::processZigbee(uint8_t* buffer,
         }
         if (index == zStackLength + this->MinMessageLength) {
             if (payload[this->PositionSOF] == this->SOF) {
+                ERaLogHex("ZB <<", payload, index);
                 rsp = FromZigbee::fromZigbee(payload, value);
                 if (rsp.type != TypeT::ERR) {
                     if (rspWait == nullptr) {

@@ -10,6 +10,10 @@
     Follow us:                  https://www.fb.com/EoHPlatform
  *************************************************************/
 
+// Enable debug console
+// Set CORE_DEBUG_LEVEL = 3 first
+// #define ERA_DEBUG
+
 // You should get Auth Token in the ERa App or ERa Dashboard
 #define ERA_AUTH_TOKEN "ERA2706"
 // Force using virtual pin
@@ -27,16 +31,14 @@ const char ssid[] = "YOUR_SSID";
 const char pass[] = "YOUR_PASSWORD";
 
 /* This function is called every time the Virtual Pin 0 state change */
-ERA_WRITE(ERA0)
-{
+ERA_WRITE(ERA0) {
     /* Get value from Virtual Pin 0 and write Pin 32 */
     uint8_t value = (int)param;
     digitalWrite(YOU_RELAY_PIN, value ? HIGH : LOW);
 }
 
 /* This function send uptime every second to Virtual Pin 1 */
-void timerEvent()
-{
+void timerEvent() {
     ERa.virtualWrite(ERA1, millis() / 1000L);
 }
 

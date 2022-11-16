@@ -5,6 +5,7 @@
 #include <cmath>
 #include <ERa/ERaParam.hpp>
 #include <Utility/ERaUtility.hpp>
+#include <Modbus/ERaModbusState.hpp>
 #include <Modbus/ERaParse.hpp>
 #include "ERaModbusConfig.hpp"
 #include "ERaDefineModbus.hpp"
@@ -40,17 +41,26 @@ public:
         , failWrite(0)
 #if defined(ARDUINO)
         , stream(NULL)
+#elif defined(LINUX)
+        , fd(-1)
 #endif
         , _modbusTask(NULL)
         , _writeModbusTask(NULL)
         , messageHandle(NULL)
         , mutex(NULL)
-#if defined(LINUX)
-        , fd(0)
-#endif
     {}
     ~ERaModbus()
     {}
+
+#if defined(ARDUINO)
+    void setModbusStream(Stream& _stream) {
+        this->stream = &_stream;
+    }
+#elif defined(LINUX)
+    void setModbusStream(int _fd) {
+        this->fd = _fd;
+    }
+#endif
 
 protected:
     void begin() {
@@ -72,6 +82,7 @@ protected:
     }
 
     void runRead() {
+        ModbusState::set(ModbusStateT::STATE_MB_RUNNING);
         if (!ERaRemainingTime(this->modbusConfig.modbusDelay.prevMillis, this->modbusConfig.modbusDelay.delay)) {
             this->modbusConfig.modbusDelay.prevMillis = ERaMillis();
             this->readModbusConfig();
@@ -102,6 +113,7 @@ protected:
             this->modbusConfig.parseConfig(ptr);
             static_cast<Api*>(this)->writeToFlash(FILENAME_CONFIG, ptr);
         }
+        ModbusState::set(ModbusStateT::STATE_MB_PARSE);
     }
 
     void removeConfigFromFlash() {
@@ -154,6 +166,7 @@ private:
 
     void configModbus();
     void readModbusConfig();
+    void delayModbus(const int address);
     ModbusConfigAlias_t* getModbusAlias(const char* key);
     ModbusConfig_t* getModbusConfig(int id);
     bool actionModbus(const char* key);
@@ -191,14 +204,13 @@ private:
     int failWrite;
 #if defined(ARDUINO)
     Stream* stream;
+#elif defined(LINUX)
+    int fd;
 #endif
     TaskHandle_t _modbusTask;
     TaskHandle_t _writeModbusTask;
     QueueMessage_t messageHandle;
     ERaMutex_t mutex;
-#if defined(LINUX)
-    int fd;
-#endif
 };
 
 template <class Api>
@@ -210,9 +222,37 @@ void ERaModbus<Api>::readModbusConfig() {
     for (size_t i = 0; i < this->modbusConfig.readConfigCount; ++i) {
         ModbusConfig_t& param = *this->modbusConfig.modbusConfigParam[i];
         this->sendModbusRead(param);
+        this->delayModbus(param.addr);
+#if defined(ERA_NO_RTOS)
+        if (ModbusState::is(ModbusStateT::STATE_MB_PARSE)) {
+            return;
+        }
+#endif
     }
     this->dataBuff.add_multi("fail_read", this->failRead, "fail_write", this->failWrite, "total", this->total);
     static_cast<Api*>(this)->modbusDataWrite(&this->dataBuff);
+}
+
+template <class Api>
+void ERaModbus<Api>::delayModbus(const int address) {
+    unsigned long delayMs {10L};
+    unsigned long startMillis = ERaMillis();
+    for (ERaList<SensorDelay_t>::iterator* it = this->modbusConfig.sensorDelay.begin(); it != nullptr; it = it->getNext()) {
+        if (it->get().address == address) {
+            delayMs = it->get().delay;
+            break;
+        }
+    }
+    do {
+#if defined(ERA_NO_RTOS)
+        eraOnWaiting();
+        static_cast<Api*>(this)->run();
+        if (ModbusState::is(ModbusStateT::STATE_MB_PARSE)) {
+            break;
+        }
+#endif
+        ERaDelay(10);
+    } while (ERaRemainingTime(startMillis, delayMs));
 }
 
 template <class Api>
@@ -316,6 +356,11 @@ void ERaModbus<Api>::sendModbusRead(ModbusConfig_t& param) {
         this->dataBuff.add("1");
     }
     else {
+#if defined(ERA_NO_RTOS)
+        if (ModbusState::is(ModbusStateT::STATE_MB_PARSE)) {
+            return;
+        }
+#endif
         switch (param.func) {
             case ModbusFunctionT::READ_COIL_STATUS:
             case ModbusFunctionT::READ_INPUT_STATUS:

@@ -10,6 +10,10 @@
     Follow us:                  https://www.fb.com/EoHPlatform
  *************************************************************/
 
+// Enable debug console
+// Set CORE_DEBUG_LEVEL = 3 first
+// #define ERA_DEBUG
+
 #include <Arduino.h>
 #include <ERa.hpp>
 #include <ERa/ERaTimer.hpp>

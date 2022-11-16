@@ -22,12 +22,16 @@ void ERaZigbee<Api>::startZigbee(bool& format, bool& invalid) {
     ToZigbee::CommandZigbee::panIdReadOSALZstack(10);
     ToZigbee::CommandZigbee::getExtAddrSystem(1);
 
-    if (CheckInfoCoordinator_t(this->coordinator)) {
+    if (!CheckInfoCoordinator_t(this->coordinator)) {
         format = true;
     }
 
     if (format) {
         // parse network option update soon
+        this->coordinator->address.panId = ERaRandomNumber(0x1000, 0xF000);
+        if (this->coordinator->address.panId < 0x1000 || this->coordinator->address.panId > 0xF000) {
+            this->coordinator->address.panId = this->DefaultPanId;
+        }
         if (invalid) {
             index = ERaRandomNumber(0, 15);
             if (index > 15) {
@@ -36,6 +40,13 @@ void ERaZigbee<Api>::startZigbee(bool& format, bool& invalid) {
             else {
                 this->coordinator->channel = this->ChannelList[index];
             }
+        }
+        ToZigbee::CommandZigbee::getDeviceInfoZstack(10);
+        if (IsZeroArray(this->coordinator->address.addr.ieeeAddr)) {
+            CopyArray(this->coordinator->extAddr, this->coordinator->address.addr.ieeeAddr);
+        }
+        if (!IsZeroArray(this->coordinator->address.addr.ieeeAddr)) {
+            CopyArray(this->coordinator->address.addr.ieeeAddr, this->coordinator->extPanId);
         }
 
         ToZigbee::CommandZigbee::requestResetZstack(ResetTypeT::RST_SOFT, 1);
@@ -124,9 +135,11 @@ void ERaZigbee<Api>::startZigbee(bool& format, bool& invalid) {
 
     ToZigbee::CommandZigbee::requestInfoNwkExtZstack(1);
 
-    ZigbeeState::set(ZigbeeStateT::STATE_ZB_INIT_SUCCESSFUL);
-
     this->permitJoinDuration(this->coordinator->permitJoin.address, 0x00);
+
+    this->createInfoCoordinator();
+
+    ZigbeeState::set(ZigbeeStateT::STATE_ZB_INIT_SUCCESSFUL);
 }
 
 template <class Api>

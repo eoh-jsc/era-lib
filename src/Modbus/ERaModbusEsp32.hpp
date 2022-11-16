@@ -42,6 +42,7 @@ bool ERaModbus<Api>::waitResponse(ModbusConfig_t& param, uint8_t* modbusData) {
                     if (length > 256) {
                         break;
                     }
+                    ERaLogHex("MB <<", modbusData, length);
                     if (modbusData[0] != param.addr || modbusData[1] != param.func) {
                         break;
                     }
@@ -62,6 +63,9 @@ bool ERaModbus<Api>::waitResponse(ModbusConfig_t& param, uint8_t* modbusData) {
         else {
             eraOnWaiting();
             static_cast<Api*>(this)->run();
+            if (ModbusState::is(ModbusStateT::STATE_MB_PARSE)) {
+                break;
+            }
         }
 #endif
         ERaDelay(10);
@@ -72,6 +76,7 @@ bool ERaModbus<Api>::waitResponse(ModbusConfig_t& param, uint8_t* modbusData) {
 template <class Api>
 void ERaModbus<Api>::sendCommand(const vector<uint8_t>& data) {
     ERaGuardLock(this->mutex);
+    ERaLogHex("MB >>", data.data(), data.size());
     SEND_UART(UART_MODBUS, const_cast<uint8_t*>(data.data()), data.size());
     WAIT_SEND_UART_DONE(UART_MODBUS);
     FLUSH_UART(UART_MODBUS);

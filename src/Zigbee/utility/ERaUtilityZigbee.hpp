@@ -1,7 +1,7 @@
 #ifndef INC_ERA_UTILITY_ZIGBEE_HPP_
 #define INC_ERA_UTILITY_ZIGBEE_HPP_
 
-#include <zigbee/ERaZigBee.hpp>
+#include <Zigbee/ERaZigbee.hpp>
 
 #define MAX_TOPIC_LENGTH 100
 

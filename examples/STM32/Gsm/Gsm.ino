@@ -10,6 +10,10 @@
     Follow us:                  https://www.fb.com/EoHPlatform
  *************************************************************/
 
+// Enable debug console
+// #define ERA_DEBUG
+// #define ERA_SERIAL Serial
+
 /* Select your apn */
 #define APN_VIETTEL
 // #define APN_VINAPHONE
@@ -28,6 +32,8 @@
 
 HardwareSerial SerialGsm(PC7, PC6);
 TinyGsm modem(SerialGsm);
+
+ERaTimer timer;
 
 #if defined(APN_VIETTEL)
     const char apn[] = "v-internet";
@@ -49,6 +55,11 @@ TinyGsm modem(SerialGsm);
 
 const int pwrPin = PB7;
 
+/* This function print uptime every second */
+void timerEvent() {
+    ERA_LOG("Timer", "Uptime: %d\n", ERaMillis() / 1000L);
+}
+
 void setup() {
     /* Setup debug console */
     Serial.begin(115200);
@@ -57,8 +68,12 @@ void setup() {
     SerialGsm.begin(115200);
 
     ERa.begin(modem, apn, user, pass, pwrPin);
+
+    /* Setup timer called function every second */
+    timer.setInterval(1000L, timerEvent);
 }
 
 void loop() {
     ERa.run();
+    timer.run();
 }

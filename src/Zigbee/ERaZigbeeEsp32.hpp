@@ -98,6 +98,7 @@ ResultT ERaToZigbee<Zigbee>::waitResponse(Response_t rspWait, void* value) {
 template <class Zigbee>
 void ERaToZigbee<Zigbee>::sendByte(uint8_t byte) {
     ERaGuardLock(this->mutex);
+    ERaLogHex("ZB >>", byte, 1);
 	SEND_UART(UART_ZIGBEE, &byte, 1);
 	WAIT_SEND_UART_DONE(UART_ZIGBEE);
     ERaGuardUnlock(this->mutex);
@@ -106,6 +107,7 @@ void ERaToZigbee<Zigbee>::sendByte(uint8_t byte) {
 template <class Zigbee>
 void ERaToZigbee<Zigbee>::sendCommand(const vector<uint8_t>& data) {
     ERaGuardLock(this->mutex);
+    ERaLogHex("ZB >>", data.data(), data.size());
 	SEND_UART(UART_ZIGBEE, const_cast<uint8_t*>(data.data()), data.size());
 	WAIT_SEND_UART_DONE(UART_ZIGBEE);
     ERaGuardUnlock(this->mutex);

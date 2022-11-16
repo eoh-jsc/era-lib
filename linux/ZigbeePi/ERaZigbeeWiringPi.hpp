@@ -5,11 +5,17 @@
 
 template <class Api>
 void ERaZigbee<Api>::configZigbee() {
-    this->fd = serialOpen("/dev/ttyAMA0", 115200);
+    if (this->fd < 0) {
+        this->fd = serialOpen("/dev/ttyACM0", 115200);
+    }
 }
 
 template <class Api>
 void ERaZigbee<Api>::handleZigbeeData() {
+    if (this->fd < 0) {
+        return;
+    }
+
     int length = serialDataAvail(this->fd);
     if (!length) {
         return;
@@ -25,9 +31,12 @@ void ERaZigbee<Api>::handleZigbeeData() {
 
 template <class Zigbee>
 ResultT ERaToZigbee<Zigbee>::waitResponse(Response_t rspWait, void* value) {
+    if (static_cast<Zigbee*>(this)->fd < 0) {
+        return ResultT::RESULT_FAIL;
+    }
+
     int length {0};
     int position {0};
-    uart_event_t event;
     Response_t rsp {
         .nwkAddr = NO_NWK_ADDR,
         .type = TypeT::ERR,
@@ -68,12 +77,22 @@ ResultT ERaToZigbee<Zigbee>::waitResponse(Response_t rspWait, void* value) {
 
 template <class Zigbee>
 void ERaToZigbee<Zigbee>::sendByte(uint8_t byte) {
+    if (static_cast<Zigbee*>(this)->fd < 0) {
+        return;
+    }
+
+    ERaLogHex("ZB >>", byte, 1);
     serialPutchar(static_cast<Zigbee*>(this)->fd, byte);
     serialFlush(static_cast<Zigbee*>(this)->fd);
 }
 
 template <class Zigbee>
 void ERaToZigbee<Zigbee>::sendCommand(const vector<uint8_t>& data) {
+    if (static_cast<Zigbee*>(this)->fd < 0) {
+        return;
+    }
+
+    ERaLogHex("ZB >>", data.data(), data.size());
     for (const auto& var : data) {
         serialPutchar(static_cast<Zigbee*>(this)->fd, var);
     }

@@ -98,16 +98,17 @@
     #pragma message "Debug enabled"
 #else
     #undef ERA_LOG
+    #undef ERA_DEBUG_DUMP
     #define ERA_LOG(...)
 #endif
 
 static
 ERA_UNUSED void ERaLogHex(const char* title, const uint8_t* buf, size_t len) {
-#ifdef ERA_DEBUG
+#ifdef ERA_DEBUG_DUMP
     char str[5] {0};
     std::string out(title);
     snprintf(str, sizeof(str), "%3d", len);
-    out.append("(");
+    out.append(" (");
     out.append(str);
     out.append("): ");
     for (size_t i = 0; i < len; ++i) {

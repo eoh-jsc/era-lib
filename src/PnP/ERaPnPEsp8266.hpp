@@ -122,7 +122,7 @@ public:
         this->connectWiFi(ssid, pass);
         Base::init();
         this->config(auth, host, port, username, password);
-        if (Base::connect()) {
+        if (this->connected() && Base::connect()) {
             ERaState::set(StateT::STATE_CONNECTED);
         }
         else {
@@ -698,18 +698,29 @@ void ERaPnP::connectCloud() {
 }
 
 void ERaPnP::connectWiFi(const char* ssid, const char* pass) {
-    ERA_LOG(TAG, "Connecting to %s...", ssid);
-    if (pass && strlen(pass)) {
-        WiFi.begin(ssid, pass);
-    } else {
-        WiFi.begin(ssid);
-    }
-    unsigned long startMillis = ERaMillis();
-    while (WiFi.status() != WL_CONNECTED) {
-        ERaDelay(500);
-        if (!ERaRemainingTime(startMillis, WIFI_NET_CONNECT_TIMEOUT)) {
-            WiFi.disconnect();
-            return;
+    int status = WiFi.status();
+
+    unsigned long started = ERaMillis();
+    while (status != WL_CONNECTED) {
+        ERA_LOG(TAG, "Connecting to %s...", ssid);
+        if (pass && strlen(pass)) {
+            WiFi.begin(ssid, pass);
+        } else {
+            WiFi.begin(ssid);
+        }
+
+        unsigned long startMillis = ERaMillis();
+        while (status != WL_CONNECTED) {
+            ERaDelay(500);
+            status = WiFi.status();
+            if (!ERaRemainingTime(started, WIFI_NET_CONNECT_TIMEOUT)) {
+                WiFi.disconnect();
+                return;
+            }
+            else if (!ERaRemainingTime(startMillis, 20000)) {
+                WiFi.disconnect();
+                break;
+            }
         }
     }
     ERA_LOG(TAG, "Connected to WiFi");

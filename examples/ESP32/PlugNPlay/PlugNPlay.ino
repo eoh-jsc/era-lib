@@ -10,6 +10,10 @@
     Follow us:                  https://www.fb.com/EoHPlatform
  *************************************************************/
 
+// Enable debug console
+// Set CORE_DEBUG_LEVEL = 3 first
+// #define ERA_DEBUG
+
 // You should get Auth Token in the ERa App or ERa Dashboard
 #define ERA_AUTH_TOKEN "ERA2706"
 

@@ -10,6 +10,10 @@
     Follow us:                  https://www.fb.com/EoHPlatform
  *************************************************************/
 
+// Enable debug console
+// #define ERA_DEBUG
+// #define ERA_SERIAL Serial
+
 // You should get Auth Token in the ERa App or ERa Dashboard
 #define ERA_AUTH_TOKEN "ERA2706"
 
@@ -20,13 +24,24 @@
 const char ssid[] = "YOUR_SSID";
 const char pass[] = "YOUR_PASSWORD";
 
+ERaTimer timer;
+
+/* This function print uptime every second */
+void timerEvent() {
+    ERA_LOG("Timer", "Uptime: %d\n", ERaMillis() / 1000L);
+}
+
 void setup() {
     /* Setup debug console */
     Serial.begin(115200);
 
     ERa.begin(ssid, pass);
+
+    /* Setup timer called function every second */
+    timer.setInterval(1000L, timerEvent);
 }
 
 void loop() {
     ERa.run();
+    timer.run();
 }

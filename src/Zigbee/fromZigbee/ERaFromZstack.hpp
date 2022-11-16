@@ -197,6 +197,14 @@ void ERaFromZigbee<Zigbee>::processTCDeviceIndication(vector<uint8_t>& data, voi
 }
 
 template <class Zigbee>
+void ERaFromZigbee<Zigbee>::processZDOState(vector<uint8_t>& data, void* value) {
+    if (!data.size()) {
+        return;
+    }
+    this->coordinator->deviceState = static_cast<DeviceStateListT>(data.at(0));
+}
+
+template <class Zigbee>
 void ERaFromZigbee<Zigbee>::processReadOsalNVItems(vector<uint8_t>& data, void* value) {
     if (!data.size()) {
         return;

@@ -7,11 +7,20 @@ HardwareSerial SerialMB(PA3, PA2);
 
 template <class Api>
 void ERaModbus<Api>::configModbus() {
+    if (this->stream != NULL) {
+        return;
+    }
+
+    this->stream = &SerialMB;
     SerialMB.begin(9600);
 }
 
 template <class Api>
 bool ERaModbus<Api>::waitResponse(ModbusConfig_t& param, uint8_t* modbusData) {
+    if (this->stream == NULL) {
+        return false;
+    }
+
     int length {0};
 
     if (this->total++ > 99) {
@@ -23,18 +32,24 @@ bool ERaModbus<Api>::waitResponse(ModbusConfig_t& param, uint8_t* modbusData) {
     unsigned long startMillis = ERaMillis();
 
     do {
-        if (!SerialMB.available()) {
+        if (!this->stream->available()) {
 #if defined(ERA_NO_RTOS)
             eraOnWaiting();
             static_cast<Api*>(this)->run();
+            if (ModbusState::is(ModbusStateT::STATE_MB_PARSE)) {
+                break;
+            }
 #endif
             ERaDelay(10);
             continue;
         }
-        length = 0;
+
         do {
-            modbusData[length] = SerialMB.read();
-        } while ((++length < 256) && SerialMB.available());
+            modbusData[length] = this->stream->read();
+        } while ((++length < 256) && this->stream->available());
+
+        ERaLogHex("MB <<", modbusData, length);
+
         if (modbusData[0] == param.addr && modbusData[1] == param.func) {
             if (this->checkReceiveCRC(param, modbusData)) {
                 return true;
@@ -47,8 +62,13 @@ bool ERaModbus<Api>::waitResponse(ModbusConfig_t& param, uint8_t* modbusData) {
 
 template <class Api>
 void ERaModbus<Api>::sendCommand(const vector<uint8_t>& data) {
-    SerialMB.write(data.data(), data.size());
-    SerialMB.flush();
+    if (this->stream == NULL) {
+        return;
+    }
+
+    ERaLogHex("MB >>", data.data(), data.size());
+    this->stream->write(data.data(), data.size());
+    this->stream->flush();
 }
 
 #endif /* INC_ERA_MODBUS_STM32_HPP_ */

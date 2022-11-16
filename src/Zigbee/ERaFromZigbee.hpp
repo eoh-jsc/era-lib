@@ -32,6 +32,7 @@ private:
     void processActiveEndpoint(vector<uint8_t>& data, void* value = nullptr);
     void processBindUnbind(vector<uint8_t>& data, void* value = nullptr);
     void processTCDeviceIndication(vector<uint8_t>& data, void* value = nullptr);
+    void processZDOState(vector<uint8_t>& data, void* value = nullptr);
     void processReadOsalNVItems(vector<uint8_t>& data, void* value = nullptr);
     void processWriteOsalNVItems(vector<uint8_t>& data, void* value = nullptr);
     void processLengthOsalNVItems(vector<uint8_t>& data, void* value = nullptr);
@@ -153,6 +154,9 @@ Response_t ERaFromZigbee<Zigbee>::fromZigbee(const uint8_t* payload, void* value
                 }
                 else if (cmd == ZDOCommandsT::ZDO_TC_DEV_IND) {
                     this->processTCDeviceIndication(data, value);
+                }
+                else if (cmd == ZDOCommandsT::ZDO_STATE_CHANGE_IND) {
+                    this->processZDOState(data, value);
                 }
                 break;
             case SubsystemT::APP_CNF:

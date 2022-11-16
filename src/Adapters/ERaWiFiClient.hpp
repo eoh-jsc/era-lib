@@ -7,7 +7,7 @@
 #include <ERa/ERaApiArduino.hpp>
 #include <MQTT/ERaMqtt.hpp>
 
-#define WIFI_NET_CONNECT_TIMEOUT      60000
+#define WIFI_NET_CONNECT_TIMEOUT      3 * 60000
 
 class ERaFlash;
 

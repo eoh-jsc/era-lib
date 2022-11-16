@@ -10,6 +10,10 @@
     Follow us:                  https://www.fb.com/EoHPlatform
  *************************************************************/
 
+// Enable debug console
+// #define ERA_DEBUG
+// #define ERA_SERIAL stdout
+
 #include <ERaSimpleMBWiringPi.hpp>
 #include <ERa/ERaTimer.hpp>
 #include <ERaOptionsArgs.hpp>

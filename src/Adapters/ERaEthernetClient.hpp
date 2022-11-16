@@ -28,12 +28,14 @@ public:
         this->getMacAddress(auth);
         if (!Ethernet.begin(this->macAddress)) {
             ERA_LOG(TAG, "Connect failed");
+            return false;
         }
 
-        MVPDelay(1000);
+        ERaDelay(1000);
         IPAddress localIP = Ethernet.localIP();
         ERA_FORCE_UNUSED(localIP);
         ERA_LOG(TAG, "IP: %s", localIP.toString().c_str());
+        return true;
     }
 
     void config(const char* auth,
