@@ -1,15 +1,25 @@
 #ifndef INC_ERA_DEBUG_HPP_
 #define INC_ERA_DEBUG_HPP_
 
-#if defined(__AVR__)
+#if !defined(ERA_RUN_YIELD)
+    #if !defined(ERA_RUN_YIELD_MS)
+        #define ERA_RUN_YIELD_MS 0
+    #endif
+    #define ERA_RUN_YIELD() { ERaDelay(ERA_RUN_YIELD_MS); }
+#endif
+
+#if defined(__AVR__) || \
+    (defined(ARDUINO) && defined(ESP8266))
     #include <avr/pgmspace.h>
     #define ERA_PROGMEM         PROGMEM
     #define ERA_F(s)            F(s)
     #define ERA_PSTR(s)         PSTR(s)
+    #define ERA_FPSTR(s)        FPSTR(s)
 #else
     #define ERA_PROGMEM
     #define ERA_F(s)            s
     #define ERA_PSTR(s)         s
+    #define ERA_FPSTR(s)        s
 #endif
 
 #if defined(ARDUINO) && defined(ESP32)

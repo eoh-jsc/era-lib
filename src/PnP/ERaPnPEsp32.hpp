@@ -11,6 +11,7 @@
 #include <Modbus/ERaModbusEsp32.hpp>
 #include <Zigbee/ERaZigbeeEsp32.hpp>
 #include <Utility/ERaFlashEsp32.hpp>
+#include <PnP/ERaWeb.hpp>
 #include <PnP/ERaState.hpp>
 
 #define ERA_MODEL_TYPE                "ERa"
@@ -137,7 +138,7 @@ public:
             ERaState::set(StateT::STATE_CONNECTED);
         }
         else {
-            ERaState::set(StateT::STATE_SWITCH_TO_AP);
+            this->configInit();
         }
     }
 
@@ -244,9 +245,12 @@ void ERaPnP::run() {
 }
 
 void ERaPnP::configApi() {
-    if (!eraConfig.getFlag(ConfigFlagT::CONFIG_FLAG_API)) {
+    static bool configured {false};
+    if (!eraConfig.getFlag(ConfigFlagT::CONFIG_FLAG_API) &&
+        configured) {
         return;
     }
+    configured = true;
     eraConfig.setFlag(ConfigFlagT::CONFIG_FLAG_API, false);
 
     ERA_LOG(TAG, "Config api");
@@ -450,6 +454,201 @@ void ERaPnP::configApi() {
         ERaState::set(StateT::STATE_REBOOT);
     });
 
+    server.on("/", []() {
+        String content = ERA_FPSTR(webIndex) + String(ERA_FPSTR(webStyle));
+        webProcessor(content);
+        server.send(200, "text/html", content);
+    });
+
+    server.on("/wifi", []() {
+        ERA_LOG("Config", "Configuration...");
+        String ssid = server.arg("ssid");
+        String pass = server.arg("pass");
+        String backupSsid = server.arg("backup_ssid");
+        String backupPass = server.arg("backup_pass");
+        bool scanWifi  = server.hasArg("scan");
+        bool hasConnect = server.hasArg("connect");
+
+        String content;
+        int nets {0};
+        uint8_t limit {0};
+        std::vector<std::string> listWifi;
+
+        if (ssid.length()) {
+            CopyToArray(ssid, eraConfig.ssid);
+            CopyToArray(pass, eraConfig.pass);
+        }
+
+        if (backupSsid.length()) {
+            eraConfig.hasBackup = true;
+            CopyToArray(backupSsid, eraConfig.backupSSID);
+            CopyToArray(backupPass, eraConfig.backupPass);
+        } else {
+            eraConfig.hasBackup = false;
+        }
+
+        if (scanWifi) {
+            nets = WiFi.scanNetworks(true, true);
+            unsigned long tick = ERaMillis();
+            while (nets < 0 && ERaRemainingTime(tick, WIFI_SCAN_TIMEOUT)) {
+                ERaDelay(100);
+                nets = WiFi.scanComplete();
+            }
+            ERA_LOG("WiFi", "Found %d wifi", nets);
+        }
+
+        content = "<meta charset='utf-8'>";
+        content += "<form name=wifiForm method=post>";
+        content += "<h1>WIFI</h1>";
+        content += "<table border=1 width='100%'>";
+        content += "<tr><th width='50%' height='30px'>Wifi</th>";
+        content += "<th width='50%'>Wifi 2</th></tr>";
+        content += "<tr><td style='text-align:center'>" + String(strlen(eraConfig.ssid) ? eraConfig.ssid : "--");
+        content += "</td><td style='text-align:center'>" + String(strlen(eraConfig.backupSSID) ? eraConfig.backupSSID : "--");
+        content += "</td></tr></table>";
+
+        if (nets > 0) {
+            content += "<select name=ssid id=ssid width='100%'>";
+            content += "<option value='' disabled selected>%SELECT_SSID%</option>";
+            limit = 0;
+            listWifi.clear();
+            for (int i = 0; i < nets; ++i) {
+                if (WiFi.SSID(i).isEmpty()) {
+                    continue;
+                }
+                std::vector<std::string>::iterator eachWifi = std::find_if(listWifi.begin(), listWifi.end(), [i](const std::string& e) {
+                    return e == WiFi.SSID(i).c_str();
+                });
+                if (eachWifi != listWifi.end()) {
+                    continue;
+                }
+                listWifi.push_back(WiFi.SSID(i).c_str());
+                content += "<option value='";
+                content += WiFi.SSID(i);
+                content += "'>";
+                content += WiFi.SSID(i);
+                content += " (";
+                content += WiFi.RSSI(i);
+                content += ") ";
+                content += ((WiFi.encryptionType(i) == wifi_auth_mode_t::WIFI_AUTH_OPEN) ? "" : "*");
+                content += "</option>";
+                if (++limit >= 20) {
+                    break;
+                }
+            }
+            content += "</select>";
+        }
+        else {
+            content += "<input name=ssid id=ssid placeholder='%SSID%'>";
+        }
+        content += "<input name=pass id=pass placeholder='%PASSWORD%' type=password>";
+
+        if (nets > 0) {
+            content += "<select name=backup_ssid id=backup_ssid width='100%'>";
+            content += "<option value='' disabled selected>%SELECT_BACKUP_SSID%</option>";
+            limit = 0;
+            listWifi.clear();
+            for (int i = 0; i < nets; ++i) {
+                if (WiFi.SSID(i).isEmpty()) {
+                    continue;
+                }
+                std::vector<std::string>::iterator eachWifi = std::find_if(listWifi.begin(), listWifi.end(), [i](const std::string& e) {
+                    return e == WiFi.SSID(i).c_str();
+                });
+                if (eachWifi != listWifi.end()) {
+                    continue;
+                }
+                listWifi.push_back(WiFi.SSID(i).c_str());
+                content += "<option value='";
+                content += WiFi.SSID(i);
+                content += "'>";
+                content += WiFi.SSID(i);
+                content += " (";
+                content += WiFi.RSSI(i);
+                content += ") ";
+                content += ((WiFi.encryptionType(i) == wifi_auth_mode_t::WIFI_AUTH_OPEN) ? "" : "*");
+                content += "</option>";
+                if (++limit >= 20) {
+                    break;
+                }
+            }
+            content += "</select>";
+        }
+        else {
+            content += "<input name=backup_ssid id=backup_ssid placeholder='%BACKUP_SSID%'>";
+        }
+        content += "<input name=backup_pass id=backup_pass placeholder='%BACKUP_PASS%' type=password>";
+        content += "<input type=checkbox onclick=togglePass() class=checkbox> %SHOW_PASSWORD%";
+        if (!scanWifi) {
+            content += "<input type=submit name=scan id=scan class=btn value='%SCAN_WIFI%'>";
+        }
+        content += "<input type=submit onclick=clicked(event) name=connect id=connect class=btn value='%CONNECT%'>";
+        content += "<input type=submit formaction='/' class=btn value='%BACK%'></form>";
+
+        content += ERA_FPSTR(webScript);
+        content += ERA_FPSTR(webStyle);
+
+        webProcessor(content);
+        server.send(200, "text/html", content);
+        if (ssid.length() && hasConnect) {
+            eraConfig.setFlag(ConfigFlagT::CONFIG_FLAG_VALID, true);
+            eraConfig.setFlag(ConfigFlagT::CONFIG_FLAG_STORE, true);
+            ERaState::set(StateT::STATE_SWITCH_TO_STA);
+        }
+    });
+
+    server.on("/network/status", HTTP_POST, [=]() {
+        String content;
+        if (this->connected()) {
+            content += LANGUAGE_CONNECTED(LANGUAGE_EN);
+            content += " ";
+            content += WiFi.SSID();
+        }
+        else {
+            content += "--";
+        }
+        server.send(200, "text/plane", content);
+    });
+
+    server.on("/network/ip", HTTP_POST, [=]() {
+        String content;
+        if (this->connected()) {
+            content += WiFi.localIP().toString();
+        }
+        else {
+            content += "--";
+        }
+        server.send(200, "text/plane", content);
+    });
+
+    server.on("/network/ssid", HTTP_POST, [=]() {
+        String content;
+        if (this->connected()) {
+            content += WiFi.SSID();
+        }
+        else {
+            content += "--";
+        }
+        server.send(200, "text/plane", content);
+    });
+
+    server.on("/network/rssi", HTTP_POST, [=]() {
+        String content;
+        if (this->connected()) {
+            content += WiFi.RSSI();
+        }
+        else {
+            content += "--";
+        }
+        server.send(200, "text/plane", content);
+    });
+
+    server.on("/network/mac", HTTP_POST, [=]() {
+        String content;
+        content += WiFi.macAddress();
+        server.send(200, "text/plane", content);
+    });
+
     eraUdp.on("connect/wifi", [imei]() {
         ERA_LOG("Config", "Configuration...");
         String ssid = eraUdp.arg("ssid").c_str();
@@ -608,6 +807,7 @@ void ERaPnP::configInit() {
     }
     else {
         ERaState::set(StateT::STATE_SWITCH_TO_AP);
+        eraConfig.setFlag(ConfigFlagT::CONFIG_FLAG_API, true);
     }
 }
 
@@ -618,7 +818,6 @@ void ERaPnP::configLoad() {
     if (eraConfig.magic != eraDefault.magic) {
         this->configLoadDefault();
     }
-    eraConfig.setFlag(ConfigFlagT::CONFIG_FLAG_API, true);
 }
 
 void ERaPnP::configLoadDefault() {
@@ -698,6 +897,7 @@ void ERaPnP::connectNetwork() {
     }
     else {
         ERaState::set(StateT::STATE_SWITCH_TO_AP);
+        eraConfig.setFlag(ConfigFlagT::CONFIG_FLAG_API, true);
     }
 }
 

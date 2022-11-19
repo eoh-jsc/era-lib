@@ -44,6 +44,7 @@ public:
 #elif defined(LINUX)
         , fd(-1)
 #endif
+        , _streamDefault(false)
         , _modbusTask(NULL)
         , _writeModbusTask(NULL)
         , messageHandle(NULL)
@@ -77,7 +78,7 @@ protected:
             } else {
                 this->runWrite();
             }
-            ERaDelay(10);
+            ERA_MODBUS_YIELD();
         }
     }
 
@@ -111,6 +112,8 @@ protected:
             static_cast<Api*>(this)->writeToFlash(FILENAME_CONTROL, ptr);
         } else {
             this->modbusConfig.parseConfig(ptr);
+            this->setBaudRate(this->modbusConfig.baudSpeed);
+            this->executeNow();
             static_cast<Api*>(this)->writeToFlash(FILENAME_CONFIG, ptr);
         }
         ModbusState::set(ModbusStateT::STATE_MB_PARSE);
@@ -157,6 +160,7 @@ private:
         char* ptr = nullptr;
         ptr = static_cast<Api*>(this)->readFromFlash(FILENAME_CONFIG);
         this->modbusConfig.parseConfig(ptr);
+        this->setBaudRate(this->modbusConfig.baudSpeed);
         free(ptr);
         ptr = static_cast<Api*>(this)->readFromFlash(FILENAME_CONTROL);
         this->modbusControl.parseConfig(ptr);
@@ -165,6 +169,7 @@ private:
     }
 
     void configModbus();
+    void setBaudRate(uint32_t baudrate);
     void readModbusConfig();
     void delayModbus(const int address);
     ModbusConfigAlias_t* getModbusAlias(const char* key);
@@ -178,7 +183,11 @@ private:
     bool checkReceiveCRC(ModbusConfig_t& param, uint8_t* data);
     void sendCommand(const vector<uint8_t>& data);
     void modbusCRC(vector<uint8_t>& cmd);
-    
+
+    bool streamDefault() {
+        return this->_streamDefault;
+    }
+
     void executeNow() {
         this->modbusConfig.modbusDelay.prevMillis = ERaMillis() - this->modbusConfig.modbusDelay.delay;
     }
@@ -207,6 +216,7 @@ private:
 #elif defined(LINUX)
     int fd;
 #endif
+    bool _streamDefault;
     TaskHandle_t _modbusTask;
     TaskHandle_t _writeModbusTask;
     QueueMessage_t messageHandle;
@@ -221,13 +231,14 @@ void ERaModbus<Api>::readModbusConfig() {
     this->dataBuff.clear();
     for (size_t i = 0; i < this->modbusConfig.readConfigCount; ++i) {
         ModbusConfig_t& param = *this->modbusConfig.modbusConfigParam[i];
+        ERaGuardLock(this->mutex);
         this->sendModbusRead(param);
+        ERaGuardUnlock(this->mutex);
         this->delayModbus(param.addr);
-#if defined(ERA_NO_RTOS)
         if (ModbusState::is(ModbusStateT::STATE_MB_PARSE)) {
+            this->executeNow();
             return;
         }
-#endif
     }
     this->dataBuff.add_multi("fail_read", this->failRead, "fail_write", this->failWrite, "total", this->total);
     static_cast<Api*>(this)->modbusDataWrite(&this->dataBuff);
@@ -247,11 +258,11 @@ void ERaModbus<Api>::delayModbus(const int address) {
 #if defined(ERA_NO_RTOS)
         eraOnWaiting();
         static_cast<Api*>(this)->run();
+#endif
         if (ModbusState::is(ModbusStateT::STATE_MB_PARSE)) {
             break;
         }
-#endif
-        ERaDelay(10);
+        ERA_MODBUS_YIELD();
     } while (ERaRemainingTime(startMillis, delayMs));
 }
 
@@ -280,7 +291,9 @@ bool ERaModbus<Api>::actionModbus(const char* key) {
     }
 
     for (int i = 0; i < alias->readActionCount; ++i) {
+        ERaGuardLock(this->mutex);
         eachActionModbus(alias->action[i]);
+        ERaGuardUnlock(this->mutex);
     }
     
     return true;
@@ -356,11 +369,9 @@ void ERaModbus<Api>::sendModbusRead(ModbusConfig_t& param) {
         this->dataBuff.add("1");
     }
     else {
-#if defined(ERA_NO_RTOS)
         if (ModbusState::is(ModbusStateT::STATE_MB_PARSE)) {
             return;
         }
-#endif
         switch (param.func) {
             case ModbusFunctionT::READ_COIL_STATUS:
             case ModbusFunctionT::READ_INPUT_STATUS:

@@ -23,7 +23,7 @@ public:
         : Base(_transp, _flash)
         , modem(nullptr)
         , authToken(nullptr)
-        , powerPin(-1)
+        , resetPin(-1)
     {}
     ~ERaWiFi()
     {}
@@ -55,6 +55,12 @@ public:
             return false;
         }
 
+        ERA_LOG(TAG, "Waiting for network...");
+        if (!this->modem->waitForNetwork()) {
+            ERA_LOG(TAG, "Connect %s failed", ssid);
+            return false;
+        }
+
         ERA_LOG(TAG, "Connected to %s", ssid);
         return true;
     }
@@ -76,14 +82,14 @@ public:
                 TinyGsm& gsm,
                 const char* ssid,
                 const char* pass,
-                int pwrPin = -1,
+                int rstPin = -1,
                 const char* host = ERA_MQTT_HOST,
                 uint16_t port = ERA_MQTT_PORT,
                 const char* username = ERA_MQTT_USERNAME,
                 const char* password = ERA_MQTT_PASSWORD) {
         Base::init();
         this->config(gsm, auth, host, port, username, password);
-        this->setPower(pwrPin);
+        this->setPower(rstPin);
         this->connectNetwork(ssid, pass);
         Base::connect();
     }
@@ -91,12 +97,12 @@ public:
     void begin(TinyGsm& gsm,
                 const char* ssid,
                 const char* pass,
-                int pwrPin = -1) {
+                int rstPin = -1) {
         Base::init();
         this->config(gsm, ERA_MQTT_CLIENT_ID,
                     ERA_MQTT_HOST, ERA_MQTT_PORT,
                     ERA_MQTT_USERNAME, ERA_MQTT_PASSWORD);
-        this->setPower(pwrPin);
+        this->setPower(rstPin);
         this->connectNetwork(ssid, pass);
         Base::connect();
     }
@@ -104,14 +110,14 @@ public:
 protected:
 private:
     void setPower(int pin) {
-        this->powerPin = pin;
+        this->resetPin = pin;
     }
 
     void restart() {
-        if (this->powerPin <= 0) {
+        if (this->resetPin <= 0) {
             return;
         }
-        pinMode(this->powerPin, OUTPUT);
+        pinMode(this->resetPin, OUTPUT);
         this->powerOff();
         ERaDelay(2000);
         this->powerOn();
@@ -119,23 +125,23 @@ private:
     }
 
     void powerOn() {
-        if (this->powerPin <= 0) {
+        if (this->resetPin <= 0) {
             return;
         }
-        ::digitalWrite(this->powerPin, HIGH);
+        ::digitalWrite(this->resetPin, HIGH);
     }
 
     void powerOff() {
-        if (this->powerPin <= 0) {
+        if (this->resetPin <= 0) {
             return;
         }
-        ::digitalWrite(this->powerPin, LOW);
+        ::digitalWrite(this->resetPin, LOW);
     }
 
     TinyGsm* modem;
     TinyGsmClient client;
     const char* authToken;
-    int powerPin;
+    int resetPin;
 };
 
 #endif /* INC_ERA_WIFI_CLIENT_HPP_ */

@@ -156,6 +156,7 @@ protected:
 	void run() {
         static_cast<Proto*>(this)->transp.run();
 		this->eraPinReport.run();
+		ERA_RUN_YIELD();
 	}
 
 	void callERaWriteHandler(uint8_t pin, const ERaParam& param) {

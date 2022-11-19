@@ -24,6 +24,7 @@
 
     #define ERA_USE_DEFAULT_DELAY
     #define ERA_USE_DEFAULT_MILLIS
+    #define ERA_USE_DEFAULT_GUARD
 
 #elif defined(ARDUINO) && defined(ESP32)
 
@@ -93,6 +94,8 @@
         while (1) {}
     }
 
+    #define ERA_USE_DEFAULT_GUARD
+
 #elif defined(ARDUINO) && (defined(__STM32F1__) || defined(__STM32F3__))
 
     #include <libmaple/nvic.h>
@@ -113,6 +116,7 @@
     #define ERA_USE_DEFAULT_DELAY
     #define ERA_USE_DEFAULT_MILLIS
     #define ERA_USE_DEFAULT_FREE_RAM
+    #define ERA_USE_DEFAULT_GUARD
 
 #elif defined(ARDUINO) && (defined(STM32F4xx) || defined(STM32F7xx))
 
@@ -138,6 +142,7 @@
 
     #define ERA_USE_DEFAULT_DELAY
     #define ERA_USE_DEFAULT_MILLIS
+    #define ERA_USE_DEFAULT_GUARD
 
 #elif defined(LINUX) && defined(RASPBERRY)
 
@@ -230,6 +235,7 @@
     #define ERA_USE_DEFAULT_RANDOM
     #define ERA_USE_DEFAULT_FREE_RAM
     #define ERA_USE_DEFAULT_RESET
+    #define ERA_USE_DEFAULT_GUARD
 
 #endif
 
@@ -267,6 +273,17 @@
 #if defined(ERA_USE_DEFAULT_RESET)
     void ERaRestart(bool async) {
         while (1) {}
+        ERA_FORCE_UNUSED(async);
+    }
+#endif
+
+#if defined(ERA_USE_DEFAULT_GUARD)
+    void ERaGuardLock(ERaMutex_t& mutex) {
+        ERA_FORCE_UNUSED(mutex);
+    }
+
+    void ERaGuardUnlock(ERaMutex_t& mutex) {
+        ERA_FORCE_UNUSED(mutex);
     }
 #endif
 

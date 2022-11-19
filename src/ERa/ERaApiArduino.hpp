@@ -42,7 +42,15 @@ void ERaApi<Proto, Flash>::handleReadPin(cJSON* root) {
 				pin.report = PinConfig_t::__ReportConfig_t(1000, 1000, 60000, 10.0f);
 				this->getPinConfig(current, pin);
 				this->getScaleConfig(current, pin);
+#if defined(ESP32)
 				pinMode(pin.pin, ANALOG);
+#elif defined(STM32F4xx)
+				if (!digitalpinIsAnalogInput(pin.pin)) {
+					continue;
+				}
+				pin.pin = digitalPinToAnalogInput(pin.pin) + PNUM_ANALOG_BASE;
+				pinMode(pin.pin, ANALOG);
+#endif
 				this->eraPinReport.setPinReport(pin.pin, ANALOG, analogRead, pin.report.interval,
 												pin.report.minInterval, pin.report.maxInterval, pin.report.reportableChange, this->reportPinConfigCb,
 												pin.configId).setScale(pin.scale.min, pin.scale.max, pin.scale.rawMin, pin.scale.rawMax);
@@ -217,7 +225,15 @@ void ERaApi<Proto, Flash>::handlePinRequest(const std::vector<std::string>& arra
 												pin.report.minInterval, pin.report.maxInterval, pin.report.reportableChange, this->reportPinCb);
             }
 			else if (ERaStrCmp(current->valuestring, "analog")) {
+#if defined(ESP32)
 				pinMode(pin.pin, ANALOG);
+#elif defined(STM32F4xx)
+				if (!digitalpinIsAnalogInput(pin.pin)) {
+					continue;
+				}
+				pin.pin = digitalPinToAnalogInput(pin.pin) + PNUM_ANALOG_BASE;
+				pinMode(pin.pin, ANALOG);
+#endif
 				this->eraPinReport.setPinReport(pin.pin, ANALOG, analogRead, pin.report.interval,
 												pin.report.minInterval, pin.report.maxInterval, pin.report.reportableChange, this->reportPinCb);
             }

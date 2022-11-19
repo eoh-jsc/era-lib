@@ -21,6 +21,12 @@ void ERaModbus<Api>::configModbus() {
 }
 
 template <class Api>
+void ERaModbus<Api>::setBaudRate(uint32_t baudrate) {
+    uart_flush(UART_MODBUS);
+    uart_set_baudrate(UART_MODBUS, baudrate);
+}
+
+template <class Api>
 bool ERaModbus<Api>::waitResponse(ModbusConfig_t& param, uint8_t* modbusData) {
     int length {0};
     uart_event_t event;
@@ -59,28 +65,26 @@ bool ERaModbus<Api>::waitResponse(ModbusConfig_t& param, uint8_t* modbusData) {
                     break;
             }
         }
-#if defined(ERA_NO_RTOS)
         else {
+#if defined(ERA_NO_RTOS)
             eraOnWaiting();
             static_cast<Api*>(this)->run();
+#endif
             if (ModbusState::is(ModbusStateT::STATE_MB_PARSE)) {
                 break;
             }
         }
-#endif
-        ERaDelay(10);
+        ERA_MODBUS_YIELD();
     } while (ERaRemainingTime(startMillis, MAX_TIMEOUT_MODBUS));
     return false;
 }
 
 template <class Api>
 void ERaModbus<Api>::sendCommand(const vector<uint8_t>& data) {
-    ERaGuardLock(this->mutex);
     ERaLogHex("MB >>", data.data(), data.size());
     SEND_UART(UART_MODBUS, const_cast<uint8_t*>(data.data()), data.size());
     WAIT_SEND_UART_DONE(UART_MODBUS);
     FLUSH_UART(UART_MODBUS);
-    ERaGuardUnlock(this->mutex);
 }
 
 #endif /* INC_ERA_MODBUS_ESP32_HPP_ */

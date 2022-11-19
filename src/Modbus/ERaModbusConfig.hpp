@@ -14,4 +14,11 @@
 
 #define MODBUS_DATA_BUFFER_SIZE 1024
 
+#if !defined(ERA_MODBUS_YIELD)
+    #if !defined(ERA_MODBUS_YIELD_MS)
+        #define ERA_MODBUS_YIELD_MS 10
+    #endif
+    #define ERA_MODBUS_YIELD() { ERaDelay(ERA_MODBUS_YIELD_MS); }
+#endif
+
 #endif /* INC_ERA_MODBUS_CONFIG_HPP_ */

@@ -8,7 +8,19 @@ template <class Api>
 void ERaModbus<Api>::configModbus() {
     if (this->fd < 0) {
         this->fd = serialOpen("/dev/ttyAMA0", 9600);
+        this->_streamDefault = true;
     }
+}
+
+template <class Api>
+void ERaModbus<Api>::setBaudRate(uint32_t baudrate) {
+    if ((this->fd < 0) || !this->streamDefault()) {
+        return;
+    }
+
+    serialFlush(this->fd);
+    serialClose(this->fd);
+    this->fd = serialOpen("/dev/ttyAMA0", baudrate);
 }
 
 template <class Api>
@@ -33,11 +45,11 @@ bool ERaModbus<Api>::waitResponse(ModbusConfig_t& param, uint8_t* modbusData) {
 #if defined(ERA_NO_RTOS)
             eraOnWaiting();
             static_cast<Api*>(this)->run();
+#endif
             if (ModbusState::is(ModbusStateT::STATE_MB_PARSE)) {
                 break;
             }
-#endif
-            ERaDelay(10);
+            ERA_MODBUS_YIELD();
             continue;
         }
 
@@ -52,7 +64,7 @@ bool ERaModbus<Api>::waitResponse(ModbusConfig_t& param, uint8_t* modbusData) {
                 return true;
             }
         }
-        ERaDelay(10);
+        ERA_MODBUS_YIELD();
     } while (ERaRemainingTime(startMillis, MAX_TIMEOUT_MODBUS));
     return false;
 }

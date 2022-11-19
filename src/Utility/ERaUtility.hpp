@@ -20,8 +20,8 @@ uint32_t ERaRandomNumber(uint32_t min, uint32_t max);
 size_t ERaFreeRam();
 void ERaRestart(bool async);
 
-void ERaGuardLock(ERaMutex_t& mutex) ERA_WEAK;
-void ERaGuardUnlock(ERaMutex_t& mutex) ERA_WEAK;
+void ERaGuardLock(ERaMutex_t& mutex);
+void ERaGuardUnlock(ERaMutex_t& mutex);
 
 char* ERaStrdup(const char* str);
 MillisTime_t ERaRemainingTime(MillisTime_t startMillis, MillisTime_t timeout);

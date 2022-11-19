@@ -21,12 +21,12 @@ void ERaZigbee<Api>::handleZigbeeData() {
         return;
     }
     int position {0};
-    uint8_t receive[length < 256 ? 256 : length] {0};
-    uint8_t payload[length < 256 ? 256 : length] {0};
+    uint8_t receive[(length < 256) ? 256 : length] {0};
+    uint8_t payload[(length < 256) ? 256 : length] {0};
     do {
         receive[position] = serialGetchar(this->fd);
     } while (++position < length);
-    this->processZigbee(receive, length, (length < 256 ? 256 : length), payload, 0, 0);
+    this->processZigbee(receive, length, ((length < 256) ? 256 : length), payload, 0, 0);
 }
 
 template <class Zigbee>
@@ -58,19 +58,19 @@ ResultT ERaToZigbee<Zigbee>::waitResponse(Response_t rspWait, void* value) {
     do {
         int length = serialDataAvail(static_cast<Zigbee*>(this)->fd);
         if (!length) {
-            ERaDelay(10);
+            ERA_ZIGBEE_YIELD();
             continue;
         }
         position = 0;
-        uint8_t receive[length < 256 ? 256 : length] {0};
-        uint8_t payload[length < 256 ? 256 : length] {0};
+        uint8_t receive[(length < 256) ? 256 : length] {0};
+        uint8_t payload[(length < 256) ? 256 : length] {0};
         do {
             receive[position] = serialGetchar(static_cast<Zigbee*>(this)->fd);
         } while (++position < length);
-        if (static_cast<Zigbee*>(this)->processZigbee(receive, length, (length < 256 ? 256 : length), payload, 0, 0, &cmdStatus, &rspWait, value)) {
+        if (static_cast<Zigbee*>(this)->processZigbee(receive, length, ((length < 256) ? 256 : length), payload, 0, 0, &cmdStatus, &rspWait, value)) {
             return ((cmdStatus != ZnpCommandStatusT::INVALID_PARAM) ? static_cast<ResultT>(cmdStatus) : ResultT::RESULT_SUCCESSFUL);
         }
-        ERaDelay(10);
+        ERA_ZIGBEE_YIELD();
     } while (ERaRemainingTime(startMillis, rspWait.timeout));
     return ((cmdStatus != ZnpCommandStatusT::INVALID_PARAM) ? static_cast<ResultT>(cmdStatus) : ResultT::RESULT_TIMEOUT);
 }
@@ -81,7 +81,7 @@ void ERaToZigbee<Zigbee>::sendByte(uint8_t byte) {
         return;
     }
 
-    ERaLogHex("ZB >>", byte, 1);
+    ERaLogHex("ZB >>", &byte, 1);
     serialPutchar(static_cast<Zigbee*>(this)->fd, byte);
     serialFlush(static_cast<Zigbee*>(this)->fd);
 }

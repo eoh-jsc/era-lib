@@ -30,10 +30,10 @@ void ERaZigbee<Api>::handleZigbeeData() {
     switch (event.type) {
         case uart_event_type_t::UART_DATA: {
             ESP_ERROR_CHECK(uart_get_buffered_data_len(UART_ZIGBEE, (size_t*)&length));
-			uint8_t receive[length < 256 ? 256 : length] {0};
-			uint8_t payload[length < 256 ? 256 : length] {0};
+			uint8_t receive[(length < 256) ? 256 : length] {0};
+			uint8_t payload[(length < 256) ? 256 : length] {0};
             uart_read_bytes(UART_ZIGBEE, receive, length, portMAX_DELAY);
-            this->processZigbee(receive, length, (length < 256 ? 256 : length), payload, 0, 0);
+            this->processZigbee(receive, length, ((length < 256) ? 256 : length), payload, 0, 0);
         }
             break;
         case uart_event_type_t::UART_FIFO_OVF:
@@ -73,10 +73,10 @@ ResultT ERaToZigbee<Zigbee>::waitResponse(Response_t rspWait, void* value) {
             switch (event.type) {
                 case uart_event_type_t::UART_DATA: {
                     ESP_ERROR_CHECK(uart_get_buffered_data_len(UART_ZIGBEE, (size_t*)&length));
-					uint8_t receive[length < 256 ? 256 : length] {0};
-					uint8_t payload[length < 256 ? 256 : length] {0};
+					uint8_t receive[(length < 256) ? 256 : length] {0};
+					uint8_t payload[(length < 256) ? 256 : length] {0};
                     uart_read_bytes(UART_ZIGBEE, receive, length, portMAX_DELAY);
-                    if (static_cast<Zigbee*>(this)->processZigbee(receive, length, (length < 256 ? 256 : length), payload, 0, 0, &cmdStatus, &rspWait, value)) {
+                    if (static_cast<Zigbee*>(this)->processZigbee(receive, length, ((length < 256) ? 256 : length), payload, 0, 0, &cmdStatus, &rspWait, value)) {
                         return ((cmdStatus != ZnpCommandStatusT::INVALID_PARAM) ? static_cast<ResultT>(cmdStatus) : ResultT::RESULT_SUCCESSFUL);
                     }
                 }
@@ -90,7 +90,7 @@ ResultT ERaToZigbee<Zigbee>::waitResponse(Response_t rspWait, void* value) {
                     break;
             }
         }
-        ERaDelay(10);
+        ERA_ZIGBEE_YIELD();
     } while (ERaRemainingTime(startMillis, rspWait.timeout));
     return ((cmdStatus != ZnpCommandStatusT::INVALID_PARAM) ? static_cast<ResultT>(cmdStatus) : ResultT::RESULT_TIMEOUT);
 }
@@ -98,7 +98,7 @@ ResultT ERaToZigbee<Zigbee>::waitResponse(Response_t rspWait, void* value) {
 template <class Zigbee>
 void ERaToZigbee<Zigbee>::sendByte(uint8_t byte) {
     ERaGuardLock(this->mutex);
-    ERaLogHex("ZB >>", byte, 1);
+    ERaLogHex("ZB >>", &byte, 1);
 	SEND_UART(UART_ZIGBEE, &byte, 1);
 	WAIT_SEND_UART_DONE(UART_ZIGBEE);
     ERaGuardUnlock(this->mutex);

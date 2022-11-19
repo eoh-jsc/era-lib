@@ -126,7 +126,7 @@ protected:
                     break;
             }
             this->timer.run();
-            ERaDelay(10);
+            ERA_ZIGBEE_YIELD();
         }
     }
 
@@ -143,7 +143,7 @@ protected:
                     this->getZigbeeAction();
                     break;
             }
-            ERaDelay(10);
+            ERA_ZIGBEE_YIELD();
         }
     }
 
@@ -159,7 +159,7 @@ protected:
                     this->handleDefaultResponse();
                     break;
             }
-            ERaDelay(10);
+            ERA_ZIGBEE_YIELD();
         }
     }
 

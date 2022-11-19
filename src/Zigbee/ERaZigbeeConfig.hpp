@@ -11,4 +11,11 @@
 
 #define ZIGBEE_BUFFER_SIZE      1024
 
+#if !defined(ERA_ZIGBEE_YIELD)
+    #if !defined(ERA_ZIGBEE_YIELD_MS)
+        #define ERA_ZIGBEE_YIELD_MS 10
+    #endif
+    #define ERA_ZIGBEE_YIELD() { ERaDelay(ERA_ZIGBEE_YIELD_MS); }
+#endif
+
 #endif /* INC_ERA_ZIGBEE_CONFIG_HPP_ */

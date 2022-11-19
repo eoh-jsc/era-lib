@@ -13,6 +13,18 @@ void ERaModbus<Api>::configModbus() {
 
     this->stream = &SerialMB;
     SerialMB.begin(9600);
+    this->_streamDefault = true;
+}
+
+template <class Api>
+void ERaModbus<Api>::setBaudRate(uint32_t baudrate) {
+    if (!this->streamDefault()) {
+        return;
+    }
+
+    SerialMB.flush();
+    SerialMB.end();
+    SerialMB.begin(baudrate);
 }
 
 template <class Api>
@@ -36,11 +48,11 @@ bool ERaModbus<Api>::waitResponse(ModbusConfig_t& param, uint8_t* modbusData) {
 #if defined(ERA_NO_RTOS)
             eraOnWaiting();
             static_cast<Api*>(this)->run();
+#endif
             if (ModbusState::is(ModbusStateT::STATE_MB_PARSE)) {
                 break;
             }
-#endif
-            ERaDelay(10);
+            ERA_MODBUS_YIELD();
             continue;
         }
 
@@ -55,7 +67,7 @@ bool ERaModbus<Api>::waitResponse(ModbusConfig_t& param, uint8_t* modbusData) {
                 return true;
             }
         }
-        ERaDelay(10);
+        ERA_MODBUS_YIELD();
     } while (ERaRemainingTime(startMillis, MAX_TIMEOUT_MODBUS));
     return false;
 }

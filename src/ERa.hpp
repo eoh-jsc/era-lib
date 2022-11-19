@@ -7,6 +7,8 @@
     #include <ERaSimpleEsp8266.hpp>
 #elif defined(ARDUINO) && defined(STM32F4xx)
     #define ERA_NO_RTOS
+    #include <ERa/ERaDetect.hpp>
+    #define TINY_GSM_RX_BUFFER ERA_MQTT_BUFFER_SIZE
     #include <TinyGsmClient.h>
     #if defined(TINY_GSM_MODEM_HAS_WIFI)
         #include <ERaSimpleMBStm32WiFi.hpp>
