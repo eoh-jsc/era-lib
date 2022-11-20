@@ -246,8 +246,8 @@ void ERaModbus<Api>::readModbusConfig() {
 
 template <class Api>
 void ERaModbus<Api>::delayModbus(const int address) {
-    unsigned long delayMs {10L};
-    unsigned long startMillis = ERaMillis();
+    MillisTime_t delayMs {10L};
+    MillisTime_t startMillis = ERaMillis();
     for (ERaList<SensorDelay_t>::iterator* it = this->modbusConfig.sensorDelay.begin(); it != nullptr; it = it->getNext()) {
         if (it->get().address == address) {
             delayMs = it->get().delay;

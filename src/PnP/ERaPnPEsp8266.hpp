@@ -300,7 +300,7 @@ void ERaPnP::configApi() {
             CopyToArray(imei, eraConfig.password);
         }
 
-        content = R"json({"status":"ok","message":"Connecting wifi..."})json";
+        content = ERA_F(R"json({"status":"ok","message":"Connecting wifi..."})json");
         server.send(200, "application/json", content);
         if (ssid.length()) {
             eraConfig.setFlag(ConfigFlagT::CONFIG_FLAG_VALID, true);
@@ -339,7 +339,7 @@ void ERaPnP::configApi() {
         ERA_LOG("WiFi", "Scanning wifi...");
         String content;
         int nets = WiFi.scanNetworks(true, true);
-        unsigned long tick = ERaMillis();
+        MillisTime_t tick = ERaMillis();
         while (nets < 0 && ERaRemainingTime(tick, WIFI_SCAN_TIMEOUT)) {
             ERaDelay(100);
             nets = WiFi.scanComplete();
@@ -427,13 +427,13 @@ void ERaPnP::configApi() {
     });
 
     server.on("/api/reset", HTTP_POST, []() {
-        String content = R"json({"status":"ok","message":"Configuration reset"})json";
+        String content = ERA_F(R"json({"status":"ok","message":"Configuration reset"})json");
         server.send(200, "application/json", content);
         ERaState::set(StateT::STATE_RESET_CONFIG);
     });
 
     server.on("/api/reboot", HTTP_POST, []() {
-        String content = R"json({"status":"ok","message":"Rebooting..."})json";
+        String content = ERA_F(R"json({"status":"ok","message":"Rebooting..."})json");
         server.send(200, "application/json", content);
         ERaState::set(StateT::STATE_REBOOT);
     });
@@ -473,7 +473,7 @@ void ERaPnP::configApi() {
 
         if (scanWifi) {
             nets = WiFi.scanNetworks(true, true);
-            unsigned long tick = ERaMillis();
+            MillisTime_t tick = ERaMillis();
             while (nets < 0 && ERaRemainingTime(tick, WIFI_SCAN_TIMEOUT)) {
                 ERaDelay(100);
                 nets = WiFi.scanComplete();
@@ -481,19 +481,19 @@ void ERaPnP::configApi() {
             ERA_LOG("WiFi", "Found %d wifi", nets);
         }
 
-        content = "<meta charset='utf-8'>";
-        content += "<form name=wifiForm method=post>";
-        content += "<h1>WIFI</h1>";
-        content += "<table border=1 width='100%'>";
-        content += "<tr><th width='50%' height='30px'>Wifi</th>";
-        content += "<th width='50%'>Wifi 2</th></tr>";
-        content += "<tr><td style='text-align:center'>" + String(strlen(eraConfig.ssid) ? eraConfig.ssid : "--");
-        content += "</td><td style='text-align:center'>" + String(strlen(eraConfig.backupSSID) ? eraConfig.backupSSID : "--");
-        content += "</td></tr></table>";
+        content = ERA_F("<meta charset='utf-8'>");
+        content += ERA_F("<form name=wifiForm method=post>");
+        content += ERA_F("<h1>WIFI</h1>");
+        content += ERA_F("<table border=1 width='100%'>");
+        content += ERA_F("<tr><th width='50%' height='30px'>Wifi</th>");
+        content += ERA_F("<th width='50%'>Wifi 2</th></tr>");
+        content += ERA_F("<tr><td style='text-align:center'>") + String(strlen(eraConfig.ssid) ? eraConfig.ssid : "--");
+        content += ERA_F("</td><td style='text-align:center'>") + String(strlen(eraConfig.backupSSID) ? eraConfig.backupSSID : "--");
+        content += ERA_F("</td></tr></table>");
 
         if (nets > 0) {
-            content += "<select name=ssid id=ssid width='100%'>";
-            content += "<option value='' disabled selected>%SELECT_SSID%</option>";
+            content += ERA_F("<select name=ssid id=ssid width='100%'>");
+            content += ERA_F("<option value='' disabled selected>%SELECT_SSID%</option>");
             limit = 0;
             listWifi.clear();
             for (int i = 0; i < nets; ++i) {
@@ -507,29 +507,29 @@ void ERaPnP::configApi() {
                     continue;
                 }
                 listWifi.push_back(WiFi.SSID(i).c_str());
-                content += "<option value='";
+                content += ERA_F("<option value='");
                 content += WiFi.SSID(i);
-                content += "'>";
+                content += ERA_F("'>");
                 content += WiFi.SSID(i);
-                content += " (";
+                content += ERA_F(" (");
                 content += WiFi.RSSI(i);
-                content += ") ";
+                content += ERA_F(") ");
                 content += ((WiFi.encryptionType(i) == wl_enc_type::ENC_TYPE_NONE) ? "" : "*");
-                content += "</option>";
+                content += ERA_F("</option>");
                 if (++limit >= 20) {
                     break;
                 }
             }
-            content += "</select>";
+            content += ERA_F("</select>");
         }
         else {
-            content += "<input name=ssid id=ssid placeholder='%SSID%'>";
+            content += ERA_F("<input name=ssid id=ssid placeholder='%SSID%'>");
         }
-        content += "<input name=pass id=pass placeholder='%PASSWORD%' type=password>";
+        content += ERA_F("<input name=pass id=pass placeholder='%PASSWORD%' type=password>");
 
         if (nets > 0) {
-            content += "<select name=backup_ssid id=backup_ssid width='100%'>";
-            content += "<option value='' disabled selected>%SELECT_BACKUP_SSID%</option>";
+            content += ERA_F("<select name=backup_ssid id=backup_ssid width='100%'>");
+            content += ERA_F("<option value='' disabled selected>%SELECT_BACKUP_SSID%</option>");
             limit = 0;
             listWifi.clear();
             for (int i = 0; i < nets; ++i) {
@@ -543,31 +543,31 @@ void ERaPnP::configApi() {
                     continue;
                 }
                 listWifi.push_back(WiFi.SSID(i).c_str());
-                content += "<option value='";
+                content += ERA_F("<option value='");
                 content += WiFi.SSID(i);
-                content += "'>";
+                content += ERA_F("'>");
                 content += WiFi.SSID(i);
-                content += " (";
+                content += ERA_F(" (");
                 content += WiFi.RSSI(i);
-                content += ") ";
+                content += ERA_F(") ");
                 content += ((WiFi.encryptionType(i) == wl_enc_type::ENC_TYPE_NONE) ? "" : "*");
-                content += "</option>";
+                content += ERA_F("</option>");
                 if (++limit >= 20) {
                     break;
                 }
             }
-            content += "</select>";
+            content += ERA_F("</select>");
         }
         else {
-            content += "<input name=backup_ssid id=backup_ssid placeholder='%BACKUP_SSID%'>";
+            content += ERA_F("<input name=backup_ssid id=backup_ssid placeholder='%BACKUP_SSID%'>");
         }
-        content += "<input name=backup_pass id=backup_pass placeholder='%BACKUP_PASS%' type=password>";
-        content += "<input type=checkbox onclick=togglePass() class=checkbox> %SHOW_PASSWORD%";
+        content += ERA_F("<input name=backup_pass id=backup_pass placeholder='%BACKUP_PASS%' type=password>");
+        content += ERA_F("<input type=checkbox onclick=togglePass() class=checkbox> %SHOW_PASSWORD%");
         if (!scanWifi) {
-            content += "<input type=submit name=scan id=scan class=btn value='%SCAN_WIFI%'>";
+            content += ERA_F("<input type=submit name=scan id=scan class=btn value='%SCAN_WIFI%'>");
         }
-        content += "<input type=submit onclick=clicked(event) name=connect id=connect class=btn value='%CONNECT%'>";
-        content += "<input type=submit formaction='/' class=btn value='%BACK%'></form>";
+        content += ERA_F("<input type=submit onclick=clicked(event) name=connect id=connect class=btn value='%CONNECT%'>");
+        content += ERA_F("<input type=submit formaction='/' class=btn value='%BACK%'></form>");
 
         content += ERA_FPSTR(webScript);
         content += ERA_FPSTR(webStyle);
@@ -585,11 +585,11 @@ void ERaPnP::configApi() {
         String content;
         if (this->connected()) {
             content += LANGUAGE_CONNECTED(LANGUAGE_EN);
-            content += " ";
+            content += ERA_F(" ");
             content += WiFi.SSID();
         }
         else {
-            content += "--";
+            content += ERA_F("--");
         }
         server.send(200, "text/plane", content);
     });
@@ -600,7 +600,7 @@ void ERaPnP::configApi() {
             content += WiFi.localIP().toString();
         }
         else {
-            content += "--";
+            content += ERA_F("--");
         }
         server.send(200, "text/plane", content);
     });
@@ -611,7 +611,7 @@ void ERaPnP::configApi() {
             content += WiFi.SSID();
         }
         else {
-            content += "--";
+            content += ERA_F("--");
         }
         server.send(200, "text/plane", content);
     });
@@ -622,7 +622,7 @@ void ERaPnP::configApi() {
             content += WiFi.RSSI();
         }
         else {
-            content += "--";
+            content += ERA_F("--");
         }
         server.send(200, "text/plane", content);
     });
@@ -686,7 +686,7 @@ void ERaPnP::configApi() {
             CopyToArray(imei, eraConfig.password);
         }
 
-        content = R"json({"status":"ok","message":"Connecting wifi..."})json";
+        content = ERA_F(R"json({"status":"ok","message":"Connecting wifi..."})json");
         eraUdp.send(content.c_str());
         if (ssid.length()) {
             eraConfig.setFlag(ConfigFlagT::CONFIG_FLAG_VALID, true);
@@ -699,7 +699,7 @@ void ERaPnP::configApi() {
         ERA_LOG("WiFi", "Scanning wifi...");
         String content;
         int nets = WiFi.scanNetworks(true, true);
-        unsigned long tick = ERaMillis();
+        MillisTime_t tick = ERaMillis();
         while (nets < 0 && ERaRemainingTime(tick, WIFI_SCAN_TIMEOUT)) {
             ERaDelay(100);
             nets = WiFi.scanComplete();
@@ -772,13 +772,13 @@ void ERaPnP::configApi() {
     });
 
     eraUdp.on("system/reset", []() {
-        String content = R"json({"status":"ok","message":"Configuration reset"})json";
+        String content = ERA_F(R"json({"status":"ok","message":"Configuration reset"})json");
         eraUdp.send(content.c_str());
         ERaState::set(StateT::STATE_RESET_CONFIG);
     });
 
     eraUdp.on("system/reboot", []() {
-        String content = R"json({"status":"ok","message":"Rebooting..."})json";
+        String content = ERA_F(R"json({"status":"ok","message":"Rebooting..."})json");
         eraUdp.send(content.c_str());
         ERaState::set(StateT::STATE_REBOOT);
     });
@@ -842,7 +842,7 @@ void ERaPnP::configMode() {
     server.begin();
     eraUdp.begin(this->authToken);
 
-    unsigned long tick = ERaMillis();
+    MillisTime_t tick = ERaMillis();
     while (ERaState::is(StateT::STATE_WAIT_CONFIG) || ERaState::is(StateT::STATE_CONFIGURING)) {
         ERaDelay(10);
         eraUdp.run();
@@ -900,7 +900,7 @@ void ERaPnP::connectCloud() {
 void ERaPnP::connectWiFi(const char* ssid, const char* pass) {
     int status = WiFi.status();
 
-    unsigned long started = ERaMillis();
+    MillisTime_t started = ERaMillis();
     while (status != WL_CONNECTED) {
         ERA_LOG(TAG, "Connecting to %s...", ssid);
         if (pass && strlen(pass)) {
@@ -909,7 +909,7 @@ void ERaPnP::connectWiFi(const char* ssid, const char* pass) {
             WiFi.begin(ssid);
         }
 
-        unsigned long startMillis = ERaMillis();
+        MillisTime_t startMillis = ERaMillis();
         while (status != WL_CONNECTED) {
             ERaDelay(500);
             status = WiFi.status();

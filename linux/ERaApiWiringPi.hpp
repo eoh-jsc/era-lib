@@ -28,6 +28,17 @@ void ERaApi<Proto, Flash>::handleReadPin(cJSON* root) {
 		if (cJSON_IsNumber(item)) {
 			pin.pin = item->valueint;
 		}
+        else if (cJSON_IsString(item)) {
+            pin.pin = ERA_DECODE_PIN_NAME(item->valuestring);
+        }
+		pin.pinMode = this->getPinMode(current);
+		if (pin.pinMode == VIRTUAL) {
+			this->eraPinReport.setPinVirtual(pin.pin, pin.configId);
+			continue;
+		}
+		if (!this->isReadPinMode(pin.pinMode)) {
+			continue;
+		}
 		if (pin.pin > MAX_GPIO_WIRING_PI) {
 			continue;
 		}
@@ -37,7 +48,6 @@ void ERaApi<Proto, Flash>::handleReadPin(cJSON* root) {
 			this->eraPinReport.setPinVirtual(pin.pin, pin.configId);
 #else
 			if (ERaStrCmp(item->valuestring, "boolean")) {
-				pin.pinMode = this->getPinMode(current, INPUT);
 				this->getPinConfig(current, pin);
 				pinMode(pin.pin, INPUT);
                 switch (pin.pinMode) {
@@ -64,9 +74,6 @@ void ERaApi<Proto, Flash>::handleReadPin(cJSON* root) {
 				this->eraPinReport.setPinReport(pin.pin, ANALOG, analogRead, pin.report.interval,
 												pin.report.minInterval, pin.report.maxInterval, pin.report.reportableChange, this->reportPinConfigCb,
 												pin.configId).setScale(pin.scale.min, pin.scale.max, pin.scale.rawMin, pin.scale.rawMax);
-			}
-			else if (ERaStrCmp(item->valuestring, "virtual")) {
-				this->eraPinReport.setPinVirtual(pin.pin, pin.configId);
 			}
 #endif
 		}
@@ -95,6 +102,17 @@ void ERaApi<Proto, Flash>::handleWritePin(cJSON* root) {
 		if (cJSON_IsNumber(item)) {
 			pin.pin = item->valueint;
 		}
+        else if (cJSON_IsString(item)) {
+            pin.pin = ERA_DECODE_PIN_NAME(item->valuestring);
+        }
+		pin.pinMode = this->getPinMode(current);
+		if (pin.pinMode == VIRTUAL) {
+			this->eraPinReport.setPinVirtual(pin.pin, pin.configId);
+			continue;
+		}
+		if (this->isReadPinMode(pin.pinMode)) {
+			continue;
+		}
 		if (pin.pin > MAX_GPIO_WIRING_PI) {
 			continue;
 		}
@@ -104,7 +122,6 @@ void ERaApi<Proto, Flash>::handleWritePin(cJSON* root) {
 			this->eraPinReport.setPinVirtual(pin.pin, pin.configId);
 #else
 			if (ERaStrCmp(item->valuestring, "boolean")) {
-				pin.pinMode = this->getPinMode(current, OUTPUT);
 				this->getPinConfig(current, pin);
 				pinMode(pin.pin, pin.pinMode);
                 if (pin.pinMode == OUTPUT) {
@@ -114,15 +131,11 @@ void ERaApi<Proto, Flash>::handleWritePin(cJSON* root) {
                 }
 			}
 			else if (ERaStrCmp(item->valuestring, "integer")) {
-				pin.pinMode = this->getPinMode(current, PWM);
 				this->getPinConfig(current, pin);
 				this->getScaleConfig(current, pin);
-                this->eraPinReport.setPinReport(pin.pin, pin.pinMode, nullptr, pin.report.interval,
+                this->eraPinReport.setPinReport(pin.pin, PWM, nullptr, pin.report.interval,
                                                 pin.report.minInterval, pin.report.maxInterval, pin.report.reportableChange, this->reportPinConfigCb,
                                                 pin.configId).setScale(pin.scale.min, pin.scale.max, pin.scale.rawMin, pin.scale.rawMax);
-			}
-			else if (ERaStrCmp(item->valuestring, "virtual")) {
-				this->eraPinReport.setPinVirtual(pin.pin, pin.configId);
 			}
 #endif
 		}
@@ -135,7 +148,7 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const std::vector<std::strin
 		return;
 	}
 	const std::string& str = arrayTopic.at(2);
-	if (!this->isDigit(str)) {
+	if (str.empty()) {
 		return;
 	}
 	cJSON* root = cJSON_Parse(payload.c_str());
@@ -144,21 +157,27 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const std::vector<std::strin
 		root = nullptr;
 		return;
 	}
-	uint8_t pin = atoi(str.c_str());
+	uint8_t pin = ERA_DECODE_PIN_NAME(str.c_str());
 	cJSON* item = cJSON_GetObjectItem(root, "value");
 	if (cJSON_IsNumber(item)) {
 		ERaParam raw;
 		ERaParam param(item->valuedouble);
 		float value = item->valuedouble;
 		int pMode = this->eraPinReport.findPinMode(pin);
-		const ERaReport::ScaleData_t* scale = this->eraPinReport.findScale(pin);
-		if ((scale != nullptr) && scale->enable) {
-			value = ERaMapNumberRange((float)item->valuedouble, scale->min, scale->max, scale->rawMin, scale->rawMax);
+		const ERaReport::iterator* rp = this->eraPinReport.getReport(pin);
+		if (rp != nullptr) {
+			const ERaReport::ScaleData_t* scale = rp->getScale();
+			if ((scale != nullptr) && scale->enable) {
+				value = ERaMapNumberRange((float)item->valuedouble, scale->min, scale->max, scale->rawMin, scale->rawMax);
+			}
 		}
 		switch (pMode) {
 			case PWM:
                 pinMode(pin, PWM_OUTPUT);
                 ::pwmWrite(pin, value);
+				if (rp != nullptr) {
+					rp->updateReport(value);
+				}
                 break;
 			case ANALOG:
                 ::analogWrite(pin, value);

@@ -1,95 +1,93 @@
-#ifndef INC_ERA_API_ARDUINO_HPP_
-#define INC_ERA_API_ARDUINO_HPP_
+#ifndef INC_ERA_API_STM32_HPP_
+#define INC_ERA_API_STM32_HPP_
 
 #include <ERa/ERaApi.hpp>
 
-#if defined(STM32F4xx)
+#define ERA_STM32_DECODE_PIN(pin) pinNametoDigitalPin(stringToPinName(pin))
 
-	#undef ERA_DECODE_PIN_NAME
-	#define ERA_DECODE_PIN_NAME(pin) ((stringToPinName(pin) != PinName::NC) ? \
-									pinNametoDigitalPin(stringToPinName(pin)) : \
+#undef ERA_DECODE_PIN_NAME
+#define ERA_DECODE_PIN_NAME(pin) ((stringToPinName(pin) != PinName::NC) ? \
+									ERA_STM32_DECODE_PIN(pin) : \
 									(((pin[0] == 'a') || (pin[0] == 'A')) ? ERA_DECODE_PIN(atoi(pin + 1)) : atoi(pin)))
 
-	inline
-	static PinName stringToPinName(std::string str) {
-		if (str.size() < 3) {
-			return PinName::NC;
-		}
+inline
+static PinName stringToPinName(std::string str) {
+    if (str.size() < 3) {
+        return PinName::NC;
+    }
 
-		PinName p = PinName::NC;
-		std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c) {
-			return std::tolower(c);
-		});
+    PinName p = PinName::NC;
+    std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c) {
+        return std::tolower(c);
+    });
 
-		if (str.at(0) != 'p' || !isdigit(str.at(2))) {
-			return PinName::NC;
-		}
+    if (str.at(0) != 'p' || !isdigit(str.at(2))) {
+        return PinName::NC;
+    }
 
-		switch (str.at(1)) {
-			case 'a':
-				p = (PinName)(PortName::PortA + atoi(&str.at(2)));
-				break;
-			case 'b':
-				p = (PinName)(PortName::PortB + atoi(&str.at(2)));
-				break;
-	#if defined GPIOC_BASE
-			case 'c':
-				p = (PinName)(PortName::PortC + atoi(&str.at(2)));
-				break;
-	#endif
-	#if defined GPIOD_BASE
-			case 'd':
-				p = (PinName)(PortName::PortD + atoi(&str.at(2)));
-				break;
-	#endif
-	#if defined GPIOE_BASE
-			case 'e':
-				p = (PinName)(PortName::PortE + atoi(&str.at(2)));
-				break;
-	#endif
-	#if defined GPIOF_BASE
-			case 'f':
-				p = (PinName)(PortName::PortF + atoi(&str.at(2)));
-				break;
-	#endif
-	#if defined GPIOG_BASE
-			case 'g':
-				p = (PinName)(PortName::PortG + atoi(&str.at(2)));
-				break;
-	#endif
-	#if defined GPIOH_BASE
-			case 'h':
-				p = (PinName)(PortName::PortH + atoi(&str.at(2)));
-				break;
-	#endif
-	#if defined GPIOI_BASE
-			case 'i':
-				p = (PinName)(PortName::PortI + atoi(&str.at(2)));
-				break;
-	#endif
-	#if defined GPIOJ_BASE
-			case 'j':
-				p = (PinName)(PortName::PortJ + atoi(&str.at(2)));
-				break;
-	#endif
-	#if defined GPIOK_BASE
-			case 'k':
-				p = (PinName)(PortName::PortK + atoi(&str.at(2)));
-				break;
-	#endif
-	#if defined GPIOZ_BASE
-			case 'z':
-				p = (PinName)(PortName::PortZ + atoi(&str.at(2)));
-				break;
-	#endif
-			default:
-				return PinName::NC;
-		}
-
-		return p;
-	}
-
+    switch (str.at(1)) {
+        case 'a':
+            p = (PinName)(PortName::PortA + atoi(&str.at(2)));
+            break;
+        case 'b':
+            p = (PinName)(PortName::PortB + atoi(&str.at(2)));
+            break;
+#if defined GPIOC_BASE
+        case 'c':
+            p = (PinName)(PortName::PortC + atoi(&str.at(2)));
+            break;
 #endif
+#if defined GPIOD_BASE
+        case 'd':
+            p = (PinName)(PortName::PortD + atoi(&str.at(2)));
+            break;
+#endif
+#if defined GPIOE_BASE
+        case 'e':
+            p = (PinName)(PortName::PortE + atoi(&str.at(2)));
+            break;
+#endif
+#if defined GPIOF_BASE
+        case 'f':
+            p = (PinName)(PortName::PortF + atoi(&str.at(2)));
+            break;
+#endif
+#if defined GPIOG_BASE
+        case 'g':
+            p = (PinName)(PortName::PortG + atoi(&str.at(2)));
+            break;
+#endif
+#if defined GPIOH_BASE
+        case 'h':
+            p = (PinName)(PortName::PortH + atoi(&str.at(2)));
+            break;
+#endif
+#if defined GPIOI_BASE
+        case 'i':
+            p = (PinName)(PortName::PortI + atoi(&str.at(2)));
+            break;
+#endif
+#if defined GPIOJ_BASE
+        case 'j':
+            p = (PinName)(PortName::PortJ + atoi(&str.at(2)));
+            break;
+#endif
+#if defined GPIOK_BASE
+        case 'k':
+            p = (PinName)(PortName::PortK + atoi(&str.at(2)));
+            break;
+#endif
+#if defined GPIOZ_BASE
+        case 'z':
+            p = (PinName)(PortName::PortZ + atoi(&str.at(2)));
+            break;
+#endif
+        default:
+            return PinName::NC;
+    }
+
+    return p;
+}
 
 template <class Proto, class Flash>
 void ERaApi<Proto, Flash>::handleReadPin(cJSON* root) {
@@ -140,15 +138,11 @@ void ERaApi<Proto, Flash>::handleReadPin(cJSON* root) {
 				pin.report = PinConfig_t::__ReportConfig_t(1000, 1000, 60000, 10.0f);
 				this->getPinConfig(current, pin);
 				this->getScaleConfig(current, pin);
-#if defined(ESP32)
-				pinMode(pin.pin, ANALOG);
-#elif defined(STM32F4xx)
 				if (!digitalpinIsAnalogInput(pin.pin)) {
 					continue;
 				}
 				pin.pin = digitalPinToAnalogInput(pin.pin) + PNUM_ANALOG_BASE;
 				pinMode(pin.pin, ANALOG);
-#endif
 				this->eraPinReport.setPinReport(pin.pin, ANALOG, analogRead, pin.report.interval,
 												pin.report.minInterval, pin.report.maxInterval, pin.report.reportableChange, this->reportPinConfigCb,
 												pin.configId).setScale(pin.scale.min, pin.scale.max, pin.scale.rawMin, pin.scale.rawMax);
@@ -332,15 +326,11 @@ void ERaApi<Proto, Flash>::handlePinRequest(const std::vector<std::string>& arra
 												pin.report.minInterval, pin.report.maxInterval, pin.report.reportableChange, this->reportPinCb);
             }
 			else if (ERaStrCmp(current->valuestring, "analog")) {
-#if defined(ESP32)
-				pinMode(pin.pin, ANALOG);
-#elif defined(STM32F4xx)
 				if (!digitalpinIsAnalogInput(pin.pin)) {
 					continue;
 				}
 				pin.pin = digitalPinToAnalogInput(pin.pin) + PNUM_ANALOG_BASE;
 				pinMode(pin.pin, ANALOG);
-#endif
 				this->eraPinReport.setPinReport(pin.pin, ANALOG, analogRead, pin.report.interval,
 												pin.report.minInterval, pin.report.maxInterval, pin.report.reportableChange, this->reportPinCb);
             }
@@ -372,4 +362,4 @@ void ERaApi<Proto, Flash>::handlePinRequest(const std::vector<std::string>& arra
 	root = nullptr;
 }
 
-#endif /* INC_ERA_API_ARDUINO_HPP_ */
+#endif /* INC_ERA_API_STM32_HPP_ */

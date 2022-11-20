@@ -37,7 +37,7 @@ bool ERaModbus<Api>::waitResponse(ModbusConfig_t& param, uint8_t* modbusData) {
         this->failWrite = 0;
     }
 
-    unsigned long startMillis = ERaMillis();
+    MillisTime_t startMillis = ERaMillis();
 
     do
     {

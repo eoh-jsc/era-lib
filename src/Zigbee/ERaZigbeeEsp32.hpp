@@ -66,7 +66,7 @@ ResultT ERaToZigbee<Zigbee>::waitResponse(Response_t rspWait, void* value) {
     }
     uint8_t cmdStatus = ZnpCommandStatusT::INVALID_PARAM;
 
-    unsigned long startMillis = ERaMillis();
+    MillisTime_t startMillis = ERaMillis();
 
     do {
         if (osMessageQueueGet((QueueHandle_t)(static_cast<Zigbee*>(this)->messageHandle), &event, NULL, 1) == osOK) {

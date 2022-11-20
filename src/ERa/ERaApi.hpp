@@ -16,6 +16,8 @@
 	#define ERA_DECODE_PIN(pin)	pin
 #endif
 
+#define ERA_DECODE_PIN_NAME(pin) (((pin[0] == 'a') || (pin[0] == 'A')) ? ERA_DECODE_PIN(atoi(pin + 1)) : atoi(pin))
+
 typedef struct __ERaRsp_t {
     uint8_t type;
     ERaParam id;
@@ -199,7 +201,8 @@ private:
 	void getScaleConfig(const cJSON* const root, PinConfig_t& pin);
 	void getReportConfig(const cJSON* const root, PinConfig_t& pin);
 	void getPinConfig(const cJSON* const root, PinConfig_t& pin);
-	uint8_t getPinMode(const cJSON* const root, const uint8_t defaultMode);
+	uint8_t getPinMode(const cJSON* const root, const uint8_t defaultMode = VIRTUAL);
+	bool isReadPinMode(uint8_t pMode);
 	bool getGPIOPin(const cJSON* const root, const char* key, uint8_t& pin);
 	bool isDigit(const std::string& str);
 
@@ -330,9 +333,9 @@ uint8_t ERaApi<Proto, Flash>::getPinMode(const cJSON* const root, const uint8_t 
 	if (root == nullptr) {
 		return mode;
 	}
-	cJSON* item = cJSON_GetObjectItem(root, "value_converter");
+	cJSON* item = cJSON_GetObjectItem(root, "pin_mode");
 	if (item == nullptr) {
-		item = cJSON_GetObjectItem(root, "pin_mode");
+		item = cJSON_GetObjectItem(root, "value_converter");
 	}
 	if (!cJSON_IsString(item)) {
 		return mode;
@@ -364,6 +367,19 @@ uint8_t ERaApi<Proto, Flash>::getPinMode(const cJSON* const root, const uint8_t 
 	}
 
 	return mode;
+}
+
+template <class Proto, class Flash>
+bool ERaApi<Proto, Flash>::isReadPinMode(uint8_t pMode) {
+	switch (pMode) {
+		case INPUT:
+		case INPUT_PULLUP:
+		case INPUT_PULLDOWN:
+		case ANALOG:
+			return true;
+		default:
+			return false;
+	}
 }
 
 template <class Proto, class Flash>

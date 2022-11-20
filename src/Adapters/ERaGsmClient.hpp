@@ -2,9 +2,9 @@
 #define INC_ERA_GSM_CLIENT_HPP_
 
 #include <TinyGsmClient.h>
-#include <ERa/ERaApiArduinoDef.hpp>
+#include <ERa/ERaApiStm32Def.hpp>
 #include <ERa/ERaProtocol.hpp>
-#include <ERa/ERaApiArduino.hpp>
+#include <ERa/ERaApiStm32.hpp>
 #include <MQTT/ERaMqtt.hpp>
 
 #define GSM_NET_CONNECT_TIMEOUT      3 * 60000
@@ -29,7 +29,7 @@ public:
     {}
 
     bool connectNetwork(const char* apn, const char* user, const char* pass) {
-        unsigned long startMillis = ERaMillis();
+        MillisTime_t startMillis = ERaMillis();
         while (!this->connectGPRS(apn, user, pass)) {
             ERaDelay(500);
             if (!ERaRemainingTime(startMillis, GSM_NET_CONNECT_TIMEOUT)) {

@@ -40,7 +40,7 @@ public:
                 status = WiFi.begin(ssid);
             }
 
-            unsigned long startMillis = ERaMillis();
+            MillisTime_t startMillis = ERaMillis();
             while (status != WL_CONNECTED) {
                 ERaDelay(500);
                 status = WiFi.status();

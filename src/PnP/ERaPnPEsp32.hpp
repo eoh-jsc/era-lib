@@ -355,7 +355,7 @@ void ERaPnP::configApi() {
         ERA_LOG("WiFi", "Scanning wifi...");
         String content;
         int nets = WiFi.scanNetworks(true, true);
-        unsigned long tick = ERaMillis();
+        MillisTime_t tick = ERaMillis();
         while (nets < 0 && ERaRemainingTime(tick, WIFI_SCAN_TIMEOUT)) {
             ERaDelay(100);
             nets = WiFi.scanComplete();
@@ -489,7 +489,7 @@ void ERaPnP::configApi() {
 
         if (scanWifi) {
             nets = WiFi.scanNetworks(true, true);
-            unsigned long tick = ERaMillis();
+            MillisTime_t tick = ERaMillis();
             while (nets < 0 && ERaRemainingTime(tick, WIFI_SCAN_TIMEOUT)) {
                 ERaDelay(100);
                 nets = WiFi.scanComplete();
@@ -715,7 +715,7 @@ void ERaPnP::configApi() {
         ERA_LOG("WiFi", "Scanning wifi...");
         String content;
         int nets = WiFi.scanNetworks(true, true);
-        unsigned long tick = ERaMillis();
+        MillisTime_t tick = ERaMillis();
         while (nets < 0 && ERaRemainingTime(tick, WIFI_SCAN_TIMEOUT)) {
             ERaDelay(100);
             nets = WiFi.scanComplete();
@@ -858,7 +858,7 @@ void ERaPnP::configMode() {
     server.begin();
     eraUdp.begin(this->authToken);
 
-    unsigned long tick = ERaMillis();
+    MillisTime_t tick = ERaMillis();
     while (ERaState::is(StateT::STATE_WAIT_CONFIG) || ERaState::is(StateT::STATE_CONFIGURING)) {
         ERaDelay(10);
         eraUdp.run();
@@ -916,7 +916,7 @@ void ERaPnP::connectCloud() {
 void ERaPnP::connectWiFi(const char* ssid, const char* pass) {
     int status = WiFi.status();
 
-    unsigned long started = ERaMillis();
+    MillisTime_t started = ERaMillis();
     while (status != WL_CONNECTED) {
         ERA_LOG(TAG, "Connecting to %s...", ssid);
         if (pass && strlen(pass)) {
@@ -925,7 +925,7 @@ void ERaPnP::connectWiFi(const char* ssid, const char* pass) {
             WiFi.begin(ssid);
         }
 
-        unsigned long startMillis = ERaMillis();
+        MillisTime_t startMillis = ERaMillis();
         while (status != WL_CONNECTED) {
             ERaDelay(500);
             status = WiFi.status();

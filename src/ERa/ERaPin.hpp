@@ -570,7 +570,7 @@ typename Report::iterator* ERaPin<Report>::getReport(uint8_t _pin) {
     for (int i = 0; i < MAX_PINS; ++i) {
         if (this->isValidPin(i)) {
             if (this->pin[i].pin == _pin) {
-                return this->pin[i].report;
+                return &this->pin[i].report;
             }
         }
     }

@@ -79,7 +79,7 @@ public:
 			return ((this->rp != nullptr) && (this->id >= 0));
 		}
 
-        void updateReport(float value) {
+        void updateReport(float value) const {
             if (!this->isValid()) {
                 return;
             }
@@ -153,7 +153,7 @@ public:
             this->rp->setScale(this->id, min, max, rawMin, rawMax);
 		}
 
-		ERaReport::ScaleData_t* getScale() {
+		ERaReport::ScaleData_t* getScale() const {
             if (!this->isValid()) {
                 return nullptr;
             }

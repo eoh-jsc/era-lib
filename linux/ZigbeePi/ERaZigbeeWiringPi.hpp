@@ -53,7 +53,7 @@ ResultT ERaToZigbee<Zigbee>::waitResponse(Response_t rspWait, void* value) {
     }
     uint8_t cmdStatus = ZnpCommandStatusT::INVALID_PARAM;
 
-    unsigned long startMillis = ERaMillis();
+    MillisTime_t startMillis = ERaMillis();
 
     do {
         int length = serialDataAvail(static_cast<Zigbee*>(this)->fd);

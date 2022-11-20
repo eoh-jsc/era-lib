@@ -9,9 +9,9 @@
 
 #if !defined(ANALOG)
     #if defined(INPUT_ANALOG)
-        #define ANALOG            INPUT_ANALOG
+        #define ANALOG        INPUT_ANALOG
     #else
-        #define ANALOG            0xC0
+        #define ANALOG        0xC0
     #endif
 #endif
 

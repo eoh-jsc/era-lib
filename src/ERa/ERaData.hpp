@@ -144,6 +144,10 @@ public:
 	void add_hex_array(const uint8_t* ptr, size_t size);
     void add(int value);
     void add(unsigned int value);
+    void add(long value);
+    void add(unsigned long value);
+    void add(long long value);
+    void add(unsigned long long value);
     void add(float value);
     void add(double value);
 
@@ -237,6 +241,26 @@ void ERaDataBuff::add(int value) {
 
 void ERaDataBuff::add(unsigned int value) {
     this->len += snprintf(this->buff + this->len, this->buffSize - this->len, "%u", value);
+    this->buff[this->len++] = '\0';
+}
+
+void ERaDataBuff::add(long value) {
+    this->len += snprintf(this->buff + this->len, this->buffSize - this->len, "%li", value);
+    this->buff[this->len++] = '\0';
+}
+
+void ERaDataBuff::add(unsigned long value) {
+    this->len += snprintf(this->buff + this->len, this->buffSize - this->len, "%lu", value);
+    this->buff[this->len++] = '\0';
+}
+
+void ERaDataBuff::add(long long value) {
+    this->len += snprintf(this->buff + this->len, this->buffSize - this->len, "%lli", value);
+    this->buff[this->len++] = '\0';
+}
+
+void ERaDataBuff::add(unsigned long long value) {
+    this->len += snprintf(this->buff + this->len, this->buffSize - this->len, "%llu", value);
     this->buff[this->len++] = '\0';
 }
 
