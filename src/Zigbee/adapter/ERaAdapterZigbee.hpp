@@ -49,6 +49,9 @@ void ERaZigbee<Api>::startZigbee(bool& format, bool& invalid) {
             CopyArray(this->coordinator->address.addr.ieeeAddr, this->coordinator->extPanId);
         }
 
+        // Network key (update soon...)
+        CopyArray(this->DefaultNetworkKey, this->coordinator->networkKey);
+
         ToZigbee::CommandZigbee::requestResetZstack(ResetTypeT::RST_SOFT, 1);
         ToZigbee::CommandZigbee::deleteItemZstack(NvItemsIdsT::NIB);
         ToZigbee::CommandZigbee::startupOptionWriteOSALZstack(0x03);
@@ -136,6 +139,9 @@ void ERaZigbee<Api>::startZigbee(bool& format, bool& invalid) {
     ToZigbee::CommandZigbee::requestInfoNwkExtZstack(1);
 
     this->permitJoinDuration(this->coordinator->permitJoin.address, 0x00);
+
+    this->coordinator->clearAllDevice();
+    DBZigbee::parseZigbeeDevice();
 
     this->createInfoCoordinator();
 
@@ -275,10 +281,10 @@ void ERaZigbee<Api>::createInfoCoordinator() {
 
 template <class Api>
 void ERaZigbee<Api>::zigbeeTimerCallback(void* args) {
-    ERaTimer::iterator* tm = (ERaTimer::iterator*)args;
-    if (tm == nullptr) {
+    if (args == nullptr) {
         return;
     }
+    ERaTimer::iterator* tm = (ERaTimer::iterator*)args;
     if (tm->getId() == this->timerJoin.getId()) {
         this->permitJoinDuration(this->coordinator->permitJoin.address, 254);
     }

@@ -5,6 +5,9 @@
 void eraNoHandler() {
 }
 
+void eraNoModbusBaudrate(uint32_t ERA_UNUSED& baudrate) {
+}
+
 void eraWidgetWrite(uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param) {
 }
 
@@ -26,6 +29,7 @@ void eraWidgetPinRead(uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param,
 ERA_CONNECTED() __attribute__((weak, alias("eraNoHandler")));
 ERA_DISCONNECTED() __attribute__((weak, alias("eraNoHandler")));
 ERA_WAITING() __attribute__((weak, alias("eraNoHandler")));
+ERA_MODBUS_BAUDRATE() __attribute__((weak, alias("eraNoModbusBaudrate")));
 
 ERA_ON_WRITE( 0);
 ERA_ON_WRITE( 1);

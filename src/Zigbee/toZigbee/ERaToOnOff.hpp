@@ -6,7 +6,6 @@
 template <class Zigbee>
 bool ERaToZigbee<Zigbee>::stateToZigbee(const cJSON* const root, const cJSON* const current, AFAddrType_t& dstAddr, const ConvertToZigbeeT type) {
 	cJSON* subItem = nullptr;
-	EndpointListT endpoint {ENDPOINT1};
 	uint16_t transition {0};
 	uint8_t controlBits {0};
 	uint16_t onTime {0};
@@ -17,7 +16,7 @@ bool ERaToZigbee<Zigbee>::stateToZigbee(const cJSON* const root, const cJSON* co
     switch (type) {
         case ConvertToZigbeeT::CONVERT_SET_TO_ZIGBEE:
             if (ERaStrNCmp(current->string, "state")) {
-                this->getEndpointToZigbee(current, "state", endpoint);
+                this->getEndpointToZigbee(current, "state", dstAddr.endpoint);
 				subItem = cJSON_GetObjectItem(root, "is_specific");
 				if (cJSON_IsBool(subItem) || cJSON_IsNumber(subItem)) {
 					isSpecific = subItem->valueint;
@@ -80,7 +79,7 @@ bool ERaToZigbee<Zigbee>::stateToZigbee(const cJSON* const root, const cJSON* co
             break;
         case ConvertToZigbeeT::CONVERT_GET_TO_ZIGBEE:
             if (ERaStrNCmp(current->string, "state")) {
-                this->getEndpointToZigbee(current, "state", endpoint);
+                this->getEndpointToZigbee(current, "state", dstAddr.endpoint);
                 if (cJSON_Empty(current)) {
                     CommandZigbee::readAttributes(dstAddr, EndpointListT::ENDPOINT1,
                                                 ClusterIDT::ZCL_CLUSTER_ONOFF, ManufacturerCodesT::MANUF_CODE_NONE,

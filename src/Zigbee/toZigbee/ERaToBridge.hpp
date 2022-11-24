@@ -5,7 +5,12 @@
 
 template <class Zigbee>
 bool ERaToZigbee<Zigbee>::permitJoinToZigbee(const cJSON* const root) {
-    AFAddrType_t dstAddr;
+    AFAddrType_t dstAddr {
+        .addr = {
+            .nwkAddr = CommandZigbee::AddrBroadcastJoin
+        },
+        .addrMode = AddressModeT::ADDR_BROADCAST
+    };
     ResultT status {ResultT::RESULT_SUCCESSFUL};
 
     cJSON* item = cJSON_GetObjectItem(root, "ieee_addr");
@@ -16,9 +21,10 @@ bool ERaToZigbee<Zigbee>::permitJoinToZigbee(const cJSON* const root) {
     item = cJSON_GetObjectItem(root, "nwk_addr");
     if (cJSON_IsNumber(item)) {
         dstAddr.addr.nwkAddr = item->valueint;
+        dstAddr.addrMode = AddressModeT::ADDR_16BIT;
     }
     item = cJSON_GetObjectItem(root, "value");
-    if (!cJSON_IsNumber(item)) {
+    if (!cJSON_IsBool(item)) {
         return false;
     }
     if (item->valueint) {

@@ -110,6 +110,7 @@
 #define ERA_CONNECTED()         void eraOnConnected()
 #define ERA_DISCONNECTED()      void eraOnDisconnected()
 #define ERA_WAITING()			void eraOnWaiting()
+#define ERA_MODBUS_BAUDRATE()	void eraModbusBaudrate(uint32_t ERA_UNUSED& baudrate)
 
 #define ERA_WRITE_2(Pin)        void eraWidgetWrite ## Pin (uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param)
 #define ERA_WRITE(Pin)          ERA_WRITE_2(Pin)
@@ -125,10 +126,12 @@ extern "C" {
 #endif
 
 void eraNoHandler();
+void eraNoModbusBaudrate(uint32_t ERA_UNUSED& baudrate);
 
 ERA_CONNECTED();
 ERA_DISCONNECTED();
 ERA_WAITING();
+ERA_MODBUS_BAUDRATE();
 
 ERA_WRITE(  );
 ERA_WRITE( 0);

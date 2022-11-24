@@ -23,7 +23,9 @@
 #include "define/zbZigbee.hpp"
 #include "define/zdoZigbee.hpp"
 
-#define MAX_DEVICE_ZIGBEE       		10
+#if !defined(MAX_DEVICE_ZIGBEE)
+	#define MAX_DEVICE_ZIGBEE       	20
+#endif
 
 #define NO_NWK_ADDR			    		(uint16_t)0x0000
 #define NO_LOAD_ENDPOINT	    		(uint8_t)0xFF
@@ -248,13 +250,13 @@ typedef struct __ZigbeeAction_t {
 } ZigbeeAction_t;
 
 typedef struct __IdentDeviceAddr_t {
+	uint8_t typeDevice;
 	AFAddrType_t address;
-	char modelName[50];
+	uint8_t appVer;
 	bool isConnected;
+	char modelName[50];
 	ZigbeeData_t data;
 	uint8_t receiveId;
-	char* ieeeAddr;
-	cJSON* payload;
 } IdentDeviceAddr_t;
 
 typedef struct __DataAFMsg_t {
@@ -431,15 +433,20 @@ typedef struct __InfoCoordinator_t {
 	}
 	void freeAllDevice() {
 		for (size_t i = 0; i < this->deviceCount; ++i) {
-			if (this->deviceIdent[i].ieeeAddr != nullptr) {
-				free(this->deviceIdent[i].ieeeAddr);
-				this->deviceIdent[i].ieeeAddr = nullptr;
+			if (this->deviceIdent[i].data.topic != nullptr) {
+				free(this->deviceIdent[i].data.topic);
+				this->deviceIdent[i].data.topic = nullptr;
 			}
-			if (this->deviceIdent[i].payload != nullptr) {
-				cJSON_Delete(this->deviceIdent[i].payload);
-				this->deviceIdent[i].payload = nullptr;
+			if (this->deviceIdent[i].data.payload != nullptr) {
+				cJSON_Delete(this->deviceIdent[i].data.payload);
+				this->deviceIdent[i].data.payload = nullptr;
 			}
 		}
+	}
+    void clearAllDevice() {
+		this->freeAllDevice();
+		this->deviceCount = 0;
+		memset(this->deviceIdent, 0, sizeof(this->deviceIdent));
 	}
 
 	bool lock;
@@ -516,7 +523,7 @@ typedef struct __InfoDevice_t
 		, hasAnnounce(false)
 		, address {
 			.addr = {},
-			.addrMode = AddressModeT::ADDR_64BIT
+			.addrMode = AddressModeT::ADDR_16BIT
 		}
 		, hasManufCode(false)
 		, power(PWS_NEED_GET)

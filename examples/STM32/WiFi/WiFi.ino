@@ -30,6 +30,8 @@ ERaTimer timer;
 const char ssid[] = "YOUR_SSID";
 const char pass[] = "YOUR_PASSWORD";
 
+const int rstPin = PB7;
+
 /* This function print uptime every second */
 void timerEvent() {
     ERA_LOG("Timer", "Uptime: %d\n", ERaMillis() / 1000L);
@@ -42,7 +44,7 @@ void setup() {
     /* Set GSM module baud rate */
     SerialWiFi.begin(115200);
 
-    ERa.begin(modem, ssid, pass);
+    ERa.begin(modem, ssid, pass, rstPin);
 
     /* Setup timer called function every second */
     timer.setInterval(1000L, timerEvent);

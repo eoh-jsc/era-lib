@@ -7,11 +7,12 @@
 #include <ERa/ERaParam.hpp>
 #include <ERa/ERaTimer.hpp>
 #include <Utility/ERaUtility.hpp>
+#include <Zigbee/ERaZigbeeConfig.hpp>
 #include <Zigbee/ERaZigbeeState.hpp>
 #include <Zigbee/ERaToZigbee.hpp>
 #include <Zigbee/ERaFromZigbee.hpp>
+#include <Zigbee/ERaDBZigbee.hpp>
 #include "utility/ERaUtilityZigbee.hpp"
-#include "ERaZigbeeConfig.hpp"
 
 InfoDevice_t* InfoDevice_t::instance = nullptr;
 InfoCoordinator_t* InfoCoordinator_t::instance = nullptr;
@@ -20,6 +21,7 @@ template <class Api>
 class ERaZigbee
     : public ERaToZigbee< ERaZigbee<Api> >
     , public ERaFromZigbee< ERaZigbee<Api> >
+    , public ERaDBZigbee< ERaZigbee<Api> >
 {
     const char* TAG = "Zigbee";
 	const uint8_t SOF = 0xFE;
@@ -43,6 +45,7 @@ class ERaZigbee
                                         ZBChannelT::CHANNEL_16, ZBChannelT::CHANNEL_17, ZBChannelT::CHANNEL_18, ZBChannelT::CHANNEL_19, ZBChannelT::CHANNEL_20,
                                         ZBChannelT::CHANNEL_21, ZBChannelT::CHANNEL_22, ZBChannelT::CHANNEL_23, ZBChannelT::CHANNEL_24, ZBChannelT::CHANNEL_25,
                                         ZBChannelT::CHANNEL_26};
+    const uint8_t DefaultNetworkKey[16] = {0xF4, 0x3C, 0x95, 0xC2, 0x88, 0x27, 0x06, 0x95, 0xC5, 0x51, 0x2B, 0xB1, 0xB6, 0x57, 0x1A, 0x24};
     const uint8_t DefaultExtPanId[8] = {0xDD, 0xDD, 0xDD, 0xDD, 0xDD, 0xDD, 0xDD, 0xDD};
     const uint8_t TcLinkKey[32] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
                             0x5a, 0x69, 0x67, 0x42, 0x65, 0x65, 0x41, 0x6c, 0x6c, 0x69, 0x61, 0x6e, 0x63, 0x65, 0x30, 0x39,
@@ -52,8 +55,12 @@ class ERaZigbee
     typedef void* QueueMessage_t;
     friend class ERaToZigbee< ERaZigbee<Api> >;
     friend class ERaFromZigbee< ERaZigbee<Api> >;
+    friend class ERaDBZigbee< ERaZigbee<Api> >;
+
+protected:
     typedef ERaToZigbee< ERaZigbee<Api> > ToZigbee;
     typedef ERaFromZigbee< ERaZigbee<Api> > FromZigbee;
+    typedef ERaDBZigbee< ERaZigbee<Api> > DBZigbee;
 
 public:
     ERaZigbee()
@@ -67,6 +74,7 @@ public:
 #elif defined(LINUX)
         , fd(-1)
 #endif
+        , mutexData(NULL)
         , _zigbeeTask(NULL)
         , _controlZigbeeTask(NULL)
         , _responseZigbeeTask(NULL)
@@ -89,7 +97,6 @@ protected:
         this->configZigbee();
         InfoDevice_t::getInstance();
         InfoCoordinator_t::getInstance();
-        this->initZigbee(false);
         this->timerPing = this->timer.setInterval(PING_INTERVAL, [=](void* args) {
             this->zigbeeTimerCallback(args);
         }, &this->timerPing);
@@ -113,7 +120,13 @@ protected:
                     this->handleZigbeeData();
                     break;
                 case ZigbeeStateT::STATE_ZB_DEVICE_INTERVIEWING:
-                    this->interviewDevice();
+                    if (this->interviewDevice()) {
+                        this->permitJoinDuration(this->coordinator->permitJoin.address, 0);
+                        ZigbeeState::set(ZigbeeStateT::STATE_ZB_RUNNING);
+                    }
+                    else {
+                        ZigbeeState::set(ZigbeeStateT::STATE_ZB_PERMIT_JOIN);
+                    }
                     break;
                 case ZigbeeStateT::STATE_ZB_FACTORY_RESET:
                     this->factoryResetZigbee();
@@ -134,6 +147,7 @@ protected:
         for (;;) {
             switch (ZigbeeState::get()) {
                 case ZigbeeStateT::STATE_ZB_DEVICE_INTERVIEWING:
+                    this->timer.run();
                 case ZigbeeStateT::STATE_ZB_FACTORY_RESET:
                 case ZigbeeStateT::STATE_ZB_INIT_FAIL:
                 case ZigbeeStateT::STATE_ZB_INIT_FORMAT:
@@ -175,6 +189,8 @@ protected:
     static void responseZigbeeTask(void* args);
 #endif
 
+    bool addZigbeeAction(const ZigbeeActionT type, const char* ieeeAddr, cJSON* const payload);
+
 private:
     void configZigbee();
     void initZigbee(bool format, bool invalid = false);
@@ -186,7 +202,7 @@ private:
                         int length,
                         int maxLength,
                         uint8_t* payload,
-                        uint8_t index,
+                        uint8_t& index,
                         uint8_t zStackLength,
                         uint8_t* cmdStatus = nullptr,
                         Response_t* rspWait = nullptr,
@@ -218,8 +234,19 @@ private:
     void publishZigbeeData(const char* topic, cJSON* payload);
     bool actionZigbee(const ZigbeeActionT type, const char* ieeeAddr, const cJSON* const payload);
     void getZigbeeAction();
-    bool addZigbeeAction(const ZigbeeActionT type, const char* ieeeAddr, const cJSON* const payload);
     void zigbeeTimerCallback(void* args);
+
+    void writeDataToFlash(const char* filename, const char* buf) {
+        static_cast<Api*>(this)->writeToFlash(filename, buf);
+    }
+
+    char* readDataFromFlash(const char* filename) {
+        return static_cast<Api*>(this)->readFromFlash(filename);
+    }
+
+    void removeDataFromFlash(const char* filename) {
+        static_cast<Api*>(this)->removeFromFlash(filename);
+    }
 
 	bool isRequest() {
 		return this->queue.readable();
@@ -229,7 +256,25 @@ private:
 		return this->queue;
 	}
 
+	bool isResponse() {
+		return this->queueRsp.readable();
+	}
+
+	Response_t& getResponse() {
+		return this->queueRsp;
+	}
+
+	bool isDefaultRsp() {
+		return this->queueDefaultRsp.readable();
+	}
+
+	DefaultRsp_t& getDefaultRsp() {
+		return this->queueDefaultRsp;
+	}
+
 	ERaQueue<ZigbeeAction_t, 10> queue;
+	ERaQueue<Response_t, 10> queueRsp;
+	ERaQueue<DefaultRsp_t, 10> queueDefaultRsp;
     QueueMessage_t messageHandle;
 
     ERaTimer timer;
@@ -244,6 +289,7 @@ private:
 #elif defined(LINUX)
     int fd;
 #endif
+    ERaMutex_t mutexData;
     TaskHandle_t _zigbeeTask;
     TaskHandle_t _controlZigbeeTask;
     TaskHandle_t _responseZigbeeTask;
@@ -268,7 +314,10 @@ void ERaZigbee<Api>::initZigbee(bool format, bool invalid) {
 
 template <class Api>
 void ERaZigbee<Api>::handleDefaultResponse() {
-    static DefaultRsp_t rsp {};
+    if (!this->isDefaultRsp()) {
+        return;
+    }
+    DefaultRsp_t& rsp = this->getDefaultRsp();
     static SyncRsp_t syncRsp {};
 
     syncRsp = {
@@ -299,7 +348,7 @@ bool ERaZigbee<Api>::processZigbee(uint8_t* buffer,
                                     int length,
                                     int maxLength,
                                     uint8_t* payload,
-                                    uint8_t index,
+                                    uint8_t& index,
                                     uint8_t zStackLength,
                                     uint8_t* cmdStatus,
                                     Response_t* rspWait,
@@ -315,7 +364,7 @@ bool ERaZigbee<Api>::processZigbee(uint8_t* buffer,
             index = 0;
             continue;
         }
-        if (b == this->SOF && !index) {
+        if ((b == this->SOF) && !index) {
             payload[index++] = b;
             continue;
         }
@@ -325,7 +374,8 @@ bool ERaZigbee<Api>::processZigbee(uint8_t* buffer,
         if (index) {
             payload[index++] = b;
         }
-        if (index && (payload[this->PositionSOF] != this->SOF || zStackLength > this->MaxDataSize)) {
+        if (index && ((payload[this->PositionSOF] != this->SOF) ||
+                    (zStackLength > this->MaxDataSize))) {
             index = 0;
             continue;
         }
@@ -336,6 +386,9 @@ bool ERaZigbee<Api>::processZigbee(uint8_t* buffer,
                 if (rsp.type != TypeT::ERR) {
                     if (rspWait == nullptr) {
                         // sync
+                        if (this->queueRsp.writeable()) {
+                            this->queueRsp += rsp;
+                        }
                     }
                     else {
                         if (cmdStatus != nullptr) {
@@ -347,6 +400,9 @@ bool ERaZigbee<Api>::processZigbee(uint8_t* buffer,
                             }
                             if (CheckRsp_t(rsp, *rspWait)) {
                                 // sync
+                                if (this->queueRsp.writeable()) {
+                                    this->queueRsp += rsp;
+                                }
                             }
                         }
                     }
@@ -354,8 +410,11 @@ bool ERaZigbee<Api>::processZigbee(uint8_t* buffer,
             }
             index = 0;
             zStackLength = 0;
-            memset(payload, 0, length);
+            memset(payload, 0, maxLength);
         }
+    }
+    if (index && (payload[this->PositionSOF] != this->SOF)) {
+        index = 0;
     }
     return false;
 }
@@ -434,7 +493,7 @@ void ERaZigbee<Api>::getZigbeeAction() {
 }
 
 template <class Api>
-bool ERaZigbee<Api>::addZigbeeAction(const ZigbeeActionT type, const char* ieeeAddr, const cJSON* const payload) {
+bool ERaZigbee<Api>::addZigbeeAction(const ZigbeeActionT type, const char* ieeeAddr, cJSON* const payload) {
     if (ieeeAddr == nullptr || payload == nullptr) {
         return false;
     }

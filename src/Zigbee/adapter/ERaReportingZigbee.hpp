@@ -22,6 +22,9 @@ static const ConfigBindReport_t ReportingList[] = {
 		}
 	},
 	{
+		ClusterIDT::ZCL_CLUSTER_MULTISTATE_INPUT_BASIC
+	},
+	{
 		ClusterIDT::ZCL_CLUSTER_MEAS_TEMPERATURE, 1, {
 			{ZbZclTempMeasSvrAttrT::ZCL_TEMP_MEAS_ATTR_MEAS_VAL, DataTypeT::zcl_int16, ReportIntervalT::REP_INTERVAL_MINUTE, ReportIntervalT::REP_INTERVAL_HOUR, 0x001B},
 		}

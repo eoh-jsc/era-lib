@@ -3,7 +3,9 @@
 
 #include <Modbus/ERaModbus.hpp>
 
-#define UART_MODBUS UART_NUM_1
+#if !defined(UART_MODBUS)
+    #define UART_MODBUS UART_NUM_1
+#endif
 
 template <class Api>
 void ERaModbus<Api>::configModbus() {
@@ -22,6 +24,7 @@ void ERaModbus<Api>::configModbus() {
 
 template <class Api>
 void ERaModbus<Api>::setBaudRate(uint32_t baudrate) {
+    eraModbusBaudrate(baudrate);
     uart_flush(UART_MODBUS);
     uart_set_baudrate(UART_MODBUS, baudrate);
 }

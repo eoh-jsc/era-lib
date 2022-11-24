@@ -314,6 +314,9 @@ bool ERaFromZigbee<Zigbee>::getDataAttributes(const DataAFMsg_t& afMsg, DefaultR
 					defaultRsp.attribute = attrRsp;
 					defaultRsp.value = value;
                     /* Queue Zigbee Rsp */
+                    if (static_cast<Zigbee*>(this)->queueDefaultRsp.writeable()) {
+                        static_cast<Zigbee*>(this)->queueDefaultRsp += defaultRsp;
+                    }
 					defaultRsp.isFirst = false;
 					defaultRsp.isSent = true;
                     break;

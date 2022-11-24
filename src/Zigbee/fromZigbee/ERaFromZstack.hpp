@@ -190,7 +190,6 @@ void ERaFromZigbee<Zigbee>::processTCDeviceIndication(vector<uint8_t>& data, voi
                 ZigbeeState::set(ZigbeeStateT::STATE_ZB_DEVICE_JOINED);
             }
 
-            static_cast<Zigbee*>(this)->Zigbee::ToZigbee::CommandZigbee::requestNodeDesc(this->device->address, 1);
             this->createDeviceEvent(DeviceEventT::DEVICE_EVENT_JOINED);
             break;
     }
@@ -202,6 +201,31 @@ void ERaFromZigbee<Zigbee>::processZDOState(vector<uint8_t>& data, void* value) 
         return;
     }
     this->coordinator->deviceState = static_cast<DeviceStateListT>(data.at(0));
+}
+
+template <class Zigbee>
+void ERaFromZigbee<Zigbee>::processDeviceAnnounce(vector<uint8_t>& data, void* value) {
+	if (data.size() < 13) {
+		return;
+    }
+    this->device->annceDevice.dstAddr.addr.nwkAddr = BUILD_UINT16(data.at(2));
+    CopyToArray(data.at(4), this->device->annceDevice.dstAddr.addr.ieeeAddr, LENGTH_EXTADDR_IEEE);
+	this->device->annceDevice.alternatePanId = static_cast<bool>((data.at(12)) & 0x01);
+	this->device->annceDevice.type = static_cast<TypeAnnceDeviceT>((data.at(12) >> 1) & 0x01);
+	this->device->annceDevice.power = static_cast<PowerSourceT>((data.at(12) >> 2) & 0x01);
+	this->device->annceDevice.isIdle = static_cast<bool>((data.at(12) >> 3) & 0x01);
+	if (this->device->annceDevice.type == TypeAnnceDeviceT::ANNCE_ENDDEVICE) {
+        static_cast<Zigbee*>(this)->Zigbee::ToZigbee::CommandZigbee::extRouterDiscovery(this->device->address,
+                                    static_cast<Zigbee*>(this)->Options, static_cast<Zigbee*>(this)->Radius);
+    }
+    if ((this->device->address.addr.nwkAddr != this->device->annceDevice.dstAddr.addr.nwkAddr) ||
+        !CompareArray(this->device->address.addr.ieeeAddr, this->device->annceDevice.dstAddr.addr.ieeeAddr)) {
+        this->createDeviceEvent(DeviceEventT::DEVICE_EVENT_ANNOUNCE);
+        return;
+    }
+    if (ZigbeeState::is(ZigbeeStateT::STATE_ZB_DEVICE_JOINED)) {
+        ZigbeeState::set(ZigbeeStateT::STATE_ZB_DEVICE_INTERVIEWING);
+    }
 }
 
 template <class Zigbee>

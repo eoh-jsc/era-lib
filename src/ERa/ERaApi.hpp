@@ -55,6 +55,7 @@ private:
 
 	ERaReport eraReport;
 
+protected:
 #if defined(ERA_MODBUS)
     friend class ERaModbus< ERaApi<Proto, Flash> >;
 	typedef ERaModbus< ERaApi<Proto, Flash> > Modbus;

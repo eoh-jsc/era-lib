@@ -10,6 +10,7 @@
 template <class ToZigbee>
 class ERaCommandZigbee
 {
+protected:
     const uint8_t SkipBootByte = 0xEF;
     const uint16_t AddrBroadcastJoin = NWK_ADDR_BROADCAST_JOIN;
 	const uint16_t AddrBroadcastAll = NWK_ADDR_BROADCAST_GP;
@@ -246,7 +247,9 @@ private:
 template <class ToZigbee>
 ResultT ERaCommandZigbee<ToZigbee>::defaultResponse(const DefaultRsp_t& defaultRsp, uint8_t statusCode) {
 	AFAddrType_t dstAddr {
-		.addr = defaultRsp.dstAddr,
+		.addr = {
+            .nwkAddr = defaultRsp.dstAddr
+        },
 		.addrMode = AddressModeT::ADDR_16BIT,
 		.endpoint = defaultRsp.dstEndpoint,
 		.panId = 0
@@ -269,7 +272,7 @@ ResultT ERaCommandZigbee<ToZigbee>::defaultResponse(const DefaultRsp_t& defaultR
     return static_cast<ToZigbee*>(this)->sendCommandIdZigbee(this->zclHeaderRsp, dstAddr,
 															defaultRsp.srcEndpoint, {defaultRsp.zclId, CommandIdT::DEFAULT_RSP, &payload},
 															AFCommandsT::AF_DATA_CONFIRM, nullptr,
-															DEFAULT_TIMEOUT, &defaultRsp.transId);
+															DEFAULT_TIMEOUT, const_cast<uint8_t*>(&defaultRsp.transId));
 }
 
 template <class ToZigbee>

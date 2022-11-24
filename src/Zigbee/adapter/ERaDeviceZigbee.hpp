@@ -5,10 +5,18 @@
 
 template <class Api>
 bool ERaZigbee<Api>::interviewDevice() {
+    IdentDeviceAddr_t* deviceInfo = DBZigbee::getDeviceFromCoordinator();
+    if ((deviceInfo != nullptr) &&
+        (deviceInfo->address.addr.nwkAddr == this->device->address.addr.nwkAddr)) {
+        return false;
+    }
+
 	EndpointListT dstEndPoint {EndpointListT::ENDPOINT1};
 
     ERA_LOG(TAG, "Interview network address %s(%d) started", IEEEToString(this->device->address.addr.ieeeAddr).c_str(),
                                                             this->device->address.addr.nwkAddr);
+
+    FromZigbee::createDeviceEvent(DeviceEventT::DEVICE_EVENT_INTERVIEW_STARTED);
 
     ToZigbee::CommandZigbee::requestNodeDesc(this->device->address, 1); /* Inquire about the Node Descriptor information of the dest device */
     ToZigbee::CommandZigbee::extRouterDiscovery(this->device->address, this->Options, this->Radius); /* ZDO route extension message */
@@ -25,6 +33,7 @@ bool ERaZigbee<Api>::interviewDevice() {
     if (!this->device->hasManufCode) {
         ERA_LOG(TAG, "Interview network address %s(%d) failed", IEEEToString(this->device->address.addr.ieeeAddr).c_str(),
                                                                 this->device->address.addr.nwkAddr);
+        FromZigbee::createDeviceEvent(DeviceEventT::DEVICE_EVENT_INTERVIEW_FAILED);
         return false;
     }
 
@@ -35,6 +44,7 @@ bool ERaZigbee<Api>::interviewDevice() {
     if (ToZigbee::CommandZigbee::requestListEndpoint(this->device->address, this->device->address.addr.nwkAddr, 1) != ResultT::RESULT_SUCCESSFUL) { /* Request a list of active endpoint from the dest device */
         ERA_LOG(TAG, "Interview network address %s(%d) failed", IEEEToString(this->device->address.addr.ieeeAddr).c_str(),
                                                                 this->device->address.addr.nwkAddr);
+        FromZigbee::createDeviceEvent(DeviceEventT::DEVICE_EVENT_INTERVIEW_FAILED);
         return false;
     }
 
@@ -56,6 +66,8 @@ bool ERaZigbee<Api>::interviewDevice() {
 
             this->readAttrDevice(this->device->address, ClusterIDT::ZCL_CLUSTER_BASIC, {ZbZclBasicSvrAttrT::ZCL_BASIC_ATTR_MFR_NAME, /* Request a Manufacturer Name from the dest device */
                                                                                         ZbZclBasicSvrAttrT::ZCL_BASIC_ATTR_MODEL_NAME}); /* Request a Model Name from the dest device */
+
+            FromZigbee::createDeviceEvent(DeviceEventT::DEVICE_EVENT_INTERVIEW_BASIC_INFO);
 
             this->readAttrDevice(this->device->address, ClusterIDT::ZCL_CLUSTER_BASIC, {ZbZclBasicSvrAttrT::ZCL_BASIC_ATTR_POWER_SOURCE, /* Request a Power Source from the dest device */
                                                                                         ZbZclBasicSvrAttrT::ZCL_BASIC_ATTR_ZCL_VERSION, /* Request a Zcl Version from the dest device */
@@ -81,6 +93,7 @@ bool ERaZigbee<Api>::interviewDevice() {
         if (this->device->epList[i].endpoint == dstEndPoint) {
             continue;
         }
+        this->device->address.endpoint = this->device->epList[i].endpoint;
         ToZigbee::CommandZigbee::requestSimpleDesc(this->device->address, 10);
     }
 
@@ -122,6 +135,8 @@ bool ERaZigbee<Api>::interviewDevice() {
 
     ERA_LOG(TAG, "Interview network address %s(%d) successful", IEEEToString(this->device->address.addr.ieeeAddr).c_str(),
                                                             this->device->address.addr.nwkAddr);
+    FromZigbee::createDeviceEvent(DeviceEventT::DEVICE_EVENT_INTERVIEW_SUCCESSFUL);
+    DBZigbee::setDeviceToCoordinator();
 
     return true;
 }
@@ -161,14 +176,17 @@ void ERaZigbee<Api>::removeDeviceWithAddr(AFAddrType_t& dstAddr) {
             break;
         }
         hasRemove = true;
-        if (element->ieeeAddr != nullptr) {
-            free(element->ieeeAddr);
-            element->ieeeAddr = nullptr;
+        if (element->data.topic != nullptr) {
+            free(element->data.topic);
+            element->data.topic = nullptr;
         }
-        if (element->payload != nullptr) {
-            free(element->payload);
-            element->payload = nullptr;
+        if (element->data.payload != nullptr) {
+            free(element->data.payload);
+            element->data.payload = nullptr;
         }
+    }
+    if (hasRemove) {
+        DBZigbee::storeZigbeeDevice();
     }
 }
 
@@ -212,10 +230,10 @@ template <class Api>
 template <int inSize, int outSize>
 bool ERaZigbee<Api>::isClusterExist(const ClusterIDT(&inZclList)[inSize], const ClusterIDT(&outZclList)[outSize], const ClusterIDT zclId) {
     const ClusterIDT* inZcl = std::find_if(std::begin(inZclList), std::end(inZclList), [zclId](const ClusterIDT& e) {
-        return e = zclId;
+        return e == zclId;
     });
     const ClusterIDT* outZcl = std::find_if(std::begin(outZclList), std::end(outZclList), [zclId](const ClusterIDT& e) {
-        return e = zclId;
+        return e == zclId;
     });
     return ((inZcl != std::end(inZclList)) || (outZcl != std::end(outZclList)));
 }

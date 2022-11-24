@@ -172,6 +172,6 @@ CJSON_PUBLIC(cJSON*) cJSON_SetNullToObject(cJSON * const object, const char * co
     return null_item;
 }
 
-CJSON_PUBLIC(cJSON_bool) cJSON_Empty(cJSON * const object) {
+CJSON_PUBLIC(cJSON_bool) cJSON_Empty(const cJSON * const object) {
     return (cJSON_IsNull(object) || (cJSON_IsString(object) && !strlen(object->valuestring)));
 }

@@ -5,6 +5,7 @@
 #include "zcl/zclPowerConfig.hpp"
 #include "zcl/zclOnOff.hpp"
 #include "zcl/zclLevel.hpp"
+#include "zcl/zclMultistateInput.hpp"
 #include "zcl/zclTempMeas.hpp"
 #include "zcl/zclHumiMeas.hpp"
 

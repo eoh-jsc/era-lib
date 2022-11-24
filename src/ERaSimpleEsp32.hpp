@@ -6,18 +6,24 @@
 #if defined(ERA_MODBUS)
     template <class Api>
     void ERaModbus<Api>::initModbusTask() {
-        xTaskCreatePinnedToCore(this->modbusTask, "modbusTask", 1024 * 5, this, 17, &this->_modbusTask, 1);
-        xTaskCreatePinnedToCore(this->writeModbusTask, "writeModbusTask", 1024 * 5, this, 17, &this->_writeModbusTask, 1);
+        xTaskCreatePinnedToCore(this->modbusTask, "modbusTask", 1024 * 5, this, 17, &this->_modbusTask, ERA_MCU_CORE);
+        xTaskCreatePinnedToCore(this->writeModbusTask, "writeModbusTask", 1024 * 5, this, 17, &this->_writeModbusTask, ERA_MCU_CORE);
     }
 
     template <class Api>
     void ERaModbus<Api>::modbusTask(void* args) {
+        if (args == NULL) {
+            vTaskDelete(NULL);
+        }
         ERaModbus* modbus = (ERaModbus*)args;
         modbus->run(true);
     }
 
     template <class Api>
     void ERaModbus<Api>::writeModbusTask(void* args) {
+        if (args == NULL) {
+            vTaskDelete(NULL);
+        }
         ERaModbus* modbus = (ERaModbus*)args;
         modbus->run(false);
     }
@@ -26,32 +32,46 @@
 #if defined(ERA_ZIGBEE)
     template <class Api>
     void ERaZigbee<Api>::initZigbeeTask() {
-
+        xTaskCreatePinnedToCore(this->zigbeeTask, "zigbeeTask", 1024 * 10, this, 20, &this->_zigbeeTask, ERA_MCU_CORE);
+        xTaskCreatePinnedToCore(this->controlZigbeeTask, "controlZigbeeTask", 1024 * 10, this, 20, &this->_controlZigbeeTask, ERA_MCU_CORE);
+        xTaskCreatePinnedToCore(this->responseZigbeeTask, "responseZigbeeTask", 1024 * 10, this, 19, &this->_responseZigbeeTask, ERA_MCU_CORE);
     }
 
     template <class Api>
     void ERaZigbee<Api>::zigbeeTask(void* args) {
-
+        if (args == NULL) {
+            vTaskDelete(NULL);
+        }
+        ERaZigbee* zigbee = (ERaZigbee*)args;
+        zigbee->run();
     }
 
     template <class Api>
     void ERaZigbee<Api>::controlZigbeeTask(void* args) {
-        
+        if (args == NULL) {
+            vTaskDelete(NULL);
+        }
+        ERaZigbee* zigbee = (ERaZigbee*)args;
+        zigbee->runControl();
     }
 
     template <class Api>
     void ERaZigbee<Api>::responseZigbeeTask(void* args) {
-        
+        if (args == NULL) {
+            vTaskDelete(NULL);
+        }
+        ERaZigbee* zigbee = (ERaZigbee*)args;
+        zigbee->runResponse();
     }
 #endif
 
 template <class Transp, class Flash>
 void ERaProto<Transp, Flash>::initERaTask() {
 #if defined(ERA_MODBUS)
-	Base::ERaModbus::begin();
+	Base::Modbus::begin();
 #endif
 #if defined(ERA_ZIGBEE)
-	Base::ERaZigbee::begin();
+	Base::Zigbee::begin();
 #endif
 }
 

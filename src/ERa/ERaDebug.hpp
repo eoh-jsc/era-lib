@@ -22,9 +22,11 @@
     #define ERA_FPSTR(s)        s
 #endif
 
-#if defined(ARDUINO) && defined(ESP32)
+#if defined(ARDUINO) && defined(ESP32) && \
+    (CORE_DEBUG_LEVEL >= ARDUHAL_LOG_LEVEL_INFO)
     #define ERA_LOG(tag, ...)           ESP_LOGI(tag, ##__VA_ARGS__)
-#elif defined(ARDUINO) && defined(ESP8266)
+#elif defined(ARDUINO) && \
+    (defined(ESP32) || defined(ESP8266))
     #ifndef ERA_SERIAL
         #define ERA_SERIAL              Serial
     #endif

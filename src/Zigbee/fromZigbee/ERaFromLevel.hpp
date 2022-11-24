@@ -7,34 +7,34 @@ template <class Zigbee>
 bool ERaFromZigbee<Zigbee>::levelFromZigbee(const DataAFMsg_t& afMsg, cJSON* root, uint16_t attribute, uint64_t& value) {
 	bool defined {true};
 	switch (attribute) {
-		case ZCL_LEVEL_ATTR_CURRLEVEL:
+		case ZbZclLevelSvrAttrT::ZCL_LEVEL_ATTR_CURRLEVEL:
 			this->addDataZigbee<uint8_t>(afMsg, root, KEY(LEVEL, CURRLEVEL), value);
 			break;
-		case ZCL_LEVEL_ATTR_REMAINTIME:
+		case ZbZclLevelSvrAttrT::ZCL_LEVEL_ATTR_REMAINTIME:
 			this->addDataZigbee<uint16_t>(afMsg, root, KEY(LEVEL, REMAINTIME), value);
 			break;
-		case ZCL_LEVEL_ATTR_MINLEVEL:
+		case ZbZclLevelSvrAttrT::ZCL_LEVEL_ATTR_MINLEVEL:
 			this->addDataZigbee<uint8_t>(afMsg, root, KEY(LEVEL, MINLEVEL), value);
 			break;
-		case ZCL_LEVEL_ATTR_MAXLEVEL:
+		case ZbZclLevelSvrAttrT::ZCL_LEVEL_ATTR_MAXLEVEL:
 			this->addDataZigbee<uint8_t>(afMsg, root, KEY(LEVEL, MAXLEVEL), value);
 			break;
-		case ZCL_LEVEL_ATTR_ONOFF_TRANS_TIME:
+		case ZbZclLevelSvrAttrT::ZCL_LEVEL_ATTR_ONOFF_TRANS_TIME:
 			this->addDataZigbee<uint16_t>(afMsg, root, KEY(LEVEL, ONOFF_TRANS_TIME), value);
 			break;
-		case ZCL_LEVEL_ATTR_ONLEVEL:
+		case ZbZclLevelSvrAttrT::ZCL_LEVEL_ATTR_ONLEVEL:
 			this->addDataZigbee<uint8_t>(afMsg, root, KEY(LEVEL, ONLEVEL), value);
 			break;
-		case ZCL_LEVEL_ATTR_ON_TRANS_TIME:
+		case ZbZclLevelSvrAttrT::ZCL_LEVEL_ATTR_ON_TRANS_TIME:
 			this->addDataZigbee<uint16_t>(afMsg, root, KEY(LEVEL, ON_TRANS_TIME), value);
 			break;
-		case ZCL_LEVEL_ATTR_OFF_TRANS_TIME:
+		case ZbZclLevelSvrAttrT::ZCL_LEVEL_ATTR_OFF_TRANS_TIME:
 			this->addDataZigbee<uint16_t>(afMsg, root, KEY(LEVEL, OFF_TRANS_TIME), value);
 			break;
-		case ZCL_LEVEL_ATTR_DEFAULT_MOVE_RATE:
+		case ZbZclLevelSvrAttrT::ZCL_LEVEL_ATTR_DEFAULT_MOVE_RATE:
 			this->addDataZigbee<uint8_t>(afMsg, root, KEY(LEVEL, DEFAULT_MOVE_RATE), value);
 			break;
-		case ZCL_LEVEL_ATTR_STARTUP_CURRLEVEL:
+		case ZbZclLevelSvrAttrT::ZCL_LEVEL_ATTR_STARTUP_CURRLEVEL:
 			this->addDataZigbee<uint8_t>(afMsg, root, KEY(LEVEL, STARTUP_CURRLEVEL), value);
 			break;
         default:

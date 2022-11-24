@@ -32,12 +32,12 @@ IdentDeviceAddr_t* ERaFromZigbee<Zigbee>::createDataGlobal(const DataAFMsg_t& af
 		if (ZigbeeState::is(ZigbeeStateT::STATE_ZB_INIT_MAX)) {
 			return nullptr;
         }
-        if (IsZeroArray(this->coordinator->address.addr.ieeeAddr)) {
+        if (IsZeroArray(deviceInfo->address.addr.ieeeAddr)) {
             return nullptr;
         }
         deviceInfo->data.topic = reinterpret_cast<char*>(ERA_CALLOC(MAX_TOPIC_LENGTH, sizeof(char)));
         FormatString(deviceInfo->data.topic, MAX_TOPIC_LENGTH, "/zigbee/");
-        FormatString(deviceInfo->data.topic, MAX_TOPIC_LENGTH, IEEEToString(this->coordinator->address.addr.ieeeAddr).c_str());
+        FormatString(deviceInfo->data.topic, MAX_TOPIC_LENGTH, IEEEToString(deviceInfo->address.addr.ieeeAddr).c_str());
         FormatString(deviceInfo->data.topic, MAX_TOPIC_LENGTH, "/data");
         deviceInfo->receiveId = afMsg.receiveId + 1;
     }
@@ -87,6 +87,9 @@ IdentDeviceAddr_t* ERaFromZigbee<Zigbee>::createDataGlobal(const DataAFMsg_t& af
         case ClusterIDT::ZCL_CLUSTER_LEVEL_CONTROL:
             defined = this->levelFromZigbee(afMsg, dataItem, attribute, value);
             break;
+        case ClusterIDT::ZCL_CLUSTER_MULTISTATE_INPUT_BASIC:
+            defined = this->multistateInputFromZigbee(afMsg, dataItem, attribute, value);
+            break;
         default:
             break;
     }
@@ -127,12 +130,12 @@ IdentDeviceAddr_t* ERaFromZigbee<Zigbee>::createDataSpecific(const DataAFMsg_t& 
 		if (ZigbeeState::is(ZigbeeStateT::STATE_ZB_INIT_MAX)) {
 			return nullptr;
         }
-        if (IsZeroArray(this->coordinator->address.addr.ieeeAddr)) {
+        if (IsZeroArray(deviceInfo->address.addr.ieeeAddr)) {
             return nullptr;
         }
         deviceInfo->data.topic = reinterpret_cast<char*>(ERA_CALLOC(MAX_TOPIC_LENGTH, sizeof(char)));
         FormatString(deviceInfo->data.topic, MAX_TOPIC_LENGTH, "/zigbee/");
-        FormatString(deviceInfo->data.topic, MAX_TOPIC_LENGTH, IEEEToString(this->coordinator->address.addr.ieeeAddr).c_str());
+        FormatString(deviceInfo->data.topic, MAX_TOPIC_LENGTH, IEEEToString(deviceInfo->address.addr.ieeeAddr).c_str());
         FormatString(deviceInfo->data.topic, MAX_TOPIC_LENGTH, "/data");
         deviceInfo->receiveId = afMsg.receiveId + 1;
     }
@@ -369,6 +372,7 @@ void ERaFromZigbee<Zigbee>::createDeviceEvent(const DeviceEventT event) {
 			cJSON_AddItemToObject(dataItem, "definition", definitionItem);
             break;
 		case DeviceEventT::DEVICE_EVENT_INTERVIEW_STARTED:
+		case DeviceEventT::DEVICE_EVENT_INTERVIEW_BASIC_INFO:
 			cJSON_AddStringToObject(root, "type", "device_interview");
 			cJSON_AddStringToObject(dataItem, "status", "started");
 			cJSON_AddItemToObject(dataItem, "definition", definitionItem);
@@ -430,12 +434,12 @@ void ERaFromZigbee<Zigbee>::createDeviceEvent(const DeviceEventT event) {
 			cJSON_AddNumberToObject(definitionItem, "parent", this->device->parentAddr);
 			cJSON_AddBoolToObject(definitionItem, "ias", this->device->ias);
 			if(this->device->pollControl) {
-				cJSON_AddItemToObject(definitionItem, "poll_control", createDevicePollControl());
+				cJSON_AddItemToObject(definitionItem, "poll_control", this->createDevicePollControl());
             }
 			else {
 				cJSON_AddBoolToObject(definitionItem, "poll_control", false);
             }
-			cJSON_AddItemToObject(definitionItem, "endpoints", createDeviceEndpoints());
+			cJSON_AddItemToObject(definitionItem, "endpoints", this->createDeviceEndpoints());
 			cJSON_AddItemToObject(dataItem, "definition", definitionItem);
             break;
 		case DeviceEventT::DEVICE_EVENT_INTERVIEW_FAILED:
@@ -454,7 +458,8 @@ void ERaFromZigbee<Zigbee>::createDeviceEvent(const DeviceEventT event) {
 	cJSON_AddItemToObject(root, "data", dataItem);
 
     static_cast<Zigbee*>(this)->publishZigbeeData(TOPIC_ZIGBEE_BRIDGE_EVENT, root);
-    if (event == DeviceEventT::DEVICE_EVENT_INTERVIEW_SUCCESSFUL) {
+    if ((event == DeviceEventT::DEVICE_EVENT_INTERVIEW_SUCCESSFUL) ||
+        (event == DeviceEventT::DEVICE_EVENT_INTERVIEW_BASIC_INFO)) {
         static_cast<Zigbee*>(this)->publishZigbeeData(TOPIC_ZIGBEE_DEVICE_EVENT, root);
     }
 

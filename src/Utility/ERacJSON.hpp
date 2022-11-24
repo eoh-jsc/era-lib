@@ -16,6 +16,6 @@ CJSON_PUBLIC(cJSON*) cJSON_SetBoolToObject(cJSON * const object, const char * co
 CJSON_PUBLIC(cJSON*) cJSON_SetNumberToObject(cJSON * const object, const char * const name, const double number);
 CJSON_PUBLIC(cJSON*) cJSON_SetStringToObject(cJSON * const object, const char * const name, const char * const string);
 CJSON_PUBLIC(cJSON*) cJSON_SetNullToObject(cJSON * const object, const char * const name);
-CJSON_PUBLIC(cJSON_bool) cJSON_Empty(cJSON * const object);
+CJSON_PUBLIC(cJSON_bool) cJSON_Empty(const cJSON * const object);
 
 #endif /* INC_ERA_CJSON_HPP_ */

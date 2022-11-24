@@ -15,17 +15,22 @@ bool CompareString(const char* str, const char* str2) {
 }
 
 template <int len, int size>
-void CopyArray(const uint8_t(&ptr)[len], uint8_t(&arr)[size]) {
-    memcpy(arr, ptr, std::min(len, size));
+void CopyArray(const uint8_t(&src)[len], uint8_t(&dst)[size]) {
+    memcpy(dst, src, std::min(len, size));
 }
 
 template <int size>
-void CopyString(const char* ptr, char(&arr)[size]) {
-    snprintf(arr, size, "%s", ptr);
+void CopyString(const char* src, char(&dst)[size]) {
+    snprintf(dst, size, "%s", src);
 }
 
 void ClearMem(void* ptr, size_t size) {
     memset(ptr, 0, size);
+}
+
+template <typename T, int size>
+void ClearMem(T(&arr)[size]) {
+    memset(arr, 0, sizeof(T) * size);
 }
 
 template <typename T, int size>
@@ -97,6 +102,7 @@ bool StringToIEEE(const char* str, T(&ieee)[size]) {
 			ieee[size - i - 1] = strtol(hex.c_str(), nullptr, 16);
         }
 	}
+    return true;
 }
 
 #endif /* INC_ERA_UTILITY_ZIGBEE_HPP_ */

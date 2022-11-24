@@ -50,24 +50,24 @@ T ERaMapNumberRange(T value, T fromLow, T fromHigh, T toLow, T toHigh) {
     #include <Arduino.h>
 
     template <typename T, int size>
-    void CopyToArray(const String& str, T(&arr)[size]) {
-        str.toCharArray(arr, size);
+    void CopyToArray(const String& src, T(&dst)[size]) {
+        src.toCharArray(dst, size);
     }
 #endif
 
 template <typename T, int len, int size>
-void CopyToArray(const char(&ptr)[len], T(&arr)[size]) {
-    memcpy(arr, ptr, ERaMin(len, size));
+void CopyToArray(const char(&src)[len], T(&dst)[size]) {
+    memcpy(dst, src, ERaMin(len, size));
 }
 
 template <typename T, int size>
-void CopyToArray(const uint8_t& ptr, T(&arr)[size], int len) {
-    memcpy(arr, &ptr, ERaMin(len, size));
+void CopyToArray(const uint8_t& src, T(&dst)[size], int len) {
+    memcpy(dst, &src, ERaMin(len, size));
 }
 
 template <typename T>
-void CopyToStruct(const uint8_t& ptr, T& arr, int size) {
-    memcpy(&arr, &ptr, size);
+void CopyToStruct(const uint8_t& src, T& dst, int size) {
+    memcpy(&dst, &src, size);
 }
 
 template <typename T>
@@ -77,7 +77,7 @@ void ClearStruct(T& arr, int size) {
 
 template <typename T, int size>
 void ClearArray(T(&arr)[size]) {
-    memset(arr, 0, size);
+    memset(arr, 0, sizeof(T) * size);
 }
 
 template <typename... Args>
@@ -100,7 +100,7 @@ bool ERaStrCmp(const char* str, const char* str2);
 
 template <int size>
 bool ERaStrNCmp(const char* str, const char(&str2)[size]) {
-    return !strncmp(str, str2, size);
+    return !strncmp(str, str2, size - 1);
 }
 
 #if !_GLIBCXX_USE_C99_STDLIB

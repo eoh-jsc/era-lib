@@ -27,12 +27,14 @@
 #define WIFI_AP_IP                    IPAddress(192, 168, 27, 1)
 #define WIFI_AP_Subnet                IPAddress(255, 255, 255, 0)
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-uint8_t temprature_sens_read();
-#ifdef __cplusplus
-}
+#if defined(ERA_CHIP_TEMP_DEPRECATED)
+    #ifdef __cplusplus
+    extern "C" {
+    #endif
+    uint8_t temprature_sens_read();
+    #ifdef __cplusplus
+    }
+    #endif
 #endif
 
 typedef struct __ERaConfig_t {
@@ -1035,7 +1037,12 @@ void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
 
 template <class Proto, class Flash>
 void ERaApi<Proto, Flash>::addModbusInfo(cJSON* root) {
+#if defined(ERA_CHIP_TEMP)
+    /* Update soon */
+    cJSON_AddNumberToObject(root, INFO_MB_CHIP_TEMPERATURE, 5000);
+#elif defined(ERA_CHIP_TEMP_DEPRECATED)
 	cJSON_AddNumberToObject(root, INFO_MB_CHIP_TEMPERATURE, static_cast<uint16_t>((temprature_sens_read() - 32) * 100.0f / 1.8f));
+#endif
 	cJSON_AddNumberToObject(root, INFO_MB_TEMPERATURE, 0);
 	cJSON_AddNumberToObject(root, INFO_MB_VOLTAGE, 999);
 	cJSON_AddNumberToObject(root, INFO_MB_IS_BATTERY, 0);

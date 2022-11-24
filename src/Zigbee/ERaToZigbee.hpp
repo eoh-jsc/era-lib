@@ -11,10 +11,13 @@ template <class Zigbee>
 class ERaToZigbee
     : public ERaCommandZigbee< ERaToZigbee<Zigbee> >
 {
+protected:
     enum ConvertToZigbeeT {
         CONVERT_SET_TO_ZIGBEE = 0x00,
         CONVERT_GET_TO_ZIGBEE = 0x01
     };
+
+private:
     friend class ERaCommandZigbee< ERaToZigbee<Zigbee> >;
 
 public:
@@ -108,6 +111,11 @@ bool ERaToZigbee<Zigbee>::toZigbee(const cJSON* const root, AFAddrType_t& dstAdd
         }
     }
 
+    cJSON* item = cJSON_GetObjectItem(root, "nwk_addr");
+    if (cJSON_IsNumber(item)) {
+        dstAddr.addr.nwkAddr = item->valueint;
+    }
+
     if (!dstAddr.addr.nwkAddr) {
         if (dstAddr.addrMode == AddressModeT::ADDR_GROUP) {
             return false;
@@ -129,6 +137,7 @@ bool ERaToZigbee<Zigbee>::toZigbee(const cJSON* const root, AFAddrType_t& dstAdd
         }
     }
 
+    item = nullptr;
     current = nullptr;
     return true;
 }
@@ -180,6 +189,7 @@ bool ERaToZigbee<Zigbee>::findDeviceInfoWithIEEEAddr(AFAddrType_t& dstAddr) {
         this->coordinator->deviceCount++;
         /* Store */
     }
+    dstAddr.addrMode = AddressModeT::ADDR_16BIT;
     dstAddr.addr.nwkAddr = deviceInfo->address.addr.nwkAddr;
 
     return true;
@@ -215,6 +225,7 @@ ResultT ERaToZigbee<Zigbee>::createCommandBuffer(const vector<uint8_t>& payload,
                                 cmdWait, zclId, static_cast<uint8_t>(_transId != nullptr ? *_transId : 0x00),
                                 static_cast<uint8_t>(_transIdZcl != nullptr ? *_transIdZcl : 0x00), ZnpCommandStatusT::INVALID_PARAM, timeout}, value);
 
+    ERA_ZIGBEE_YIELD();
     return status;
 }
 
@@ -256,7 +267,7 @@ ResultT ERaToZigbee<Zigbee>::createCommand(AFAddrType_t& dstAddr,
     if (cmdWait == AFCommandsT::AF_INCOMING_MSG) {
         return this->createCommandBuffer(payload, TypeT::SREQ, SubsystemT::AF_INTER, AFCommandsT::AF_DATA_REQUEST,
                                         TypeT::AREQ, cmdWait, value, timeout,
-                                        SubsystemT::RESERVED, dstAddr, zclId, &this->transId, &_transIdZcl);
+                                        SubsystemT::RESERVED, dstAddr.addr.nwkAddr, zclId, &this->transId, &_transIdZcl);
     }
     else {
         return this->createCommandBuffer(payload, TypeT::SREQ, SubsystemT::AF_INTER, AFCommandsT::AF_DATA_REQUEST,

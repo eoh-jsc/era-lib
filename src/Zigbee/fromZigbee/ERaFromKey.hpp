@@ -42,6 +42,8 @@
 #define KEY_SPEC_LEVEL_MOVELEVEL                "level_move_level"
 #define KEY_SPEC_LEVEL_MOVELEVEL_ONOFF          "level_move_level_onoff"
 
+#define KEY_MULTISTATE_INPUT_PREVALUE           "in_present_value"
+
 #define KEY_MEAS_TEMPERATURE_MEAS_VAL           "temperature_measured"
 #define KEY_MEAS_TEMPERATURE_MIN_MEAS_VAL       "temperature_min_measured"
 #define KEY_MEAS_TEMPERATURE_MAX_MEAS_VAL       "temperature_max_measured"

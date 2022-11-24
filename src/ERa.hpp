@@ -4,7 +4,7 @@
 #if defined(ARDUINO) && defined(ESP32)
     #include <ERaSimpleMBEsp32.hpp>
 #elif defined(ARDUINO) && defined(ESP8266)
-    #include <ERaSimpleEsp8266.hpp>
+    #include <ERaSimpleMBEsp8266.hpp>
 #elif defined(ARDUINO) && defined(STM32F4xx)
     #define ERA_NO_RTOS
     #include <ERa/ERaDetect.hpp>

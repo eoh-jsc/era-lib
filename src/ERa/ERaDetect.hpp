@@ -17,6 +17,19 @@
 
     #define ERA_100_PINS
 
+    #if defined(CONFIG_FREERTOS_UNICORE)
+        #define ERA_MCU_CORE            0
+    #else
+        #define ERA_MCU_CORE            1
+    #endif
+
+    #if defined(ARDUINO_ESP32C3_DEV) || \
+        defined(ARDUINO_ESP32S2_DEV)
+        #define ERA_CHIP_TEMP
+    #elif defined(ARDUINO_ARCH_ESP32)
+        #define ERA_CHIP_TEMP_DEPRECATED
+    #endif
+
 #elif defined(ARDUINO) && defined(ESP8266)
 
     #if !defined(ERA_MQTT_BUFFER_SIZE)

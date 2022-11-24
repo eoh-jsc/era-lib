@@ -18,6 +18,7 @@ public:
 
 protected:
     Response_t fromZigbee(const uint8_t* payload, void* value = nullptr);
+    void createDeviceEvent(const DeviceEventT event);
 
 private:
     bool powerConfigFromZigbee(const DataAFMsg_t& afMsg, cJSON* root, uint16_t attribute, uint64_t& value);
@@ -25,6 +26,7 @@ private:
     bool onOffSpecificFromZigbee(const DataAFMsg_t& afMsg, cJSON* root, const char* key, DefaultRsp_t& defaultRsp);
     bool levelFromZigbee(const DataAFMsg_t& afMsg, cJSON* root, uint16_t attribute, uint64_t& value);
     bool levelSpecificFromZigbee(const DataAFMsg_t& afMsg, cJSON* root, const char* key, DefaultRsp_t& defaultRsp);
+    bool multistateInputFromZigbee(const DataAFMsg_t& afMsg, cJSON* root, uint16_t attribute, uint64_t& value);
     bool temperatureMeasFromZigbee(const DataAFMsg_t& afMsg, cJSON* root, uint16_t attribute, uint64_t& value);
     bool humidityMeasFromZigbee(const DataAFMsg_t& afMsg, cJSON* root, uint16_t attribute, uint64_t& value);
     void processNodeDescriptor(vector<uint8_t>& data, void* value = nullptr);
@@ -33,6 +35,7 @@ private:
     void processBindUnbind(vector<uint8_t>& data, void* value = nullptr);
     void processTCDeviceIndication(vector<uint8_t>& data, void* value = nullptr);
     void processZDOState(vector<uint8_t>& data, void* value = nullptr);
+    void processDeviceAnnounce(vector<uint8_t>& data, void* value = nullptr);
     void processReadOsalNVItems(vector<uint8_t>& data, void* value = nullptr);
     void processWriteOsalNVItems(vector<uint8_t>& data, void* value = nullptr);
     void processLengthOsalNVItems(vector<uint8_t>& data, void* value = nullptr);
@@ -48,7 +51,6 @@ private:
     void processReadAttributeResponse(const DataAFMsg_t& afMsg, DefaultRsp_t& defaultRsp, void* value = nullptr);
     void processReportAttribute(const DataAFMsg_t& afMsg, DefaultRsp_t& defaultRsp, void* value = nullptr);
     void processDefaultResponse(const DataAFMsg_t& afMsg, DefaultRsp_t& defaultRsp, void* value = nullptr);
-    void createDeviceEvent(const DeviceEventT event);
     cJSON* createDeviceEndpoints();
     cJSON* createDevicePollControl();
     bool getDataAttributes(const DataAFMsg_t& afMsg, DefaultRsp_t& defaultRsp, uint16_t nwkAddr, EndpointListT endpoint, vector<DataAttr_t> listAttr);
@@ -157,6 +159,9 @@ Response_t ERaFromZigbee<Zigbee>::fromZigbee(const uint8_t* payload, void* value
                 }
                 else if (cmd == ZDOCommandsT::ZDO_STATE_CHANGE_IND) {
                     this->processZDOState(data, value);
+                }
+                else if (cmd == ZDOCommandsT::ZDO_END_DEVICE_ANNCE_IND) {
+                    this->processDeviceAnnounce(data, value);
                 }
                 break;
             case SubsystemT::APP_CNF:
@@ -295,6 +300,9 @@ void ERaFromZigbee<Zigbee>::processDataAFMsg(const DataAFMsg_t& afMsg, Response_
 
     if (!defaultRsp.isSent) {
         /* Queue Zigbee Rsp */
+        if (static_cast<Zigbee*>(this)->queueDefaultRsp.writeable()) {
+            static_cast<Zigbee*>(this)->queueDefaultRsp += defaultRsp;
+        }
     }
 
 	ERA_FORCE_UNUSED(manufSpec);
@@ -320,6 +328,7 @@ uint8_t ERaFromZigbee<Zigbee>::getCheckSumReceive(const uint8_t* pData, size_t p
 #include "fromZigbee/ERaFromPowerConfig.hpp"
 #include "fromZigbee/ERaFromOnOff.hpp"
 #include "fromZigbee/ERaFromLevel.hpp"
+#include "fromZigbee/ERaFromMultistateInput.hpp"
 #include "fromZigbee/ERaFromZstack.hpp"
 
 #endif /* INC_ERA_FROM_ZIGBEE_HPP_ */

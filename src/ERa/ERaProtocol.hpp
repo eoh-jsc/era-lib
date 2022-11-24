@@ -100,6 +100,11 @@ public:
 		else if (arrayTopic.at(1) == "down") {
 			this->processDownRequest(arrayTopic, payload);
 		}
+#if defined(ERA_ZIGBEE)
+		else if (arrayTopic.at(1) == "zigbee") {
+			this->processZigbeeRequest(arrayTopic, payload);
+		}
+#endif
 	}
 
 protected:
@@ -118,6 +123,12 @@ private:
 	void processConfiguration(cJSON* root);
 	void processDeviceConfig(cJSON* root, uint8_t type);
 	void processArduinoPin(cJSON* root);
+#if defined(ERA_ZIGBEE)
+	void processZigbeeRequest(const std::vector<std::string>& arrayTopic, const std::string& payload);
+	void processDeviceZigbee(const std::string& payload);
+	void processActionDeviceZigbee(const cJSON* const root, uint8_t type);
+	void processActionZigbee(const std::string& ieeeAddr, const std::string& payload, uint8_t type);
+#endif
 	bool sendInfo();
 	bool sendData(ERaRsp_t& rsp);
 	bool sendPinData(ERaRsp_t& rsp);
@@ -315,6 +326,119 @@ void ERaProto<Transp, Flash>::processArduinoPin(cJSON* root) {
 		}
 	}
 }
+
+#if defined(ERA_ZIGBEE)
+	template <class Transp, class Flash>
+	void ERaProto<Transp, Flash>::processZigbeeRequest(const std::vector<std::string>& arrayTopic, const std::string& payload) {
+		if (arrayTopic.size() == 3) {
+			if ((arrayTopic.at(2) == "permit_to_join") ||
+				(arrayTopic.at(2) == "remove_device")) {
+				this->processDeviceZigbee(payload);
+				return;
+			}
+		}
+		if (arrayTopic.size() < 4) {
+			return;
+		}
+		if (arrayTopic.at(3) == "down") {
+			this->processActionZigbee(arrayTopic.at(2), payload, ZigbeeActionT::ZIGBEE_ACTION_SET);
+		}
+	}
+
+	template <class Transp, class Flash>
+	void ERaProto<Transp, Flash>::processDeviceZigbee(const std::string& payload) {
+		cJSON* root = cJSON_Parse(payload.c_str());
+		if (!cJSON_IsObject(root)) {
+			cJSON_Delete(root);
+			root = nullptr;
+			return;
+		}
+
+		cJSON* item = cJSON_GetObjectItem(root, "action");
+		if (item == cJSON_Invalid) {
+			item = cJSON_GetObjectItem(root, "command");
+		}
+		if (cJSON_IsString(item)) {
+			if (ERaStrCmp(item->valuestring, "search_device")) {
+				this->processActionDeviceZigbee(root, ZigbeeActionT::ZIGBEE_ACTION_PERMIT_JOIN);
+			}
+			else if (ERaStrCmp(item->valuestring, "remove_zigbee")) {
+				this->processActionDeviceZigbee(root, ZigbeeActionT::ZIGBEE_ACTION_REMOVE_DEVICE);
+			}
+		}
+
+		cJSON_Delete(root);
+		root = nullptr;
+		item = nullptr;
+	}
+
+	template <class Transp, class Flash>
+	void ERaProto<Transp, Flash>::processActionDeviceZigbee(const cJSON* const root, uint8_t type) {
+		cJSON* data = cJSON_GetObjectItem(root, "data");
+		if (!cJSON_IsObject(root)) {
+			return;
+		}
+
+		cJSON* item = nullptr;
+		cJSON* payload = nullptr;
+		switch (type) {
+			case ZigbeeActionT::ZIGBEE_ACTION_PERMIT_JOIN:
+				item = cJSON_GetObjectItem(data, "zigbee");
+				if (cJSON_IsBool(item)) {
+					payload = cJSON_CreateObject();
+					if (payload == nullptr) {
+						break;
+					}
+
+					cJSON_AddBoolToObject(payload, "value", item->valueint);
+					cJSON* ieeeItem = cJSON_GetObjectItem(data, "ieee_addr");
+					if (cJSON_IsString(ieeeItem)) {
+						cJSON_AddStringToObject(payload, "ieee_addr", ieeeItem->valuestring);
+					}
+					cJSON* nwkItem = cJSON_GetObjectItem(data, "nwk_addr");
+					if (cJSON_IsString(nwkItem)) {
+						cJSON_AddStringToObject(payload, "nwk_addr", nwkItem->valuestring);
+					}
+
+					if (!Base::Zigbee::addZigbeeAction(ZigbeeActionT::ZIGBEE_ACTION_PERMIT_JOIN, "", payload)) {
+						cJSON_Delete(payload);
+					}
+					ieeeItem = nullptr;
+					nwkItem = nullptr;
+				}
+				break;
+			case ZigbeeActionT::ZIGBEE_ACTION_REMOVE_DEVICE:
+				item = cJSON_GetObjectItem(data, "ieee_addr");
+				if (item == cJSON_Invalid) {
+					item = cJSON_GetObjectItem(data, "ieee_address");
+				}
+				if (cJSON_IsString(item)) {
+					this->processActionZigbee(item->valuestring, "{}", ZigbeeActionT::ZIGBEE_ACTION_REMOVE_DEVICE);
+				}
+				break;
+			default:
+				break;
+		}
+		item = nullptr;
+		data = nullptr;
+		payload = nullptr;
+	}
+
+	template <class Transp, class Flash>
+	void ERaProto<Transp, Flash>::processActionZigbee(const std::string& ieeeAddr, const std::string& payload, uint8_t type) {
+		cJSON* root = cJSON_Parse(payload.c_str());
+		if (!cJSON_IsObject(root)) {
+			cJSON_Delete(root);
+			root = nullptr;
+			return;
+		}
+
+		if (!Base::Zigbee::addZigbeeAction(static_cast<ZigbeeActionT>(type), ieeeAddr.c_str(), root)) {
+			cJSON_Delete(root);
+		}
+		root = nullptr;
+	}
+#endif
 
 template <class Transp, class Flash>
 bool ERaProto<Transp, Flash>::sendInfo() {

@@ -17,6 +17,7 @@ void ERaModbus<Api>::configModbus() {
 
 template <class Api>
 void ERaModbus<Api>::setBaudRate(uint32_t baudrate) {
+    eraModbusBaudrate(baudrate);
     if (!this->streamDefault()) {
         return;
     }

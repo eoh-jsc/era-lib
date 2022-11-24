@@ -118,6 +118,12 @@ bool ERaMqtt<Client, MQTT>::connect() {
         }
     }
 
+#if defined(ERA_ZIGBEE)
+    subscribeTopic(this->eraTopic, "/zigbee/+/down", QoST::QOS0);
+    subscribeTopic(this->eraTopic, "/zigbee/permit_to_join", QoST::QOS0);
+    subscribeTopic(this->eraTopic, "/zigbee/remove_device", QoST::QOS0);
+#endif
+
     subscribeTopic(this->eraTopic, "/arduino_pin/+", QoST::QOS0);
     subscribeTopic(this->eraTopic, "/pin/down", QoST::QOS0);
     subscribeTopic(this->eraTopic, "/down", QoST::QOS0);

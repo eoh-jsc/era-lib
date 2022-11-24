@@ -3,7 +3,13 @@
 
 #include <Zigbee/ERaZigbee.hpp>
 
-#define UART_ZIGBEE         UART_NUM_2
+#if !defined(UART_ZIGBEE)
+    #if SOC_UART_NUM > 2
+        #define UART_ZIGBEE         UART_NUM_2
+    #else
+        #define UART_ZIGBEE         UART_NUM_1
+    #endif
+#endif
 
 template <class Api>
 void ERaZigbee<Api>::configZigbee() {
@@ -22,28 +28,36 @@ void ERaZigbee<Api>::configZigbee() {
 
 template <class Api>
 void ERaZigbee<Api>::handleZigbeeData() {
-    int length {0};
     uart_event_t event;
     if (osMessageQueueGet((QueueHandle_t)(this->messageHandle), &event, NULL, 1) != osOK) {
         return;
     }
-    switch (event.type) {
-        case uart_event_type_t::UART_DATA: {
-            ESP_ERROR_CHECK(uart_get_buffered_data_len(UART_ZIGBEE, (size_t*)&length));
-			uint8_t receive[(length < 256) ? 256 : length] {0};
-			uint8_t payload[(length < 256) ? 256 : length] {0};
-            uart_read_bytes(UART_ZIGBEE, receive, length, portMAX_DELAY);
-            this->processZigbee(receive, length, ((length < 256) ? 256 : length), payload, 0, 0);
+    int length {0};
+    uint8_t index {0};
+    uint8_t payload[256] {0};
+    do {
+        if (index) {
+            if (osMessageQueueGet((QueueHandle_t)(this->messageHandle), &event, NULL, DEFAULT_TIMEOUT) != osOK) {
+                break;
+            }
         }
-            break;
-        case uart_event_type_t::UART_FIFO_OVF:
-        case uart_event_type_t::UART_BUFFER_FULL:
-            uart_flush_input(UART_ZIGBEE);
-            osMessageQueueReset((QueueHandle_t)(this->messageHandle));
-            break;
-        default:
-            break;
-    }
+        switch (event.type) {
+            case uart_event_type_t::UART_DATA: {
+                ESP_ERROR_CHECK(uart_get_buffered_data_len(UART_ZIGBEE, (size_t*)&length));
+                uint8_t receive[(length < 256) ? 256 : length] {0};
+                uart_read_bytes(UART_ZIGBEE, receive, length, portMAX_DELAY);
+                this->processZigbee(receive, length, 256, payload, index, (!index ? 0 : payload[this->PositionDataLength]));
+            }
+                break;
+            case uart_event_type_t::UART_FIFO_OVF:
+            case uart_event_type_t::UART_BUFFER_FULL:
+                uart_flush_input(UART_ZIGBEE);
+                osMessageQueueReset((QueueHandle_t)(this->messageHandle));
+                break;
+            default:
+                break;
+        }
+    } while (index);
 }
 
 template <class Zigbee>
@@ -69,27 +83,48 @@ ResultT ERaToZigbee<Zigbee>::waitResponse(Response_t rspWait, void* value) {
     MillisTime_t startMillis = ERaMillis();
 
     do {
-        if (osMessageQueueGet((QueueHandle_t)(static_cast<Zigbee*>(this)->messageHandle), &event, NULL, 1) == osOK) {
-            switch (event.type) {
-                case uart_event_type_t::UART_DATA: {
-                    ESP_ERROR_CHECK(uart_get_buffered_data_len(UART_ZIGBEE, (size_t*)&length));
-					uint8_t receive[(length < 256) ? 256 : length] {0};
-					uint8_t payload[(length < 256) ? 256 : length] {0};
-                    uart_read_bytes(UART_ZIGBEE, receive, length, portMAX_DELAY);
-                    if (static_cast<Zigbee*>(this)->processZigbee(receive, length, ((length < 256) ? 256 : length), payload, 0, 0, &cmdStatus, &rspWait, value)) {
-                        return ((cmdStatus != ZnpCommandStatusT::INVALID_PARAM) ? static_cast<ResultT>(cmdStatus) : ResultT::RESULT_SUCCESSFUL);
-                    }
+        if (static_cast<Zigbee*>(this)->isResponse()) {
+            Response_t& rsp = static_cast<Zigbee*>(this)->getResponse();
+            if (CheckAFdata_t(rsp, rspWait)) {
+                cmdStatus = rsp.cmdStatus;
+            }
+            if (CompareRsp_t(rsp, rspWait)) {
+                return ((cmdStatus != ZnpCommandStatusT::INVALID_PARAM) ? static_cast<ResultT>(cmdStatus) : ResultT::RESULT_SUCCESSFUL);
+            }
+            if (CheckRsp_t(rsp, rspWait)) {
+                // sync
+                if (static_cast<Zigbee*>(this)->queueRsp.writeable()) {
+                    static_cast<Zigbee*>(this)->queueRsp += rsp;
                 }
-                    break;
-                case uart_event_type_t::UART_FIFO_OVF:
-                case uart_event_type_t::UART_BUFFER_FULL:
-                    uart_flush_input(UART_ZIGBEE);
-                    osMessageQueueReset((QueueHandle_t)(static_cast<Zigbee*>(this)->messageHandle));
-                    break;
-                default:
-                    break;
             }
         }
+        uint8_t index {0};
+        uint8_t payload[256] {0};
+        do {
+            if (osMessageQueueGet((QueueHandle_t)(static_cast<Zigbee*>(this)->messageHandle), &event, NULL, (!index ? 1 : MAX_TIMEOUT)) == osOK) {
+                switch (event.type) {
+                    case uart_event_type_t::UART_DATA: {
+                        ESP_ERROR_CHECK(uart_get_buffered_data_len(UART_ZIGBEE, (size_t*)&length));
+                        uint8_t receive[(length < 256) ? 256 : length] {0};
+                        uart_read_bytes(UART_ZIGBEE, receive, length, portMAX_DELAY);
+                        if (static_cast<Zigbee*>(this)->processZigbee(receive, length, 256, payload, index, (!index ? 0 : payload[static_cast<Zigbee*>(this)->PositionDataLength]), &cmdStatus, &rspWait, value)) {
+                            return ((cmdStatus != ZnpCommandStatusT::INVALID_PARAM) ? static_cast<ResultT>(cmdStatus) : ResultT::RESULT_SUCCESSFUL);
+                        }
+                    }
+                        break;
+                    case uart_event_type_t::UART_FIFO_OVF:
+                    case uart_event_type_t::UART_BUFFER_FULL:
+                        uart_flush_input(UART_ZIGBEE);
+                        osMessageQueueReset((QueueHandle_t)(static_cast<Zigbee*>(this)->messageHandle));
+                        break;
+                    default:
+                        break;
+                }
+            }
+            else {
+                break;
+            }
+        } while (index);
         ERA_ZIGBEE_YIELD();
     } while (ERaRemainingTime(startMillis, rspWait.timeout));
     return ((cmdStatus != ZnpCommandStatusT::INVALID_PARAM) ? static_cast<ResultT>(cmdStatus) : ResultT::RESULT_TIMEOUT);

@@ -8,6 +8,7 @@ static const ClusterIDT AllZclId[] = {
     ClusterIDT::ZCL_CLUSTER_POWER_CONFIG,
     ClusterIDT::ZCL_CLUSTER_ONOFF,
     ClusterIDT::ZCL_CLUSTER_LEVEL_CONTROL,
+    ClusterIDT::ZCL_CLUSTER_MULTISTATE_INPUT_BASIC,
     ClusterIDT::ZCL_CLUSTER_OTA_UPGRADE,
     ClusterIDT::ZCL_CLUSTER_POLL_CONTROL,
     ClusterIDT::ZCL_CLUSTER_GREEN_POWER,
@@ -34,6 +35,9 @@ static const StringifyZcl_t StrifyZcl[] = {
     },
     {
         ClusterIDT::ZCL_CLUSTER_LEVEL_CONTROL, "genLevelControl"
+    },
+    {
+        ClusterIDT::ZCL_CLUSTER_MULTISTATE_INPUT_BASIC, "genMultistateInput"
     },
     {
         ClusterIDT::ZCL_CLUSTER_OTA_UPGRADE, "genOta"
@@ -77,6 +81,11 @@ static const KeyDataZigbee_t KeyDataZb[] = {
         }, 3, {
             KEY_SPEC(LEVEL, LEVEL_COMMAND), KEY_SPEC(LEVEL, MOVELEVEL), KEY_SPEC(LEVEL, MOVELEVEL_ONOFF)
         }
+	},
+	{
+		ClusterIDT::ZCL_CLUSTER_MULTISTATE_INPUT_BASIC, 1, {
+			KEY(MULTISTATE_INPUT, PREVALUE)
+		}
 	},
 	{
 		ClusterIDT::ZCL_CLUSTER_GREEN_POWER, 0, {}, 1,  {

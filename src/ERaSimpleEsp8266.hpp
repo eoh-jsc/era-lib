@@ -22,15 +22,15 @@
 template <class Transp, class Flash>
 void ERaProto<Transp, Flash>::initERaTask() {
 #if defined(ERA_MODBUS)
-	Base::ERaModbus::begin();
+	Base::Modbus::begin();
 #endif
 }
 
 template <class Transp, class Flash>
 void ERaProto<Transp, Flash>::runERaTask() {
 #if defined(ERA_MODBUS)
-	Base::ERaModbus::runRead();
-	Base::ERaModbus::runWrite();
+	Base::Modbus::runRead();
+	Base::Modbus::runWrite();
 #endif
 }
 

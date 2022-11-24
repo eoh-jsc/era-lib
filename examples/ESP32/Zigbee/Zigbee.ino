@@ -11,43 +11,37 @@
  *************************************************************/
 
 // Enable debug console
+// Set CORE_DEBUG_LEVEL = 3 first
 // #define ERA_DEBUG
-// #define ERA_SERIAL stdout
 
-// Enable Modbus and Zigbee
-// #include <ERaWiringPi.hpp>
+// You should get Auth Token in the ERa App or ERa Dashboard
+#define ERA_AUTH_TOKEN "ERA2706"
 
-// Enable Modbus
-#include <ERaSimpleMBWiringPi.hpp>
-
+#include <Arduino.h>
+#include <ERaEsp32.hpp>
 #include <ERa/ERaTimer.hpp>
-#include <ERaOptionsArgs.hpp>
 
-static const char* auth;
-static const char* host;
-static uint16_t port;
+const char ssid[] = "YOUR_SSID";
+const char pass[] = "YOUR_PASSWORD";
 
 ERaTimer timer;
 
+/* This function print uptime every second */
+void timerEvent() {
+    ERA_LOG("Timer", "Uptime: %d\n", ERaMillis() / 1000L);
+}
+
 void setup() {
-    ERa.begin(auth, host, port, auth, auth);
-    timer.setInterval(1000L, []() {
-        printf("Uptime: %d\n", ERaMillis() / 1000L);
-    });
+    /* Setup debug console */
+    Serial.begin(115200);
+
+    ERa.begin(ssid, pass);
+
+    /* Setup timer called function every second */
+    timer.setInterval(1000L, timerEvent);
 }
 
 void loop() {
     ERa.run();
     timer.run();
-}
-
-int main(int argc, char *argv[]) {
-    processArgs(argc, argv, auth, host, port);
-
-    setup();
-    while (1) {
-        loop();
-    }
-
-    return 0;
 }
