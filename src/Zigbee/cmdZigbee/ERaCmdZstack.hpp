@@ -211,12 +211,13 @@ ResultT ERaCommandZigbee<ToZigbee>::stateStartupAppZstack(size_t limit, void* va
 			if (this->coordinator->deviceState == DeviceStateListT::STARTED_COORDINATOR) {
 				return ResultT::RESULT_SUCCESSFUL;
 			}
-			for (size_t j = 0; j < 100; ++j) {
+			for (size_t j = 0; j < 1000; ++j) {
 				// loop check
+				static_cast<ToZigbee*>(this)->handleZigbeeData();
 				if (this->coordinator->deviceState == DeviceStateListT::STARTED_COORDINATOR) {
 					return ResultT::RESULT_SUCCESSFUL;
 				}
-				ERaDelay(100);
+				ERA_ZIGBEE_YIELD();
 			}
 		}
 		ERaDelay(1000);

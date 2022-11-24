@@ -32,7 +32,8 @@ void ERaZigbee<Api>::startZigbee(bool& format, bool& invalid) {
         if (this->coordinator->address.panId < 0x1000 || this->coordinator->address.panId > 0xF000) {
             this->coordinator->address.panId = this->DefaultPanId;
         }
-        if (invalid) {
+        if (invalid || (this->coordinator->channel == ZBChannelT::CHANNEL_NONE) ||
+                        (this->coordinator->channel == ZBChannelT::NO_LOAD_CHANNEL)) {
             index = ERaRandomNumber(0, 15);
             if (index > 15) {
                 this->coordinator->channel = this->DefaultChannel;

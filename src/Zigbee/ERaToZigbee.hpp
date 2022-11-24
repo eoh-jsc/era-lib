@@ -37,6 +37,10 @@ protected:
     bool permitJoinToZigbee(const cJSON* const root);
 
 private:
+    void handleZigbeeData() {
+        static_cast<Zigbee*>(this)->handleZigbeeData();
+    }
+
     bool stateToZigbee(const cJSON* const root, const cJSON* const current, AFAddrType_t& dstAddr, const ConvertToZigbeeT type);
     bool levelToZigbee(const cJSON* const root, const cJSON* const current, AFAddrType_t& dstAddr, const ConvertToZigbeeT type);
     bool getEndpointToZigbee(const cJSON* const root, const char* key, EndpointListT& endpoint);

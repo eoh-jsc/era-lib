@@ -40,7 +40,7 @@ typedef struct __ERaConfig_t {
     char token[64];
     char host[64];
     uint16_t port;
-    char user[64];
+    char username[64];
     char password[64];
     
     void setFlag(uint8_t mask, bool value) {
@@ -124,6 +124,13 @@ public:
         Base::init();
         this->config(auth, host, port, username, password);
         if (this->connected() && Base::connect()) {
+            CopyToArray(ssid, eraConfig.ssid);
+            CopyToArray(pass, eraConfig.pass);
+            CopyToArray(auth, eraConfig.token);
+            CopyToArray(host, eraConfig.host);
+            eraConfig.port = port;
+            CopyToArray(username, eraConfig.username);
+            CopyToArray(password, eraConfig.password);
             ERaState::set(StateT::STATE_CONNECTED);
         }
         else {
@@ -288,10 +295,10 @@ void ERaPnP::configApi() {
             eraConfig.port = port.toInt();
         }
         if (user.length()) {
-            CopyToArray(user, eraConfig.user);
+            CopyToArray(user, eraConfig.username);
         }
         else {
-            CopyToArray(imei, eraConfig.user);
+            CopyToArray(imei, eraConfig.username);
         }
         if (password.length()) {
             CopyToArray(password, eraConfig.password);
@@ -674,10 +681,10 @@ void ERaPnP::configApi() {
             eraConfig.port = port.toInt();
         }
         if (user.length()) {
-            CopyToArray(user, eraConfig.user);
+            CopyToArray(user, eraConfig.username);
         }
         else {
-            CopyToArray(imei, eraConfig.user);
+            CopyToArray(imei, eraConfig.username);
         }
         if (password.length()) {
             CopyToArray(password, eraConfig.password);
@@ -809,7 +816,7 @@ void ERaPnP::configLoadDefault() {
     eraConfig = eraDefault;
     this->getImeiChip(imei, sizeof(imei));
     CopyToArray(imei, eraConfig.token);
-    CopyToArray(imei, eraConfig.user);
+    CopyToArray(imei, eraConfig.username);
     CopyToArray(imei, eraConfig.password);
     ERA_LOG(TAG, "Using default config");
 }
@@ -887,7 +894,7 @@ void ERaPnP::connectNetwork() {
 
 void ERaPnP::connectCloud() {
     ERA_LOG(TAG, "Connecting cloud...");
-    this->config(eraConfig.token, eraConfig.host, eraConfig.port, eraConfig.user, eraConfig.password);
+    this->config(eraConfig.token, eraConfig.host, eraConfig.port, eraConfig.username, eraConfig.password);
     if (Base::connect()) {
         this->configSave();
         ERaState::set(StateT::STATE_CONNECTED);

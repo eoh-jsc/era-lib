@@ -95,6 +95,9 @@ public:
 protected:
     void begin() { 
         this->configZigbee();
+        if (ToZigbee::CommandZigbee::pingSystem(3) != ResultT::RESULT_SUCCESSFUL) {
+            return;
+        }
         InfoDevice_t::getInstance();
         InfoCoordinator_t::getInstance();
         this->timerPing = this->timer.setInterval(PING_INTERVAL, [=](void* args) {
