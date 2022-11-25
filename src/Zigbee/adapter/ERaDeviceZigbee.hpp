@@ -84,8 +84,6 @@ bool ERaZigbee<Api>::interviewDevice() {
         }
     }
 
-    vector<NewCluster_t> newZcls;
-
     for (size_t i = 0; i < this->device->epCount; ++i) {
         if (this->device->epList[i].endpoint == EndpointListT::ENDPOINT_NONE) {
             continue;
@@ -97,10 +95,14 @@ bool ERaZigbee<Api>::interviewDevice() {
         ToZigbee::CommandZigbee::requestSimpleDesc(this->device->address, 10);
     }
 
+    ERA_LOG(TAG, "Binding %s(%d)", IEEEToString(this->device->address.addr.ieeeAddr).c_str(),
+                                                            this->device->address.addr.nwkAddr);
+
     for (size_t i = 0; i < this->device->epCount; ++i) {
         if (this->device->epList[i].endpoint == EndpointListT::ENDPOINT_NONE) {
             continue;
         }
+        this->device->address.endpoint = this->device->epList[i].endpoint;
         if (this->device->power == PowerSourceT::PWS_BATTERY || this->device->power == PowerSourceT::PWS_DC_SOURCE) {
             if (this->isClusterExist(this->device->epList[i].inZclIdList, this->device->epList[i].outZclIdList, ClusterIDT::ZCL_CLUSTER_POWER_CONFIG)) {
                 this->readAttrDevice(this->device->address, ClusterIDT::ZCL_CLUSTER_POWER_CONFIG, {ZbZclPowerConfigSvrAttrT::ZCL_POWER_CONFIG_ATTR_BATTERY_VOLTAGE,
@@ -111,21 +113,26 @@ bool ERaZigbee<Api>::interviewDevice() {
         if (this->device->epList[i].endpoint == EndpointListT::ENDPOINT242) {
             continue;
         }
+		vector<ClusterIDT> zclIds;
         for (size_t j = 0; j < this->device->epList[i].inZclCount; ++j) {
-            if (this->isBindReportExist(ReportingList, this->device->epList[i].inZclIdList[j])) {
-                ToZigbee::CommandZigbee::requestBind(this->device->address, this->coordinator->address, this->device->epList[i].inZclIdList[j]);
+            if (this->device->epList[i].inZclIdList[j] == ClusterIDT::ZCL_CLUSTER_BASIC) { /* Skip Bind Basic Cluster */
+                continue;
             }
-            if (this->isElementExist(AllZclId, this->device->epList[i].inZclIdList[j])) {
-                newZcls.push_back({this->device->epList[i].inZclIdList[j], this->device->epList[i].endpoint});
+            if ((this->isBindReportExist(ReportingList, this->device->epList[i].inZclIdList[j]) != nullptr) ||
+                !this->isElementExist(AllZclId, this->device->epList[i].inZclIdList[j])) {
+                zclIds.push_back(this->device->epList[i].inZclIdList[j]);
                 ToZigbee::CommandZigbee::requestBind(this->device->address, this->coordinator->address, this->device->epList[i].inZclIdList[j]);
             }
         }
         for (size_t j = 0; j < this->device->epList[i].outZclCount; ++j) {
-            if (this->isBindReportExist(ReportingList, this->device->epList[i].outZclIdList[j])) {
-                ToZigbee::CommandZigbee::requestBind(this->device->address, this->coordinator->address, this->device->epList[i].outZclIdList[j]);
+            if (this->device->epList[i].outZclIdList[j] == ClusterIDT::ZCL_CLUSTER_BASIC) { /* Skip Bind Basic Cluster */
+                continue;
             }
-            if (this->isElementExist(AllZclId, this->device->epList[i].outZclIdList[j])) {
-                newZcls.push_back({this->device->epList[i].outZclIdList[j], this->device->epList[i].endpoint});
+            if (this->isElementExist(zclIds, this->device->epList[i].outZclIdList[j])) {
+                continue;
+            }
+            if ((this->isBindReportExist(ReportingList, this->device->epList[i].outZclIdList[j]) != nullptr) ||
+                !this->isElementExist(AllZclId, this->device->epList[i].outZclIdList[j])) {
                 ToZigbee::CommandZigbee::requestBind(this->device->address, this->coordinator->address, this->device->epList[i].outZclIdList[j]);
             }
         }
@@ -137,7 +144,6 @@ bool ERaZigbee<Api>::interviewDevice() {
                                                             this->device->address.addr.nwkAddr);
     FromZigbee::createDeviceEvent(DeviceEventT::DEVICE_EVENT_INTERVIEW_SUCCESSFUL);
     DBZigbee::setDeviceToCoordinator();
-
     return true;
 }
 
@@ -227,6 +233,49 @@ ResultT ERaZigbee<Api>::writeAttrDevice(AFAddrType_t& dstAddr,
 }
 
 template <class Api>
+void ERaZigbee<Api>::readDataDevice() {
+    /* Read data device */
+    ERA_LOG(TAG, "Reading data %s(%d)", IEEEToString(this->device->address.addr.ieeeAddr).c_str(),
+                                                            this->device->address.addr.nwkAddr);
+
+    if (this->device->typeDevice != TypeDeviceT::ROUTERDEVICE) {
+        if ((this->device->power != PowerSourceT::PWS_SINGLE_PHASE) &&
+            (this->device->power != PowerSourceT::PWS_THREE_PHASE)) {
+            return;
+        }
+    }
+    for (size_t i = 0; i < this->device->epCount; ++i) {
+        if (this->device->epList[i].endpoint == EndpointListT::ENDPOINT_NONE) {
+            continue;
+        }
+        if (this->device->epList[i].endpoint == EndpointListT::ENDPOINT242) {
+            continue;
+        }
+        this->device->address.endpoint = this->device->epList[i].endpoint;
+		vector<ClusterIDT> zclIds;
+        const ConfigBindReport_t* config = nullptr;
+        for (size_t j = 0; j < this->device->epList[i].inZclCount; ++j) {
+            if ((config = this->isBindReportExist(ReportingList, this->device->epList[i].inZclIdList[j])) != nullptr) {
+                zclIds.push_back(this->device->epList[i].inZclIdList[j]);
+                this->readAttrDevice(this->device->address, this->device->epList[i].inZclIdList[j], {
+                    config->attribute, config->attribute + config->numReadAttr
+                    }, 1);
+            }
+        }
+        for (size_t j = 0; j < this->device->epList[i].outZclCount; ++j) {
+            if (this->isElementExist(zclIds, this->device->epList[i].outZclIdList[j])) {
+                continue;
+            }
+            if ((config = this->isBindReportExist(ReportingList, this->device->epList[i].outZclIdList[j])) != nullptr) {
+                this->readAttrDevice(this->device->address, this->device->epList[i].outZclIdList[j], {
+                    config->attribute, config->attribute + config->numReadAttr
+                    }, 1);
+            }
+        }
+    }
+}
+
+template <class Api>
 template <int inSize, int outSize>
 bool ERaZigbee<Api>::isClusterExist(const ClusterIDT(&inZclList)[inSize], const ClusterIDT(&outZclList)[outSize], const ClusterIDT zclId) {
     const ClusterIDT* inZcl = std::find_if(std::begin(inZclList), std::end(inZclList), [zclId](const ClusterIDT& e) {
@@ -240,11 +289,11 @@ bool ERaZigbee<Api>::isClusterExist(const ClusterIDT(&inZclList)[inSize], const 
 
 template <class Api>
 template <int size>
-bool ERaZigbee<Api>::isBindReportExist(const ConfigBindReport_t(&inConfig)[size], const ClusterIDT zclId) {
+const ConfigBindReport_t* ERaZigbee<Api>::isBindReportExist(const ConfigBindReport_t(&inConfig)[size], const ClusterIDT zclId) {
     const ConfigBindReport_t* config = std::find_if(std::begin(inConfig), std::end(inConfig), [zclId](const ConfigBindReport_t& e) {
         return e.zclId == zclId;
     });
-    return (config != std::end(inConfig));
+    return ((config != std::end(inConfig)) ? config : nullptr);
 }
 
 template <class Api>
@@ -254,6 +303,15 @@ bool ERaZigbee<Api>::isElementExist(const T(&elementList)[size], const T element
         return e == element;
     });
     return (_element != std::end(elementList));
+}
+
+template <class Api>
+template <typename T>
+bool ERaZigbee<Api>::isElementExist(const std::vector<T>& elementList, const T element) {
+    const auto _element = std::find_if(elementList.begin(), elementList.end(), [element](const T& e) {
+        return e == element;
+    });
+    return (_element != elementList.end());
 }
 
 #endif /* INC_ERA_DEVICE_ZIGBEE_HPP_ */

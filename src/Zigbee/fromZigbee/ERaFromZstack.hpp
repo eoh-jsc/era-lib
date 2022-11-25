@@ -151,6 +151,9 @@ void ERaFromZigbee<Zigbee>::processBindUnbind(vector<uint8_t>& data, void* value
 	if (data.size() < 3) {
 		return;
     }
+    if (value == nullptr) {
+        return;
+    }
     uint16_t srcAddr = BUILD_UINT16(data.at(0));
     switch (srcAddr) {
 		case NWK_ADDR_COORDINATOR:
@@ -226,6 +229,21 @@ void ERaFromZigbee<Zigbee>::processDeviceAnnounce(vector<uint8_t>& data, void* v
     if (ZigbeeState::is(ZigbeeStateT::STATE_ZB_DEVICE_JOINED)) {
         ZigbeeState::set(ZigbeeStateT::STATE_ZB_DEVICE_INTERVIEWING);
     }
+}
+
+template <class Zigbee>
+void ERaFromZigbee<Zigbee>::processDeviceLeave(vector<uint8_t>& data, void* value) {
+	if (data.size() < 13) {
+		return;
+    }
+    AFAddrType_t srcAddr;
+    srcAddr.addr.nwkAddr = BUILD_UINT16(data.at(0));
+    CopyToArray(data.at(2), srcAddr.addr.ieeeAddr, LENGTH_EXTADDR_IEEE);
+	bool request = data.at(10);
+	bool remove = data.at(11);
+	bool rejoin = data.at(12);
+    static_cast<Zigbee*>(this)->Zigbee::ToZigbee::CommandZigbee::removeDevice(srcAddr, false, false, false);
+    this->createDeviceEvent(DeviceEventT::DEVICE_EVENT_LEAVE, &srcAddr);
 }
 
 template <class Zigbee>

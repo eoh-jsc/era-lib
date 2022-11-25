@@ -18,7 +18,7 @@ public:
 
 protected:
     Response_t fromZigbee(const uint8_t* payload, void* value = nullptr);
-    void createDeviceEvent(const DeviceEventT event);
+    void createDeviceEvent(const DeviceEventT event, const AFAddrType_t* dstAddr = nullptr);
 
 private:
     bool powerConfigFromZigbee(const DataAFMsg_t& afMsg, cJSON* root, uint16_t attribute, uint64_t& value);
@@ -36,6 +36,7 @@ private:
     void processTCDeviceIndication(vector<uint8_t>& data, void* value = nullptr);
     void processZDOState(vector<uint8_t>& data, void* value = nullptr);
     void processDeviceAnnounce(vector<uint8_t>& data, void* value = nullptr);
+    void processDeviceLeave(vector<uint8_t>& data, void* value = nullptr);
     void processReadOsalNVItems(vector<uint8_t>& data, void* value = nullptr);
     void processWriteOsalNVItems(vector<uint8_t>& data, void* value = nullptr);
     void processLengthOsalNVItems(vector<uint8_t>& data, void* value = nullptr);
@@ -162,6 +163,9 @@ Response_t ERaFromZigbee<Zigbee>::fromZigbee(const uint8_t* payload, void* value
                 }
                 else if (cmd == ZDOCommandsT::ZDO_END_DEVICE_ANNCE_IND) {
                     this->processDeviceAnnounce(data, value);
+                }
+                else if (cmd == ZDOCommandsT::ZDO_LEAVE_IND) {
+                    this->processDeviceLeave(data, value);
                 }
                 break;
             case SubsystemT::APP_CNF:

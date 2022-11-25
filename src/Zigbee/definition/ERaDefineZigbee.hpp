@@ -409,7 +409,7 @@ typedef struct __InfoCoordinator_t {
 			.addr = {
 					.nwkAddr = NWK_ADDR_COORDINATOR_INIT
 			},
-			.addrMode = AddressModeT::ADDR_16BIT,
+			.addrMode = AddressModeT::ADDR_64BIT,
 			.endpoint = ENDPOINT1,
 			.panId = 0x0001
 		}

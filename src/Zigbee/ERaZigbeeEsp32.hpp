@@ -13,6 +13,11 @@
 
 template <class Api>
 void ERaZigbee<Api>::configZigbee() {
+    if (uart_is_driver_installed(UART_ZIGBEE)) {
+        ERA_LOG(TAG, "[Warning] UART %d installed, please setup another UART for Zigbee!", UART_ZIGBEE);
+        ERA_LOG(TAG, "[Warning] Or disable Modbus first!");
+        return;
+    }
     uart_config_t config = {
         .baud_rate = 115200,
         .data_bits = UART_DATA_8_BITS,

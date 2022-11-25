@@ -125,6 +125,7 @@ protected:
                 case ZigbeeStateT::STATE_ZB_DEVICE_INTERVIEWING:
                     if (this->interviewDevice()) {
                         this->permitJoinDuration(this->coordinator->permitJoin.address, 0);
+                        this->readDataDevice();
                         ZigbeeState::set(ZigbeeStateT::STATE_ZB_RUNNING);
                     }
                     else {
@@ -225,13 +226,16 @@ private:
                             ClusterIDT zclId,
                             vector<DataWriteAttr_t> data,
                             size_t limit = 2);
+    void readDataDevice();
 
     template <int inSize, int outSize>
     bool isClusterExist(const ClusterIDT(&inZcl)[inSize], const ClusterIDT(&outZcl)[outSize], const ClusterIDT zclId);
     template <int size>
-    bool isBindReportExist(const ConfigBindReport_t(&inConfig)[size], const ClusterIDT zclId);
+    const ConfigBindReport_t* isBindReportExist(const ConfigBindReport_t(&inConfig)[size], const ClusterIDT zclId);
     template <typename T, int size>
     bool isElementExist(const T(&elementList)[size], const T element);
+    template <typename T>
+    bool isElementExist(const std::vector<T>& elementList, const T element);
 
     void publishZigbeeData(const IdentDeviceAddr_t* deviceInfo);
     void publishZigbeeData(const char* topic, cJSON* payload);

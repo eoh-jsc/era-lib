@@ -311,7 +311,7 @@ void ERaFromZigbee<Zigbee>::removeDataZigbee(const DataAFMsg_t& afMsg, cJSON* ro
 }
 
 template <class Zigbee>
-void ERaFromZigbee<Zigbee>::createDeviceEvent(const DeviceEventT event) {
+void ERaFromZigbee<Zigbee>::createDeviceEvent(const DeviceEventT event, const AFAddrType_t* dstAddr) {
     cJSON* root = cJSON_CreateObject();
     if (root == nullptr) {
         return;
@@ -332,8 +332,8 @@ void ERaFromZigbee<Zigbee>::createDeviceEvent(const DeviceEventT event) {
 		return;
 	}
 
-    cJSON_AddNumberToObject(dataItem, "nwk_addr", this->device->address.addr.nwkAddr);
-    cJSON_AddStringToObject(dataItem, "ieee_addr", IEEEToString(this->device->address.addr.ieeeAddr).c_str());
+    cJSON_AddNumberToObject(dataItem, "nwk_addr", ((dstAddr != nullptr) ? dstAddr->addr.nwkAddr : this->device->address.addr.nwkAddr));
+    cJSON_AddStringToObject(dataItem, "ieee_addr", IEEEToString((dstAddr != nullptr) ? dstAddr->addr.ieeeAddr : this->device->address.addr.ieeeAddr).c_str());
 
     if (event != DeviceEventT::DEVICE_EVENT_ANNOUNCE) {
 		cJSON_AddStringToObject(definitionItem, "model", this->device->modelName);

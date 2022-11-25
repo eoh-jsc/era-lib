@@ -32,9 +32,9 @@
 #if defined(ERA_ZIGBEE)
     template <class Api>
     void ERaZigbee<Api>::initZigbeeTask() {
-        xTaskCreatePinnedToCore(this->zigbeeTask, "zigbeeTask", 1024 * 10, this, 20, &this->_zigbeeTask, ERA_MCU_CORE);
-        xTaskCreatePinnedToCore(this->controlZigbeeTask, "controlZigbeeTask", 1024 * 10, this, 20, &this->_controlZigbeeTask, ERA_MCU_CORE);
-        xTaskCreatePinnedToCore(this->responseZigbeeTask, "responseZigbeeTask", 1024 * 10, this, 19, &this->_responseZigbeeTask, ERA_MCU_CORE);
+        xTaskCreatePinnedToCore(this->zigbeeTask, "zigbeeTask", 1024 * 12, this, 20, &this->_zigbeeTask, ERA_MCU_CORE);
+        xTaskCreatePinnedToCore(this->controlZigbeeTask, "controlZigbeeTask", 1024 * 12, this, 20, &this->_controlZigbeeTask, ERA_MCU_CORE);
+        xTaskCreatePinnedToCore(this->responseZigbeeTask, "responseZigbeeTask", 1024 * 12, this, 19, &this->_responseZigbeeTask, ERA_MCU_CORE);
     }
 
     template <class Api>

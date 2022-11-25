@@ -14,6 +14,8 @@ static const ConfigBindReport_t ReportingList[] = {
 	{
 		ClusterIDT::ZCL_CLUSTER_ONOFF, 1, {
 			{ZbZclOnOffSvrAttrT::ZCL_ONOFF_ATTR_ONOFF, DataTypeT::zcl_boolean, ReportIntervalT::REP_INTERVAL_NONE, ReportIntervalT::REP_INTERVAL_HOUR, 0x00},
+		}, ManufacturerCodesT::MANUF_CODE_NONE, 1, {
+			ZbZclOnOffSvrAttrT::ZCL_ONOFF_ATTR_ONOFF
 		}
 	},
     {
