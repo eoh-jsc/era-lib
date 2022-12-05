@@ -1,0 +1,41 @@
+name: New version released
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  notify-release:
+    runs-on: ubuntu-latest
+    container: python:3.9.7-slim-buster
+    steps:
+      - name: Notify release
+        run: |
+          apt-get update
+          apt-get -y install curl
+          cat << EOF > message.json
+          {
+            "@type": "MessageCard",
+            "@context": "https://schema.org/extensions",
+            "summary": "New firmware version released!",
+            "themeColor": "1A7F37",
+            "sections": [{
+              "activityTitle": "[Firmware] New version released! 😍",
+              "activitySubtitle": "$GITHUB_REPOSITORY",
+              "facts": [{
+                "name": "Version:",
+                "value": "$GITHUB_REF_NAME"
+              }]
+            }],
+            "potentialAction": [{
+              "@type": "OpenUri",
+              "name": "See detail",
+              "targets": [{
+                "os": "default",
+                "uri": "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$GITHUB_REF_NAME"
+              }]
+            }]
+          }
+          EOF
+          curl -X POST ${{ secrets.TEAMS_WEBHOOK_DEPLOY_FIRMWARE }} --header 'Content-Type: application/json' -d @message.json
