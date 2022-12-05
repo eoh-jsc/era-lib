@@ -1,6 +1,10 @@
 #ifndef INC_ERA_ETHERNET_CLIENT_HPP_
 #define INC_ERA_ETHERNET_CLIENT_HPP_
 
+#if !defined(ERA_PROTO_TYPE)
+    #define ERA_PROTO_TYPE            "Ethernet"
+#endif
+
 #include <ERa/ERaApiArduinoDef.hpp>
 #include <ERa/ERaProtocol.hpp>
 #include <ERa/ERaApiArduino.hpp>
@@ -24,17 +28,17 @@ public:
     {}
 
     bool connectNetwork(const char* auth) {
-        ERA_LOG(TAG, "Connecting network...");
+        ERA_LOG(TAG, ERA_PSTR("Connecting network..."));
         this->getMacAddress(auth);
         if (!Ethernet.begin(this->macAddress)) {
-            ERA_LOG(TAG, "Connect failed");
+            ERA_LOG(TAG, ERA_PSTR("Connect failed"));
             return false;
         }
 
         ERaDelay(1000);
         IPAddress localIP = Ethernet.localIP();
         ERA_FORCE_UNUSED(localIP);
-        ERA_LOG(TAG, "IP: %s", localIP.toString().c_str());
+        ERA_LOG(TAG, ERA_PSTR("IP: %s"), localIP.toString().c_str());
         return true;
     }
 
@@ -87,7 +91,7 @@ private:
             }
         }
 
-        ERA_LOG(TAG, "Get MAC: %02X-%02X-%02X-%02X-%02X-%02X",
+        ERA_LOG(TAG, ERA_PSTR("Get MAC: %02X-%02X-%02X-%02X-%02X-%02X"),
                 this->macAddress[0], this->macAddress[1],
                 this->macAddress[2], this->macAddress[3],
                 this->macAddress[4], this->macAddress[5]);
@@ -96,5 +100,29 @@ private:
     const char* authToken;
     uint8_t macAddress[6];
 };
+
+template <class Proto, class Flash>
+void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
+    cJSON_AddStringToObject(root, INFO_BOARD, ERA_BOARD_TYPE);
+    cJSON_AddStringToObject(root, INFO_MODEL, ERA_MODEL_TYPE);
+	cJSON_AddStringToObject(root, INFO_AUTH_TOKEN, this->thisProto().ERA_AUTH);
+    cJSON_AddStringToObject(root, INFO_FIRMWARE_VERSION, ERA_FIRMWARE_VERSION);
+    cJSON_AddStringToObject(root, INFO_SSID, ERA_PROTO_TYPE);
+    cJSON_AddStringToObject(root, INFO_BSSID, ERA_PROTO_TYPE);
+    cJSON_AddNumberToObject(root, INFO_RSSI, ETH.linkSpeed());
+    cJSON_AddStringToObject(root, INFO_MAC, ETH.macAddress().c_str());
+    cJSON_AddStringToObject(root, INFO_LOCAL_IP, ETH.localIP().toString().c_str());
+    cJSON_AddNumberToObject(root, INFO_PING, this->thisProto().transp.getPing());
+}
+
+template <class Proto, class Flash>
+void ERaApi<Proto, Flash>::addModbusInfo(cJSON* root) {
+    cJSON_AddNumberToObject(root, INFO_MB_CHIP_TEMPERATURE, 5000);
+	cJSON_AddNumberToObject(root, INFO_MB_TEMPERATURE, 0);
+	cJSON_AddNumberToObject(root, INFO_MB_VOLTAGE, 999);
+	cJSON_AddNumberToObject(root, INFO_MB_IS_BATTERY, 0);
+	cJSON_AddNumberToObject(root, INFO_MB_RSSI, ETH.linkSpeed());
+	cJSON_AddStringToObject(root, INFO_MB_WIFI_USING, ERA_PROTO_TYPE);
+}
 
 #endif /* INC_ERA_ETHERNET_CLIENT_HPP_ */

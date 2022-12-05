@@ -49,6 +49,11 @@
 #define KEY_MEAS_TEMPERATURE_MAX_MEAS_VAL       "temperature_max_measured"
 #define KEY_MEAS_TEMPERATURE_TOLERANCE          "temperature_tolerance"
 
+#define KEY_MEAS_PRESSURE_MEAS_VAL              "pressure_measured"
+#define KEY_MEAS_PRESSURE_MIN_MEAS_VAL          "pressure_min_measured"
+#define KEY_MEAS_PRESSURE_MAX_MEAS_VAL          "pressure_max_measured"
+#define KEY_MEAS_PRESSURE_TOLERANCE             "pressure_tolerance"
+
 #define KEY_MEAS_HUMIDITY_MEAS_VAL              "humidity_measured"
 #define KEY_MEAS_HUMIDITY_MIN_MEAS_VAL          "humidity_min_measured"
 #define KEY_MEAS_HUMIDITY_MAX_MEAS_VAL          "humidity_max_measured"

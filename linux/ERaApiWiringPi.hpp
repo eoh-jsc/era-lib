@@ -3,9 +3,6 @@
 
 #include <ERa/ERaApi.hpp>
 
-#define ERA_MODEL_TYPE                "ERa"
-#define ERA_BOARD_TYPE                "Raspberry"
-
 template <class Proto, class Flash>
 void ERaApi<Proto, Flash>::handleReadPin(cJSON* root) {
 	if (!cJSON_IsArray(root)) {
@@ -201,6 +198,11 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const std::vector<std::strin
 			this->callERaPinWriteHandler(pin, param, raw);
 		}
 	}
+	else if (cJSON_IsString(item)) {
+		ERaParam param;
+		param.add_static(item->valuestring);
+		this->callERaWriteHandler(pin, param);
+	}
 
 	cJSON_Delete(root);
 	root = nullptr;
@@ -222,7 +224,12 @@ void ERaApi<Proto, Flash>::handlePinRequest(const std::vector<std::string>& arra
 
 	for (current = root->child; current != nullptr && current->string != nullptr; current = current->next) {
 		if (this->getGPIOPin(current, "virtual_pin", pin.pin)) {
-			param = current->valuedouble;
+			if (cJSON_IsNumber(current)) {
+				param = current->valuedouble;
+			}
+			else if (cJSON_IsString(current)) {
+				param.add_static(current->valuestring);
+			}
 			this->callERaWriteHandler(pin.pin, param);
 			continue;
 		}
@@ -302,13 +309,15 @@ template <class Proto, class Flash>
 void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
     cJSON_AddStringToObject(root, INFO_BOARD, ERA_BOARD_TYPE);
     cJSON_AddStringToObject(root, INFO_MODEL, ERA_MODEL_TYPE);
-	cJSON_AddStringToObject(root, INFO_AUTH_TOKEN, static_cast<Proto*>(this)->ERA_AUTH);
+	cJSON_AddStringToObject(root, INFO_AUTH_TOKEN, this->thisProto().ERA_AUTH);
     cJSON_AddStringToObject(root, INFO_FIRMWARE_VERSION, ERA_FIRMWARE_VERSION);
-    cJSON_AddStringToObject(root, INFO_SSID, "Linux");
-    cJSON_AddStringToObject(root, INFO_BSSID, "Linux");
+    cJSON_AddStringToObject(root, INFO_SSID, ((this->thisProto().transp.getSSID() == nullptr) ?
+                                            ERA_PROTO_TYPE : this->thisProto().transp.getSSID()));
+    cJSON_AddStringToObject(root, INFO_BSSID, ERA_PROTO_TYPE);
     cJSON_AddNumberToObject(root, INFO_RSSI, 100);
-    cJSON_AddStringToObject(root, INFO_MAC, "Linux");
-    cJSON_AddStringToObject(root, INFO_LOCAL_IP, "Linux");
+    cJSON_AddStringToObject(root, INFO_MAC, ERA_PROTO_TYPE);
+    cJSON_AddStringToObject(root, INFO_LOCAL_IP, ERA_PROTO_TYPE);
+    cJSON_AddNumberToObject(root, INFO_PING, this->thisProto().transp.getPing());
 }
 
 template <class Proto, class Flash>
@@ -318,7 +327,8 @@ void ERaApi<Proto, Flash>::addModbusInfo(cJSON* root) {
 	cJSON_AddNumberToObject(root, INFO_MB_VOLTAGE, 999);
 	cJSON_AddNumberToObject(root, INFO_MB_IS_BATTERY, 0);
 	cJSON_AddNumberToObject(root, INFO_MB_RSSI, 100);
-	cJSON_AddStringToObject(root, INFO_MB_WIFI_USING, "Linux");
+	cJSON_AddStringToObject(root, INFO_MB_WIFI_USING, ((this->thisProto().transp.getSSID() == nullptr) ?
+                                            		ERA_PROTO_TYPE : this->thisProto().transp.getSSID()));
 }
 
-#endif /* INC_ERA_API_PI_HPP_ */
+#endif /* INC_ERA_API_WIRING_PI_HPP_ */

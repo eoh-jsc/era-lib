@@ -12,7 +12,7 @@ void ERaZigbee<Api>::configZigbee() {
     }
 
     this->stream = &SerialZB;
-    SerialZB.begin(9600);
+    SerialZB.begin(ZIGBEE_BAUDRATE);
 }
 
 template <class Api>
@@ -24,37 +24,48 @@ void ERaZigbee<Api>::handleZigbeeData() {
     if (!this->stream->available()) {
         return;
     }
+    int remain {0};
     uint8_t index {0};
     uint8_t payload[256] {0};
     MillisTime_t startMillis = ERaMillis();
     do {
+        if (!this->stream->available()) {
+            ERA_ZIGBEE_YIELD();
+            continue;
+        }
         int position {0};
         int length = this->stream->available();
         uint8_t receive[(length < 256) ? 256 : length] {0};
         ERaGuardLock(this->mutexData);
         do {
             receive[position] = this->stream->read();
-            if (position) {
+            if (index && !position) {
+                length = remain;
+            }
+            else if (!index && (position == this->PositionDataLength)) {
                 if (receive[this->PositionSOF] == this->SOF) {
                     length = receive[this->PositionDataLength] + this->MinMessageLength;
                 }
                 else {
                     length = 0;
-                    break;
                 }
             }
         } while ((++position < length) && ERaRemainingTime(startMillis, DEFAULT_TIMEOUT));
         ERaGuardUnlock(this->mutexData);
         this->processZigbee(receive, length, 256, payload, index, (!index ? 0 : payload[this->PositionDataLength]));
         if (index) {
+            if (!length) {
+                index = 0;
+            }
+            remain = length - index;
             ERA_ZIGBEE_YIELD();
         }
-    } while (index && this->stream->available());
+    } while (index && ERaRemainingTime(startMillis, DEFAULT_TIMEOUT));
 }
 
 template <class Zigbee>
 ResultT ERaToZigbee<Zigbee>::waitResponse(Response_t rspWait, void* value) {
-    if (static_cast<Zigbee*>(this)->stream == NULL) {
+    if (this->thisZigbee().stream == NULL) {
         return ResultT::RESULT_FAIL;
     }
     
@@ -66,8 +77,8 @@ ResultT ERaToZigbee<Zigbee>::waitResponse(Response_t rspWait, void* value) {
     MillisTime_t startMillis = ERaMillis();
 
     do {
-        if (static_cast<Zigbee*>(this)->isResponse()) {
-            Response_t& rsp = static_cast<Zigbee*>(this)->getResponse();
+        if (this->thisZigbee().isResponse()) {
+            Response_t& rsp = this->thisZigbee().getResponse();
             if (CheckAFdata_t(rsp, rspWait)) {
                 cmdStatus = rsp.cmdStatus;
             }
@@ -76,42 +87,54 @@ ResultT ERaToZigbee<Zigbee>::waitResponse(Response_t rspWait, void* value) {
             }
             if (CheckRsp_t(rsp, rspWait)) {
                 // sync
-                if (static_cast<Zigbee*>(this)->queueRsp.writeable()) {
-                    static_cast<Zigbee*>(this)->queueRsp += rsp;
+                if (this->thisZigbee().queueRsp.writeable()) {
+                    this->thisZigbee().queueRsp += rsp;
                 }
             }
         }
-        if (!static_cast<Zigbee*>(this)->stream->available()) {
+        if (!this->thisZigbee().stream->available()) {
             ERA_ZIGBEE_YIELD();
             continue;
         }
+        int remain {0};
         uint8_t index {0};
         uint8_t payload[256] {0};
         do {
+            if (!this->thisZigbee().stream->available()) {
+                ERA_ZIGBEE_YIELD();
+                continue;
+            }
             int position = 0;
-            int length = static_cast<Zigbee*>(this)->stream->available();
+            int length = this->thisZigbee().stream->available();
             uint8_t receive[(length < 256) ? 256 : length] {0};
-            ERaGuardLock(static_cast<Zigbee*>(this)->mutexData);
+            ERaGuardLock(this->thisZigbee().mutexData);
             do {
-                receive[position] = static_cast<Zigbee*>(this)->stream->read();
-                if (position) {
-                    if (receive[static_cast<Zigbee*>(this)->PositionSOF] == static_cast<Zigbee*>(this)->SOF) {
-                        length = receive[static_cast<Zigbee*>(this)->PositionDataLength] + static_cast<Zigbee*>(this)->MinMessageLength;
+                receive[position] = this->thisZigbee().stream->read();
+                if (index && !position) {
+                    length = remain;
+                }
+                else if (!index && (position == this->thisZigbee().PositionDataLength)) {
+                    if (receive[this->thisZigbee().PositionSOF] == this->thisZigbee().SOF) {
+                        length = receive[this->thisZigbee().PositionDataLength] + this->thisZigbee().MinMessageLength;
                     }
                     else {
                         length = 0;
-                        break;
                     }
                 }
             } while ((++position < length) && ERaRemainingTime(startMillis, rspWait.timeout));
-            ERaGuardUnlock(static_cast<Zigbee*>(this)->mutexData);
-            if (static_cast<Zigbee*>(this)->processZigbee(receive, length, 256, payload, index, (!index ? 0 : payload[static_cast<Zigbee*>(this)->PositionDataLength]), &cmdStatus, &rspWait, value)) {
+            ERaGuardUnlock(this->thisZigbee().mutexData);
+            if (this->thisZigbee().processZigbee(receive, length, 256, payload, index,
+                (!index ? 0 : payload[this->thisZigbee().PositionDataLength]), &cmdStatus, &rspWait, value)) {
                 return ((cmdStatus != ZnpCommandStatusT::INVALID_PARAM) ? static_cast<ResultT>(cmdStatus) : ResultT::RESULT_SUCCESSFUL);
             }
             if (index) {
+                if (!length) {
+                    index = 0;
+                }
+                remain = length - index;
                 ERA_ZIGBEE_YIELD();
             }
-        } while (index && static_cast<Zigbee*>(this)->stream->available());
+        } while (index && ERaRemainingTime(startMillis, rspWait.timeout));
         ERA_ZIGBEE_YIELD();
     } while (ERaRemainingTime(startMillis, rspWait.timeout));
     return ((cmdStatus != ZnpCommandStatusT::INVALID_PARAM) ? static_cast<ResultT>(cmdStatus) : ResultT::RESULT_TIMEOUT);
@@ -119,27 +142,27 @@ ResultT ERaToZigbee<Zigbee>::waitResponse(Response_t rspWait, void* value) {
 
 template <class Zigbee>
 void ERaToZigbee<Zigbee>::sendByte(uint8_t byte) {
-    if (static_cast<Zigbee*>(this)->stream == NULL) {
+    if (this->thisZigbee().stream == NULL) {
         return;
     }
 
     ERaGuardLock(this->mutex);
     ERaLogHex("ZB >>", &byte, 1);
-    static_cast<Zigbee*>(this)->stream->write(byte);
-    static_cast<Zigbee*>(this)->stream->flush();
+    this->thisZigbee().stream->write(byte);
+    this->thisZigbee().stream->flush();
     ERaGuardUnlock(this->mutex);
 }
 
 template <class Zigbee>
 void ERaToZigbee<Zigbee>::sendCommand(const vector<uint8_t>& data) {
-    if (static_cast<Zigbee*>(this)->stream == NULL) {
+    if (this->thisZigbee().stream == NULL) {
         return;
     }
 
     ERaGuardLock(this->mutex);
     ERaLogHex("ZB >>", data.data(), data.size());
-    static_cast<Zigbee*>(this)->stream->write(data.data(), data.size());
-    static_cast<Zigbee*>(this)->stream->flush();
+    this->thisZigbee().stream->write(data.data(), data.size());
+    this->thisZigbee().stream->flush();
     ERaGuardUnlock(this->mutex);
 }
 

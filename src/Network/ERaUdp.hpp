@@ -171,7 +171,7 @@ void ERaUdp<Udp>::runCommand(const char* cmd, ERaCmdHandler* handler) {
 
 template <class Udp>
 void ERaUdp<Udp>::sendBoardInfo() {
-    ERA_LOG(TAG, "Board Info...");
+    ERA_LOG(TAG, ERA_PSTR("Board Info..."));
     cJSON* root = cJSON_CreateObject();
     if (root == nullptr) {
         return;

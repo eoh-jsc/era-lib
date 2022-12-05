@@ -1,6 +1,10 @@
 #ifndef INC_ERA_ETHERNET_ESP32_CLIENT_HPP_
 #define INC_ERA_ETHERNET_ESP32_CLIENT_HPP_
 
+#if !defined(ERA_PROTO_TYPE)
+    #define ERA_PROTO_TYPE            "Ethernet"
+#endif
+
 #include <ETH.h>
 #include <WiFi.h>
 #include <WiFiClient.h>
@@ -11,15 +15,14 @@
 #include <Zigbee/ERaZigbeeEsp32.hpp>
 #include <Utility/ERaFlashEsp32.hpp>
 
-#define ERA_MODEL_TYPE                "ERa"
-#define ERA_BOARD_TYPE                "ESP32"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-uint8_t temprature_sens_read();
-#ifdef __cplusplus
-}
+#if defined(ERA_CHIP_TEMP_DEPRECATED)
+    #ifdef __cplusplus
+    extern "C" {
+    #endif
+    uint8_t temprature_sens_read();
+    #ifdef __cplusplus
+    }
+    #endif
 #endif
 
 class ERaEthernet
@@ -43,17 +46,17 @@ public:
                         int mdio = ETH_PHY_MDIO,
                         eth_phy_type_t type = ETH_PHY_LAN8720,
                         eth_clock_mode_t clkMode = ETH_CLOCK_GPIO0_IN) {
-        ERA_LOG(TAG, "Connecting network...");
+        ERA_LOG(TAG, ERA_PSTR("Connecting network..."));
         if (!ETH.begin(phyAddr, power,
                         mdc, mdio, type, clkMode)){
-            ERA_LOG(TAG, "Connect failed");
+            ERA_LOG(TAG, ERA_PSTR("Connect failed"));
             return false;
         }
 
         ERaDelay(1000);
         IPAddress localIP = ETH.localIP();
         ERA_FORCE_UNUSED(localIP);
-        ERA_LOG(TAG, "IP: %s", localIP.toString().c_str());
+        ERA_LOG(TAG, ERA_PSTR("IP: %s"), localIP.toString().c_str());
         return true;
     }
 
@@ -107,18 +110,24 @@ template <class Proto, class Flash>
 void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
     cJSON_AddStringToObject(root, INFO_BOARD, ERA_BOARD_TYPE);
     cJSON_AddStringToObject(root, INFO_MODEL, ERA_MODEL_TYPE);
-	cJSON_AddStringToObject(root, INFO_AUTH_TOKEN, static_cast<Proto*>(this)->ERA_AUTH);
+	cJSON_AddStringToObject(root, INFO_AUTH_TOKEN, this->thisProto().ERA_AUTH);
     cJSON_AddStringToObject(root, INFO_FIRMWARE_VERSION, ERA_FIRMWARE_VERSION);
-    cJSON_AddStringToObject(root, INFO_SSID, "Ethernet");
-    cJSON_AddStringToObject(root, INFO_BSSID, "Ethernet");
+    cJSON_AddStringToObject(root, INFO_SSID, ERA_PROTO_TYPE);
+    cJSON_AddStringToObject(root, INFO_BSSID, ERA_PROTO_TYPE);
     cJSON_AddNumberToObject(root, INFO_RSSI, ETH.linkSpeed());
     cJSON_AddStringToObject(root, INFO_MAC, ETH.macAddress().c_str());
     cJSON_AddStringToObject(root, INFO_LOCAL_IP, ETH.localIP().toString().c_str());
+    cJSON_AddNumberToObject(root, INFO_PING, this->thisProto().transp.getPing());
 }
 
 template <class Proto, class Flash>
 void ERaApi<Proto, Flash>::addModbusInfo(cJSON* root) {
+#if defined(ERA_CHIP_TEMP)
+    /* Update soon */
+    cJSON_AddNumberToObject(root, INFO_MB_CHIP_TEMPERATURE, 5000);
+#elif defined(ERA_CHIP_TEMP_DEPRECATED)
 	cJSON_AddNumberToObject(root, INFO_MB_CHIP_TEMPERATURE, static_cast<uint16_t>((temprature_sens_read() - 32) * 100.0f / 1.8f));
+#endif
 	cJSON_AddNumberToObject(root, INFO_MB_TEMPERATURE, 0);
 	cJSON_AddNumberToObject(root, INFO_MB_VOLTAGE, 999);
 	cJSON_AddNumberToObject(root, INFO_MB_IS_BATTERY, 0);

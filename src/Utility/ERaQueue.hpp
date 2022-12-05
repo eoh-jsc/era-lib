@@ -73,7 +73,7 @@ private:
 		return ((i + n) % N);
 	}
 
-	bool space() {
+	int space() {
 		int s = this->r - this->w;
 		if (s <= 0) {
 			s += N;

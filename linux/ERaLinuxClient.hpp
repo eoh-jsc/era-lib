@@ -1,9 +1,7 @@
 #ifndef INC_ERA_LINUX_CLIENT_HPP_
 #define INC_ERA_LINUX_CLIENT_HPP_
 
-#include <ERaApiWiringPiDef.hpp>
 #include <ERa/ERaProtocol.hpp>
-#include <ERaApiWiringPi.hpp>
 #include <MQTTLinux/ERaMqttLinux.hpp>
 #include <UtilityLinux/ERaFlashLinux.hpp>
 

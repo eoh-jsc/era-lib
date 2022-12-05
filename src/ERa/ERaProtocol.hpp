@@ -67,17 +67,18 @@ public:
 		}
 		this->printBanner();
 		this->sendInfo();
-		eraOnConnected();
 		return true;
     }
 
 	void run() {
-		Base::run();
+		if (!Base::run()) {
+			ERaState::set(StateT::STATE_DISCONNECTED);
+		}
 		this->runERaTask();
 	}
 
 	void processRequest(std::string& topic, const std::string& payload) {
-		ERA_LOG(TAG, "MQTT message: %s %s", topic.c_str(), payload.c_str());
+		ERA_LOG(TAG, ERA_PSTR("MQTT message: %s %s"), topic.c_str(), payload.c_str());
 		
 		if (topic.find(this->ERA_TOPIC) != 0) {
 			return;
@@ -137,7 +138,6 @@ private:
 	bool sendModbusData(ERaRsp_t& rsp);
 	bool sendZigbeeData(ERaRsp_t& rsp);
 	void sendCommand(ERaRsp_t& rsp, ApiData_t data = nullptr);
-	void sendCommandConfigIdMulti(ERaRsp_t& rsp, ERaDataBuff* data);
 	void sendCommandModbus(ERaRsp_t& rsp, ERaDataBuff* data);
 	void initPinConfig();
 	void parsePinConfig(const char* str);
@@ -152,15 +152,16 @@ private:
 
 template <class Transp, class Flash>
 void ERaProto<Transp, Flash>::printBanner() {
-	ERA_LOG(TAG, ERA_NEWLINE
+	ERA_LOG(TAG, ERA_PSTR(ERA_NEWLINE
 		"  ____  ____         	 " ERA_NEWLINE
 		" / _   / _  \\  _     	 " ERA_NEWLINE
 		"/____ / / __/ /.\\    	 " ERA_NEWLINE
 		" / _ /  _ \\  / _ \\ 	 " ERA_NEWLINE
 		"/___/__//_/`/_/ \\_\\	 " ERA_NEWLINE
-		"                (v" ERA_FIRMWARE_VERSION ")"
+		"           (v" ERA_FIRMWARE_VERSION " for " ERA_BOARD_TYPE ")"
 		ERA_NEWLINE
-		"Connection successful!!!" ERA_NEWLINE
+		"Connection successful (ping: %lums)!!!" ERA_NEWLINE),
+		(unsigned long)this->transp.getPing()
 	);
 }
 
@@ -552,7 +553,13 @@ bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
 		root = nullptr;
 		return false;
 	}
-	cJSON_AddNumberToObject(root, name, rsp.param);
+	if ((char*)rsp.param != nullptr) {
+		cJSON_AddStringToObject(root, name, rsp.param);
+		free((char*)rsp.param);
+	}
+	else {
+		cJSON_AddNumberToObject(root, name, rsp.param);
+	}
 	payload = cJSON_PrintUnformatted(root);
 	if (payload != nullptr) {
 		status = this->transp.publishData(topicName, payload);
@@ -575,7 +582,13 @@ bool ERaProto<Transp, Flash>::sendConfigIdData(ERaRsp_t& rsp) {
 	if (root == nullptr) {
 		return false;
 	}
-	cJSON_AddNumberToObject(root, "v", rsp.param);
+	if ((char*)rsp.param != nullptr) {
+		cJSON_AddStringToObject(root, "v", rsp.param);
+		free((char*)rsp.param);
+	}
+	else {
+		cJSON_AddNumberToObject(root, "v", rsp.param);
+	}
 	payload = cJSON_PrintUnformatted(root);
 	if (payload != nullptr) {
 		status = this->transp.publishData(topicName, payload);
@@ -624,7 +637,12 @@ bool ERaProto<Transp, Flash>::sendZigbeeData(ERaRsp_t& rsp) {
 	bool status {false};
 	char* topic = rsp.id;
 	char* payload = rsp.param;
-	if (topic == nullptr || payload == nullptr) {
+	if (topic == nullptr) {
+		return false;
+	}
+	if (payload == nullptr) {
+		free(topic);
+		topic = nullptr;
 		return false;
 	}
 	char topicName[MAX_TOPIC_LENGTH] {0};
@@ -641,11 +659,6 @@ bool ERaProto<Transp, Flash>::sendZigbeeData(ERaRsp_t& rsp) {
 template <class Transp, class Flash>
 void ERaProto<Transp, Flash>::sendCommand(ERaRsp_t& rsp, ApiData_t data) {
 	switch (rsp.type) {
-		case Base::ERaTypeRspT::ERA_RESPONSE_CONFIG_ID_MULTI: {
-			ERaDataBuff* configIdData = (ERaDataBuff*)data;
-			this->sendCommandConfigIdMulti(rsp, configIdData);
-		}
-			break;
 		case Base::ERaTypeRspT::ERA_RESPONSE_MODBUS_DATA: {
 			ERaDataBuff* modbusData = (ERaDataBuff*)data;
 			this->sendCommandModbus(rsp, modbusData);
@@ -655,28 +668,6 @@ void ERaProto<Transp, Flash>::sendCommand(ERaRsp_t& rsp, ApiData_t data) {
 			break;
 	}
 	this->sendData(rsp);
-}
-
-template <class Transp, class Flash>
-void ERaProto<Transp, Flash>::sendCommandConfigIdMulti(ERaRsp_t& rsp, ERaDataBuff* data) {
-	if (data == nullptr) {
-		return;
-	}
-	cJSON* root = cJSON_CreateObject();
-	if (root == nullptr) {
-		return;
-	}
-	const ERaDataBuff::iterator e = data->end();
-	for (ERaDataBuff::iterator it = data->begin(); it < e; ++it) {
-		const char* name = it;
-		++it;
-		if (!it.isEmpty()) {
-			cJSON_AddNumberToObject(root, name, it.getFloat());
-		}
-	}
-	rsp.param = root;
-	cJSON_Delete(root);
-	root = nullptr;
 }
 
 template <class Transp, class Flash>

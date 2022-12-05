@@ -50,6 +50,18 @@ ifeq ($(target),raspberry)
 	LDFLAGS += -lwiringPi
 endif
 
+ifeq ($(zigbee),true)
+	CXXFLAGS += -DERA_ZIGBEE
+endif
+
+ifeq ($(debug),true)
+	CXXFLAGS += -DERA_DEBUG
+endif
+
+ifeq ($(dump),true)
+	CXXFLAGS += -DERA_DEBUG_DUMP
+endif
+
 SOURCES=main.cpp \
 	../src/ERa/ERaTimer.cpp \
 	../src/ERa/ERaReport.cpp \

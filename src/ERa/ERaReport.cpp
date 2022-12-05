@@ -16,7 +16,7 @@ void ERaReport::run() {
 		if (currentMillis - this->report[i].prevMillis < this->report[i].minInterval) {
 			continue;
 		}
-		if (std::abs(this->report[i].data.value - this->report[i].data.prevValue) < this->report[i].reportableChange) {
+		if (abs(this->report[i].data.value - this->report[i].data.prevValue) < this->report[i].reportableChange) {
 			if (currentMillis - this->report[i].prevMillis < this->report[i].maxInterval) {
 				continue;
 			}

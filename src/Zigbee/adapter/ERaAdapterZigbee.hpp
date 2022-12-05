@@ -193,7 +193,7 @@ void ERaZigbee<Api>::pingCoordinator() {
     if (ToZigbee::CommandZigbee::pingSystem(10) == ResultT::RESULT_SUCCESSFUL) {
         return;
     }
-    ERA_LOG(TAG, "Ping coordinator failed, resetting coordinator!");
+    ERA_LOG(TAG, ERA_PSTR("Ping coordinator failed, resetting coordinator!"));
     ZigbeeState::set(ZigbeeStateT::STATE_ZB_INIT_MAX);
 }
 

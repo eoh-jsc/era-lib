@@ -244,15 +244,15 @@ private:
     void zigbeeTimerCallback(void* args);
 
     void writeDataToFlash(const char* filename, const char* buf) {
-        static_cast<Api*>(this)->writeToFlash(filename, buf);
+        this->thisApi().writeToFlash(filename, buf);
     }
 
     char* readDataFromFlash(const char* filename) {
-        return static_cast<Api*>(this)->readFromFlash(filename);
+        return this->thisApi().readFromFlash(filename);
     }
 
     void removeDataFromFlash(const char* filename) {
-        static_cast<Api*>(this)->removeFromFlash(filename);
+        this->thisApi().removeFromFlash(filename);
     }
 
 	bool isRequest() {
@@ -279,9 +279,19 @@ private:
 		return this->queueDefaultRsp;
 	}
 
-	ERaQueue<ZigbeeAction_t, 10> queue;
-	ERaQueue<Response_t, 10> queueRsp;
-	ERaQueue<DefaultRsp_t, 10> queueDefaultRsp;
+	inline
+	const Api& thisApi() const {
+		return static_cast<const Api&>(*this);
+	}
+
+	inline
+	Api& thisApi() {
+		return static_cast<Api&>(*this);
+	}
+
+	ERaQueue<ZigbeeAction_t, 20> queue;
+	ERaQueue<Response_t, 20> queueRsp;
+	ERaQueue<DefaultRsp_t, 20> queueDefaultRsp;
     QueueMessage_t messageHandle;
 
     ERaTimer timer;
@@ -432,7 +442,7 @@ void ERaZigbee<Api>::publishZigbeeData(const IdentDeviceAddr_t* deviceInfo) {
         deviceInfo == std::end(this->coordinator->deviceIdent)) {
         return;
     }
-    static_cast<Api*>(this)->zigbeeDataWrite(deviceInfo->data.topic, deviceInfo->data.payload);
+    this->thisApi().zigbeeDataWrite(deviceInfo->data.topic, deviceInfo->data.payload);
 }
 
 template <class Api>
@@ -440,7 +450,7 @@ void ERaZigbee<Api>::publishZigbeeData(const char* topic, cJSON* payload) {
     if (topic == nullptr || payload == nullptr) {
         return;
     }
-    static_cast<Api*>(this)->zigbeeDataWrite(topic, payload);
+    this->thisApi().zigbeeDataWrite(topic, payload);
 }
 
 template <class Api>

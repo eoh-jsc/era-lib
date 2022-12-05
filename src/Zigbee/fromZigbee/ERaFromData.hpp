@@ -18,7 +18,7 @@ IdentDeviceAddr_t* ERaFromZigbee<Zigbee>::createDataGlobal(const DataAFMsg_t& af
 		if (afMsg.zclId == ClusterIDT::ZCL_CLUSTER_GREEN_POWER) {
 			return nullptr;
         }
-        if (static_cast<Zigbee*>(this)->Zigbee::ToZigbee::CommandZigbee::requestIEEEAddrZstack(const_cast<DataAFMsg_t&>(afMsg).srcAddr, 0, 0) != ResultT::RESULT_SUCCESSFUL) {
+        if (this->thisZigbee().Zigbee::ToZigbee::CommandZigbee::requestIEEEAddrZstack(const_cast<DataAFMsg_t&>(afMsg).srcAddr, 0, 0) != ResultT::RESULT_SUCCESSFUL) {
             return nullptr;
         }
         deviceInfo = std::find_if(std::begin(this->coordinator->deviceIdent), std::end(this->coordinator->deviceIdent),
@@ -43,7 +43,7 @@ IdentDeviceAddr_t* ERaFromZigbee<Zigbee>::createDataGlobal(const DataAFMsg_t& af
     }
 
 	deviceInfo->isConnected = true;
-	const_cast<DataAFMsg_t&>(afMsg).modelName = deviceInfo->modelName;
+	const_cast<DataAFMsg_t&>(afMsg).deviceInfo = deviceInfo;
 
     bool isSameId {false};
     cJSON* dataItem = nullptr;
@@ -90,6 +90,15 @@ IdentDeviceAddr_t* ERaFromZigbee<Zigbee>::createDataGlobal(const DataAFMsg_t& af
         case ClusterIDT::ZCL_CLUSTER_MULTISTATE_INPUT_BASIC:
             defined = this->multistateInputFromZigbee(afMsg, dataItem, attribute, value);
             break;
+        case ClusterIDT::ZCL_CLUSTER_MEAS_TEMPERATURE:
+            defined = this->temperatureMeasFromZigbee(afMsg, dataItem, attribute, value);
+            break;
+        case ClusterIDT::ZCL_CLUSTER_MEAS_PRESSURE:
+            defined = this->pressureMeasFromZigbee(afMsg, dataItem, attribute, value);
+            break;
+        case ClusterIDT::ZCL_CLUSTER_MEAS_HUMIDITY:
+            defined = this->humidityMeasFromZigbee(afMsg, dataItem, attribute, value);
+            break;
         default:
             break;
     }
@@ -116,7 +125,7 @@ IdentDeviceAddr_t* ERaFromZigbee<Zigbee>::createDataSpecific(const DataAFMsg_t& 
 		if (afMsg.zclId == ClusterIDT::ZCL_CLUSTER_GREEN_POWER) {
 			return nullptr;
         }
-        if (static_cast<Zigbee*>(this)->Zigbee::ToZigbee::CommandZigbee::requestIEEEAddrZstack(const_cast<DataAFMsg_t&>(afMsg).srcAddr, 0, 0) != ResultT::RESULT_SUCCESSFUL) {
+        if (this->thisZigbee().Zigbee::ToZigbee::CommandZigbee::requestIEEEAddrZstack(const_cast<DataAFMsg_t&>(afMsg).srcAddr, 0, 0) != ResultT::RESULT_SUCCESSFUL) {
             return nullptr;
         }
         deviceInfo = std::find_if(std::begin(this->coordinator->deviceIdent), std::end(this->coordinator->deviceIdent),
@@ -141,7 +150,7 @@ IdentDeviceAddr_t* ERaFromZigbee<Zigbee>::createDataSpecific(const DataAFMsg_t& 
     }
 
 	deviceInfo->isConnected = true;
-	const_cast<DataAFMsg_t&>(afMsg).modelName = deviceInfo->modelName;
+	const_cast<DataAFMsg_t&>(afMsg).deviceInfo = deviceInfo;
 
     bool isSameId {false};
     cJSON* dataItem = nullptr;
@@ -190,104 +199,189 @@ IdentDeviceAddr_t* ERaFromZigbee<Zigbee>::createDataSpecific(const DataAFMsg_t& 
     if (isSameId) {
         return nullptr;
     }
-    static_cast<Zigbee*>(this)->publishZigbeeData(deviceInfo);
+    this->thisZigbee().publishZigbeeData(deviceInfo);
     return deviceInfo;
 }
 
 template <class Zigbee>
 template <typename T>
 void ERaFromZigbee<Zigbee>::addDataZigbee(const DataAFMsg_t& afMsg, cJSON* root, const char* key, T value) {
-    char name[50] {0};
+    char name[LENGTH_BUFFER] {0};
+#if defined(ENABLE_SCALE_ZIGBEE_DATA)
+    const ScaleDataZigbee_t* element = std::find_if(std::begin(ScaleZigbeeList), std::end(ScaleZigbeeList), [key](const ScaleDataZigbee_t& e) {
+        return ((e.key != nullptr) && (key != nullptr) && CompareString(e.key, key));
+    });
+    if (element != std::end(ScaleZigbeeList)) {
+        float scale {element->defaultScale};
+        if (element->numScale) {
+            const ScaleDataModel_t* elementScale = std::find_if(std::begin(element->scaleModel), std::end(element->scaleModel), [afMsg](const ScaleDataModel_t& e) {
+                if ((e.modelName == nullptr) || (afMsg.deviceInfo == nullptr)) {
+                    return false;
+                }
+                const char* pModel = strstr(e.modelName, "*");
+                if (pModel != nullptr) {
+                    return CompareNString(e.modelName, afMsg.deviceInfo->modelName, strlen(e.modelName) - strlen(pModel));
+                }
+                else {
+                    return CompareString(e.modelName, afMsg.deviceInfo->modelName);
+                }
+            });
+            if (elementScale != std::end(element->scaleModel)) {
+                scale = elementScale->scale;
+            }
+        }
+        if (afMsg.srcAddr.endpoint == EndpointListT::ENDPOINT1) {
+            cJSON_SetNumberWithDecimalToObject(root, key, value * scale, 5);
+        }
+        else {
+            StringPrint(name, "%s_%d", key, afMsg.srcAddr.endpoint);
+            cJSON_SetNumberWithDecimalToObject(root, name, value * scale, 5);
+        }
+        return;
+    }
+#endif
     if (afMsg.srcAddr.endpoint == EndpointListT::ENDPOINT1) {
         cJSON_SetNumberToObject(root, key, value);
     }
     else {
-		snprintf(name, sizeof(name), "%s_%d", key, afMsg.srcAddr.endpoint);
+		StringPrint(name, "%s_%d", key, afMsg.srcAddr.endpoint);
 		cJSON_SetNumberToObject(root, name, value);
     }
 }
 
 template <class Zigbee>
 void ERaFromZigbee<Zigbee>::addDataZigbee(const DataAFMsg_t& afMsg, cJSON* root, const char* key, float value) {
-    char name[50] {0};
+    char name[LENGTH_BUFFER] {0};
+	float scale {1.0f};
+#if defined(ENABLE_SCALE_ZIGBEE_DATA)
+    const ScaleDataZigbee_t* element = std::find_if(std::begin(ScaleZigbeeList), std::end(ScaleZigbeeList), [key](const ScaleDataZigbee_t& e) {
+        return ((e.key != nullptr) && (key != nullptr) && CompareString(e.key, key));
+    });
+    if (element != std::end(ScaleZigbeeList)) {
+        scale = element->defaultScale;
+        if (element->numScale) {
+            const ScaleDataModel_t* elementScale = std::find_if(std::begin(element->scaleModel), std::end(element->scaleModel), [afMsg](const ScaleDataModel_t& e) {
+                if ((e.modelName == nullptr) || (afMsg.deviceInfo == nullptr)) {
+                    return false;
+                }
+                const char* pModel = strstr(e.modelName, "*");
+                if (pModel != nullptr) {
+                    return CompareNString(e.modelName, afMsg.deviceInfo->modelName, strlen(e.modelName) - strlen(pModel));
+                }
+                else {
+                    return CompareString(e.modelName, afMsg.deviceInfo->modelName);
+                }
+            });
+            if (elementScale != std::end(element->scaleModel)) {
+                scale = elementScale->scale;
+            }
+        }
+    }
+#endif
     if (afMsg.srcAddr.endpoint == EndpointListT::ENDPOINT1) {
-        cJSON_SetNumberWithDecimalToObject(root, key, value, 5);
+        cJSON_SetNumberWithDecimalToObject(root, key, value * scale, 5);
     }
     else {
-		snprintf(name, sizeof(name), "%s_%d", key, afMsg.srcAddr.endpoint);
-		cJSON_SetNumberWithDecimalToObject(root, name, value, 5);
+		StringPrint(name, "%s_%d", key, afMsg.srcAddr.endpoint);
+		cJSON_SetNumberWithDecimalToObject(root, name, value * scale, 5);
     }
 }
 
 template <class Zigbee>
 void ERaFromZigbee<Zigbee>::addDataZigbee(const DataAFMsg_t& afMsg, cJSON* root, const char* key, double value) {
-    char name[50] {0};
+    char name[LENGTH_BUFFER] {0};
+	float scale {1.0f};
+#if defined(ENABLE_SCALE_ZIGBEE_DATA)
+    const ScaleDataZigbee_t* element = std::find_if(std::begin(ScaleZigbeeList), std::end(ScaleZigbeeList), [key](const ScaleDataZigbee_t& e) {
+        return ((e.key != nullptr) && (key != nullptr) && CompareString(e.key, key));
+    });
+    if (element != std::end(ScaleZigbeeList)) {
+        scale = element->defaultScale;
+        if (element->numScale) {
+            const ScaleDataModel_t* elementScale = std::find_if(std::begin(element->scaleModel), std::end(element->scaleModel), [afMsg](const ScaleDataModel_t& e) {
+                if ((e.modelName == nullptr) || (afMsg.deviceInfo == nullptr)) {
+                    return false;
+                }
+                const char* pModel = strstr(e.modelName, "*");
+                if (pModel != nullptr) {
+                    return CompareNString(e.modelName, afMsg.deviceInfo->modelName, strlen(e.modelName) - strlen(pModel));
+                }
+                else {
+                    return CompareString(e.modelName, afMsg.deviceInfo->modelName);
+                }
+            });
+            if (elementScale != std::end(element->scaleModel)) {
+                scale = elementScale->scale;
+            }
+        }
+    }
+#endif
     if (afMsg.srcAddr.endpoint == EndpointListT::ENDPOINT1) {
-        cJSON_SetNumberWithDecimalToObject(root, key, value, 5);
+        cJSON_SetNumberWithDecimalToObject(root, key, value * scale, 5);
     }
     else {
-		snprintf(name, sizeof(name), "%s_%d", key, afMsg.srcAddr.endpoint);
-		cJSON_SetNumberWithDecimalToObject(root, name, value, 5);
+		StringPrint(name, "%s_%d", key, afMsg.srcAddr.endpoint);
+		cJSON_SetNumberWithDecimalToObject(root, name, value * scale, 5);
     }
 }
 
 template <class Zigbee>
 void ERaFromZigbee<Zigbee>::addDataZigbee(const DataAFMsg_t& afMsg, cJSON* root, const char* key, char* value) {
-    char name[50] {0};
+    char name[LENGTH_BUFFER] {0};
     if (afMsg.srcAddr.endpoint == EndpointListT::ENDPOINT1) {
         cJSON_SetStringToObject(root, key, value);
     }
     else {
-		snprintf(name, sizeof(name), "%s_%d", key, afMsg.srcAddr.endpoint);
+		StringPrint(name, "%s_%d", key, afMsg.srcAddr.endpoint);
 		cJSON_SetStringToObject(root, name, value);
     }
 }
 
 template <class Zigbee>
 void ERaFromZigbee<Zigbee>::addDataZigbee(const DataAFMsg_t& afMsg, cJSON* root, const char* key, const char* value) {
-    char name[50] {0};
+    char name[LENGTH_BUFFER] {0};
     if (afMsg.srcAddr.endpoint == EndpointListT::ENDPOINT1) {
         cJSON_SetStringToObject(root, key, value);
     }
     else {
-		snprintf(name, sizeof(name), "%s_%d", key, afMsg.srcAddr.endpoint);
+		StringPrint(name, "%s_%d", key, afMsg.srcAddr.endpoint);
 		cJSON_SetStringToObject(root, name, value);
     }
 }
 
 template <class Zigbee>
 void ERaFromZigbee<Zigbee>::addDataZigbee(const DataAFMsg_t& afMsg, cJSON* root, const char* key, cJSON* value) {
-    char name[50] {0};
+    char name[LENGTH_BUFFER] {0};
     if (afMsg.srcAddr.endpoint == EndpointListT::ENDPOINT1) {
         cJSON_AddItemToObject(root, key, value);
     }
     else {
-		snprintf(name, sizeof(name), "%s_%d", key, afMsg.srcAddr.endpoint);
+		StringPrint(name, "%s_%d", key, afMsg.srcAddr.endpoint);
 		cJSON_AddItemToObject(root, name, value);
     }
 }
 
 template <class Zigbee>
 void ERaFromZigbee<Zigbee>::addDataZigbee(const DataAFMsg_t& afMsg, cJSON* root, const char* key, const cJSON* value) {
-    char name[50] {0};
+    char name[LENGTH_BUFFER] {0};
     if (afMsg.srcAddr.endpoint == EndpointListT::ENDPOINT1) {
         cJSON_AddItemToObject(root, key, value);
     }
     else {
-		snprintf(name, sizeof(name), "%s_%d", key, afMsg.srcAddr.endpoint);
+		StringPrint(name, "%s_%d", key, afMsg.srcAddr.endpoint);
 		cJSON_AddItemToObject(root, name, value);
     }
 }
 
 template <class Zigbee>
 cJSON* ERaFromZigbee<Zigbee>::getDataZigbee(const DataAFMsg_t& afMsg, cJSON* root, const char* key) {
-	char name[50] {0};
+	char name[LENGTH_BUFFER] {0};
 	cJSON* item = nullptr;
 	if(afMsg.srcAddr.endpoint == EndpointListT::ENDPOINT1) {
 		item = cJSON_GetObjectItem(root, key);
     }
 	else {
-		snprintf(name, sizeof(name), "%s_%d", key, afMsg.srcAddr.endpoint);
+		StringPrint(name, "%s_%d", key, afMsg.srcAddr.endpoint);
 		item = cJSON_GetObjectItem(root, name);
 	}
 	return item;
@@ -295,13 +389,13 @@ cJSON* ERaFromZigbee<Zigbee>::getDataZigbee(const DataAFMsg_t& afMsg, cJSON* roo
 
 template <class Zigbee>
 void ERaFromZigbee<Zigbee>::removeDataZigbee(const DataAFMsg_t& afMsg, cJSON* root, const char* key) {
-	char name[50] {0};
+	char name[LENGTH_BUFFER] {0};
 	cJSON* item = nullptr;
 	if(afMsg.srcAddr.endpoint == EndpointListT::ENDPOINT1) {
 		item = cJSON_DetachItemFromObject(root, key);
     }
 	else {
-		snprintf(name, sizeof(name), "%s_%d", key, afMsg.srcAddr.endpoint);
+		StringPrint(name, "%s_%d", key, afMsg.srcAddr.endpoint);
 		item = cJSON_DetachItemFromObject(root, name);
 	}
     if (item != nullptr) {
@@ -457,10 +551,10 @@ void ERaFromZigbee<Zigbee>::createDeviceEvent(const DeviceEventT event, const AF
 
 	cJSON_AddItemToObject(root, "data", dataItem);
 
-    static_cast<Zigbee*>(this)->publishZigbeeData(TOPIC_ZIGBEE_BRIDGE_EVENT, root);
+    this->thisZigbee().publishZigbeeData(TOPIC_ZIGBEE_BRIDGE_EVENT, root);
     if ((event == DeviceEventT::DEVICE_EVENT_INTERVIEW_SUCCESSFUL) ||
         (event == DeviceEventT::DEVICE_EVENT_INTERVIEW_BASIC_INFO)) {
-        static_cast<Zigbee*>(this)->publishZigbeeData(TOPIC_ZIGBEE_DEVICE_EVENT, root);
+        this->thisZigbee().publishZigbeeData(TOPIC_ZIGBEE_DEVICE_EVENT, root);
     }
 
     cJSON_Delete(root);
@@ -539,7 +633,7 @@ cJSON* ERaFromZigbee<Zigbee>::createDeviceEndpoints() {
                     if (key->keyInZcl[k] == nullptr) {
                         continue;
                     }
-                    char keyName[50] {0};
+                    char keyName[LENGTH_BUFFER] {0};
                     if (this->device->epList[i].endpoint > EndpointListT::ENDPOINT1) {
                         FormatString(keyName, "%s_%d", key->keyInZcl[k], this->device->epList[i].endpoint);
                     }
@@ -606,7 +700,7 @@ cJSON* ERaFromZigbee<Zigbee>::createDeviceEndpoints() {
                     if (key->keyOutZcl[k] == nullptr) {
                         continue;
                     }
-                    char keyName[50] {0};
+                    char keyName[LENGTH_BUFFER] {0};
                     if (this->device->epList[i].endpoint > EndpointListT::ENDPOINT1) {
                         FormatString(keyName, "%s_%d", key->keyOutZcl[k], this->device->epList[i].endpoint);
                     }

@@ -4,6 +4,8 @@
 #include <Ethernet.h>
 #include <EthernetClient.h>
 #include <Adapters/ERaEthernetClient.hpp>
+#include <Modbus/ERaModbusArduino.hpp>
+#include <Utility/ERaFlashConfig.hpp>
 
 #if defined(ERA_MODBUS)
     template <class Api>

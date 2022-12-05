@@ -130,6 +130,7 @@ private:
     void parseOneAction(char* ptr, size_t len, ModbusConfigAlias_t& config);
     void actOneAction(int* ptr, size_t len, ModbusConfigAlias_t& config);
     void processParseIsEnableBluetooth(char* ptr, size_t len);
+
 };
 
 #endif /* INC_ERA_PARSE_HPP_ */

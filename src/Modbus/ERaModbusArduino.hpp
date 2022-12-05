@@ -3,27 +3,36 @@
 
 #include <Modbus/ERaModbus.hpp>
 
+#define SerialMB    Serial1
+
 template <class Api>
 void ERaModbus<Api>::configModbus() {
     if (this->stream != NULL) {
         return;
     }
 
-    this->stream = &Serial1;
-    Serial1.setRxBufferSize(MODBUS_BUFFER_SIZE);
-    Serial1.begin(9600);
+    this->stream = &SerialMB;
+#if defined(ESP8266)
+    SerialMB.setRxBufferSize(MODBUS_BUFFER_SIZE);
+#endif
+    SerialMB.begin(MODBUS_BAUDRATE);
     this->_streamDefault = true;
 }
 
 template <class Api>
 void ERaModbus<Api>::setBaudRate(uint32_t baudrate) {
-    eraModbusBaudrate(baudrate);
+    ERaModbusBaudrate(baudrate);
     if (!this->streamDefault()) {
         return;
     }
 
-    Serial1.flush();
-    Serial1.updateBaudRate(baudrate);
+    SerialMB.flush();
+#if defined(ESP8266)
+    SerialMB.updateBaudRate(baudrate);
+#else
+    SerialMB.end();
+    SerialMB.begin(baudrate);
+#endif
 }
 
 template <class Api>
@@ -45,8 +54,8 @@ bool ERaModbus<Api>::waitResponse(ModbusConfig_t& param, uint8_t* modbusData) {
     do {
         if (!this->stream->available()) {
 #if defined(ERA_NO_RTOS)
-            eraOnWaiting();
-            static_cast<Api*>(this)->run();
+            ERaOnWaiting();
+            this->thisApi().run();
 #endif
             if (ModbusState::is(ModbusStateT::STATE_MB_PARSE)) {
                 break;

@@ -4,7 +4,8 @@
 #include <Zigbee/ERaZigbee.hpp>
 
 #if !defined(UART_ZIGBEE)
-    #if SOC_UART_NUM > 2
+    #if (SOC_UART_NUM > 2) || \
+        (ESP_IDF_VERSION_MAJOR < 4)
         #define UART_ZIGBEE         UART_NUM_2
     #else
         #define UART_ZIGBEE         UART_NUM_1
@@ -13,13 +14,20 @@
 
 template <class Api>
 void ERaZigbee<Api>::configZigbee() {
-    if (uart_is_driver_installed(UART_ZIGBEE)) {
-        ERA_LOG(TAG, "[Warning] UART %d installed, please setup another UART for Zigbee!", UART_ZIGBEE);
-        ERA_LOG(TAG, "[Warning] Or disable Modbus first!");
+#if defined(ERA_MODBUS)
+    #if ESP_IDF_VERSION_MAJOR < 4
+        if (UART_ZIGBEE == UART_MODBUS) {
+    #else
+        if (uart_is_driver_installed(UART_ZIGBEE)) {
+    #endif
+        ERA_LOG(TAG, ERA_PSTR("[Warning] UART %d installed, please setup another UART for Zigbee!"), UART_ZIGBEE);
+        ERA_LOG(TAG, ERA_PSTR("[Warning] Or disable Modbus first!"));
+        ERA_LOG(TAG, ERA_PSTR("[Warning] Exclude header file ERa.hpp and Include specific header file ERaSimpleZBEsp32.hpp"));
         return;
     }
+#endif
     uart_config_t config = {
-        .baud_rate = 115200,
+        .baud_rate = ZIGBEE_BAUDRATE,
         .data_bits = UART_DATA_8_BITS,
         .parity = UART_PARITY_DISABLE,
         .stop_bits = UART_STOP_BITS_1,
@@ -88,8 +96,8 @@ ResultT ERaToZigbee<Zigbee>::waitResponse(Response_t rspWait, void* value) {
     MillisTime_t startMillis = ERaMillis();
 
     do {
-        if (static_cast<Zigbee*>(this)->isResponse()) {
-            Response_t& rsp = static_cast<Zigbee*>(this)->getResponse();
+        if (this->thisZigbee().isResponse()) {
+            Response_t& rsp = this->thisZigbee().getResponse();
             if (CheckAFdata_t(rsp, rspWait)) {
                 cmdStatus = rsp.cmdStatus;
             }
@@ -98,21 +106,22 @@ ResultT ERaToZigbee<Zigbee>::waitResponse(Response_t rspWait, void* value) {
             }
             if (CheckRsp_t(rsp, rspWait)) {
                 // sync
-                if (static_cast<Zigbee*>(this)->queueRsp.writeable()) {
-                    static_cast<Zigbee*>(this)->queueRsp += rsp;
+                if (this->thisZigbee().queueRsp.writeable()) {
+                    this->thisZigbee().queueRsp += rsp;
                 }
             }
         }
         uint8_t index {0};
         uint8_t payload[256] {0};
         do {
-            if (osMessageQueueGet((QueueHandle_t)(static_cast<Zigbee*>(this)->messageHandle), &event, NULL, (!index ? 1 : MAX_TIMEOUT)) == osOK) {
+            if (osMessageQueueGet((QueueHandle_t)(this->thisZigbee().messageHandle), &event, NULL, (!index ? 1 : MAX_TIMEOUT)) == osOK) {
                 switch (event.type) {
                     case uart_event_type_t::UART_DATA: {
                         ESP_ERROR_CHECK(uart_get_buffered_data_len(UART_ZIGBEE, (size_t*)&length));
                         uint8_t receive[(length < 256) ? 256 : length] {0};
                         uart_read_bytes(UART_ZIGBEE, receive, length, portMAX_DELAY);
-                        if (static_cast<Zigbee*>(this)->processZigbee(receive, length, 256, payload, index, (!index ? 0 : payload[static_cast<Zigbee*>(this)->PositionDataLength]), &cmdStatus, &rspWait, value)) {
+                        if (this->thisZigbee().processZigbee(receive, length, 256, payload, index,
+                            (!index ? 0 : payload[this->thisZigbee().PositionDataLength]), &cmdStatus, &rspWait, value)) {
                             return ((cmdStatus != ZnpCommandStatusT::INVALID_PARAM) ? static_cast<ResultT>(cmdStatus) : ResultT::RESULT_SUCCESSFUL);
                         }
                     }
@@ -120,7 +129,7 @@ ResultT ERaToZigbee<Zigbee>::waitResponse(Response_t rspWait, void* value) {
                     case uart_event_type_t::UART_FIFO_OVF:
                     case uart_event_type_t::UART_BUFFER_FULL:
                         uart_flush_input(UART_ZIGBEE);
-                        osMessageQueueReset((QueueHandle_t)(static_cast<Zigbee*>(this)->messageHandle));
+                        osMessageQueueReset((QueueHandle_t)(this->thisZigbee().messageHandle));
                         break;
                     default:
                         break;

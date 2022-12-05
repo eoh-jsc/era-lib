@@ -109,12 +109,12 @@ protected:
     void parseModbusConfig(char* ptr, bool isControl = false) {
         if (isControl) {
             this->modbusControl.parseConfig(ptr);
-            static_cast<Api*>(this)->writeToFlash(FILENAME_CONTROL, ptr);
+            this->thisApi().writeToFlash(FILENAME_CONTROL, ptr);
         } else {
             this->modbusConfig.parseConfig(ptr);
             this->setBaudRate(this->modbusConfig.baudSpeed);
             this->executeNow();
-            static_cast<Api*>(this)->writeToFlash(FILENAME_CONFIG, ptr);
+            this->thisApi().writeToFlash(FILENAME_CONFIG, ptr);
         }
         ModbusState::set(ModbusStateT::STATE_MB_PARSE);
     }
@@ -122,8 +122,8 @@ protected:
     void removeConfigFromFlash() {
         this->modbusConfig.deleteAll();
         this->modbusControl.deleteAll();
-        static_cast<Api*>(this)->removeFromFlash(FILENAME_CONFIG);
-        static_cast<Api*>(this)->removeFromFlash(FILENAME_CONTROL);
+        this->thisApi().removeFromFlash(FILENAME_CONFIG);
+        this->thisApi().removeFromFlash(FILENAME_CONTROL);
     }
 
     void clearDataBuff() {
@@ -158,11 +158,11 @@ protected:
 private:
     void initModbusConfig() {
         char* ptr = nullptr;
-        ptr = static_cast<Api*>(this)->readFromFlash(FILENAME_CONFIG);
+        ptr = this->thisApi().readFromFlash(FILENAME_CONFIG);
         this->modbusConfig.parseConfig(ptr);
         this->setBaudRate(this->modbusConfig.baudSpeed);
         free(ptr);
-        ptr = static_cast<Api*>(this)->readFromFlash(FILENAME_CONTROL);
+        ptr = this->thisApi().readFromFlash(FILENAME_CONTROL);
         this->modbusControl.parseConfig(ptr);
         free(ptr);
         ptr = nullptr;
@@ -204,6 +204,16 @@ private:
         return this->queue.isEmpty();
     }
 
+	inline
+	const Api& thisApi() const {
+		return static_cast<const Api&>(*this);
+	}
+
+	inline
+	Api& thisApi() {
+		return static_cast<Api&>(*this);
+	}
+
 	ERaQueue<ModbusAction_t, 10> queue;
     ERaDataBuffDynamic dataBuff;
     ERaApplication& modbusConfig = ERaApplication::config;
@@ -241,7 +251,7 @@ void ERaModbus<Api>::readModbusConfig() {
         }
     }
     this->dataBuff.add_multi("fail_read", this->failRead, "fail_write", this->failWrite, "total", this->total);
-    static_cast<Api*>(this)->modbusDataWrite(&this->dataBuff);
+    this->thisApi().modbusDataWrite(&this->dataBuff);
 }
 
 template <class Api>
@@ -256,8 +266,8 @@ void ERaModbus<Api>::delayModbus(const int address) {
     }
     do {
 #if defined(ERA_NO_RTOS)
-        eraOnWaiting();
-        static_cast<Api*>(this)->run();
+        ERaOnWaiting();
+        this->thisApi().run();
 #endif
         if (ModbusState::is(ModbusStateT::STATE_MB_PARSE)) {
             break;

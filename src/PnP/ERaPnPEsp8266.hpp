@@ -1,6 +1,10 @@
 #ifndef INC_ERA_PNP_ESP8266_HPP_
 #define INC_ERA_PNP_ESP8266_HPP_
 
+#if !defined(ERA_PROTO_TYPE)
+    #define ERA_PROTO_TYPE            "WiFi"
+#endif
+
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
@@ -14,8 +18,6 @@
 #include <PnP/ERaWeb.hpp>
 #include <PnP/ERaState.hpp>
 
-#define ERA_MODEL_TYPE                "ERa"
-#define ERA_BOARD_TYPE                "ESP8266"
 #define CONFIG_AP_URL                 "era.setup"
 
 #define WIFI_SCAN_MAX                 20
@@ -131,6 +133,7 @@ public:
             eraConfig.port = port;
             CopyToArray(username, eraConfig.username);
             CopyToArray(password, eraConfig.password);
+            eraConfig.setFlag(ConfigFlagT::CONFIG_FLAG_VALID, true);
             ERaState::set(StateT::STATE_CONNECTED);
         }
         else {
@@ -200,7 +203,12 @@ void ERaPnP::run() {
             this->switchToAPSTA();
             break;
         case StateT::STATE_CONNECTING_NETWORK:
-            this->connectNetwork();
+            if (this->connected()) {
+                ERaState::set(StateT::STATE_CONNECTING_CLOUD);
+            }
+            else {
+                this->connectNetwork();
+            }
             break;
         case StateT::STATE_CONNECTING_CLOUD:
             this->connectCloud();
@@ -213,8 +221,11 @@ void ERaPnP::run() {
                 Base::run();
             }
             else {
-                ERaState::set(StateT::STATE_CONNECTING_NETWORK);
+                ERaState::set(StateT::STATE_DISCONNECTED);
             }
+            break;
+        case StateT::STATE_DISCONNECTED:
+            ERaState::set(StateT::STATE_CONNECTING_NETWORK);
             break;
         case StateT::STATE_OTA_UPGRADE:
             ERaState::set(StateT::STATE_RUNNING);
@@ -244,7 +255,7 @@ void ERaPnP::configApi() {
     configured = true;
     eraConfig.setFlag(ConfigFlagT::CONFIG_FLAG_API, false);
 
-    ERA_LOG(TAG, "Config api");
+    ERA_LOG(TAG, ERA_PSTR("Config api"));
 
     char imei[64] {0};
     char ssidAP[64] {0};
@@ -255,7 +266,7 @@ void ERaPnP::configApi() {
     dnsServer.setErrorReplyCode(DNSReplyCode::ServerFailure);
 
     server.on("/api/config", HTTP_POST, [imei]() {
-        ERA_LOG("Config", "Configuration...");
+        ERA_LOG(ERA_PSTR("Config"), ERA_PSTR("Configuration..."));
         String ssid = server.arg("ssid");
         String pass = server.arg("pass");
         String backupSsid = server.arg("backup_ssid");
@@ -317,7 +328,7 @@ void ERaPnP::configApi() {
     });
 
     server.on("/api/board_info.json", HTTP_POST, [imei, ssidAP]() {
-        ERA_LOG("Info", "Board info");
+        ERA_LOG(ERA_PSTR("Info"), ERA_PSTR("Board info"));
         String content;
         cJSON* root = cJSON_CreateObject();
         if (root != nullptr) {
@@ -343,7 +354,7 @@ void ERaPnP::configApi() {
     });
 
     server.on("/api/wifi_scan.json", HTTP_POST, []() {
-        ERA_LOG("WiFi", "Scanning wifi...");
+        ERA_LOG(ERA_PSTR("WiFi"), ERA_PSTR("Scanning wifi..."));
         String content;
         int nets = WiFi.scanNetworks(true, true);
         MillisTime_t tick = ERaMillis();
@@ -351,7 +362,7 @@ void ERaPnP::configApi() {
             ERaDelay(100);
             nets = WiFi.scanComplete();
         }
-        ERA_LOG("WiFi", "Found %d wifi", nets);
+        ERA_LOG(ERA_PSTR("WiFi"), ERA_PSTR("Found %d wifi"), nets);
 
         if (nets <= 0) {
             server.send(200, "application/json", "[]");
@@ -452,7 +463,7 @@ void ERaPnP::configApi() {
     });
 
     server.on("/wifi", []() {
-        ERA_LOG("Config", "Configuration...");
+        ERA_LOG(ERA_PSTR("Config"), ERA_PSTR("Configuration..."));
         String ssid = server.arg("ssid");
         String pass = server.arg("pass");
         String backupSsid = server.arg("backup_ssid");
@@ -485,7 +496,7 @@ void ERaPnP::configApi() {
                 ERaDelay(100);
                 nets = WiFi.scanComplete();
             }
-            ERA_LOG("WiFi", "Found %d wifi", nets);
+            ERA_LOG(ERA_PSTR("WiFi"), ERA_PSTR("Found %d wifi"), nets);
         }
 
         content = ERA_F("<meta charset='utf-8'>");
@@ -641,7 +652,7 @@ void ERaPnP::configApi() {
     });
 
     eraUdp.on("connect/wifi", [imei]() {
-        ERA_LOG("Config", "Configuration...");
+        ERA_LOG(ERA_PSTR("Config"), ERA_PSTR("Configuration..."));
         String ssid = eraUdp.arg("ssid").c_str();
         String pass = eraUdp.arg("pass").c_str();
         String backupSsid = eraUdp.arg("backup_ssid").c_str();
@@ -703,7 +714,7 @@ void ERaPnP::configApi() {
     });
 
     eraUdp.on("scan/wifi", []() {
-        ERA_LOG("WiFi", "Scanning wifi...");
+        ERA_LOG(ERA_PSTR("WiFi"), ERA_PSTR("Scanning wifi..."));
         String content;
         int nets = WiFi.scanNetworks(true, true);
         MillisTime_t tick = ERaMillis();
@@ -711,7 +722,7 @@ void ERaPnP::configApi() {
             ERaDelay(100);
             nets = WiFi.scanComplete();
         }
-        ERA_LOG("WiFi", "Found %d wifi", nets);
+        ERA_LOG(ERA_PSTR("WiFi"), ERA_PSTR("Found %d wifi"), nets);
 
         if (nets <= 0) {
             eraUdp.send("[]");
@@ -803,9 +814,12 @@ void ERaPnP::configInit() {
 }
 
 void ERaPnP::configLoad() {
+    if (eraConfig.getFlag(ConfigFlagT::CONFIG_FLAG_VALID)) {
+        return;
+    }
     memset(&eraConfig, 0, sizeof(eraConfig));
     Base::ERaApi::flash.readFlash("config", &eraConfig, sizeof(eraConfig));
-    ERA_LOG(TAG, "Configuration loaded from flash");
+    ERA_LOG(TAG, ERA_PSTR("Configuration loaded from flash"));
     if (eraConfig.magic != eraDefault.magic) {
         this->configLoadDefault();
     }
@@ -818,7 +832,7 @@ void ERaPnP::configLoadDefault() {
     CopyToArray(imei, eraConfig.token);
     CopyToArray(imei, eraConfig.username);
     CopyToArray(imei, eraConfig.password);
-    ERA_LOG(TAG, "Using default config");
+    ERA_LOG(TAG, ERA_PSTR("Using default config"));
 }
 
 void ERaPnP::configSave() {
@@ -827,7 +841,7 @@ void ERaPnP::configSave() {
     }
     eraConfig.setFlag(ConfigFlagT::CONFIG_FLAG_STORE, false);
     Base::ERaApi::flash.writeFlash("config", &eraConfig, sizeof(eraConfig));
-    ERA_LOG(TAG, "Configuration stored to flash");
+    ERA_LOG(TAG, ERA_PSTR("Configuration stored to flash"));
 }
 
 void ERaPnP::configReset() {
@@ -835,16 +849,16 @@ void ERaPnP::configReset() {
     eraConfig.setFlag(ConfigFlagT::CONFIG_FLAG_STORE, true);
     this->configSave();
     ERaState::set(StateT::STATE_SWITCH_TO_AP);
-    ERA_LOG(TAG, "Resetting configuration");
+    ERA_LOG(TAG, ERA_PSTR("Resetting configuration"));
 }
 
 void ERaPnP::configMode() {
     this->configApi();
 
-    ERA_LOG(TAG, "Config mode");
+    ERA_LOG(TAG, ERA_PSTR("Config mode"));
 
     dnsServer.start(DNS_PORT, CONFIG_AP_URL, WiFi.softAPIP());
-    ERA_LOG(TAG, "AP URL: %s", CONFIG_AP_URL);
+    ERA_LOG(TAG, ERA_PSTR("AP URL: %s"), CONFIG_AP_URL);
 
     server.begin();
     eraUdp.begin(this->authToken);
@@ -893,7 +907,7 @@ void ERaPnP::connectNetwork() {
 }
 
 void ERaPnP::connectCloud() {
-    ERA_LOG(TAG, "Connecting cloud...");
+    ERA_LOG(TAG, ERA_PSTR("Connecting cloud..."));
     this->config(eraConfig.token, eraConfig.host, eraConfig.port, eraConfig.username, eraConfig.password);
     if (Base::connect()) {
         this->configSave();
@@ -909,7 +923,7 @@ void ERaPnP::connectWiFi(const char* ssid, const char* pass) {
 
     MillisTime_t started = ERaMillis();
     while (status != WL_CONNECTED) {
-        ERA_LOG(TAG, "Connecting to %s...", ssid);
+        ERA_LOG(TAG, ERA_PSTR("Connecting to %s..."), ssid);
         if (pass && strlen(pass)) {
             WiFi.begin(ssid, pass);
         } else {
@@ -930,15 +944,16 @@ void ERaPnP::connectWiFi(const char* ssid, const char* pass) {
             }
         }
     }
-    ERA_LOG(TAG, "Connected to WiFi");
+    this->transp.setSSID(ssid);
+    ERA_LOG(TAG, ERA_PSTR("Connected to WiFi"));
 
     IPAddress localIP = WiFi.localIP();
     ERA_FORCE_UNUSED(localIP);
-    ERA_LOG(TAG, "IP: %s", localIP.toString().c_str());
+    ERA_LOG(TAG, ERA_PSTR("IP: %s"), localIP.toString().c_str());
 }
 
 void ERaPnP::switchToAP() {
-    ERA_LOG(TAG, "Switching to AP...");
+    ERA_LOG(TAG, ERA_PSTR("Switching to AP..."));
 
     char ssidAP[64] {0};
     this->getWiFiName(ssidAP, sizeof(ssidAP));
@@ -952,14 +967,14 @@ void ERaPnP::switchToAP() {
     ERaDelay(500);
 
     IPAddress myIP = WiFi.softAPIP();
-    ERA_LOG(TAG, "AP SSID: %s", ssidAP);
-    ERA_LOG(TAG, "AP IP: %s", myIP.toString().c_str());
+    ERA_LOG(TAG, ERA_PSTR("AP SSID: %s"), ssidAP);
+    ERA_LOG(TAG, ERA_PSTR("AP IP: %s"), myIP.toString().c_str());
 
     ERaState::set(StateT::STATE_WAIT_CONFIG);
 }
 
 void ERaPnP::switchToSTA() {
-    ERA_LOG(TAG, "Switching to STA...");
+    ERA_LOG(TAG, ERA_PSTR("Switching to STA..."));
 
     ERaDelay(1000);
     WiFi.mode(WIFI_OFF);
@@ -970,7 +985,7 @@ void ERaPnP::switchToSTA() {
 }
 
 void ERaPnP::switchToAPSTA() {
-    ERA_LOG(TAG, "Switching to AP STA...");
+    ERA_LOG(TAG, ERA_PSTR("Switching to AP STA..."));
 
     ERaDelay(100);
     WiFi.mode(WIFI_AP_STA);
@@ -1011,13 +1026,14 @@ template <class Proto, class Flash>
 void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
     cJSON_AddStringToObject(root, INFO_BOARD, ERA_BOARD_TYPE);
     cJSON_AddStringToObject(root, INFO_MODEL, ERA_MODEL_TYPE);
-	cJSON_AddStringToObject(root, INFO_AUTH_TOKEN, static_cast<Proto*>(this)->ERA_AUTH);
+	cJSON_AddStringToObject(root, INFO_AUTH_TOKEN, this->thisProto().ERA_AUTH);
     cJSON_AddStringToObject(root, INFO_FIRMWARE_VERSION, ERA_FIRMWARE_VERSION);
     cJSON_AddStringToObject(root, INFO_SSID, WiFi.SSID().c_str());
     cJSON_AddStringToObject(root, INFO_BSSID, WiFi.BSSIDstr().c_str());
     cJSON_AddNumberToObject(root, INFO_RSSI, WiFi.RSSI());
     cJSON_AddStringToObject(root, INFO_MAC, WiFi.macAddress().c_str());
     cJSON_AddStringToObject(root, INFO_LOCAL_IP, WiFi.localIP().toString().c_str());
+    cJSON_AddNumberToObject(root, INFO_PING, this->thisProto().transp.getPing());
 }
 
 template <class Proto, class Flash>

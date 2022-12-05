@@ -111,6 +111,7 @@ enum ClusterIDT {
 
     /* Measurement Cluster IDs */
     ZCL_CLUSTER_MEAS_TEMPERATURE = 0x0402,
+    ZCL_CLUSTER_MEAS_PRESSURE = 0x0403,
     ZCL_CLUSTER_MEAS_HUMIDITY = 0x0405,
 
     /* Security Cluster IDs */

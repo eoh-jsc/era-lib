@@ -28,10 +28,10 @@ bool ERaToZigbee<Zigbee>::permitJoinToZigbee(const cJSON* const root) {
         return false;
     }
     if (item->valueint) {
-        status = static_cast<Zigbee*>(this)->permitJoinDuration(dstAddr, 254);
+        status = this->thisZigbee().permitJoinDuration(dstAddr, 254);
     }
     else {
-        status = static_cast<Zigbee*>(this)->permitJoinDuration(dstAddr, 0);
+        status = this->thisZigbee().permitJoinDuration(dstAddr, 0);
     }
     this->createBridgeDataZigbee("permit_join", status, root);
     return true;
@@ -50,7 +50,7 @@ void ERaToZigbee<Zigbee>::createBridgeDataZigbee(const char* subTopic, ResultT s
     cJSON_AddItemToObject(root, "data", cJSON_Duplicate(item, true));
     cJSON_AddStringToObject(root, "status", ((status == ResultT::RESULT_SUCCESSFUL) ? "ok" : "error"));
 
-    static_cast<Zigbee*>(this)->publishZigbeeData(topic, root);
+    this->thisZigbee().publishZigbeeData(topic, root);
 
     cJSON_Delete(root);
     root = nullptr;

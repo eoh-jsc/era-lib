@@ -12,13 +12,13 @@ void ERaModbus<Api>::configModbus() {
     }
 
     this->stream = &SerialMB;
-    SerialMB.begin(9600);
+    SerialMB.begin(MODBUS_BAUDRATE);
     this->_streamDefault = true;
 }
 
 template <class Api>
 void ERaModbus<Api>::setBaudRate(uint32_t baudrate) {
-    eraModbusBaudrate(baudrate);
+    ERaModbusBaudrate(baudrate);
     if (!this->streamDefault()) {
         return;
     }
@@ -47,8 +47,8 @@ bool ERaModbus<Api>::waitResponse(ModbusConfig_t& param, uint8_t* modbusData) {
     do {
         if (!this->stream->available()) {
 #if defined(ERA_NO_RTOS)
-            eraOnWaiting();
-            static_cast<Api*>(this)->run();
+            ERaOnWaiting();
+            this->thisApi().run();
 #endif
             if (ModbusState::is(ModbusStateT::STATE_MB_PARSE)) {
                 break;

@@ -65,10 +65,10 @@ ResultT ERaCommandZigbee<ToZigbee>::readOSALLength(NvItemsIdsT itemId, void* val
 	vector<uint8_t> payload;
 	payload.push_back(LO_UINT16(itemId));
 	payload.push_back(HI_UINT16(itemId));
-	return static_cast<ToZigbee*>(this)->createCommandBuffer(payload, TypeT::SREQ,
-															SubsystemT::SYS_INTER, SYSCommandsT::SYS_OSAL_NV_LENGTH,
-															TypeT::SRSP, SYSCommandsT::SYS_OSAL_NV_LENGTH,
-															value);
+	return this->thisToZigbee().createCommandBuffer(payload, TypeT::SREQ,
+													SubsystemT::SYS_INTER, SYSCommandsT::SYS_OSAL_NV_LENGTH,
+													TypeT::SRSP, SYSCommandsT::SYS_OSAL_NV_LENGTH,
+													value);
 }
 
 template <class ToZigbee>
@@ -77,10 +77,10 @@ ResultT ERaCommandZigbee<ToZigbee>::readOSALItem(NvItemsIdsT itemId, uint8_t off
 	payload.push_back(LO_UINT16(itemId));
 	payload.push_back(HI_UINT16(itemId));
 	payload.push_back(offset);
-	return static_cast<ToZigbee*>(this)->createCommandBuffer(payload, TypeT::SREQ,
-															SubsystemT::SYS_INTER, SYSCommandsT::SYS_OSAL_NV_READ,
-															TypeT::SRSP, SYSCommandsT::SYS_OSAL_NV_READ,
-															value);
+	return this->thisToZigbee().createCommandBuffer(payload, TypeT::SREQ,
+													SubsystemT::SYS_INTER, SYSCommandsT::SYS_OSAL_NV_READ,
+													TypeT::SRSP, SYSCommandsT::SYS_OSAL_NV_READ,
+													value);
 }
 
 template <class ToZigbee>
@@ -90,10 +90,10 @@ ResultT ERaCommandZigbee<ToZigbee>::readOSALItemExt(NvItemsIdsT itemId, uint16_t
 	payload.push_back(HI_UINT16(itemId));
 	payload.push_back(LO_UINT16(offset));
 	payload.push_back(HI_UINT16(offset));
-	return static_cast<ToZigbee*>(this)->createCommandBuffer(payload, TypeT::SREQ,
-															SubsystemT::SYS_INTER, SYSCommandsT::SYS_OSAL_NV_READ_EXT,
-															TypeT::SRSP, SYSCommandsT::SYS_OSAL_NV_READ_EXT,
-															value);
+	return this->thisToZigbee().createCommandBuffer(payload, TypeT::SREQ,
+													SubsystemT::SYS_INTER, SYSCommandsT::SYS_OSAL_NV_READ_EXT,
+													TypeT::SRSP, SYSCommandsT::SYS_OSAL_NV_READ_EXT,
+													value);
 }
 
 template <class ToZigbee>
@@ -104,10 +104,10 @@ ResultT ERaCommandZigbee<ToZigbee>::writeOSALItem(NvItemsIdsT itemId, uint8_t of
 	payload.push_back(offset);
 	payload.push_back(data.size());
 	payload.insert(payload.end(), data.begin(), data.end());
-	return static_cast<ToZigbee*>(this)->createCommandBuffer(payload, TypeT::SREQ,
-															SubsystemT::SYS_INTER, SYSCommandsT::SYS_OSAL_NV_WRITE,
-															TypeT::SRSP, SYSCommandsT::SYS_OSAL_NV_WRITE,
-															value);
+	return this->thisToZigbee().createCommandBuffer(payload, TypeT::SREQ,
+													SubsystemT::SYS_INTER, SYSCommandsT::SYS_OSAL_NV_WRITE,
+													TypeT::SRSP, SYSCommandsT::SYS_OSAL_NV_WRITE,
+													value);
 }
 
 template <class ToZigbee>
@@ -120,10 +120,10 @@ ResultT ERaCommandZigbee<ToZigbee>::writeOSALItemExt(NvItemsIdsT itemId, uint16_
 	payload.push_back(LO_UINT16(data.size()));
 	payload.push_back(HI_UINT16(data.size()));
 	payload.insert(payload.end(), data.begin(), data.end());
-	return static_cast<ToZigbee*>(this)->createCommandBuffer(payload, TypeT::SREQ,
-															SubsystemT::SYS_INTER, SYSCommandsT::SYS_OSAL_NV_WRITE_EXT,
-															TypeT::SRSP, SYSCommandsT::SYS_OSAL_NV_WRITE_EXT,
-															value);
+	return this->thisToZigbee().createCommandBuffer(payload, TypeT::SREQ,
+													SubsystemT::SYS_INTER, SYSCommandsT::SYS_OSAL_NV_WRITE_EXT,
+													TypeT::SRSP, SYSCommandsT::SYS_OSAL_NV_WRITE_EXT,
+													value);
 }
 
 template <class ToZigbee>
@@ -135,9 +135,9 @@ ResultT ERaCommandZigbee<ToZigbee>::writeOSALItemInit(NvItemsIdsT itemId, uint16
 	payload.push_back(HI_UINT16(itemLen));
 	payload.push_back(data.size());
 	payload.insert(payload.end(), data.begin(), data.end());
-	return static_cast<ToZigbee*>(this)->createCommandBuffer(payload, TypeT::SREQ,
-															SubsystemT::SYS_INTER, SYSCommandsT::SYS_OSAL_NV_ITEM_INIT,
-															TypeT::SRSP, SYSCommandsT::SYS_OSAL_NV_ITEM_INIT);
+	return this->thisToZigbee().createCommandBuffer(payload, TypeT::SREQ,
+													SubsystemT::SYS_INTER, SYSCommandsT::SYS_OSAL_NV_ITEM_INIT,
+													TypeT::SRSP, SYSCommandsT::SYS_OSAL_NV_ITEM_INIT);
 }
 
 template <class ToZigbee>
@@ -147,9 +147,9 @@ ResultT ERaCommandZigbee<ToZigbee>::deleteOSALItem(NvItemsIdsT itemId, uint16_t 
 	payload.push_back(HI_UINT16(itemId));
 	payload.push_back(LO_UINT16(len));
 	payload.push_back(HI_UINT16(len));
-	return static_cast<ToZigbee*>(this)->createCommandBuffer(payload, TypeT::SREQ,
-															SubsystemT::SYS_INTER, SYSCommandsT::SYS_OSAL_NV_DELETE,
-															TypeT::SRSP, SYSCommandsT::SYS_OSAL_NV_DELETE);
+	return this->thisToZigbee().createCommandBuffer(payload, TypeT::SREQ,
+													SubsystemT::SYS_INTER, SYSCommandsT::SYS_OSAL_NV_DELETE,
+													TypeT::SRSP, SYSCommandsT::SYS_OSAL_NV_DELETE);
 }
 
 template <class ToZigbee>
@@ -190,10 +190,10 @@ ResultT ERaCommandZigbee<ToZigbee>::readNVLength(NvSystemIdsT sysId, NvItemsIdsT
 	payload.push_back(HI_UINT16(itemId));
 	payload.push_back(LO_UINT16(subId));
 	payload.push_back(HI_UINT16(subId));
-	return static_cast<ToZigbee*>(this)->createCommandBuffer(payload, TypeT::SREQ,
-															SubsystemT::SYS_INTER, SYSCommandsT::SYS_NV_LENGTH,
-															TypeT::SRSP, SYSCommandsT::SYS_NV_LENGTH,
-															value);
+	return this->thisToZigbee().createCommandBuffer(payload, TypeT::SREQ,
+													SubsystemT::SYS_INTER, SYSCommandsT::SYS_NV_LENGTH,
+													TypeT::SRSP, SYSCommandsT::SYS_NV_LENGTH,
+													value);
 }
 
 template <class ToZigbee>
@@ -207,10 +207,10 @@ ResultT ERaCommandZigbee<ToZigbee>::readNVItem(NvSystemIdsT sysId, NvItemsIdsT i
 	payload.push_back(LO_UINT16(offset));
 	payload.push_back(HI_UINT16(offset));
 	payload.push_back(len);
-	return static_cast<ToZigbee*>(this)->createCommandBuffer(payload, TypeT::SREQ,
-															SubsystemT::SYS_INTER, SYSCommandsT::SYS_NV_READ,
-															TypeT::SRSP, SYSCommandsT::SYS_NV_READ,
-															value);
+	return this->thisToZigbee().createCommandBuffer(payload, TypeT::SREQ,
+													SubsystemT::SYS_INTER, SYSCommandsT::SYS_NV_READ,
+													TypeT::SRSP, SYSCommandsT::SYS_NV_READ,
+													value);
 }
 
 template <class ToZigbee>
@@ -225,10 +225,10 @@ ResultT ERaCommandZigbee<ToZigbee>::writeNVItem(NvSystemIdsT sysId, NvItemsIdsT 
 	payload.push_back(HI_UINT16(offset));
 	payload.push_back(data.size());
 	payload.insert(payload.end(), data.begin(), data.end());
-	return static_cast<ToZigbee*>(this)->createCommandBuffer(payload, TypeT::SREQ,
-															SubsystemT::SYS_INTER, SYSCommandsT::SYS_NV_WRITE,
-															TypeT::SRSP, SYSCommandsT::SYS_NV_WRITE,
-															value);
+	return this->thisToZigbee().createCommandBuffer(payload, TypeT::SREQ,
+													SubsystemT::SYS_INTER, SYSCommandsT::SYS_NV_WRITE,
+													TypeT::SRSP, SYSCommandsT::SYS_NV_WRITE,
+													value);
 }
 
 template <class ToZigbee>
@@ -239,9 +239,9 @@ ResultT ERaCommandZigbee<ToZigbee>::deleteNVItem(NvSystemIdsT sysId, NvItemsIdsT
 	payload.push_back(HI_UINT16(itemId));
 	payload.push_back(LO_UINT16(subId));
 	payload.push_back(HI_UINT16(subId));
-	return static_cast<ToZigbee*>(this)->createCommandBuffer(payload, TypeT::SREQ,
-															SubsystemT::SYS_INTER, SYSCommandsT::SYS_NV_DELETE,
-															TypeT::SRSP, SYSCommandsT::SYS_NV_DELETE);
+	return this->thisToZigbee().createCommandBuffer(payload, TypeT::SREQ,
+													SubsystemT::SYS_INTER, SYSCommandsT::SYS_NV_DELETE,
+													TypeT::SRSP, SYSCommandsT::SYS_NV_DELETE);
 }
 
 #endif /* INC_ERA_COMMAND_NV_ITEM_ZIGBEE_HPP_ */

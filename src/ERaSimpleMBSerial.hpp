@@ -1,0 +1,8 @@
+#ifndef INC_ERA_SIMPLE_MODBUS_SERIAL_HPP_
+#define INC_ERA_SIMPLE_MODBUS_SERIAL_HPP_
+
+#define ERA_MODBUS
+
+#include <ERaSimpleSerial.hpp>
+
+#endif /* INC_ERA_SIMPLE_MODBUS_SERIAL_HPP_ */

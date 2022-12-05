@@ -1,3 +1,4 @@
+#include <string.h>
 #include "MQTTClient.h"
 #include <ERa/ERaDefine.hpp>
 

@@ -44,6 +44,9 @@ T ERaMapNumberRange(T value, T fromLow, T fromHigh, T toLow, T toHigh) {
 #if defined(ARDUINO) && defined(ESP32)
     #include "driver/uart.h"
     #include <Utility/ERaOs.hpp>
+#elif defined(ARDUINO) && \
+    (defined(STM32F4xx) || defined(ARDUINO_ARCH_RP2040))
+    #include <Utility/ERaOs.hpp>
 #endif
 
 #if defined(ARDUINO)
@@ -58,6 +61,11 @@ T ERaMapNumberRange(T value, T fromLow, T fromHigh, T toLow, T toHigh) {
 template <typename T, int len, int size>
 void CopyToArray(const char(&src)[len], T(&dst)[size]) {
     memcpy(dst, src, ERaMin(len, size));
+}
+
+template <typename T, int size>
+void CopyToArray(const uint8_t& src, T(&dst)[size]) {
+    memcpy(dst, &src, size);
 }
 
 template <typename T, int size>

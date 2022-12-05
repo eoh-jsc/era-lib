@@ -14,6 +14,15 @@ bool CompareString(const char* str, const char* str2) {
     return !strcmp(str, str2);
 }
 
+bool CompareNString(const char* str, const char* str2, int size) {
+    return !strncmp(str, str2, size);
+}
+
+template <int size>
+bool CompareNString(const char* str, const char(&str2)[size]) {
+    return !strncmp(str, str2, size - 1);
+}
+
 template <int len, int size>
 void CopyArray(const uint8_t(&src)[len], uint8_t(&dst)[size]) {
     memcpy(dst, src, std::min(len, size));
@@ -22,6 +31,19 @@ void CopyArray(const uint8_t(&src)[len], uint8_t(&dst)[size]) {
 template <int size>
 void CopyString(const char* src, char(&dst)[size]) {
     snprintf(dst, size, "%s", src);
+}
+
+template <typename... Args>
+void StringPrint(char* buf, size_t len, Args... tail) {
+    if (buf == nullptr) {
+        return;
+    }
+    snprintf(buf + strlen(buf), len - strlen(buf), tail...);
+}
+
+template <int size, typename... Args>
+void StringPrint(char(&buf)[size], Args... tail) {
+    snprintf(buf + strlen(buf), size - strlen(buf), tail...);
 }
 
 void ClearMem(void* ptr, size_t size) {
@@ -89,7 +111,7 @@ bool StringToIEEE(const char* str, T(&ieee)[size]) {
     if (str == nullptr) {
         return false;
     }
-    if (strlen(str) != 18 || !ERaStrNCmp(str, "0x")) {
+    if (strlen(str) != 18 || !CompareNString(str, "0x")) {
         return false;
     }
     if (size != LENGTH_EXTADDR_IEEE) {

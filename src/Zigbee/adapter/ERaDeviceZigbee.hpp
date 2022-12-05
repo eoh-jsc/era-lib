@@ -13,8 +13,8 @@ bool ERaZigbee<Api>::interviewDevice() {
 
 	EndpointListT dstEndPoint {EndpointListT::ENDPOINT1};
 
-    ERA_LOG(TAG, "Interview network address %s(%d) started", IEEEToString(this->device->address.addr.ieeeAddr).c_str(),
-                                                            this->device->address.addr.nwkAddr);
+    ERA_LOG(TAG, ERA_PSTR("Interview network address %s(%d) started"), IEEEToString(this->device->address.addr.ieeeAddr).c_str(),
+                                                                    this->device->address.addr.nwkAddr);
 
     FromZigbee::createDeviceEvent(DeviceEventT::DEVICE_EVENT_INTERVIEW_STARTED);
 
@@ -31,8 +31,8 @@ bool ERaZigbee<Api>::interviewDevice() {
     }
 
     if (!this->device->hasManufCode) {
-        ERA_LOG(TAG, "Interview network address %s(%d) failed", IEEEToString(this->device->address.addr.ieeeAddr).c_str(),
-                                                                this->device->address.addr.nwkAddr);
+        ERA_LOG(TAG, ERA_PSTR("Interview network address %s(%d) failed"), IEEEToString(this->device->address.addr.ieeeAddr).c_str(),
+                                                                        this->device->address.addr.nwkAddr);
         FromZigbee::createDeviceEvent(DeviceEventT::DEVICE_EVENT_INTERVIEW_FAILED);
         return false;
     }
@@ -42,8 +42,8 @@ bool ERaZigbee<Api>::interviewDevice() {
     }
 
     if (ToZigbee::CommandZigbee::requestListEndpoint(this->device->address, this->device->address.addr.nwkAddr, 1) != ResultT::RESULT_SUCCESSFUL) { /* Request a list of active endpoint from the dest device */
-        ERA_LOG(TAG, "Interview network address %s(%d) failed", IEEEToString(this->device->address.addr.ieeeAddr).c_str(),
-                                                                this->device->address.addr.nwkAddr);
+        ERA_LOG(TAG, ERA_PSTR("Interview network address %s(%d) failed"), IEEEToString(this->device->address.addr.ieeeAddr).c_str(),
+                                                                        this->device->address.addr.nwkAddr);
         FromZigbee::createDeviceEvent(DeviceEventT::DEVICE_EVENT_INTERVIEW_FAILED);
         return false;
     }
@@ -95,8 +95,8 @@ bool ERaZigbee<Api>::interviewDevice() {
         ToZigbee::CommandZigbee::requestSimpleDesc(this->device->address, 10);
     }
 
-    ERA_LOG(TAG, "Binding %s(%d)", IEEEToString(this->device->address.addr.ieeeAddr).c_str(),
-                                                            this->device->address.addr.nwkAddr);
+    ERA_LOG(TAG, ERA_PSTR("Binding %s(%d)"), IEEEToString(this->device->address.addr.ieeeAddr).c_str(),
+                                                        this->device->address.addr.nwkAddr);
 
     for (size_t i = 0; i < this->device->epCount; ++i) {
         if (this->device->epList[i].endpoint == EndpointListT::ENDPOINT_NONE) {
@@ -140,8 +140,8 @@ bool ERaZigbee<Api>::interviewDevice() {
 
     /* Config Reporting */
 
-    ERA_LOG(TAG, "Interview network address %s(%d) successful", IEEEToString(this->device->address.addr.ieeeAddr).c_str(),
-                                                            this->device->address.addr.nwkAddr);
+    ERA_LOG(TAG, ERA_PSTR("Interview network address %s(%d) successful"), IEEEToString(this->device->address.addr.ieeeAddr).c_str(),
+                                                                        this->device->address.addr.nwkAddr);
     FromZigbee::createDeviceEvent(DeviceEventT::DEVICE_EVENT_INTERVIEW_SUCCESSFUL);
     DBZigbee::setDeviceToCoordinator();
     return true;
@@ -235,7 +235,7 @@ ResultT ERaZigbee<Api>::writeAttrDevice(AFAddrType_t& dstAddr,
 template <class Api>
 void ERaZigbee<Api>::readDataDevice() {
     /* Read data device */
-    ERA_LOG(TAG, "Reading data %s(%d)", IEEEToString(this->device->address.addr.ieeeAddr).c_str(),
+    ERA_LOG(TAG, ERA_PSTR("Reading data %s(%d)"), IEEEToString(this->device->address.addr.ieeeAddr).c_str(),
                                                             this->device->address.addr.nwkAddr);
 
     if (this->device->typeDevice != TypeDeviceT::ROUTERDEVICE) {

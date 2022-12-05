@@ -6,8 +6,10 @@
 #if defined(ERA_MODBUS)
     template <class Api>
     void ERaModbus<Api>::initModbusTask() {
-        xTaskCreatePinnedToCore(this->modbusTask, "modbusTask", 1024 * 5, this, 17, &this->_modbusTask, ERA_MCU_CORE);
-        xTaskCreatePinnedToCore(this->writeModbusTask, "writeModbusTask", 1024 * 5, this, 17, &this->_writeModbusTask, ERA_MCU_CORE);
+        xTaskCreatePinnedToCore(this->modbusTask, "modbusTask", 1024 * 5, this,
+                                configMAX_PRIORITIES - 3, &this->_modbusTask, ERA_MCU_CORE);
+        xTaskCreatePinnedToCore(this->writeModbusTask, "writeModbusTask", 1024 * 5, this,
+                                configMAX_PRIORITIES - 3, &this->_writeModbusTask, ERA_MCU_CORE);
     }
 
     template <class Api>
@@ -17,6 +19,7 @@
         }
         ERaModbus* modbus = (ERaModbus*)args;
         modbus->run(true);
+        vTaskDelete(NULL);
     }
 
     template <class Api>
@@ -26,15 +29,19 @@
         }
         ERaModbus* modbus = (ERaModbus*)args;
         modbus->run(false);
+        vTaskDelete(NULL);
     }
 #endif
 
 #if defined(ERA_ZIGBEE)
     template <class Api>
     void ERaZigbee<Api>::initZigbeeTask() {
-        xTaskCreatePinnedToCore(this->zigbeeTask, "zigbeeTask", 1024 * 12, this, 20, &this->_zigbeeTask, ERA_MCU_CORE);
-        xTaskCreatePinnedToCore(this->controlZigbeeTask, "controlZigbeeTask", 1024 * 12, this, 20, &this->_controlZigbeeTask, ERA_MCU_CORE);
-        xTaskCreatePinnedToCore(this->responseZigbeeTask, "responseZigbeeTask", 1024 * 12, this, 19, &this->_responseZigbeeTask, ERA_MCU_CORE);
+        xTaskCreatePinnedToCore(this->zigbeeTask, "zigbeeTask", 1024 * 12, this,
+                                configMAX_PRIORITIES - 1, &this->_zigbeeTask, ERA_MCU_CORE);
+        xTaskCreatePinnedToCore(this->controlZigbeeTask, "controlZigbeeTask", 1024 * 12, this,
+                                configMAX_PRIORITIES - 1, &this->_controlZigbeeTask, ERA_MCU_CORE);
+        xTaskCreatePinnedToCore(this->responseZigbeeTask, "responseZigbeeTask", 1024 * 12, this,
+                                configMAX_PRIORITIES - 2, &this->_responseZigbeeTask, ERA_MCU_CORE);
     }
 
     template <class Api>
@@ -44,6 +51,7 @@
         }
         ERaZigbee* zigbee = (ERaZigbee*)args;
         zigbee->run();
+        vTaskDelete(NULL);
     }
 
     template <class Api>
@@ -53,6 +61,7 @@
         }
         ERaZigbee* zigbee = (ERaZigbee*)args;
         zigbee->runControl();
+        vTaskDelete(NULL);
     }
 
     template <class Api>
@@ -62,6 +71,7 @@
         }
         ERaZigbee* zigbee = (ERaZigbee*)args;
         zigbee->runResponse();
+        vTaskDelete(NULL);
     }
 #endif
 

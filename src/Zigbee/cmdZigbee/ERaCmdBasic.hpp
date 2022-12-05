@@ -8,8 +8,8 @@ ResultT ERaCommandZigbee<ToZigbee>::resetFactoryDefaultsGenBasic(AFAddrType_t& d
     if (dstAddr.addrMode == AddressModeT::ADDR_GROUP) {
         return ResultT::RESULT_FAIL;
     }
-    return static_cast<ToZigbee*>(this)->sendCommandIdZigbee(this->zclHeader11, dstAddr, EndpointListT::ENDPOINT1,
-                                                            {ClusterIDT::ZCL_CLUSTER_BASIC, ZbZclBasicSvrCmdT::ZCL_BASIC_RESET_FACTORY, nullptr});
+    return this->thisToZigbee().sendCommandIdZigbee(this->zclHeader11, dstAddr, EndpointListT::ENDPOINT1,
+                                                    {ClusterIDT::ZCL_CLUSTER_BASIC, ZbZclBasicSvrCmdT::ZCL_BASIC_RESET_FACTORY, nullptr});
 }
 
 #endif /* INC_ERA_COMMAND_BASIC_ZIGBEE_HPP_ */

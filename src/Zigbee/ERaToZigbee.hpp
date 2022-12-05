@@ -38,7 +38,7 @@ protected:
 
 private:
     void handleZigbeeData() {
-        static_cast<Zigbee*>(this)->handleZigbeeData();
+        this->thisZigbee().handleZigbeeData();
     }
 
     bool stateToZigbee(const cJSON* const root, const cJSON* const current, AFAddrType_t& dstAddr, const ConvertToZigbeeT type);
@@ -100,6 +100,16 @@ private:
     void sendByte(uint8_t byte);
     void sendCommand(const vector<uint8_t>& data);
 
+	inline
+	const Zigbee& thisZigbee() const {
+		return static_cast<const Zigbee&>(*this);
+	}
+
+	inline
+	Zigbee& thisZigbee() {
+		return static_cast<Zigbee&>(*this);
+	}
+
 	uint8_t transId;
 	uint8_t transIdZcl;
 
@@ -154,7 +164,7 @@ bool ERaToZigbee<Zigbee>::getEndpointToZigbee(const cJSON* const root, const cha
     bool onOff {false};
     char* ptr = strstr(root->string, key);
     if (strchr((ptr += strlen(key)), '_')) {
-        if (ERaStrNCmp(ptr, "_onoff")) {
+        if (CompareNString(ptr, "_onoff")) {
             onOff = true;
             ptr += strlen("_onoff");
             if (!strchr(ptr, '_')) {
@@ -216,7 +226,7 @@ ResultT ERaToZigbee<Zigbee>::createCommandBuffer(const vector<uint8_t>& payload,
     vector<uint8_t> command;
     uint8_t fcs {0};
     ResultT status {ResultT::RESULT_SUCCESSFUL};
-	command.push_back(static_cast<Zigbee*>(this)->SOF);
+	command.push_back(this->thisZigbee().SOF);
 	command.push_back(payload.size());
 	command.push_back(((type << 5) & 0xE0) | (sub & 0x1F));
 	command.push_back(cmd);
@@ -263,8 +273,8 @@ ResultT ERaToZigbee<Zigbee>::createCommand(AFAddrType_t& dstAddr,
 	payload.push_back(LO_UINT16(zclId));
 	payload.push_back(HI_UINT16(zclId));
 	payload.push_back(++this->transId);
-	payload.push_back(static_cast<Zigbee*>(this)->Options);
-	payload.push_back(static_cast<Zigbee*>(this)->Radius);
+	payload.push_back(this->thisZigbee().Options);
+	payload.push_back(this->thisZigbee().Radius);
 	payload.push_back(data.size());
 	payload.insert(payload.end(), data.begin(), data.end());
 

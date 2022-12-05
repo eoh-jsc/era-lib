@@ -14,11 +14,11 @@
 // #define ERA_DEBUG
 // #define ERA_SERIAL stdout
 
-// Enable Modbus and Zigbee
-// #include <ERaWiringPi.hpp>
-
 // Enable Modbus
-#include <ERaSimpleMBWiringPi.hpp>
+// #include <ERaSimpleMBLinux.hpp>
+
+// Enable Modbus and Zigbee
+#include <ERaLinux.hpp>
 
 #include <ERa/ERaTimer.hpp>
 #include <ERaOptionsArgs.hpp>

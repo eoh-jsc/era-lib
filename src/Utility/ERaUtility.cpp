@@ -6,6 +6,7 @@
         if (!max) {
             return 0;
         }
+        randomSeed(ERaMillis());
         uint32_t numRand = random(max);
         return (numRand % (max - min) + min);
     }
@@ -81,6 +82,7 @@
         if (!max) {
             return 0;
         }
+        randomSeed(ERaMillis());
         uint32_t numRand = random(max);
         return (numRand % (max - min) + min);
     }
@@ -104,6 +106,7 @@
         if (!max) {
             return 0;
         }
+        randomSeed(ERaMillis());
         uint32_t numRand = random(max);
         return (numRand % (max - min) + min);
     }
@@ -122,10 +125,15 @@
 
     extern "C" char *sbrk(int i);
 
+    void ERaDelay(MillisTime_t ms) {
+        osDelay(ms);
+    }
+
     uint32_t ERaRandomNumber(uint32_t min, uint32_t max) {
         if (!max) {
             return 0;
         }
+        randomSeed(ERaMillis());
         uint32_t numRand = random(max);
         return (numRand % (max - min) + min);
     }
@@ -140,9 +148,110 @@
         while (1) {}
     }
 
-    #define ERA_USE_DEFAULT_DELAY
+    void ERaGuardLock(ERaMutex_t& mutex) {
+        if (mutex == nullptr) {
+            mutex = (ERaMutex_t)xSemaphoreCreateMutex();
+        }
+        osSemaphoreAcquire((SemaphoreHandle_t)mutex, osWaitForever);
+    }
+
+    void ERaGuardUnlock(ERaMutex_t& mutex) {
+        if (mutex == nullptr) {
+            mutex = (ERaMutex_t)xSemaphoreCreateMutex();
+        }
+        osSemaphoreRelease((SemaphoreHandle_t)mutex);
+    }
+
     #define ERA_USE_DEFAULT_MILLIS
+
+#elif defined(ARDUINO) && defined(ARDUINO_ARCH_RP2040)
+
+    void ERaDelay(MillisTime_t ms) {
+        osDelay(ms);
+    }
+
+    MillisTime_t ERaMillis() {
+        return millis();
+    }
+
+    uint32_t ERaRandomNumber(uint32_t min, uint32_t max) {
+        if (!max) {
+            return 0;
+        }
+        randomSeed(ERaMillis());
+        uint32_t numRand = random(max);
+        return (numRand % (max - min) + min);
+    }
+
+    void ERaGuardLock(ERaMutex_t& mutex) {
+        if (mutex == nullptr) {
+            mutex = (ERaMutex_t)xSemaphoreCreateMutex();
+        }
+        osSemaphoreAcquire((SemaphoreHandle_t)mutex, osWaitForever);
+    }
+
+    void ERaGuardUnlock(ERaMutex_t& mutex) {
+        if (mutex == nullptr) {
+            mutex = (ERaMutex_t)xSemaphoreCreateMutex();
+        }
+        osSemaphoreRelease((SemaphoreHandle_t)mutex);
+    }
+
+    #define ERA_USE_DEFAULT_FREE_RAM
+    #define ERA_USE_DEFAULT_RESET
+
+#elif defined(__MBED__)
+
+    #include <mbed.h>
+    using namespace mbed;
+    using namespace rtos;
+
+    static Timer  eraMillisTimer;
+    static Ticker eraWaker;
+
+    static
+    void eraWake() {
+    }
+
+    ERA_CONSTRUCTOR
+    static void ERaSystemInit() {
+        eraWaker.attach(&eraWake, 2.0f);
+        eraMillisTimer.start();
+    }
+
+    void ERaDelay(MillisTime_t ms) {
+#ifndef NO_RTOS
+        ThisThread::sleep_for(ms);
+#else
+        wait_us(ms * 1000);
+#endif
+    }
+
+    MillisTime_t ERaMillis() {
+        return eraMillisTimer.read_ms();
+    }
+
+#ifndef NO_RTOS
+    void ERaGuardLock(ERaMutex_t& mutex) {
+        if (mutex == nullptr) {
+            mutex = new Semaphore(1);
+        }
+        ((Semaphore*)mutex)->acquire();
+    }
+
+    void ERaGuardUnlock(ERaMutex_t& mutex) {
+        if (mutex == nullptr) {
+            mutex = new Semaphore(1);
+        }
+        ((Semaphore*)mutex)->release();
+    }
+#else
     #define ERA_USE_DEFAULT_GUARD
+#endif
+
+    #define ERA_USE_DEFAULT_RANDOM
+    #define ERA_USE_DEFAULT_FREE_RAM
+    #define ERA_USE_DEFAULT_RESET
 
 #elif defined(LINUX) && defined(RASPBERRY)
 
@@ -187,7 +296,7 @@
     #include <time.h>
     #include <unistd.h>
 
-    static millis_time_t startupTime {0};
+    static MillisTime_t startupTime {0};
 
     ERA_CONSTRUCTOR
     static void ERaSystemInit() {

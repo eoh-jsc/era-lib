@@ -1,35 +1,36 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <ERa/ERaHandlers.hpp>
+#include <ERa/ERaDebug.hpp>
 
-void eraNoHandler() {
+void ERaNoHandler() {
 }
 
-void eraNoModbusBaudrate(uint32_t ERA_UNUSED& baudrate) {
+void ERaNoModbusBaudrate(uint32_t ERA_UNUSED& baudrate) {
 }
 
-void eraWidgetWrite(uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param) {
+void ERaWidgetWrite(uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param) {
 }
 
-void eraWidgetPinWrite(uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param, const ERaParam ERA_UNUSED &raw) {
+void ERaWidgetPinWrite(uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param, const ERaParam ERA_UNUSED &raw) {
 }
 
-void eraWidgetPinRead(uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param, const ERaParam ERA_UNUSED &raw) {
+void ERaWidgetPinRead(uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param, const ERaParam ERA_UNUSED &raw) {
 }
 
-#define ERA_ON_WRITE(Pin) void eraWidgetWrite ## Pin (uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param) \
-        __attribute__((weak, alias("eraWidgetWrite")))
+#define ERA_ON_WRITE(Pin) void ERaWidgetWrite ## Pin (uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param) \
+        __attribute__((weak, alias("ERaWidgetWrite")))
 
-#define ERA_ON_PIN_WRITE(Pin) void eraWidgetPinWrite ## Pin (uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param, const ERaParam ERA_UNUSED &raw) \
-        __attribute__((weak, alias("eraWidgetPinWrite")))
+#define ERA_ON_PIN_WRITE(Pin) void ERaWidgetPinWrite ## Pin (uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param, const ERaParam ERA_UNUSED &raw) \
+        __attribute__((weak, alias("ERaWidgetPinWrite")))
 
-#define ERA_ON_PIN_READ(Pin) void eraWidgetPinRead ## Pin (uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param, const ERaParam ERA_UNUSED &raw) \
-        __attribute__((weak, alias("eraWidgetPinRead")))
+#define ERA_ON_PIN_READ(Pin) void ERaWidgetPinRead ## Pin (uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param, const ERaParam ERA_UNUSED &raw) \
+        __attribute__((weak, alias("ERaWidgetPinRead")))
 
-ERA_CONNECTED() __attribute__((weak, alias("eraNoHandler")));
-ERA_DISCONNECTED() __attribute__((weak, alias("eraNoHandler")));
-ERA_WAITING() __attribute__((weak, alias("eraNoHandler")));
-ERA_MODBUS_BAUDRATE() __attribute__((weak, alias("eraNoModbusBaudrate")));
+ERA_CONNECTED() __attribute__((weak, alias("ERaNoHandler")));
+ERA_DISCONNECTED() __attribute__((weak, alias("ERaNoHandler")));
+ERA_WAITING() __attribute__((weak, alias("ERaNoHandler")));
+ERA_MODBUS_BAUDRATE() __attribute__((weak, alias("ERaNoModbusBaudrate")));
 
 ERA_ON_WRITE( 0);
 ERA_ON_WRITE( 1);
@@ -340,98 +341,110 @@ ERA_ON_PIN_READ(49);
 	ERA_ON_PIN_READ(99);
 #endif
 
-static const ERaWriteHandler eraWriteHandler[] = {
-    eraWidgetWrite0, eraWidgetWrite1, eraWidgetWrite2, eraWidgetWrite3, eraWidgetWrite4,
-    eraWidgetWrite5, eraWidgetWrite6, eraWidgetWrite7, eraWidgetWrite8, eraWidgetWrite9,
-    eraWidgetWrite10, eraWidgetWrite11, eraWidgetWrite12, eraWidgetWrite13, eraWidgetWrite14,
-    eraWidgetWrite15, eraWidgetWrite16, eraWidgetWrite17, eraWidgetWrite18, eraWidgetWrite19,
-    eraWidgetWrite20, eraWidgetWrite21, eraWidgetWrite22, eraWidgetWrite23, eraWidgetWrite24,
-    eraWidgetWrite25, eraWidgetWrite26, eraWidgetWrite27, eraWidgetWrite28, eraWidgetWrite29,
-    eraWidgetWrite30, eraWidgetWrite31, eraWidgetWrite32, eraWidgetWrite33, eraWidgetWrite34,
-    eraWidgetWrite35, eraWidgetWrite36, eraWidgetWrite37, eraWidgetWrite38, eraWidgetWrite39,
-    eraWidgetWrite40, eraWidgetWrite41, eraWidgetWrite42, eraWidgetWrite43, eraWidgetWrite44,
-    eraWidgetWrite45, eraWidgetWrite46, eraWidgetWrite47, eraWidgetWrite48, eraWidgetWrite49,
+static const ERaWriteHandler ERaWriteHandlerVector[] ERA_PROGMEM = {
+    ERaWidgetWrite0, ERaWidgetWrite1, ERaWidgetWrite2, ERaWidgetWrite3, ERaWidgetWrite4,
+    ERaWidgetWrite5, ERaWidgetWrite6, ERaWidgetWrite7, ERaWidgetWrite8, ERaWidgetWrite9,
+    ERaWidgetWrite10, ERaWidgetWrite11, ERaWidgetWrite12, ERaWidgetWrite13, ERaWidgetWrite14,
+    ERaWidgetWrite15, ERaWidgetWrite16, ERaWidgetWrite17, ERaWidgetWrite18, ERaWidgetWrite19,
+    ERaWidgetWrite20, ERaWidgetWrite21, ERaWidgetWrite22, ERaWidgetWrite23, ERaWidgetWrite24,
+    ERaWidgetWrite25, ERaWidgetWrite26, ERaWidgetWrite27, ERaWidgetWrite28, ERaWidgetWrite29,
+    ERaWidgetWrite30, ERaWidgetWrite31, ERaWidgetWrite32, ERaWidgetWrite33, ERaWidgetWrite34,
+    ERaWidgetWrite35, ERaWidgetWrite36, ERaWidgetWrite37, ERaWidgetWrite38, ERaWidgetWrite39,
+    ERaWidgetWrite40, ERaWidgetWrite41, ERaWidgetWrite42, ERaWidgetWrite43, ERaWidgetWrite44,
+    ERaWidgetWrite45, ERaWidgetWrite46, ERaWidgetWrite47, ERaWidgetWrite48, ERaWidgetWrite49,
 #if defined(ERA_100_PINS)
-    eraWidgetWrite50, eraWidgetWrite51, eraWidgetWrite52, eraWidgetWrite53, eraWidgetWrite54,
-    eraWidgetWrite55, eraWidgetWrite56, eraWidgetWrite57, eraWidgetWrite58, eraWidgetWrite59,
-    eraWidgetWrite60, eraWidgetWrite61, eraWidgetWrite62, eraWidgetWrite63, eraWidgetWrite64,
-    eraWidgetWrite65, eraWidgetWrite66, eraWidgetWrite67, eraWidgetWrite68, eraWidgetWrite69,
-    eraWidgetWrite70, eraWidgetWrite71, eraWidgetWrite72, eraWidgetWrite73, eraWidgetWrite74,
-    eraWidgetWrite75, eraWidgetWrite76, eraWidgetWrite77, eraWidgetWrite78, eraWidgetWrite79,
-    eraWidgetWrite80, eraWidgetWrite81, eraWidgetWrite82, eraWidgetWrite83, eraWidgetWrite84,
-    eraWidgetWrite85, eraWidgetWrite86, eraWidgetWrite87, eraWidgetWrite88, eraWidgetWrite89,
-    eraWidgetWrite90, eraWidgetWrite91, eraWidgetWrite92, eraWidgetWrite93, eraWidgetWrite94,
-    eraWidgetWrite95, eraWidgetWrite96, eraWidgetWrite97, eraWidgetWrite98, eraWidgetWrite99,
+    ERaWidgetWrite50, ERaWidgetWrite51, ERaWidgetWrite52, ERaWidgetWrite53, ERaWidgetWrite54,
+    ERaWidgetWrite55, ERaWidgetWrite56, ERaWidgetWrite57, ERaWidgetWrite58, ERaWidgetWrite59,
+    ERaWidgetWrite60, ERaWidgetWrite61, ERaWidgetWrite62, ERaWidgetWrite63, ERaWidgetWrite64,
+    ERaWidgetWrite65, ERaWidgetWrite66, ERaWidgetWrite67, ERaWidgetWrite68, ERaWidgetWrite69,
+    ERaWidgetWrite70, ERaWidgetWrite71, ERaWidgetWrite72, ERaWidgetWrite73, ERaWidgetWrite74,
+    ERaWidgetWrite75, ERaWidgetWrite76, ERaWidgetWrite77, ERaWidgetWrite78, ERaWidgetWrite79,
+    ERaWidgetWrite80, ERaWidgetWrite81, ERaWidgetWrite82, ERaWidgetWrite83, ERaWidgetWrite84,
+    ERaWidgetWrite85, ERaWidgetWrite86, ERaWidgetWrite87, ERaWidgetWrite88, ERaWidgetWrite89,
+    ERaWidgetWrite90, ERaWidgetWrite91, ERaWidgetWrite92, ERaWidgetWrite93, ERaWidgetWrite94,
+    ERaWidgetWrite95, ERaWidgetWrite96, ERaWidgetWrite97, ERaWidgetWrite98, ERaWidgetWrite99,
 #endif
 };
 
-static const ERaPinWriteHandler eraPinWriteHandler[] = {
-    eraWidgetPinWrite0, eraWidgetPinWrite1, eraWidgetPinWrite2, eraWidgetPinWrite3, eraWidgetPinWrite4,
-    eraWidgetPinWrite5, eraWidgetPinWrite6, eraWidgetPinWrite7, eraWidgetPinWrite8, eraWidgetPinWrite9,
-    eraWidgetPinWrite10, eraWidgetPinWrite11, eraWidgetPinWrite12, eraWidgetPinWrite13, eraWidgetPinWrite14,
-    eraWidgetPinWrite15, eraWidgetPinWrite16, eraWidgetPinWrite17, eraWidgetPinWrite18, eraWidgetPinWrite19,
-    eraWidgetPinWrite20, eraWidgetPinWrite21, eraWidgetPinWrite22, eraWidgetPinWrite23, eraWidgetPinWrite24,
-    eraWidgetPinWrite25, eraWidgetPinWrite26, eraWidgetPinWrite27, eraWidgetPinWrite28, eraWidgetPinWrite29,
-    eraWidgetPinWrite30, eraWidgetPinWrite31, eraWidgetPinWrite32, eraWidgetPinWrite33, eraWidgetPinWrite34,
-    eraWidgetPinWrite35, eraWidgetPinWrite36, eraWidgetPinWrite37, eraWidgetPinWrite38, eraWidgetPinWrite39,
-    eraWidgetPinWrite40, eraWidgetPinWrite41, eraWidgetPinWrite42, eraWidgetPinWrite43, eraWidgetPinWrite44,
-    eraWidgetPinWrite45, eraWidgetPinWrite46, eraWidgetPinWrite47, eraWidgetPinWrite48, eraWidgetPinWrite49,
+static const ERaPinWriteHandler ERaPinWriteHandlerVector[] ERA_PROGMEM = {
+    ERaWidgetPinWrite0, ERaWidgetPinWrite1, ERaWidgetPinWrite2, ERaWidgetPinWrite3, ERaWidgetPinWrite4,
+    ERaWidgetPinWrite5, ERaWidgetPinWrite6, ERaWidgetPinWrite7, ERaWidgetPinWrite8, ERaWidgetPinWrite9,
+    ERaWidgetPinWrite10, ERaWidgetPinWrite11, ERaWidgetPinWrite12, ERaWidgetPinWrite13, ERaWidgetPinWrite14,
+    ERaWidgetPinWrite15, ERaWidgetPinWrite16, ERaWidgetPinWrite17, ERaWidgetPinWrite18, ERaWidgetPinWrite19,
+    ERaWidgetPinWrite20, ERaWidgetPinWrite21, ERaWidgetPinWrite22, ERaWidgetPinWrite23, ERaWidgetPinWrite24,
+    ERaWidgetPinWrite25, ERaWidgetPinWrite26, ERaWidgetPinWrite27, ERaWidgetPinWrite28, ERaWidgetPinWrite29,
+    ERaWidgetPinWrite30, ERaWidgetPinWrite31, ERaWidgetPinWrite32, ERaWidgetPinWrite33, ERaWidgetPinWrite34,
+    ERaWidgetPinWrite35, ERaWidgetPinWrite36, ERaWidgetPinWrite37, ERaWidgetPinWrite38, ERaWidgetPinWrite39,
+    ERaWidgetPinWrite40, ERaWidgetPinWrite41, ERaWidgetPinWrite42, ERaWidgetPinWrite43, ERaWidgetPinWrite44,
+    ERaWidgetPinWrite45, ERaWidgetPinWrite46, ERaWidgetPinWrite47, ERaWidgetPinWrite48, ERaWidgetPinWrite49,
 #if defined(ERA_100_PINS)
-    eraWidgetPinWrite50, eraWidgetPinWrite51, eraWidgetPinWrite52, eraWidgetPinWrite53, eraWidgetPinWrite54,
-    eraWidgetPinWrite55, eraWidgetPinWrite56, eraWidgetPinWrite57, eraWidgetPinWrite58, eraWidgetPinWrite59,
-    eraWidgetPinWrite60, eraWidgetPinWrite61, eraWidgetPinWrite62, eraWidgetPinWrite63, eraWidgetPinWrite64,
-    eraWidgetPinWrite65, eraWidgetPinWrite66, eraWidgetPinWrite67, eraWidgetPinWrite68, eraWidgetPinWrite69,
-    eraWidgetPinWrite70, eraWidgetPinWrite71, eraWidgetPinWrite72, eraWidgetPinWrite73, eraWidgetPinWrite74,
-    eraWidgetPinWrite75, eraWidgetPinWrite76, eraWidgetPinWrite77, eraWidgetPinWrite78, eraWidgetPinWrite79,
-    eraWidgetPinWrite80, eraWidgetPinWrite81, eraWidgetPinWrite82, eraWidgetPinWrite83, eraWidgetPinWrite84,
-    eraWidgetPinWrite85, eraWidgetPinWrite86, eraWidgetPinWrite87, eraWidgetPinWrite88, eraWidgetPinWrite89,
-    eraWidgetPinWrite90, eraWidgetPinWrite91, eraWidgetPinWrite92, eraWidgetPinWrite93, eraWidgetPinWrite94,
-    eraWidgetPinWrite95, eraWidgetPinWrite96, eraWidgetPinWrite97, eraWidgetPinWrite98, eraWidgetPinWrite99,
+    ERaWidgetPinWrite50, ERaWidgetPinWrite51, ERaWidgetPinWrite52, ERaWidgetPinWrite53, ERaWidgetPinWrite54,
+    ERaWidgetPinWrite55, ERaWidgetPinWrite56, ERaWidgetPinWrite57, ERaWidgetPinWrite58, ERaWidgetPinWrite59,
+    ERaWidgetPinWrite60, ERaWidgetPinWrite61, ERaWidgetPinWrite62, ERaWidgetPinWrite63, ERaWidgetPinWrite64,
+    ERaWidgetPinWrite65, ERaWidgetPinWrite66, ERaWidgetPinWrite67, ERaWidgetPinWrite68, ERaWidgetPinWrite69,
+    ERaWidgetPinWrite70, ERaWidgetPinWrite71, ERaWidgetPinWrite72, ERaWidgetPinWrite73, ERaWidgetPinWrite74,
+    ERaWidgetPinWrite75, ERaWidgetPinWrite76, ERaWidgetPinWrite77, ERaWidgetPinWrite78, ERaWidgetPinWrite79,
+    ERaWidgetPinWrite80, ERaWidgetPinWrite81, ERaWidgetPinWrite82, ERaWidgetPinWrite83, ERaWidgetPinWrite84,
+    ERaWidgetPinWrite85, ERaWidgetPinWrite86, ERaWidgetPinWrite87, ERaWidgetPinWrite88, ERaWidgetPinWrite89,
+    ERaWidgetPinWrite90, ERaWidgetPinWrite91, ERaWidgetPinWrite92, ERaWidgetPinWrite93, ERaWidgetPinWrite94,
+    ERaWidgetPinWrite95, ERaWidgetPinWrite96, ERaWidgetPinWrite97, ERaWidgetPinWrite98, ERaWidgetPinWrite99,
 #endif
 };
 
-static const ERaPinReadHandler eraPinReadHandler[] = {
-    eraWidgetPinRead0, eraWidgetPinRead1, eraWidgetPinRead2, eraWidgetPinRead3, eraWidgetPinRead4,
-    eraWidgetPinRead5, eraWidgetPinRead6, eraWidgetPinRead7, eraWidgetPinRead8, eraWidgetPinRead9,
-    eraWidgetPinRead10, eraWidgetPinRead11, eraWidgetPinRead12, eraWidgetPinRead13, eraWidgetPinRead14,
-    eraWidgetPinRead15, eraWidgetPinRead16, eraWidgetPinRead17, eraWidgetPinRead18, eraWidgetPinRead19,
-    eraWidgetPinRead20, eraWidgetPinRead21, eraWidgetPinRead22, eraWidgetPinRead23, eraWidgetPinRead24,
-    eraWidgetPinRead25, eraWidgetPinRead26, eraWidgetPinRead27, eraWidgetPinRead28, eraWidgetPinRead29,
-    eraWidgetPinRead30, eraWidgetPinRead31, eraWidgetPinRead32, eraWidgetPinRead33, eraWidgetPinRead34,
-    eraWidgetPinRead35, eraWidgetPinRead36, eraWidgetPinRead37, eraWidgetPinRead38, eraWidgetPinRead39,
-    eraWidgetPinRead40, eraWidgetPinRead41, eraWidgetPinRead42, eraWidgetPinRead43, eraWidgetPinRead44,
-    eraWidgetPinRead45, eraWidgetPinRead46, eraWidgetPinRead47, eraWidgetPinRead48, eraWidgetPinRead49,
+static const ERaPinReadHandler ERaPinReadHandlerVector[] ERA_PROGMEM = {
+    ERaWidgetPinRead0, ERaWidgetPinRead1, ERaWidgetPinRead2, ERaWidgetPinRead3, ERaWidgetPinRead4,
+    ERaWidgetPinRead5, ERaWidgetPinRead6, ERaWidgetPinRead7, ERaWidgetPinRead8, ERaWidgetPinRead9,
+    ERaWidgetPinRead10, ERaWidgetPinRead11, ERaWidgetPinRead12, ERaWidgetPinRead13, ERaWidgetPinRead14,
+    ERaWidgetPinRead15, ERaWidgetPinRead16, ERaWidgetPinRead17, ERaWidgetPinRead18, ERaWidgetPinRead19,
+    ERaWidgetPinRead20, ERaWidgetPinRead21, ERaWidgetPinRead22, ERaWidgetPinRead23, ERaWidgetPinRead24,
+    ERaWidgetPinRead25, ERaWidgetPinRead26, ERaWidgetPinRead27, ERaWidgetPinRead28, ERaWidgetPinRead29,
+    ERaWidgetPinRead30, ERaWidgetPinRead31, ERaWidgetPinRead32, ERaWidgetPinRead33, ERaWidgetPinRead34,
+    ERaWidgetPinRead35, ERaWidgetPinRead36, ERaWidgetPinRead37, ERaWidgetPinRead38, ERaWidgetPinRead39,
+    ERaWidgetPinRead40, ERaWidgetPinRead41, ERaWidgetPinRead42, ERaWidgetPinRead43, ERaWidgetPinRead44,
+    ERaWidgetPinRead45, ERaWidgetPinRead46, ERaWidgetPinRead47, ERaWidgetPinRead48, ERaWidgetPinRead49,
 #if defined(ERA_100_PINS)
-    eraWidgetPinRead50, eraWidgetPinRead51, eraWidgetPinRead52, eraWidgetPinRead53, eraWidgetPinRead54,
-    eraWidgetPinRead55, eraWidgetPinRead56, eraWidgetPinRead57, eraWidgetPinRead58, eraWidgetPinRead59,
-    eraWidgetPinRead60, eraWidgetPinRead61, eraWidgetPinRead62, eraWidgetPinRead63, eraWidgetPinRead64,
-    eraWidgetPinRead65, eraWidgetPinRead66, eraWidgetPinRead67, eraWidgetPinRead68, eraWidgetPinRead69,
-    eraWidgetPinRead70, eraWidgetPinRead71, eraWidgetPinRead72, eraWidgetPinRead73, eraWidgetPinRead74,
-    eraWidgetPinRead75, eraWidgetPinRead76, eraWidgetPinRead77, eraWidgetPinRead78, eraWidgetPinRead79,
-    eraWidgetPinRead80, eraWidgetPinRead81, eraWidgetPinRead82, eraWidgetPinRead83, eraWidgetPinRead84,
-    eraWidgetPinRead85, eraWidgetPinRead86, eraWidgetPinRead87, eraWidgetPinRead88, eraWidgetPinRead89,
-    eraWidgetPinRead90, eraWidgetPinRead91, eraWidgetPinRead92, eraWidgetPinRead93, eraWidgetPinRead94,
-    eraWidgetPinRead95, eraWidgetPinRead96, eraWidgetPinRead97, eraWidgetPinRead98, eraWidgetPinRead99,
+    ERaWidgetPinRead50, ERaWidgetPinRead51, ERaWidgetPinRead52, ERaWidgetPinRead53, ERaWidgetPinRead54,
+    ERaWidgetPinRead55, ERaWidgetPinRead56, ERaWidgetPinRead57, ERaWidgetPinRead58, ERaWidgetPinRead59,
+    ERaWidgetPinRead60, ERaWidgetPinRead61, ERaWidgetPinRead62, ERaWidgetPinRead63, ERaWidgetPinRead64,
+    ERaWidgetPinRead65, ERaWidgetPinRead66, ERaWidgetPinRead67, ERaWidgetPinRead68, ERaWidgetPinRead69,
+    ERaWidgetPinRead70, ERaWidgetPinRead71, ERaWidgetPinRead72, ERaWidgetPinRead73, ERaWidgetPinRead74,
+    ERaWidgetPinRead75, ERaWidgetPinRead76, ERaWidgetPinRead77, ERaWidgetPinRead78, ERaWidgetPinRead79,
+    ERaWidgetPinRead80, ERaWidgetPinRead81, ERaWidgetPinRead82, ERaWidgetPinRead83, ERaWidgetPinRead84,
+    ERaWidgetPinRead85, ERaWidgetPinRead86, ERaWidgetPinRead87, ERaWidgetPinRead88, ERaWidgetPinRead89,
+    ERaWidgetPinRead90, ERaWidgetPinRead91, ERaWidgetPinRead92, ERaWidgetPinRead93, ERaWidgetPinRead94,
+    ERaWidgetPinRead95, ERaWidgetPinRead96, ERaWidgetPinRead97, ERaWidgetPinRead98, ERaWidgetPinRead99,
 #endif
 };
 
 ERaWriteHandler getERaWriteHandler(uint8_t pin) {
-    if (pin >= ERA_COUNT_OF(eraWriteHandler)) {
+    if (pin >= ERA_COUNT_OF(ERaWriteHandlerVector)) {
         return nullptr;
     }
-    return eraWriteHandler[pin];
+#if defined(ERA_HAS_PROGMEM)
+	return (ERaWriteHandler)pgm_read_ptr(&ERaWriteHandlerVector[pin]);
+#else
+    return ERaWriteHandlerVector[pin];
+#endif
 }
 
 ERaPinWriteHandler getERaPinWriteHandler(uint8_t pin) {
-    if (pin >= ERA_COUNT_OF(eraPinWriteHandler)) {
+    if (pin >= ERA_COUNT_OF(ERaPinWriteHandlerVector)) {
         return nullptr;
     }
-    return eraPinWriteHandler[pin];
+#if defined(ERA_HAS_PROGMEM)
+	return (ERaPinWriteHandler)pgm_read_ptr(&ERaPinWriteHandlerVector[pin]);
+#else
+    return ERaPinWriteHandlerVector[pin];
+#endif
 }
 
 ERaPinReadHandler getERaPinReadHandler(uint8_t pin) {
-    if (pin >= ERA_COUNT_OF(eraPinReadHandler)) {
+    if (pin >= ERA_COUNT_OF(ERaPinReadHandlerVector)) {
         return nullptr;
     }
-    return eraPinReadHandler[pin];
+#if defined(ERA_HAS_PROGMEM)
+	return (ERaPinReadHandler)pgm_read_ptr(&ERaPinReadHandlerVector[pin]);
+#else
+    return ERaPinReadHandlerVector[pin];
+#endif
 }

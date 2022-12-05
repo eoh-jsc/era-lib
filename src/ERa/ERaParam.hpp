@@ -26,11 +26,23 @@ public:
 		add(value);
 	}
 	~ERaParam()
-	{}
+	{
+		this->valueint = 0;
+		this->valuedouble = 0;
+		this->valuestring = nullptr;
+	}
 
 	template <typename T>
 	void add(T value) {
 		addParam(value);
+	}
+
+	void add_static(char* value) {
+		this->valuestring = value;
+	}
+
+	void add_static(const char* value) {
+		this->valuestring = const_cast<char*>(value);
 	}
 
 	template <typename T>
@@ -67,6 +79,10 @@ private:
 	}
 
 	void addParam(cJSON* value) {
+		this->valuestring = cJSON_PrintUnformatted(value);
+	}
+
+	void addParam(const cJSON* value) {
 		this->valuestring = cJSON_PrintUnformatted(value);
 	}
 };

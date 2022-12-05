@@ -29,6 +29,16 @@ private:
     void createDevice(cJSON* const root, const IdentDeviceAddr_t& deviceInfo);
     void checkDevice();
 
+	inline
+	const Zigbee& thisZigbee() const {
+		return static_cast<const Zigbee&>(*this);
+	}
+
+	inline
+	Zigbee& thisZigbee() {
+		return static_cast<Zigbee&>(*this);
+	}
+
     InfoDevice_t*& device;
     InfoCoordinator_t*& coordinator;
 };
@@ -68,7 +78,7 @@ void ERaDBZigbee<Zigbee>::parseDevice(const cJSON* const root) {
 template <class Zigbee>
 void ERaDBZigbee<Zigbee>::parseZigbeeDevice() {
     char* ptr = nullptr;
-    ptr = static_cast<Zigbee*>(this)->readDataFromFlash(FILENAME_DEVICES);
+    ptr = this->thisZigbee().readDataFromFlash(FILENAME_DEVICES);
     if (ptr == nullptr) {
         return;
     }
@@ -138,7 +148,7 @@ void ERaDBZigbee<Zigbee>::storeZigbeeDevice() {
 	char* ptr = cJSON_PrintUnformatted(root);
     if (ptr != nullptr) {
         //store
-        static_cast<Zigbee*>(this)->writeDataToFlash(FILENAME_DEVICES, ptr);
+        this->thisZigbee().writeDataToFlash(FILENAME_DEVICES, ptr);
     }
     cJSON_Delete(root);
     free(ptr);

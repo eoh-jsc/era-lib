@@ -25,6 +25,7 @@ class ERaMqtt
     const char* TAG = "MQTT";
     const char* ONLINE_MESSAGE = R"json({"ol":1})json";
     const char* OFFLINE_MESSAGE = R"json({"ol":0})json";
+    const char* ONLINE_MESSAGE_INFO = R"json({"ol":1,"wifi_ssid":"%s"})json";
     const char* LWT_TOPIC = "/is_online";
     const bool LWT_RETAINED = true;
     const int LWT_QOS = QoST::QOS1;
@@ -36,6 +37,8 @@ public:
         , port(ERA_MQTT_PORT)
         , username(ERA_MQTT_USERNAME)
         , password(ERA_MQTT_PASSWORD)
+        , ssid(NULL)
+        , ping(0L)
         , mutex(NULL)
     {
         memset(this->willTopic, 0, sizeof(this->willTopic));
@@ -46,6 +49,8 @@ public:
         , port(ERA_MQTT_PORT)
         , username(ERA_MQTT_USERNAME)
         , password(ERA_MQTT_PASSWORD)
+        , ssid(NULL)
+        , ping(0L)
         , mutex(NULL)
     {
         this->setClient(&_client);
@@ -60,15 +65,31 @@ public:
 
     void config(const char* _host, uint16_t _port, const char* _user, const char* _password);
     bool connect();
-    void run();
+    bool run();
     bool publishData(const char* topic, const char* payload);
 
+    void setTimeout(uint32_t timeout) {
+        this->mqtt.setTimeout(timeout);
+    }
+
     void setTopic(const char* topic) {
-        this->eraTopic = topic;
+        this->ERaTopic = topic;
     }
 
     void setAuth(const char* auth) {
-        this->eraAuth = auth;
+        this->ERaAuth = auth;
+    }
+
+    void setSSID(const char* _ssid) {
+        this->ssid = _ssid;
+    }
+
+    const char* getSSID() {
+        return this->ssid;
+    }
+
+    MillisTime_t getPing() {
+        return this->ping;
     }
 
     void onMessage(MessageCallback cb) {
@@ -86,8 +107,10 @@ private:
     uint16_t port;
     const char* username;
     const char* password;
-    const char* eraTopic;
-    const char* eraAuth;
+    const char* ERaTopic;
+    const char* ERaAuth;
+    const char* ssid;
+    MillisTime_t ping;
     char willTopic[MAX_TOPIC_LENGTH];
     ERaMutex_t mutex;
 };
@@ -99,9 +122,9 @@ void ERaMqtt<Client, MQTT>::config(const char* _host, uint16_t _port, const char
     this->username = _user;
     this->password = _password;
     ClearArray(this->willTopic);
-    FormatString(this->willTopic, this->eraTopic);
+    FormatString(this->willTopic, this->ERaTopic);
     FormatString(this->willTopic, LWT_TOPIC);
-    this->mqtt.setKeepAlive(60);
+    this->mqtt.setKeepAlive(ERA_MQTT_KEEPALIVE);
     this->mqtt.setWill(this->willTopic, OFFLINE_MESSAGE, LWT_RETAINED, LWT_QOS);
     this->mqtt.begin(this->host, this->port, *this->client);
 }
@@ -110,8 +133,8 @@ template <class Client, class MQTT>
 bool ERaMqtt<Client, MQTT>::connect() {
     size_t count {0};
     this->mqtt.disconnect();
-    while (this->mqtt.connect(this->eraAuth, this->username, this->password) == false) {
-        ERA_LOG(TAG, "MQTT: connect failed, retrying in 5 seconds");
+    while (this->mqtt.connect(this->ERaAuth, this->username, this->password) == false) {
+        ERA_LOG(TAG, ERA_PSTR("MQTT: connect failed, retrying in 5 seconds"));
         ERaDelay(5000);
         if (++count >= LIMIT_CONNECT_BROKER_MQTT) {
             return false;
@@ -119,26 +142,28 @@ bool ERaMqtt<Client, MQTT>::connect() {
     }
 
 #if defined(ERA_ZIGBEE)
-    subscribeTopic(this->eraTopic, "/zigbee/+/down", QoST::QOS0);
-    subscribeTopic(this->eraTopic, "/zigbee/permit_to_join", QoST::QOS0);
-    subscribeTopic(this->eraTopic, "/zigbee/remove_device", QoST::QOS0);
+    subscribeTopic(this->ERaTopic, "/zigbee/+/down", QoST::QOS0);
+    subscribeTopic(this->ERaTopic, "/zigbee/permit_to_join", QoST::QOS0);
+    subscribeTopic(this->ERaTopic, "/zigbee/remove_device", QoST::QOS0);
 #endif
 
-    subscribeTopic(this->eraTopic, "/arduino_pin/+", QoST::QOS0);
-    subscribeTopic(this->eraTopic, "/pin/down", QoST::QOS0);
-    subscribeTopic(this->eraTopic, "/down", QoST::QOS0);
+    subscribeTopic(this->ERaTopic, "/arduino_pin/+", QoST::QOS0);
+    subscribeTopic(this->ERaTopic, "/pin/down", QoST::QOS0);
+    subscribeTopic(this->ERaTopic, "/down", QoST::QOS0);
 
     this->publishLWT();
 
+	ERaOnConnected();
     return true;
 }
 
 template <class Client, class MQTT>
-void ERaMqtt<Client, MQTT>::run() {
+bool ERaMqtt<Client, MQTT>::run() {
     if (!this->mqtt.loop()) {
-        eraOnDisconnected();
-        this->connect();
+        ERaOnDisconnected();
+        return this->connect();
     }
+    return true;
 }
 
 template <class Client, class MQTT>
@@ -150,7 +175,7 @@ bool ERaMqtt<Client, MQTT>::subscribeTopic(const char* baseTopic, const char* to
 
     ERaGuardLock(this->mutex);
     if (this->mqtt.connected()) {
-        ERA_LOG(TAG, "Subscribe: %s, QoS: %d", topicName, qos);
+        ERA_LOG(TAG, ERA_PSTR("Subscribe: %s, QoS: %d"), topicName, qos);
         status = this->mqtt.subscribe(topicName, qos);
     }
     ERaGuardUnlock(this->mutex);
@@ -164,7 +189,7 @@ bool ERaMqtt<Client, MQTT>::publishData(const char* topic, const char* payload) 
 
     ERaGuardLock(this->mutex);
     if (this->mqtt.connected()) {
-        ERA_LOG(TAG, "Publish %s: %s", topic, payload);
+        ERA_LOG(TAG, ERA_PSTR("Publish %s: %s"), topic, payload);
         status = this->mqtt.publish(topic, payload);
     }
     ERaGuardUnlock(this->mutex);
@@ -175,11 +200,20 @@ bool ERaMqtt<Client, MQTT>::publishData(const char* topic, const char* payload) 
 template <class Client, class MQTT>
 bool ERaMqtt<Client, MQTT>::publishLWT() {
     bool status {false};
+    char payload[100] {0};
+    if (this->getSSID() == nullptr) {
+        FormatString(payload, ONLINE_MESSAGE);
+    }
+    else {
+        FormatString(payload, ONLINE_MESSAGE_INFO, this->getSSID());
+    }
 
     ERaGuardLock(this->mutex);
     if (this->mqtt.connected()) {
-        ERA_LOG(TAG, "Publish %s: %s", this->willTopic, ONLINE_MESSAGE);
-        status = this->mqtt.publish(this->willTopic, ONLINE_MESSAGE, LWT_RETAINED, LWT_QOS);
+        ERA_LOG(TAG, ERA_PSTR("Publish %s: %s"), this->willTopic, payload);
+        this->ping = ERaMillis();
+        status = this->mqtt.publish(this->willTopic, payload, LWT_RETAINED, LWT_QOS);
+        this->ping = ERaMillis() - this->ping;
     }
     ERaGuardUnlock(this->mutex);
 

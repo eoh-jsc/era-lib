@@ -1,6 +1,9 @@
 #ifndef INC_ERA_CONFIG_HPP_
 #define INC_ERA_CONFIG_HPP_
 
+#if !defined(ERA_MODEL_TYPE)
+    #define ERA_MODEL_TYPE          "ERa"
+#endif
 #define ERA_FIRMWARE_VERSION        "1.0.0"
 
 #define MAX_TOPIC_LENGTH            100
@@ -42,6 +45,12 @@
     #define ERA_MQTT_PASSWORD       ""
 #endif
 
+#if defined(DEFAULT_MQTT_KEEPALIVE)
+    #define ERA_MQTT_KEEPALIVE      DEFAULT_MQTT_KEEPALIVE
+#else
+    #define ERA_MQTT_KEEPALIVE      60
+#endif
+
 #define LIMIT_CONNECT_BROKER_MQTT   10
 
 #define INFO_BOARD                  "board"
@@ -53,6 +62,7 @@
 #define INFO_RSSI                   "rssi"
 #define INFO_MAC                    "mac"
 #define INFO_LOCAL_IP               "ip"
+#define INFO_PING                   "ping"
 
 #define INFO_MB_CHIP_TEMPERATURE    "chip_temperature"
 #define INFO_MB_TEMPERATURE         "temperature"

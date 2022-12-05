@@ -1,12 +1,11 @@
 #ifndef INC_ERA_SIMPLE_SERIAL_HPP_
 #define INC_ERA_SIMPLE_SERIAL_HPP_
 
+#define ERA_NO_RTOS
+
 #include <Adapters/ERaSerialClient.hpp>
 #include <Modbus/ERaModbusArduino.hpp>
-#include <Utility/ERaFlashArduino.hpp>
-
-#define ERA_MODEL_TYPE                "ERa"
-#define ERA_BOARD_TYPE                "Stream"
+#include <Utility/ERaFlashConfig.hpp>
 
 #if defined(ERA_MODBUS)
     template <class Api>
@@ -41,13 +40,14 @@ template <class Proto, class Flash>
 void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
     cJSON_AddStringToObject(root, INFO_BOARD, ERA_BOARD_TYPE);
     cJSON_AddStringToObject(root, INFO_MODEL, ERA_MODEL_TYPE);
-	cJSON_AddStringToObject(root, INFO_AUTH_TOKEN, static_cast<Proto*>(this)->ERA_AUTH);
+	cJSON_AddStringToObject(root, INFO_AUTH_TOKEN, this->thisProto().ERA_AUTH);
     cJSON_AddStringToObject(root, INFO_FIRMWARE_VERSION, ERA_FIRMWARE_VERSION);
-    cJSON_AddStringToObject(root, INFO_SSID, "Stream");
-    cJSON_AddStringToObject(root, INFO_BSSID, "Stream");
+    cJSON_AddStringToObject(root, INFO_SSID, ERA_PROTO_TYPE);
+    cJSON_AddStringToObject(root, INFO_BSSID, ERA_PROTO_TYPE);
     cJSON_AddNumberToObject(root, INFO_RSSI, 100);
-    cJSON_AddStringToObject(root, INFO_MAC, "Stream");
-    cJSON_AddStringToObject(root, INFO_LOCAL_IP, "Stream");
+    cJSON_AddStringToObject(root, INFO_MAC, ERA_PROTO_TYPE);
+    cJSON_AddStringToObject(root, INFO_LOCAL_IP, ERA_PROTO_TYPE);
+    cJSON_AddNumberToObject(root, INFO_PING, this->thisProto().transp.getPing());
 }
 
 template <class Proto, class Flash>
@@ -57,7 +57,7 @@ void ERaApi<Proto, Flash>::addModbusInfo(cJSON* root) {
 	cJSON_AddNumberToObject(root, INFO_MB_VOLTAGE, 999);
 	cJSON_AddNumberToObject(root, INFO_MB_IS_BATTERY, 0);
 	cJSON_AddNumberToObject(root, INFO_MB_RSSI, 100);
-	cJSON_AddStringToObject(root, INFO_MB_WIFI_USING, "Stream");
+	cJSON_AddStringToObject(root, INFO_MB_WIFI_USING, ERA_PROTO_TYPE);
 }
 
 static ERaMqtt<ERaClient, MQTTClient> mqtt;

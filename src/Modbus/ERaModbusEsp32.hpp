@@ -10,7 +10,7 @@
 template <class Api>
 void ERaModbus<Api>::configModbus() {
     uart_config_t config = {
-        .baud_rate = 9600,
+        .baud_rate = MODBUS_BAUDRATE,
         .data_bits = UART_DATA_8_BITS,
         .parity = UART_PARITY_DISABLE,
         .stop_bits = UART_STOP_BITS_1,
@@ -24,7 +24,7 @@ void ERaModbus<Api>::configModbus() {
 
 template <class Api>
 void ERaModbus<Api>::setBaudRate(uint32_t baudrate) {
-    eraModbusBaudrate(baudrate);
+    ERaModbusBaudrate(baudrate);
     uart_flush(UART_MODBUS);
     uart_set_baudrate(UART_MODBUS, baudrate);
 }
@@ -70,8 +70,8 @@ bool ERaModbus<Api>::waitResponse(ModbusConfig_t& param, uint8_t* modbusData) {
         }
         else {
 #if defined(ERA_NO_RTOS)
-            eraOnWaiting();
-            static_cast<Api*>(this)->run();
+            ERaOnWaiting();
+            this->thisApi().run();
 #endif
             if (ModbusState::is(ModbusStateT::STATE_MB_PARSE)) {
                 break;

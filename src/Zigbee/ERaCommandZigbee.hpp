@@ -231,6 +231,16 @@ protected:
     ResultT stopWithOnOffGenLevelCtrl(AFAddrType_t& dstAddr);
 
 private:
+	inline
+	const ToZigbee& thisToZigbee() const {
+		return static_cast<const ToZigbee&>(*this);
+	}
+
+	inline
+	ToZigbee& thisToZigbee() {
+		return static_cast<ToZigbee&>(*this);
+	}
+
 	HeaderZclFrame_t zclHeader01;
 	HeaderZclFrame_t zclHeader10;
 	HeaderZclFrame_t zclHeader11;
@@ -269,10 +279,10 @@ ResultT ERaCommandZigbee<ToZigbee>::defaultResponse(const DefaultRsp_t& defaultR
 	vector<uint8_t> payload;
 	payload.push_back(defaultRsp.cmdId);
 	payload.push_back(statusCode);
-    return static_cast<ToZigbee*>(this)->sendCommandIdZigbee(this->zclHeaderRsp, dstAddr,
-															defaultRsp.srcEndpoint, {defaultRsp.zclId, CommandIdT::DEFAULT_RSP, &payload},
-															AFCommandsT::AF_DATA_CONFIRM, nullptr,
-															DEFAULT_TIMEOUT, const_cast<uint8_t*>(&defaultRsp.transId));
+    return this->thisToZigbee().sendCommandIdZigbee(this->zclHeaderRsp, dstAddr,
+													defaultRsp.srcEndpoint, {defaultRsp.zclId, CommandIdT::DEFAULT_RSP, &payload},
+													AFCommandsT::AF_DATA_CONFIRM, nullptr,
+													DEFAULT_TIMEOUT, const_cast<uint8_t*>(&defaultRsp.transId));
 }
 
 template <class ToZigbee>
@@ -283,9 +293,9 @@ ResultT ERaCommandZigbee<ToZigbee>::permitJoinRequest(AFAddrType_t& dstAddr, uin
 	payload.push_back(HI_UINT16(dstAddr.addr.nwkAddr));
 	payload.push_back(seconds);
 	payload.push_back(0x00); /* Trust Center Significance */
-	return static_cast<ToZigbee*>(this)->createCommandBuffer(payload, TypeT::SREQ,
-															SubsystemT::ZDO_INTER, ZDOCommandsT::ZDO_MGMT_PERMIT_JOIN_REQ,
-															TypeT::AREQ, ZDOCommandsT::ZDO_MGMT_PERMIT_JOIN_RSP); /* Set the Permit Join for the destination device */
+	return this->thisToZigbee().createCommandBuffer(payload, TypeT::SREQ,
+													SubsystemT::ZDO_INTER, ZDOCommandsT::ZDO_MGMT_PERMIT_JOIN_REQ,
+													TypeT::AREQ, ZDOCommandsT::ZDO_MGMT_PERMIT_JOIN_RSP); /* Set the Permit Join for the destination device */
 }
 
 #include "cmdZigbee/ERaCmdDevice.hpp"

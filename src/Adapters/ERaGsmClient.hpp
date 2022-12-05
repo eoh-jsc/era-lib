@@ -1,13 +1,23 @@
 #ifndef INC_ERA_GSM_CLIENT_HPP_
 #define INC_ERA_GSM_CLIENT_HPP_
 
+#if !defined(ERA_PROTO_TYPE)
+    #define ERA_PROTO_TYPE            "GSM"
+#endif
+
 #include <TinyGsmClient.h>
-#include <ERa/ERaApiStm32Def.hpp>
 #include <ERa/ERaProtocol.hpp>
-#include <ERa/ERaApiStm32.hpp>
 #include <MQTT/ERaMqtt.hpp>
 
 #define GSM_NET_CONNECT_TIMEOUT      3 * 60000
+
+typedef struct __ERaConfig_t {
+    char apn[64];
+    char user[64];
+    char pass[64];
+} ERA_ATTR_PACKED ERaConfig_t;
+
+static ERaConfig_t eraConfig{0};
 
 class ERaFlash;
 
@@ -40,41 +50,41 @@ public:
     }
 
     bool connectGPRS(const char* apn, const char* user, const char* pass) {
-        ERA_LOG(TAG, "Restarting modem...");
+        ERA_LOG(TAG, ERA_PSTR("Restarting modem..."));
         this->restart();
 
-        ERA_LOG(TAG, "Modem init");
+        ERA_LOG(TAG, ERA_PSTR("Modem init"));
         if (!this->modem->begin()) {
-            ERA_LOG(TAG, "Can't init modem");
+            ERA_LOG(TAG, ERA_PSTR("Can't init modem"));
             return false;
         }
 
         switch (this->modem->getSimStatus()) {
             case SimStatus::SIM_ERROR:
-                ERA_LOG(TAG, "SIM is missing");
+                ERA_LOG(TAG, ERA_PSTR("SIM is missing"));
                 break;
             case SimStatus::SIM_LOCKED:
-                ERA_LOG(TAG, "SIM is PIN-locked");
+                ERA_LOG(TAG, ERA_PSTR("SIM is PIN-locked"));
                 break;
             default:
                 break;
         }
 
-        ERA_LOG(TAG, "Connecting to network...");
+        ERA_LOG(TAG, ERA_PSTR("Connecting to network..."));
         if (this->modem->waitForNetwork()) {
-            ERA_LOG(TAG, "Network: %s", modem->getOperator().c_str());
+            ERA_LOG(TAG, ERA_PSTR("Network: %s"), modem->getOperator().c_str());
         }
         else {
-            ERA_LOG(TAG, "Register in network failed");
+            ERA_LOG(TAG, ERA_PSTR("Register in network failed"));
         }
 
-        ERA_LOG(TAG, "Connecting to %s...", apn);
+        ERA_LOG(TAG, ERA_PSTR("Connecting to %s..."), apn);
         if (!this->modem->gprsConnect(apn, user, pass)) {
-            ERA_LOG(TAG, "Connect GPRS failed");
+            ERA_LOG(TAG, ERA_PSTR("Connect GPRS failed"));
             return false;
         }
 
-        ERA_LOG(TAG, "Connected to GPRS");
+        ERA_LOG(TAG, ERA_PSTR("Connected to GPRS"));
         return true;
     }
 
@@ -105,7 +115,7 @@ public:
         this->config(gsm, auth, host, port, username, password);
         this->setPower(pwrPin);
         this->connectNetwork(apn, user, pass);
-        Base::connect();
+        this->setNetwork(apn, user, pass);
     }
 
     void begin(TinyGsm& gsm,
@@ -113,17 +123,42 @@ public:
                 const char* user,
                 const char* pass,
                 int pwrPin = -1) {
-        Base::init();
-        this->config(gsm, ERA_MQTT_CLIENT_ID,
-                    ERA_MQTT_HOST, ERA_MQTT_PORT,
+        this->begin(ERA_MQTT_CLIENT_ID, gsm, apn, user, pass,
+                    pwrPin, ERA_MQTT_HOST, ERA_MQTT_PORT,
                     ERA_MQTT_USERNAME, ERA_MQTT_PASSWORD);
-        this->setPower(pwrPin);
-        this->connectNetwork(apn, user, pass);
-        Base::connect();
+    }
+
+    void run() {
+        switch (ERaState::get()) {
+            case StateT::STATE_CONNECTING_CLOUD:
+                if (Base::connect()) {
+                    ERaState::set(StateT::STATE_CONNECTED);
+                }
+                break;
+            case StateT::STATE_CONNECTED:
+                ERaState::set(StateT::STATE_RUNNING);
+                break;
+            case StateT::STATE_RUNNING:
+                Base::run();
+                break;
+            default:
+                if (this->modem->isNetworkConnected() ||
+                    this->connectNetwork(eraConfig.apn,
+                                        eraConfig.user, eraConfig.pass)) {
+                    ERaState::set(StateT::STATE_CONNECTING_CLOUD);
+                }
+                break;
+        }
     }
 
 protected:
 private:
+    void setNetwork(const char* apn, const char* user, const char* pass) {
+        CopyToArray(apn, eraConfig.apn);
+        CopyToArray(user, eraConfig.user);
+        CopyToArray(pass, eraConfig.pass);
+    }
+
     void setPower(int pin) {
         this->powerPin = pin;
     }

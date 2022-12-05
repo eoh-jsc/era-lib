@@ -15,6 +15,7 @@ static const ClusterIDT AllZclId[] = {
 
     /* Measurement Cluster IDs */
     ClusterIDT::ZCL_CLUSTER_MEAS_TEMPERATURE,
+    ClusterIDT::ZCL_CLUSTER_MEAS_PRESSURE,
     ClusterIDT::ZCL_CLUSTER_MEAS_HUMIDITY,
 
     /* Security Cluster IDs */
@@ -50,6 +51,9 @@ static const StringifyZcl_t StrifyZcl[] = {
     },
     {
         ClusterIDT::ZCL_CLUSTER_MEAS_TEMPERATURE, "msTemperatureMeasurement"
+    },
+    {
+        ClusterIDT::ZCL_CLUSTER_MEAS_PRESSURE, "msPressureMeasurement"
     },
     {
         ClusterIDT::ZCL_CLUSTER_MEAS_HUMIDITY, "msRelativeHumidity"
@@ -94,8 +98,13 @@ static const KeyDataZigbee_t KeyDataZb[] = {
 	},
     {
 		ClusterIDT::ZCL_CLUSTER_MEAS_TEMPERATURE, 1, {
-			KEY(MEAS_TEMPERATURE, MEAS_VAL) 
+			KEY(MEAS_TEMPERATURE, MEAS_VAL)
 		}
+    },
+    {
+        ClusterIDT::ZCL_CLUSTER_MEAS_PRESSURE, 1, {
+            KEY(MEAS_PRESSURE, MEAS_VAL)
+        }
     },
     {
 		ClusterIDT::ZCL_CLUSTER_MEAS_HUMIDITY, 1, {

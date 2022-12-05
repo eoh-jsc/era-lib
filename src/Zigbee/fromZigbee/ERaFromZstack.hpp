@@ -172,6 +172,15 @@ void ERaFromZigbee<Zigbee>::processTCDeviceIndication(vector<uint8_t>& data, voi
     }
     uint16_t nwkAddr = BUILD_UINT16(data.at(0));
     uint16_t parentAddr = BUILD_UINT16(data.at(10));
+    uint8_t ieeeAddr[LENGTH_EXTADDR_IEEE] {0};
+    CopyToArray(data.at(2), ieeeAddr, LENGTH_EXTADDR_IEEE);
+    if (ZigbeeState::is(ZigbeeStateT::STATE_ZB_DEVICE_JOINED)) {
+        if (CompareArray(this->device->address.addr.ieeeAddr, ieeeAddr) &&
+            (this->device->address.addr.nwkAddr != nwkAddr)) {
+            this->device->address.addr.nwkAddr = nwkAddr;
+        }
+        return;
+    }
     if (!ZigbeeState::is(ZigbeeStateT::STATE_ZB_PERMIT_JOIN)) {
         return;
     }
@@ -218,13 +227,15 @@ void ERaFromZigbee<Zigbee>::processDeviceAnnounce(vector<uint8_t>& data, void* v
 	this->device->annceDevice.power = static_cast<PowerSourceT>((data.at(12) >> 2) & 0x01);
 	this->device->annceDevice.isIdle = static_cast<bool>((data.at(12) >> 3) & 0x01);
 	if (this->device->annceDevice.type == TypeAnnceDeviceT::ANNCE_ENDDEVICE) {
-        static_cast<Zigbee*>(this)->Zigbee::ToZigbee::CommandZigbee::extRouterDiscovery(this->device->address,
-                                    static_cast<Zigbee*>(this)->Options, static_cast<Zigbee*>(this)->Radius);
+        this->thisZigbee().Zigbee::ToZigbee::CommandZigbee::extRouterDiscovery(this->device->address,
+                                    this->thisZigbee().Options, this->thisZigbee().Radius);
     }
-    if ((this->device->address.addr.nwkAddr != this->device->annceDevice.dstAddr.addr.nwkAddr) ||
-        !CompareArray(this->device->address.addr.ieeeAddr, this->device->annceDevice.dstAddr.addr.ieeeAddr)) {
+    if (!CompareArray(this->device->address.addr.ieeeAddr, this->device->annceDevice.dstAddr.addr.ieeeAddr)) {
         this->createDeviceEvent(DeviceEventT::DEVICE_EVENT_ANNOUNCE);
         return;
+    }
+    if (this->device->address.addr.nwkAddr != this->device->annceDevice.dstAddr.addr.nwkAddr) {
+        this->device->address.addr.nwkAddr = this->device->annceDevice.dstAddr.addr.nwkAddr;
     }
     if (ZigbeeState::is(ZigbeeStateT::STATE_ZB_DEVICE_JOINED)) {
         ZigbeeState::set(ZigbeeStateT::STATE_ZB_DEVICE_INTERVIEWING);
@@ -242,7 +253,7 @@ void ERaFromZigbee<Zigbee>::processDeviceLeave(vector<uint8_t>& data, void* valu
 	bool request = data.at(10);
 	bool remove = data.at(11);
 	bool rejoin = data.at(12);
-    static_cast<Zigbee*>(this)->Zigbee::ToZigbee::CommandZigbee::removeDevice(srcAddr, false, false, false);
+    this->thisZigbee().Zigbee::ToZigbee::CommandZigbee::removeDevice(srcAddr, false, false, false);
     this->createDeviceEvent(DeviceEventT::DEVICE_EVENT_LEAVE, &srcAddr);
 }
 

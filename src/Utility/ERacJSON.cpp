@@ -38,7 +38,7 @@ CJSON_PUBLIC(cJSON*) cJSON_AddNumberWithDecimalToObject(cJSON* const object, con
 		d /= 10;
 	} while (d);
 
-	while (std::abs(n) < 1.f && --decimal) {
+	while (abs(n) < 1.f && --decimal) {
 		n *= 10;
 	}
 
@@ -63,7 +63,7 @@ CJSON_PUBLIC(cJSON*) cJSON_CreateNumberWithDecimalToObject(const double number, 
 		d /= 10;
 	} while (d);
 
-	while (std::abs(n) < 1.f && --decimal) {
+	while (abs(n) < 1.f && --decimal) {
 		n *= 10;
 	}
 

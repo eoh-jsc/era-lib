@@ -314,8 +314,8 @@ bool ERaFromZigbee<Zigbee>::getDataAttributes(const DataAFMsg_t& afMsg, DefaultR
 					defaultRsp.attribute = attrRsp;
 					defaultRsp.value = value;
                     /* Queue Zigbee Rsp */
-                    if (static_cast<Zigbee*>(this)->queueDefaultRsp.writeable()) {
-                        static_cast<Zigbee*>(this)->queueDefaultRsp += defaultRsp;
+                    if (this->thisZigbee().queueDefaultRsp.writeable()) {
+                        this->thisZigbee().queueDefaultRsp += defaultRsp;
                     }
 					defaultRsp.isFirst = false;
 					defaultRsp.isSent = true;
@@ -329,7 +329,7 @@ bool ERaFromZigbee<Zigbee>::getDataAttributes(const DataAFMsg_t& afMsg, DefaultR
             case ClusterIDT::ZCL_CLUSTER_BASIC:
                 break;
             default:
-                static_cast<Zigbee*>(this)->publishZigbeeData(deviceInfo);
+                this->thisZigbee().publishZigbeeData(deviceInfo);
                 break;
         }
     }
@@ -365,7 +365,7 @@ bool ERaFromZigbee<Zigbee>::getDataAttributesRsp(const DataAFMsg_t& afMsg, Defau
     }
 
     if (status) {
-        static_cast<Zigbee*>(this)->Zigbee::ToZigbee::CommandZigbee::readAttributesResponse(afMsg.srcAddr, afMsg.srcAddr.endpoint,
+        this->thisZigbee().Zigbee::ToZigbee::CommandZigbee::readAttributesResponse(afMsg.srcAddr, afMsg.srcAddr.endpoint,
                                                                                             afMsg.zclId, defaultRsp.manufCode, listData,
                                                                                             AFCommandsT::AF_DATA_CONFIRM, &defaultRsp.transId);
     }

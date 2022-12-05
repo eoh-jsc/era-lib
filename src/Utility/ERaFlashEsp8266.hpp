@@ -29,11 +29,11 @@ private:
 void ERaFlash::begin() {
     SPIFFS.end();
     if (!SPIFFS.begin()) {
-        ERA_LOG(TAG, "ERa flash init FAILED");
+        ERA_LOG(TAG, ERA_PSTR("ERa flash init FAILED"));
     }
     this->preferences.end();
     if (!this->preferences.begin("era", false)) {
-        ERA_LOG(TAG, "ERa flash init FAILED");
+        ERA_LOG(TAG, ERA_PSTR("ERa flash init FAILED"));
     }
 }
 

@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include "../../../ERa/ERaDefine.hpp"
 
 /**
  * The error type used by all exposed APIs.

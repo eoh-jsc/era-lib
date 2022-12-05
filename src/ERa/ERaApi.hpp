@@ -24,18 +24,16 @@ typedef struct __ERaRsp_t {
     ERaParam param;
 } ERaRsp_t;
 
+class Internal {};
+
 template <class Proto, class Flash>
-class ERaApi 
-#if defined(ERA_MODBUS) && \
-	defined(ERA_ZIGBEE)
-	: public ERaModbus< ERaApi<Proto, Flash> >
+class ERaApi
+	: public Internal
+#if defined(ERA_MODBUS)
+	, public ERaModbus< ERaApi<Proto, Flash> >
+#endif
+#if defined(ERA_ZIGBEE)
 	, public ERaZigbee< ERaApi<Proto, Flash> >
-#elif defined(ERA_MODBUS) && \
-	!defined(ERA_ZIGBEE)
-	: public ERaModbus< ERaApi<Proto, Flash> >
-#elif !defined(ERA_MODBUS) && \
-	defined(ERA_ZIGBEE)
-	: public ERaZigbee< ERaApi<Proto, Flash> >
 #endif
 {
 protected:
@@ -78,7 +76,7 @@ public:
 		rsp.type = ERaTypeRspT::ERA_RESPONSE_VIRTUAL_PIN;
 		rsp.id = pin;
 		rsp.param = value;
-		static_cast<Proto*>(this)->sendCommand(rsp);
+		this->thisProto().sendCommand(rsp);
 	}
 
 	void digitalWrite(int pin, bool value) {
@@ -86,7 +84,7 @@ public:
 		rsp.type = ERaTypeRspT::ERA_RESPONSE_DIGITAL_PIN;
 		rsp.id = pin;
 		rsp.param = value;
-		static_cast<Proto*>(this)->sendCommand(rsp);
+		this->thisProto().sendCommand(rsp);
 	}
 
 	void analogWrite(int pin, int value) {
@@ -94,7 +92,7 @@ public:
 		rsp.type = ERaTypeRspT::ERA_RESPONSE_ANALOG_PIN;
 		rsp.id = pin;
 		rsp.param = value;
-		static_cast<Proto*>(this)->sendCommand(rsp);
+		this->thisProto().sendCommand(rsp);
 	}
 
 	void pwmWrite(int pin, int value) {
@@ -102,7 +100,7 @@ public:
 		rsp.type = ERaTypeRspT::ERA_RESPONSE_PWM_PIN;
 		rsp.id = pin;
 		rsp.param = value;
-		static_cast<Proto*>(this)->sendCommand(rsp);
+		this->thisProto().sendCommand(rsp);
 	}
 
 	template <typename T>
@@ -111,7 +109,7 @@ public:
 		rsp.type = ERaTypeRspT::ERA_RESPONSE_CONFIG_ID;
 		rsp.id = configId;
 		rsp.param = value;
-		static_cast<Proto*>(this)->sendCommand(rsp);
+		this->thisProto().sendCommand(rsp);
 	}
 
 	template <typename T, typename... Args>
@@ -123,13 +121,12 @@ public:
 	template <typename... Args>
 	void configIdMultiWrite(Args... tail) {
 		ERaRsp_t rsp;
-		char mem[ERA_BUFFER_SIZE] {0};
-		ERaDataBuff data(mem, sizeof(mem));
+		ERaDataJson data;
+		data.add_multi(tail...);
 		rsp.type = ERaTypeRspT::ERA_RESPONSE_CONFIG_ID_MULTI;
 		rsp.id = 0;
-		rsp.param = 0;
-		data.add_multi(tail...);
-		static_cast<Proto*>(this)->sendCommand(rsp, &data);
+		rsp.param = data.getJson();
+		this->thisProto().sendCommand(rsp);
 	}
 
 	void modbusDataWrite(ERaDataBuff* value) {
@@ -137,7 +134,7 @@ public:
 		rsp.type = ERaTypeRspT::ERA_RESPONSE_MODBUS_DATA;
 		rsp.id = 0;
 		rsp.param = 0;
-		static_cast<Proto*>(this)->sendCommand(rsp, value);
+		this->thisProto().sendCommand(rsp, value);
 	}
 
 	void zigbeeDataWrite(const char* id, cJSON* value) {
@@ -145,7 +142,13 @@ public:
 		rsp.type = ERaTypeRspT::ERA_RESPONSE_ZIGBEE_DATA;
 		rsp.id = id;
 		rsp.param = value;
-		static_cast<Proto*>(this)->sendCommand(rsp);
+		this->thisProto().sendCommand(rsp);
+	}
+
+	void osStarts() {
+#if defined(ERA_RTOS) && !defined(ERA_NO_RTOS)
+		osStartsScheduler();
+#endif
 	}
 
 protected:
@@ -156,10 +159,10 @@ protected:
 	void handlePinRequest(const std::vector<std::string>& arrayTopic, const std::string& payload);
 	void processArduinoPinRequest(const std::vector<std::string>& arrayTopic, const std::string& payload);
 
-	void run() {
-        static_cast<Proto*>(this)->transp.run();
-		this->eraPinReport.run();
+	bool run() {
 		ERA_RUN_YIELD();
+		this->eraPinReport.run();
+        return this->thisProto().transp.run();
 	}
 
 	void callERaWriteHandler(uint8_t pin, const ERaParam& param) {
@@ -243,6 +246,16 @@ private:
 		}
 		this->configIdWrite(rp->configId, rp->value);
 		this->callERaPinReadHandler(rp->pin, param, raw);
+	}
+
+	inline
+	const Proto& thisProto() const {
+		return static_cast<const Proto&>(*this);
+	}
+
+	inline
+	Proto& thisProto() {
+		return static_cast<Proto&>(*this);
 	}
 
 	ReportPinCallback_t reportPinCb = [=](void* args) {

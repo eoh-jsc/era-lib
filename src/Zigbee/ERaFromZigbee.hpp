@@ -28,6 +28,7 @@ private:
     bool levelSpecificFromZigbee(const DataAFMsg_t& afMsg, cJSON* root, const char* key, DefaultRsp_t& defaultRsp);
     bool multistateInputFromZigbee(const DataAFMsg_t& afMsg, cJSON* root, uint16_t attribute, uint64_t& value);
     bool temperatureMeasFromZigbee(const DataAFMsg_t& afMsg, cJSON* root, uint16_t attribute, uint64_t& value);
+    bool pressureMeasFromZigbee(const DataAFMsg_t& afMsg, cJSON* root, uint16_t attribute, uint64_t& value);
     bool humidityMeasFromZigbee(const DataAFMsg_t& afMsg, cJSON* root, uint16_t attribute, uint64_t& value);
     void processNodeDescriptor(vector<uint8_t>& data, void* value = nullptr);
     void processSimpleDescriptor(vector<uint8_t>& data, void* value = nullptr);
@@ -73,6 +74,16 @@ private:
     cJSON* getDataZigbee(const DataAFMsg_t& afMsg, cJSON* root, const char* key);
     void removeDataZigbee(const DataAFMsg_t& afMsg, cJSON* root, const char* key);
 
+	inline
+	const Zigbee& thisZigbee() const {
+		return static_cast<const Zigbee&>(*this);
+	}
+
+	inline
+	Zigbee& thisZigbee() {
+		return static_cast<Zigbee&>(*this);
+	}
+
     InfoDevice_t*& device;
     InfoCoordinator_t*& coordinator;
 };
@@ -93,18 +104,18 @@ Response_t ERaFromZigbee<Zigbee>::fromZigbee(const uint8_t* payload, void* value
         .timeout = 0,
     };
     uint8_t fcs {0};
-	if (payload[static_cast<Zigbee*>(this)->PositionSOF] != static_cast<Zigbee*>(this)->SOF) {
+	if (payload[this->thisZigbee().PositionSOF] != this->thisZigbee().SOF) {
 		return rsp;
     }
-	uint8_t length = payload[static_cast<Zigbee*>(this)->PositionDataLength];
-	uint8_t type = (payload[static_cast<Zigbee*>(this)->PositionCmd0] & 0xE0) >> 5;
-	uint8_t sub = payload[static_cast<Zigbee*>(this)->PositionCmd0] & 0x1F;
-	uint8_t cmd = payload[static_cast<Zigbee*>(this)->PositionCmd1];
-    data.assign(payload + static_cast<Zigbee*>(this)->DataStart, payload + static_cast<Zigbee*>(this)->DataStart + length);
-    if (data.size() > static_cast<Zigbee*>(this)->MaxDataSize) {
+	uint8_t length = payload[this->thisZigbee().PositionDataLength];
+	uint8_t type = (payload[this->thisZigbee().PositionCmd0] & 0xE0) >> 5;
+	uint8_t sub = payload[this->thisZigbee().PositionCmd0] & 0x1F;
+	uint8_t cmd = payload[this->thisZigbee().PositionCmd1];
+    data.assign(payload + this->thisZigbee().DataStart, payload + this->thisZigbee().DataStart + length);
+    if (data.size() > this->thisZigbee().MaxDataSize) {
         return rsp;
     }
-    fcs = this->getCheckSumReceive(payload + static_cast<Zigbee*>(this)->PositionDataLength, length + 3);
+    fcs = this->getCheckSumReceive(payload + this->thisZigbee().PositionDataLength, length + 3);
 	if(fcs != payload[length + 4]) {
 		return rsp;
     }
@@ -259,7 +270,7 @@ bool ERaFromZigbee<Zigbee>::getDataAFMsg(DataAFMsg_t& afMsg, vector<uint8_t>& da
 		afMsg.pData = &data.at(20 + manufShift);
     }
 	afMsg.radius = data.at(19 + afMsg.len); /* Radius (remain) - limits the number of hops */
-	if ((afMsg.radius < static_cast<Zigbee*>(this)->Radius - 1) || (afMsg.zclId == ClusterIDT::ZCL_CLUSTER_GREEN_POWER)) { /* afMsg.srcEndpoint == ENDPOINT242 */
+	if ((afMsg.radius < this->thisZigbee().Radius - 1) || (afMsg.zclId == ClusterIDT::ZCL_CLUSTER_GREEN_POWER)) { /* afMsg.srcEndpoint == ENDPOINT242 */
 		afMsg.parentAddr = BUILD_UINT16(data.at(17 + afMsg.len)); /* MAC header source short address */
     }
 	if (afMsg.parentAddr == afMsg.srcAddr.addr.nwkAddr) {
@@ -304,8 +315,8 @@ void ERaFromZigbee<Zigbee>::processDataAFMsg(const DataAFMsg_t& afMsg, Response_
 
     if (!defaultRsp.isSent) {
         /* Queue Zigbee Rsp */
-        if (static_cast<Zigbee*>(this)->queueDefaultRsp.writeable()) {
-            static_cast<Zigbee*>(this)->queueDefaultRsp += defaultRsp;
+        if (this->thisZigbee().queueDefaultRsp.writeable()) {
+            this->thisZigbee().queueDefaultRsp += defaultRsp;
         }
     }
 
@@ -326,6 +337,7 @@ uint8_t ERaFromZigbee<Zigbee>::getCheckSumReceive(const uint8_t* pData, size_t p
 
 #include "fromZigbee/ERaFromKey.hpp"
 #include "adapter/ERaClusterZigbee.hpp"
+#include "fromZigbee/ERaFromScale.hpp"
 #include "fromZigbee/ERaFromGlobal.hpp"
 #include "fromZigbee/ERaFromSpecific.hpp"
 #include "fromZigbee/ERaFromData.hpp"
@@ -333,6 +345,9 @@ uint8_t ERaFromZigbee<Zigbee>::getCheckSumReceive(const uint8_t* pData, size_t p
 #include "fromZigbee/ERaFromOnOff.hpp"
 #include "fromZigbee/ERaFromLevel.hpp"
 #include "fromZigbee/ERaFromMultistateInput.hpp"
+#include "fromZigbee/ERaFromTempMeas.hpp"
+#include "fromZigbee/ERaFromPressMeas.hpp"
+#include "fromZigbee/ERaFromHumiMeas.hpp"
 #include "fromZigbee/ERaFromZstack.hpp"
 
 #endif /* INC_ERA_FROM_ZIGBEE_HPP_ */

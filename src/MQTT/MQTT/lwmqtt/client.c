@@ -70,7 +70,12 @@ static uint16_t lwmqtt_get_next_packet_id(lwmqtt_client_t *client) {
 static lwmqtt_err_t lwmqtt_read_from_network(lwmqtt_client_t *client, size_t offset, size_t len) {
   // check read buffer capacity
   if (client->read_buf_size < offset + len) {
-    return LWMQTT_BUFFER_TOO_SHORT;
+    uint8_t* copy = (uint8_t*)ERA_REALLOC(client->read_buf, offset + len + 1);
+    if (copy == NULL) {
+      return LWMQTT_BUFFER_TOO_SHORT;
+    }
+    client->read_buf_size = offset + len;
+    client->read_buf = copy;
   }
 
   // prepare counter
@@ -567,6 +572,16 @@ lwmqtt_err_t lwmqtt_publish(lwmqtt_client_t *client, lwmqtt_string_t topic, lwmq
   uint16_t packet_id = 0;
   if (message.qos == LWMQTT_QOS1 || message.qos == LWMQTT_QOS2) {
     packet_id = lwmqtt_get_next_packet_id(client);
+  }
+
+  // check write buffer capacity
+  uint32_t rem_len = 100 + topic.len + (uint32_t)message.payload_len;
+  if (client->write_buf_size < rem_len) {
+    uint8_t* copy = (uint8_t*)ERA_REALLOC(client->write_buf, rem_len + 1);
+    if (copy != NULL) {
+      client->write_buf_size = rem_len;
+      client->write_buf = copy;
+    }
   }
 
   // encode publish packet

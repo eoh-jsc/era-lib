@@ -1,6 +1,10 @@
 #ifndef INC_ERA_SERIAL_CLIENT_HPP_
 #define INC_ERA_SERIAL_CLIENT_HPP_
 
+#if !defined(ERA_PROTO_TYPE)
+    #define ERA_PROTO_TYPE            "Stream"
+#endif
+
 #include <ERa/ERaApiArduinoDef.hpp>
 #include <ERa/ERaProtocol.hpp>
 #include <ERa/ERaApiArduino.hpp>

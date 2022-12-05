@@ -85,7 +85,11 @@ size_t ERaFlashLinux::writeFlash(const char* key, const void* value, size_t len)
     }
     FILE* file = fopen(key, "wb");
     if (file == nullptr) {
-        return 0;
+        this->mkdir(key);
+        file = fopen(key, "wb");
+        if (file == nullptr) {
+            return 0;
+        }
     }
     fwrite(value, len, 1, file);
     fclose(file);

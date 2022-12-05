@@ -1,13 +1,22 @@
 #ifndef INC_ERA_WIFI_CLIENT_HPP_
 #define INC_ERA_WIFI_CLIENT_HPP_
 
+#if !defined(ERA_PROTO_TYPE)
+    #define ERA_PROTO_TYPE            "WiFi"
+#endif
+
 #include <TinyGsmClient.h>
-#include <ERa/ERaApiStm32Def.hpp>
 #include <ERa/ERaProtocol.hpp>
-#include <ERa/ERaApiStm32.hpp>
 #include <MQTT/ERaMqtt.hpp>
 
 #define WIFI_NET_CONNECT_TIMEOUT      3 * 60000
+
+typedef struct __ERaConfig_t {
+    char ssid[64];
+    char pass[64];
+} ERA_ATTR_PACKED ERaConfig_t;
+
+static ERaConfig_t eraConfig{0};
 
 class ERaFlash;
 
@@ -36,32 +45,33 @@ public:
                 return false;
             }
         }
+        this->transp.setSSID(ssid);
         return true;
     }
 
     bool connectWiFi(const char* ssid, const char* pass) {
-        ERA_LOG(TAG, "Restarting modem...");
+        ERA_LOG(TAG, ERA_PSTR("Restarting modem..."));
         this->restart();
 
-        ERA_LOG(TAG, "Modem init");
+        ERA_LOG(TAG, ERA_PSTR("Modem init"));
         if (!this->modem->begin()) {
-            ERA_LOG(TAG, "Can't init modem");
+            ERA_LOG(TAG, ERA_PSTR("Can't init modem"));
             return false;
         }
 
-        ERA_LOG(TAG, "Connecting to %s...", ssid);
+        ERA_LOG(TAG, ERA_PSTR("Connecting to %s..."), ssid);
         if (!this->modem->networkConnect(ssid, pass)) {
-            ERA_LOG(TAG, "Connect %s failed", ssid);
+            ERA_LOG(TAG, ERA_PSTR("Connect %s failed"), ssid);
             return false;
         }
 
-        ERA_LOG(TAG, "Waiting for network...");
+        ERA_LOG(TAG, ERA_PSTR("Waiting for network..."));
         if (!this->modem->waitForNetwork()) {
-            ERA_LOG(TAG, "Connect %s failed", ssid);
+            ERA_LOG(TAG, ERA_PSTR("Connect %s failed"), ssid);
             return false;
         }
 
-        ERA_LOG(TAG, "Connected to %s", ssid);
+        ERA_LOG(TAG, ERA_PSTR("Connected to %s"), ssid);
         return true;
     }
 
@@ -91,24 +101,47 @@ public:
         this->config(gsm, auth, host, port, username, password);
         this->setPower(rstPin);
         this->connectNetwork(ssid, pass);
-        Base::connect();
+        this->setNetwork(ssid, pass);
     }
 
     void begin(TinyGsm& gsm,
                 const char* ssid,
                 const char* pass,
                 int rstPin = -1) {
-        Base::init();
-        this->config(gsm, ERA_MQTT_CLIENT_ID,
-                    ERA_MQTT_HOST, ERA_MQTT_PORT,
+        this->begin(ERA_MQTT_CLIENT_ID, gsm, ssid, pass,
+                    rstPin, ERA_MQTT_HOST, ERA_MQTT_PORT,
                     ERA_MQTT_USERNAME, ERA_MQTT_PASSWORD);
-        this->setPower(rstPin);
-        this->connectNetwork(ssid, pass);
-        Base::connect();
+    }
+
+    void run() {
+        switch (ERaState::get()) {
+            case StateT::STATE_CONNECTING_CLOUD:
+                if (Base::connect()) {
+                    ERaState::set(StateT::STATE_CONNECTED);
+                }
+                break;
+            case StateT::STATE_CONNECTED:
+                ERaState::set(StateT::STATE_RUNNING);
+                break;
+            case StateT::STATE_RUNNING:
+                Base::run();
+                break;
+            default:
+                if (this->modem->isNetworkConnected() ||
+                    this->connectNetwork(eraConfig.ssid, eraConfig.pass)) {
+                    ERaState::set(StateT::STATE_CONNECTING_CLOUD);
+                }
+                break;
+        }
     }
 
 protected:
 private:
+    void setNetwork(const char* ssid, const char* pass) {
+        CopyToArray(ssid, eraConfig.ssid);
+        CopyToArray(pass, eraConfig.pass);
+    }
+
     void setPower(int pin) {
         this->resetPin = pin;
     }

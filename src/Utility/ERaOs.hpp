@@ -1,14 +1,28 @@
 #ifndef INC_ERA_OS_HPP_
 #define INC_ERA_OS_HPP_
 
-#ifdef INC_FREERTOS_H
+#if defined(ARDUINO) && \
+	(defined(ESP32) || defined(STM32F4xx) || \
+	defined(ARDUINO_ARCH_RP2040))
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/semphr.h"
-#include "freertos/task.h"
-#include "freertos/queue.h"
-#include "freertos/ringbuf.h"
-#include "freertos/event_groups.h"
+#define ERA_RTOS
+
+#if defined(ESP32)
+	#include "freertos/FreeRTOS.h"
+	#include "freertos/semphr.h"
+	#include "freertos/task.h"
+	#include "freertos/queue.h"
+	#include "freertos/event_groups.h"
+#else
+	#include "STM32FreeRTOSConfig_extra.h"
+	#include <FreeRTOS.h>
+	#include <semphr.h>
+	#include <task.h>
+	#include <queue.h>
+	#include <event_groups.h>
+
+	#define IRAM_ATTR
+#endif
 
 typedef enum {
 	osOK                      =  0,         ///< Operation completed successfully.
@@ -27,14 +41,17 @@ typedef enum {
 	osTimerPeriodic           = 1           ///< Repeating timer.
 } osTimerType_t;
 
-#define portEND_SWITCHING_ISR( xSwitchRequired ) if( xSwitchRequired != pdFALSE ) portYIELD()
-#define osPortYIELD_FROM_ISR( x ) portEND_SWITCHING_ISR( x )
+#ifndef portEND_SWITCHING_ISR
+	#define portEND_SWITCHING_ISR(xSwitchRequired) if(xSwitchRequired != pdFALSE) portYIELD()
+#endif
+#define osPortYIELD_FROM_ISR(x) portEND_SWITCHING_ISR(x)
 /// Timeout value.
 #define osWaitForever         0xFFFFFFFFU ///< Wait forever timeout value.
 #define osFlagsWaitAny        0x00000000U ///< Wait for any flag (default).
 #define osFlagsWaitAll        0x00000001U ///< Wait for all flags.
 #define osFlagsNoClear        0x00000002U ///< Do not clear flags which have been specified to wait for.
 
+void osStartsScheduler();
 void osDelay(uint32_t ticks);
 uint32_t osThreadGetStackSpace(TaskHandle_t thread_id);
 osStatus_t osMessageQueueGet(QueueHandle_t mq_id, void *msg_ptr, uint8_t *msg_prio, uint32_t timeout);

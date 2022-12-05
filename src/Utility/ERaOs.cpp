@@ -1,11 +1,32 @@
 #include <Arduino.h>
 #include <Utility/ERaOs.hpp>
 
-#ifdef INC_FREERTOS_H
+#if defined(ARDUINO) && \
+	(defined(ESP32) || defined(STM32F4xx) || \
+    defined(ARDUINO_ARCH_RP2040))
+
+#if defined(STM32F4xx)
+    static bool started {false};
+#else
+    static bool started {true};
+#endif
+
+void osStartsScheduler() {
+    started = true;
+#if defined(STM32F4xx)
+    vTaskStartScheduler();
+    while (1) { delay(1000); }
+#endif
+}
 
 void osDelay(uint32_t ticks) {
     if (ticks != 0U) {
-        vTaskDelay(ticks / portTICK_PERIOD_MS);
+        if (started) {
+            vTaskDelay(ticks / portTICK_PERIOD_MS);
+        }
+        else {
+            delay(ticks);
+        }
     }
 }
 
@@ -188,6 +209,11 @@ osStatus_t osMessageQueueReset(QueueHandle_t mq_id) {
 }
 
 osStatus_t osSemaphoreRelease(SemaphoreHandle_t semaphore_id) {
+#if defined(STM32F4xx)
+    if (!started) {
+        return osOK;
+    }
+#endif
     osStatus_t stat;
 
     stat = osOK;
@@ -227,6 +253,11 @@ osStatus_t IRAM_ATTR osSemaphoreReleaseIRQ(SemaphoreHandle_t semaphore_id) {
 }
 
 osStatus_t osSemaphoreAcquire(SemaphoreHandle_t semaphore_id, uint32_t timeout) {
+#if defined(STM32F4xx)
+    if (!started) {
+        return osOK;
+    }
+#endif
     osStatus_t stat;
 
     stat = osOK;

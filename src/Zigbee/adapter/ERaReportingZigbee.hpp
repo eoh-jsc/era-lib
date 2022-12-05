@@ -32,6 +32,11 @@ static const ConfigBindReport_t ReportingList[] = {
 		}
 	},
 	{
+		ClusterIDT::ZCL_CLUSTER_MEAS_PRESSURE, 1, {
+			{ZbZclPressMeasSvrAttrT::ZCL_PRESS_MEAS_ATTR_MEAS_VAL, DataTypeT::zcl_int16, ReportIntervalT::REP_INTERVAL_MINUTE, ReportIntervalT::REP_INTERVAL_HOUR, 0x0005},
+		}
+	},
+	{
 		ClusterIDT::ZCL_CLUSTER_MEAS_HUMIDITY, 1, {
 			{ZbZclHumiMeasSvrAttrT::ZCL_HUMI_MEAS_ATTR_MEAS_VAL, DataTypeT::zcl_uint16, ReportIntervalT::REP_INTERVAL_MINUTE, ReportIntervalT::REP_INTERVAL_HOUR, 0x0064},
 		}

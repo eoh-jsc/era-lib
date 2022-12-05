@@ -185,6 +185,11 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const std::vector<std::strin
 			this->callERaPinWriteHandler(pin, param, raw);
 		}
 	}
+	else if (cJSON_IsString(item)) {
+		ERaParam param;
+		param.add_static(item->valuestring);
+		this->callERaWriteHandler(pin, param);
+	}
 
 	cJSON_Delete(root);
 	root = nullptr;
@@ -206,7 +211,12 @@ void ERaApi<Proto, Flash>::handlePinRequest(const std::vector<std::string>& arra
 
 	for (current = root->child; current != nullptr && current->string != nullptr; current = current->next) {
 		if (this->getGPIOPin(current, "virtual_pin", pin.pin)) {
-			param = current->valuedouble;
+			if (cJSON_IsNumber(current)) {
+				param = current->valuedouble;
+			}
+			else if (cJSON_IsString(current)) {
+				param.add_static(current->valuestring);
+			}
 			this->callERaWriteHandler(pin.pin, param);
 			continue;
 		}

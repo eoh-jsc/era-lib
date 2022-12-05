@@ -3,8 +3,8 @@
 
 #include <stdint.h>
 
-#define RUN_ERA_TASK void runERaTask()
+#define RUN_ERA_TASK void runERaLoopTask(void* args)
 
-void runERaTask();
+void runERaLoopTask(void* args);
 
 #endif /* INC_ERA_TASK_HPP_ */

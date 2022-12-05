@@ -23,10 +23,10 @@ ResultT ERaCommandZigbee<ToZigbee>::readAttributes(AFAddrType_t& dstAddr,
 		payload.push_back(LO_UINT16(var));
 		payload.push_back(HI_UINT16(var));
     }
-    return static_cast<ToZigbee*>(this)->sendCommandIdZigbee(this->zclHeaderCus, dstAddr,
-															srcEndpoint, {zclId, CommandIdT::READ_ATTR, &payload},
-															cmdWait, value,
-															MAX_TIMEOUT);
+    return this->thisToZigbee().sendCommandIdZigbee(this->zclHeaderCus, dstAddr,
+													srcEndpoint, {zclId, CommandIdT::READ_ATTR, &payload},
+													cmdWait, value,
+													MAX_TIMEOUT);
 }
 
 template <class ToZigbee>
@@ -69,10 +69,10 @@ ResultT ERaCommandZigbee<ToZigbee>::readAttributesResponse(AFAddrType_t& dstAddr
 				break;
 		}
     }
-    return static_cast<ToZigbee*>(this)->sendCommandIdZigbee(this->zclHeaderCus, dstAddr,
-															srcEndpoint, {zclId, CommandIdT::READ_ATTR_RSP, &payload},
-															cmdWait, nullptr,
-															DEFAULT_TIMEOUT, _transId);
+    return this->thisToZigbee().sendCommandIdZigbee(this->zclHeaderCus, dstAddr,
+													srcEndpoint, {zclId, CommandIdT::READ_ATTR_RSP, &payload},
+													cmdWait, nullptr,
+													DEFAULT_TIMEOUT, _transId);
 }
 
 template <class ToZigbee>
@@ -110,10 +110,10 @@ ResultT ERaCommandZigbee<ToZigbee>::writeAttributes(AFAddrType_t& dstAddr,
 				break;
 		}
     }
-    return static_cast<ToZigbee*>(this)->sendCommandIdZigbee(this->zclHeaderCus, dstAddr,
-															srcEndpoint, {zclId, CommandIdT::WRITE_ATTR, &payload},
-															cmdWait, nullptr,
-															MAX_TIMEOUT);
+    return this->thisToZigbee().sendCommandIdZigbee(this->zclHeaderCus, dstAddr,
+													srcEndpoint, {zclId, CommandIdT::WRITE_ATTR, &payload},
+													cmdWait, nullptr,
+													MAX_TIMEOUT);
 }
 
 template <class ToZigbee>
@@ -137,10 +137,10 @@ ResultT ERaCommandZigbee<ToZigbee>::writeAttributesResponse(AFAddrType_t& dstAdd
 		payload.push_back(LO_UINT16(var));
 		payload.push_back(HI_UINT16(var));
 	}
-    return static_cast<ToZigbee*>(this)->sendCommandIdZigbee(this->zclHeaderCus, dstAddr,
-															srcEndpoint, {zclId, CommandIdT::WRITE_ATTR_RSP, &payload},
-															cmdWait, nullptr,
-															DEFAULT_TIMEOUT, _transId);
+    return this->thisToZigbee().sendCommandIdZigbee(this->zclHeaderCus, dstAddr,
+													srcEndpoint, {zclId, CommandIdT::WRITE_ATTR_RSP, &payload},
+													cmdWait, nullptr,
+													DEFAULT_TIMEOUT, _transId);
 }
 
 template <class ToZigbee>
@@ -191,9 +191,9 @@ ResultT ERaCommandZigbee<ToZigbee>::requestBind(AFAddrType_t& srcAddr,
 	}
 
 	for (size_t i = 0; i < 2; ++i) {
-		if (static_cast<ToZigbee*>(this)->createCommandBuffer(payload, TypeT::SREQ,
-															SubsystemT::ZDO_INTER, ZDOCommandsT::ZDO_BIND_REQ,
-															TypeT::AREQ, ZDOCommandsT::ZDO_BIND_RSP, &status) == ResultT::RESULT_SUCCESSFUL) {
+		if (this->thisToZigbee().createCommandBuffer(payload, TypeT::SREQ,
+													SubsystemT::ZDO_INTER, ZDOCommandsT::ZDO_BIND_REQ,
+													TypeT::AREQ, ZDOCommandsT::ZDO_BIND_RSP, &status) == ResultT::RESULT_SUCCESSFUL) {
 			return ((status == ZnpCommandStatusT::SUCCESS_STATUS) ? ResultT::RESULT_SUCCESSFUL : ResultT::RESULT_FAIL);
 		}
 	}
@@ -248,9 +248,9 @@ ResultT ERaCommandZigbee<ToZigbee>::requestUnbind(AFAddrType_t& srcAddr,
 	}
 
 	for (size_t i = 0; i < 2; ++i) {
-		if (static_cast<ToZigbee*>(this)->createCommandBuffer(payload, TypeT::SREQ,
-															SubsystemT::ZDO_INTER, ZDOCommandsT::ZDO_UNBIND_REQ,
-															TypeT::AREQ, ZDOCommandsT::ZDO_UNBIND_RSP, &status) == ResultT::RESULT_SUCCESSFUL) {
+		if (this->thisToZigbee().createCommandBuffer(payload, TypeT::SREQ,
+													SubsystemT::ZDO_INTER, ZDOCommandsT::ZDO_UNBIND_REQ,
+													TypeT::AREQ, ZDOCommandsT::ZDO_UNBIND_RSP, &status) == ResultT::RESULT_SUCCESSFUL) {
 			return ((status == ZnpCommandStatusT::SUCCESS_STATUS) ? ResultT::RESULT_SUCCESSFUL : ResultT::RESULT_FAIL);
 		}
 	}
@@ -273,9 +273,9 @@ ResultT ERaCommandZigbee<ToZigbee>::requestSimpleDesc(AFAddrType_t& dstAddr, siz
 	payload.push_back(HI_UINT16(dstAddr.addr.nwkAddr));
 	payload.push_back(dstAddr.endpoint);
 	for (size_t i = 0; i < limit; ++i) {
-		if (static_cast<ToZigbee*>(this)->createCommandBuffer(payload, TypeT::SREQ,
-															SubsystemT::ZDO_INTER, ZDOCommandsT::ZDO_SIMPLE_DESC_REQ,
-															TypeT::AREQ, ZDOCommandsT::ZDO_SIMPLE_DESC_RSP, value) == ResultT::RESULT_SUCCESSFUL) { /* Descriptor of the dest device's Endpoint */
+		if (this->thisToZigbee().createCommandBuffer(payload, TypeT::SREQ,
+													SubsystemT::ZDO_INTER, ZDOCommandsT::ZDO_SIMPLE_DESC_REQ,
+													TypeT::AREQ, ZDOCommandsT::ZDO_SIMPLE_DESC_RSP, value) == ResultT::RESULT_SUCCESSFUL) { /* Descriptor of the dest device's Endpoint */
 			if (this->device->epTick == tick) {
 				return ResultT::RESULT_SUCCESSFUL;
 			}
@@ -293,9 +293,9 @@ ResultT ERaCommandZigbee<ToZigbee>::requestNodeDesc(AFAddrType_t& dstAddr, size_
 	payload.push_back(LO_UINT16(dstAddr.addr.nwkAddr));
 	payload.push_back(HI_UINT16(dstAddr.addr.nwkAddr));
 	for (size_t i = 0; i < limit; ++i) {
-		if (static_cast<ToZigbee*>(this)->createCommandBuffer(payload, TypeT::SREQ,
-															SubsystemT::ZDO_INTER, ZDOCommandsT::ZDO_NODE_DESC_REQ,
-															TypeT::AREQ, ZDOCommandsT::ZDO_NODE_DESC_RSP, value) == ResultT::RESULT_SUCCESSFUL) { /* Inquire about the Node Descriptor information of the dest device */
+		if (this->thisToZigbee().createCommandBuffer(payload, TypeT::SREQ,
+													SubsystemT::ZDO_INTER, ZDOCommandsT::ZDO_NODE_DESC_REQ,
+													TypeT::AREQ, ZDOCommandsT::ZDO_NODE_DESC_RSP, value) == ResultT::RESULT_SUCCESSFUL) { /* Inquire about the Node Descriptor information of the dest device */
 			return ResultT::RESULT_SUCCESSFUL;
 		}
 		ERaDelay(1000);
@@ -310,9 +310,9 @@ ResultT ERaCommandZigbee<ToZigbee>::extRouterDiscovery(AFAddrType_t& dstAddr, co
 	payload.push_back(HI_UINT16(dstAddr.addr.nwkAddr));
 	payload.push_back(options);
 	payload.push_back(radius);
-	return static_cast<ToZigbee*>(this)->createCommandBuffer(payload, TypeT::SREQ,
-															SubsystemT::ZDO_INTER, ZDOCommandsT::ZDO_EXT_ROUTE_DISC,
-															TypeT::SRSP, ZDOCommandsT::ZDO_EXT_ROUTE_DISC); /* ZDO route extension message */
+	return this->thisToZigbee().createCommandBuffer(payload, TypeT::SREQ,
+													SubsystemT::ZDO_INTER, ZDOCommandsT::ZDO_EXT_ROUTE_DISC,
+													TypeT::SRSP, ZDOCommandsT::ZDO_EXT_ROUTE_DISC); /* ZDO route extension message */
 }
 
 template <class ToZigbee>
@@ -323,9 +323,9 @@ ResultT ERaCommandZigbee<ToZigbee>::requestListEndpoint(AFAddrType_t& dstAddr, u
 	payload.push_back(LO_UINT16(nwkAddrOfInterest));
 	payload.push_back(HI_UINT16(nwkAddrOfInterest));
 	for (size_t i = 0; i < limit; ++i) {
-		if (static_cast<ToZigbee*>(this)->createCommandBuffer(payload, TypeT::SREQ,
-															SubsystemT::ZDO_INTER, ZDOCommandsT::ZDO_ACTIVE_EP_REQ,
-															TypeT::AREQ, ZDOCommandsT::ZDO_ACTIVE_EP_RSP, value) == ResultT::RESULT_SUCCESSFUL) { /* Request a list of active endpoint from the dest device */
+		if (this->thisToZigbee().createCommandBuffer(payload, TypeT::SREQ,
+													SubsystemT::ZDO_INTER, ZDOCommandsT::ZDO_ACTIVE_EP_REQ,
+													TypeT::AREQ, ZDOCommandsT::ZDO_ACTIVE_EP_RSP, value) == ResultT::RESULT_SUCCESSFUL) { /* Request a list of active endpoint from the dest device */
 			if (this->device->epCount) {
 				return ResultT::RESULT_SUCCESSFUL;
 			}
@@ -353,9 +353,9 @@ ResultT ERaCommandZigbee<ToZigbee>::removeDevice(AFAddrType_t& dstAddr, bool rej
 		payload.resize(10);
 	}
 	payload.push_back(option);
-	return static_cast<ToZigbee*>(this)->createCommandBuffer(payload, TypeT::SREQ,
-															SubsystemT::ZDO_INTER, ZDOCommandsT::ZDO_MGMT_LEAVE_REQ,
-															TypeT::SRSP, ZDOCommandsT::ZDO_MGMT_LEAVE_REQ);
+	return this->thisToZigbee().createCommandBuffer(payload, TypeT::SREQ,
+													SubsystemT::ZDO_INTER, ZDOCommandsT::ZDO_MGMT_LEAVE_REQ,
+													TypeT::SRSP, ZDOCommandsT::ZDO_MGMT_LEAVE_REQ);
 }
 
 template <class ToZigbee>
@@ -378,9 +378,9 @@ void ERaCommandZigbee<ToZigbee>::removeAllDevice(bool rejoin, bool removeChildre
 			payload.resize(10);
 		}
 		payload.push_back(option);
-		static_cast<ToZigbee*>(this)->createCommandBuffer(payload, TypeT::SREQ,
-															SubsystemT::ZDO_INTER, ZDOCommandsT::ZDO_MGMT_LEAVE_REQ,
-															TypeT::AREQ, ZDOCommandsT::ZDO_MGMT_LEAVE_RSP);
+		this->thisToZigbee().createCommandBuffer(payload, TypeT::SREQ,
+												SubsystemT::ZDO_INTER, ZDOCommandsT::ZDO_MGMT_LEAVE_REQ,
+												TypeT::AREQ, ZDOCommandsT::ZDO_MGMT_LEAVE_RSP);
 	}
 }
 

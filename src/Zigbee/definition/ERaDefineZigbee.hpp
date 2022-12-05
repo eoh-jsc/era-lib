@@ -27,6 +27,10 @@
 	#define MAX_DEVICE_ZIGBEE       	20
 #endif
 
+#if !defined(DISABLE_SCALE_ZIGBEE_DATA)
+	#define ENABLE_SCALE_ZIGBEE_DATA
+#endif
+
 #define NO_NWK_ADDR			    		(uint16_t)0x0000
 #define NO_LOAD_ENDPOINT	    		(uint8_t)0xFF
 #define ZCL_DATA_MIN		    		3
@@ -46,6 +50,7 @@
 
 #define LENGTH_EXTADDR_IEEE	    		8
 #define LENGTH_NETWORK_KEY	    		16
+#define LENGTH_BUFFER					50
 
 #define TRANSMIT_POWER_CC2652P_DEFAULT	(uint8_t)0x09
 #define TRANSMIT_POWER_CC2652P_MAX  	(uint8_t)0x14
@@ -91,6 +96,20 @@ typedef struct __KeyDataZigbee_t {
 	uint8_t numKeyOut;
 	const char* keyOutZcl[10];
 } KeyDataZigbee_t;
+
+typedef struct __ScaleDataModel_t {
+	const char* modelName;
+	float scale;
+	uint32_t divide;
+} ScaleDataModel_t;
+
+typedef struct __ScaleDataZigbee_t {
+	const char* key;
+	float defaultScale;
+	uint32_t defaultDivide;
+	uint8_t numScale;
+	ScaleDataModel_t scaleModel[10];
+} ScaleDataZigbee_t;
 
 typedef struct __ConfigReport_t {
 	uint16_t attribute;
@@ -279,7 +298,7 @@ typedef struct __DataAFMsg_t {
 	uint16_t parentAddr;
 	uint8_t radius;
 	uint8_t ddr;
-	char* modelName;
+	const IdentDeviceAddr_t* deviceInfo;
 } DataAFMsg_t;
 
 typedef struct __PermitJoin_t {
@@ -428,7 +447,7 @@ typedef struct __InfoCoordinator_t {
 	}
 	void reset(__InfoCoordinator_t*& _instance = __InfoCoordinator_t::instance) {
 		_instance->freeAllDevice();
-		memset(_instance, 0, sizeof(__InfoCoordinator_t));
+		memset((void*)_instance, 0, sizeof(__InfoCoordinator_t));
 		new(_instance) __InfoCoordinator_t();
 	}
 	void freeAllDevice() {
@@ -538,7 +557,7 @@ typedef struct __InfoDevice_t
         return __InfoDevice_t::instance;
     }
 	void reset(__InfoDevice_t*& _instance = __InfoDevice_t::instance) {
-		memset(_instance, 0, sizeof(__InfoDevice_t));
+		memset((void*)_instance, 0, sizeof(__InfoDevice_t));
 		new(_instance) __InfoDevice_t();
 	}
 
