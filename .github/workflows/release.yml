@@ -38,4 +38,4 @@ jobs:
             }]
           }
           EOF
-          curl -X POST ${{ secrets.TEAMS_WEBHOOK_DEPLOY_BACKEND }} --header 'Content-Type: application/json' -d @message.json
+          curl -X POST ${{ secrets.TEAMS_WEBHOOK_DEPLOY_FIRMWARE }} --header 'Content-Type: application/json' -d @message.json
