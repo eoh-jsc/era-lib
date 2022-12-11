@@ -29,4 +29,8 @@
     #endif
 #endif
 
+#if !defined(ERA_MODBUS_EXECUTE_MS)
+    #define ERA_MODBUS_EXECUTE_MS  0
+#endif
+
 #endif /* INC_ERA_MODBUS_CONFIG_HPP_ */

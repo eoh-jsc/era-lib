@@ -12,12 +12,12 @@
     template <class Api>
     void ERaModbus<Api>::initModbusTask() {
     #if !defined(ERA_NO_RTOS)
-        xTaskCreate(runERaLoopTask, "eraTask", 1024 * 8, NULL,
-                    configMAX_PRIORITIES - 4, NULL);
-        xTaskCreate(this->modbusTask, "modbusTask", 1024 * 5, this,
-                    configMAX_PRIORITIES - 3, (::TaskHandle_t*)(&this->_modbusTask));
-        xTaskCreate(this->writeModbusTask, "writeModbusTask", 1024 * 5, this,
-                    configMAX_PRIORITIES - 3, (::TaskHandle_t*)(&this->_writeModbusTask));
+        ERaOs::osThreadNew(runERaLoopTask, "eraTask",
+                            1024 * 8, NULL, configMAX_PRIORITIES - 4);
+        this->_modbusTask = ERaOs::osThreadNew(this->modbusTask, "modbusTask",
+                            1024 * 5, this, configMAX_PRIORITIES - 3);
+        this->_writeModbusTask = ERaOs::osThreadNew(this->writeModbusTask, "writeModbusTask",
+                            1024 * 5, this, configMAX_PRIORITIES - 3);
     #endif
     }
 
@@ -25,11 +25,11 @@
     void ERaModbus<Api>::modbusTask(void* args) {
     #if !defined(ERA_NO_RTOS)
         if (args == NULL) {
-            vTaskDelete(NULL);
+            ERaOs::osThreadDelete(NULL);
         }
         ERaModbus* modbus = (ERaModbus*)args;
         modbus->run(true);
-        vTaskDelete(NULL);
+        ERaOs::osThreadDelete(NULL);
     #endif
     }
 
@@ -37,11 +37,11 @@
     void ERaModbus<Api>::writeModbusTask(void* args) {
     #if !defined(ERA_NO_RTOS)
         if (args == NULL) {
-            vTaskDelete(NULL);
+            ERaOs::osThreadDelete(NULL);
         }
         ERaModbus* modbus = (ERaModbus*)args;
         modbus->run(false);
-        vTaskDelete(NULL);
+        ERaOs::osThreadDelete(NULL);
     #endif
     }
 #endif
@@ -88,8 +88,8 @@ void ERaApi<Proto, Flash>::addModbusInfo(cJSON* root) {
                                                     ERA_PROTO_TYPE : this->thisProto().transp.getSSID()));
 }
 
-static ERaMqtt<TinyGsmClient, MQTTClient> mqtt;
 static ERaFlash flash;
-ERaWiFi ERa(mqtt, flash);
+static ERaMqtt<TinyGsmClient, MQTTClient> mqtt;
+ERaWiFi< ERaMqtt<TinyGsmClient, MQTTClient> > ERa(mqtt, flash);
 
 #endif /* INC_ERA_SIMPLE_STM32_WIFI_HPP_ */

@@ -23,9 +23,10 @@ class ERaMqttLinux
     typedef std::function<void(std::string&, std::string&)> MessageCallback;
 
     const char* TAG = "MQTT";
-    const char* ONLINE_MESSAGE = R"json({"ol":1})json";
+    const char* ONLINE_MESSAGE = R"json({"ol":1%s%s})json";
     const char* OFFLINE_MESSAGE = R"json({"ol":0})json";
-    const char* ONLINE_MESSAGE_INFO = R"json({"ol":1,"wifi_ssid":"%s"})json";
+    const char* WIFI_INFO = R"json(,"wifi_ssid":"%s")json";
+    const char* ASK_CONFIG_INFO = R"json(,"ask_configuration":1)json";
     const char* LWT_TOPIC = "/is_online";
     const bool LWT_RETAINED = true;
     const int LWT_QOS = QoST::QOS1;
@@ -38,6 +39,7 @@ public:
         , password(ERA_MQTT_PASSWORD)
         , ssid(NULL)
         , ping(0L)
+        , askConfig(false)
         , mutex(NULL)
     {
         memset(this->willTopic, 0, sizeof(this->willTopic));
@@ -74,6 +76,18 @@ public:
         return this->ping;
     }
 
+    void setAskConfig(bool enable) {
+        this->askConfig = enable;
+    }
+
+    bool getAskConfig() {
+        return this->askConfig;
+    }
+
+    const char* getTag() {
+        return this->TAG;
+    }
+
     void onMessage(MessageCallback cb) {
         this->mqtt.onMessage(cb);
     }
@@ -92,6 +106,7 @@ private:
     const char* ERaAuth;
     const char* ssid;
     MillisTime_t ping;
+    bool askConfig;
     char willTopic[MAX_TOPIC_LENGTH];
     ERaMutex_t mutex;
 };
@@ -181,13 +196,17 @@ bool ERaMqttLinux<MQTT>::publishData(const char* topic, const char* payload) {
 template <class MQTT>
 bool ERaMqttLinux<MQTT>::publishLWT() {
     bool status {false};
+    char wifiInfo[50] {0};
     char payload[100] {0};
-    if (this->getSSID() == nullptr) {
-        FormatString(payload, ONLINE_MESSAGE);
+
+    if (this->getSSID() != nullptr) {
+        FormatString(wifiInfo, WIFI_INFO, this->getSSID());
     }
-    else {
-        FormatString(payload, ONLINE_MESSAGE_INFO, this->getSSID());
-    }
+#if defined(ERA_ASK_CONFIG_WHEN_RESTART)
+    FormatString(payload, ONLINE_MESSAGE, wifiInfo, ASK_CONFIG_INFO);
+#else
+    FormatString(payload, ONLINE_MESSAGE, wifiInfo, this->getAskConfig() ? ASK_CONFIG_INFO : "");
+#endif
 
     ERaGuardLock(this->mutex);
     if (this->mqtt.connected()) {

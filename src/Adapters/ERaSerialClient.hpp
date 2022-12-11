@@ -100,15 +100,16 @@ private:
     bool _connected;
 };
 
+template <class Transport>
 class ERaStream
-    : public ERaProto< ERaMqtt<ERaClient, MQTTClient>, ERaFlash >
+    : public ERaProto<Transport, ERaFlash>
 {
     const char* TAG = "Serial";
-    friend class ERaProto< ERaMqtt<ERaClient, MQTTClient>, ERaFlash >;
-    typedef ERaProto< ERaMqtt<ERaClient, MQTTClient>, ERaFlash > Base;
+    friend class ERaProto<Transport, ERaFlash>;
+    typedef ERaProto<Transport, ERaFlash> Base;
 
 public:
-    ERaStream(ERaMqtt<ERaClient, MQTTClient>& _transp, ERaFlash& _flash)
+    ERaStream(Transport& _transp, ERaFlash& _flash)
         : Base(_transp, _flash)
         , authToken(nullptr)
     {}

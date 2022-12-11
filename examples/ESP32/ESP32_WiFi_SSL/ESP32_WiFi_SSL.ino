@@ -11,11 +11,12 @@
  *************************************************************/
 
 // Enable debug console
+// Set CORE_DEBUG_LEVEL = 3 first
 // #define ERA_DEBUG
-// #define ERA_SERIAL Serial
 
 // You should get Auth Token in the ERa App or ERa Dashboard
 #define ERA_AUTH_TOKEN "ERA2706"
+#define ERA_USE_SSL
 
 #include <Arduino.h>
 #include <ERa.hpp>
@@ -28,7 +29,7 @@ ERaTimer timer;
 
 /* This function print uptime every second */
 void timerEvent() {
-    ERA_LOG(ERA_PSTR("Timer"), ERA_PSTR("Uptime: %d\n"), ERaMillis() / 1000L);
+    ERA_LOG("Timer", "Uptime: %d", ERaMillis() / 1000L);
 }
 
 void setup() {

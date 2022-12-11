@@ -44,8 +44,11 @@ T ERaMapNumberRange(T value, T fromLow, T fromHigh, T toLow, T toHigh) {
 #if defined(ARDUINO) && defined(ESP32)
     #include "driver/uart.h"
     #include <Utility/ERaOs.hpp>
-#elif defined(ARDUINO) && \
-    (defined(STM32F4xx) || defined(ARDUINO_ARCH_RP2040))
+#elif defined(ARDUINO) &&                        \
+    (defined(STM32F0xx) || defined(STM32F1xx) || \
+    defined(STM32F2xx) || defined(STM32F3xx) ||  \
+    defined(STM32F4xx) || defined(STM32F7xx) ||  \
+    defined(ARDUINO_ARCH_RP2040))
     #include <Utility/ERaOs.hpp>
 #endif
 

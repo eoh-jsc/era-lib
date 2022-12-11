@@ -27,7 +27,7 @@ void ERaApi<Proto, Flash>::handleReadPin(cJSON* root) {
 		}
 		item = cJSON_GetObjectItem(current, "pin_number");
 		if (cJSON_IsNumber(item)) {
-			pin.pin = item->valueint;
+			pin.pin = ERA_DECODE_PIN_NUMBER(item->valueint);
 		}
         else if (cJSON_IsString(item)) {
             pin.pin = ERA_DECODE_PIN_NAME(item->valuestring);
@@ -89,7 +89,7 @@ void ERaApi<Proto, Flash>::handleWritePin(cJSON* root) {
 		}
 		item = cJSON_GetObjectItem(current, "pin_number");
 		if (cJSON_IsNumber(item)) {
-			pin.pin = item->valueint;
+			pin.pin = ERA_DECODE_PIN_NUMBER(item->valueint);
 		}
         else if (cJSON_IsString(item)) {
             pin.pin = ERA_DECODE_PIN_NAME(item->valuestring);
@@ -120,6 +120,7 @@ void ERaApi<Proto, Flash>::handleWritePin(cJSON* root) {
 				this->getScaleConfig(current, pin);
 				if (pin.pwm.channel >= 0) {
 					ledcSetup(pin.pwm.channel, pin.pwm.frequency, pin.pwm.resolution);
+					ledcDetachPin(pin.pin);
 					ledcAttachPin(pin.pin, pin.pwm.channel);
 					this->eraPinReport.setPWMPinReport(pin.pin, PWM, pin.pwm.channel, ledcRead,
 														pin.report.interval, pin.report.minInterval, pin.report.maxInterval, pin.report.reportableChange,
@@ -235,6 +236,7 @@ void ERaApi<Proto, Flash>::handlePinRequest(const std::vector<std::string>& arra
 			}
             else if (ERaStrCmp(current->valuestring, "pwm")) {
 				ledcSetup(pin.pwm.channel, pin.pwm.frequency, pin.pwm.resolution);
+				ledcDetachPin(pin.pin);
 				ledcAttachPin(pin.pin, pin.pwm.channel);
 				this->eraPinReport.setPWMPinReport(pin.pin, PWM, pin.pwm.channel, ledcRead,
 													pin.report.interval, pin.report.minInterval, pin.report.maxInterval, pin.report.reportableChange,
@@ -292,6 +294,7 @@ void ERaApi<Proto, Flash>::handlePinRequest(const std::vector<std::string>& arra
 
 	cJSON_Delete(root);
 	root = nullptr;
+	ERA_FORCE_UNUSED(arrayTopic);
 }
 
 #endif /* INC_ERA_API_ESP32_HPP_ */

@@ -1,7 +1,8 @@
 #ifndef INC_ERA_WIFI_ESP8266_HPP_
 #define INC_ERA_WIFI_ESP8266_HPP_
 
-void ERaPnP::onWiFiEvent(WiFiEvent_t event) {
+template <class Transport>
+void ERaPnP<Transport>::onWiFiEvent(WiFiEvent_t event) {
 	switch (event) {
 		case WIFI_EVENT_STAMODE_DISCONNECTED:
 			ERA_LOG(ERA_PSTR("WiFi"), ERA_PSTR("Wifi Disconnected"));

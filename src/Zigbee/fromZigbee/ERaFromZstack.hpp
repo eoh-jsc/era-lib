@@ -144,6 +144,7 @@ void ERaFromZigbee<Zigbee>::processActiveEndpoint(vector<uint8_t>& data, void* v
             });
             break;
     }
+    ERA_FORCE_UNUSED(epInfo);
 }
 
 template <class Zigbee>
@@ -255,6 +256,9 @@ void ERaFromZigbee<Zigbee>::processDeviceLeave(vector<uint8_t>& data, void* valu
 	bool rejoin = data.at(12);
     this->thisZigbee().Zigbee::ToZigbee::CommandZigbee::removeDevice(srcAddr, false, false, false);
     this->createDeviceEvent(DeviceEventT::DEVICE_EVENT_LEAVE, &srcAddr);
+    ERA_FORCE_UNUSED(request);
+    ERA_FORCE_UNUSED(remove);
+    ERA_FORCE_UNUSED(rejoin);
 }
 
 template <class Zigbee>

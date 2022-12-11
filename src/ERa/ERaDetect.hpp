@@ -71,7 +71,40 @@
         #endif
     #endif
 
-#elif defined(ARDUINO) && defined(STM32F4xx)
+#elif defined(ARDUINO) &&                           \
+    (defined(STM32F0xx) || defined(STM32F1xx) ||    \
+    defined(STM32F2xx) || defined(STM32F3xx))
+
+    #if !defined(ERA_MQTT_BUFFER_SIZE)
+        #define ERA_MQTT_BUFFER_SIZE    2048
+    #endif
+
+    #if !defined(ERA_BUFFER_SIZE)
+        #define ERA_BUFFER_SIZE         512
+    #endif
+
+    #if !defined(ERA_MAX_GPIO_PIN)
+        #define ERA_MAX_GPIO_PIN        100
+    #endif
+
+    #define ERA_100_PINS
+
+    #define STM32
+
+    #if !defined(ERA_BOARD_TYPE)
+        #if defined(STM32F0xx)
+            #define ERA_BOARD_TYPE      "STM32F0"
+        #elif defined(STM32F1xx)
+            #define ERA_BOARD_TYPE      "STM32F1"
+        #elif defined(STM32F2xx)
+            #define ERA_BOARD_TYPE      "STM32F2"
+        #elif defined(STM32F3xx)
+            #define ERA_BOARD_TYPE      "STM32F3"
+        #endif
+    #endif
+
+#elif defined(ARDUINO) &&                       \
+    (defined(STM32F4xx) || defined(STM32F7xx))
 
     #if !defined(ERA_MQTT_BUFFER_SIZE)
         #define ERA_MQTT_BUFFER_SIZE    5120
@@ -87,12 +120,18 @@
 
     #define ERA_100_PINS
 
+    #define STM32
+
     #if defined(ERA_NO_RTOS)
         #define ERA_NO_YIELD
     #endif
 
     #if !defined(ERA_BOARD_TYPE)
-        #define ERA_BOARD_TYPE          "STM32F4"
+        #if defined(STM32F4xx)
+            #define ERA_BOARD_TYPE      "STM32F4"
+        #elif defined(STM32F7xx)
+            #define ERA_BOARD_TYPE      "STM32F7"
+        #endif
     #endif
 
 #elif defined(ARDUINO) && defined(ARDUINO_ARCH_RP2040)
@@ -198,10 +237,6 @@
         #define ERA_BOARD_TYPE          "Custom"
     #endif
 
-#endif
-
-#if !defined(ERA_PROTO_TYPE)
-    #define ERA_PROTO_TYPE              "WiFi"
 #endif
 
 #endif /* INC_ERA_DETECT_HPP_ */

@@ -32,7 +32,7 @@ ERaTimer timer;
 void setup() {
     ERa.begin(auth, host, port, auth, auth);
     timer.setInterval(1000L, []() {
-        printf("Uptime: %d\n", ERaMillis() / 1000L);
+        printf("Uptime: %d\r\n", ERaMillis() / 1000L);
     });
 }
 

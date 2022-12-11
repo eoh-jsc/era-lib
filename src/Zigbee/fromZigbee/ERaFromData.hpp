@@ -103,6 +103,8 @@ IdentDeviceAddr_t* ERaFromZigbee<Zigbee>::createDataGlobal(const DataAFMsg_t& af
             break;
     }
 
+    ERA_FORCE_UNUSED(defined);
+
     dataItem = nullptr;
     if (isSameId) {
         return nullptr;
@@ -194,6 +196,8 @@ IdentDeviceAddr_t* ERaFromZigbee<Zigbee>::createDataSpecific(const DataAFMsg_t& 
         default:
             break;
     }
+
+    ERA_FORCE_UNUSED(defined);
 
     dataItem = nullptr;
     if (isSameId) {

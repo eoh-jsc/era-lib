@@ -1,27 +1,29 @@
 #include <Arduino.h>
 #include <Utility/ERaOs.hpp>
 
-#if defined(ARDUINO) && \
-	(defined(ESP32) || defined(STM32F4xx) || \
-    defined(ARDUINO_ARCH_RP2040))
+#if defined(ARDUINO) && 					 	        \
+	(defined(ESP32) || defined(STM32F0xx) || 	        \
+	defined(STM32F1xx) || defined(STM32F2xx) ||         \
+	defined(STM32F3xx) || defined(STM32F4xx) ||         \
+	defined(STM32F7xx) || defined(ARDUINO_ARCH_RP2040))
 
-#if defined(STM32F4xx)
-    static bool started {false};
+#if defined(STM32)
+    static volatile bool osStarted {false};
 #else
-    static bool started {true};
+    static volatile bool osStarted {true};
 #endif
 
-void osStartsScheduler() {
-    started = true;
-#if defined(STM32F4xx)
+void ERaOs::osStartsScheduler() {
+    osStarted = true;
+#if defined(STM32)
     vTaskStartScheduler();
     while (1) { delay(1000); }
 #endif
 }
 
-void osDelay(uint32_t ticks) {
+void ERaOs::osDelay(uint32_t ticks) {
     if (ticks != 0U) {
-        if (started) {
+        if (osStarted) {
             vTaskDelay(ticks / portTICK_PERIOD_MS);
         }
         else {
@@ -30,7 +32,25 @@ void osDelay(uint32_t ticks) {
     }
 }
 
-uint32_t osThreadGetStackSpace(TaskHandle_t thread_id) {
+TaskHandle_t ERaOs::osThreadNew(void (*task)(void *args), const char* name, uint32_t size,
+							    void* args, unsigned int priority, unsigned int core) {
+    TaskHandle_t hTask = NULL;
+
+#if defined(ESP32)
+    xTaskCreatePinnedToCore(task, name, size, args, priority, &hTask, core);
+#else
+    xTaskCreate(task, name, size, args, priority, &hTask);
+    (void)core;
+#endif
+
+    return hTask;
+}
+
+void ERaOs::osThreadDelete(TaskHandle_t thread_id) {
+    vTaskDelete(thread_id);
+}
+
+uint32_t ERaOs::osThreadGetStackSpace(TaskHandle_t thread_id) {
 	uint32_t sz;
 
 	sz = (uint32_t)(uxTaskGetStackHighWaterMark(thread_id) * sizeof(StackType_t));
@@ -38,7 +58,7 @@ uint32_t osThreadGetStackSpace(TaskHandle_t thread_id) {
 	return (sz);
 }
 
-osStatus_t osMessageQueueGet(QueueHandle_t mq_id, void *msg_ptr, uint8_t *msg_prio, uint32_t timeout) {
+osStatus_t ERaOs::osMessageQueueGet(QueueHandle_t mq_id, void *msg_ptr, uint8_t *msg_prio, uint32_t timeout) {
     osStatus_t stat;
 
     (void)msg_prio; /* Message priority is ignored */
@@ -61,7 +81,8 @@ osStatus_t osMessageQueueGet(QueueHandle_t mq_id, void *msg_ptr, uint8_t *msg_pr
     return (stat);
 }
 
-osStatus_t IRAM_ATTR osMessageQueueGetIRQ(QueueHandle_t mq_id, void *msg_ptr, uint8_t *msg_prio, uint32_t timeout) {
+IRAM_ATTR
+osStatus_t ERaOs::osMessageQueueGetIRQ(QueueHandle_t mq_id, void *msg_ptr, uint8_t *msg_prio, uint32_t timeout) {
     osStatus_t stat;
     BaseType_t yield;
 
@@ -85,7 +106,7 @@ osStatus_t IRAM_ATTR osMessageQueueGetIRQ(QueueHandle_t mq_id, void *msg_ptr, ui
     return (stat);
 }
 
-osStatus_t osMessageQueuePut(QueueHandle_t mq_id, const void *msg_ptr, uint8_t msg_prio, uint32_t timeout) {
+osStatus_t ERaOs::osMessageQueuePut(QueueHandle_t mq_id, const void *msg_ptr, uint8_t msg_prio, uint32_t timeout) {
     osStatus_t stat;
 
     (void)msg_prio; /* Message priority is ignored */
@@ -108,7 +129,8 @@ osStatus_t osMessageQueuePut(QueueHandle_t mq_id, const void *msg_ptr, uint8_t m
     return (stat);
 }
 
-osStatus_t IRAM_ATTR osMessageQueuePutIRQ(QueueHandle_t mq_id, const void *msg_ptr, uint8_t msg_prio, uint32_t timeout) {
+IRAM_ATTR
+osStatus_t ERaOs::osMessageQueuePutIRQ(QueueHandle_t mq_id, const void *msg_ptr, uint8_t msg_prio, uint32_t timeout) {
     osStatus_t stat;
     BaseType_t yield;
 
@@ -132,7 +154,7 @@ osStatus_t IRAM_ATTR osMessageQueuePutIRQ(QueueHandle_t mq_id, const void *msg_p
     return (stat);
 }
 
-uint32_t osMessageQueueGetCount(QueueHandle_t mq_id) {
+uint32_t ERaOs::osMessageQueueGetCount(QueueHandle_t mq_id) {
     UBaseType_t count;
 
     if (mq_id == NULL) {
@@ -145,7 +167,8 @@ uint32_t osMessageQueueGetCount(QueueHandle_t mq_id) {
     return ((uint32_t)count);
 }
 
-uint32_t IRAM_ATTR osMessageQueueGetCountIRQ(QueueHandle_t mq_id) {
+IRAM_ATTR
+uint32_t ERaOs::osMessageQueueGetCountIRQ(QueueHandle_t mq_id) {
     UBaseType_t count;
 
     if (mq_id == NULL) {
@@ -158,7 +181,7 @@ uint32_t IRAM_ATTR osMessageQueueGetCountIRQ(QueueHandle_t mq_id) {
     return ((uint32_t)count);
 }
 
-uint32_t osMessageQueueGetSpace(QueueHandle_t mq_id) {
+uint32_t ERaOs::osMessageQueueGetSpace(QueueHandle_t mq_id) {
 	StaticQueue_t *mq = (StaticQueue_t *)mq_id;
 	uint32_t space;
 
@@ -172,7 +195,8 @@ uint32_t osMessageQueueGetSpace(QueueHandle_t mq_id) {
 	return (space);
 }
 
-uint32_t IRAM_ATTR osMessageQueueGetSpaceIRQ(QueueHandle_t mq_id) {
+IRAM_ATTR
+uint32_t ERaOs::osMessageQueueGetSpaceIRQ(QueueHandle_t mq_id) {
 	StaticQueue_t *mq = (StaticQueue_t *)mq_id;
 	uint32_t space;
 
@@ -187,14 +211,14 @@ uint32_t IRAM_ATTR osMessageQueueGetSpaceIRQ(QueueHandle_t mq_id) {
 	return (space);
 }
 
-void waitMessageQueueSpace(QueueHandle_t mq_id, uint32_t timeout) {
+void ERaOs::waitMessageQueueSpace(QueueHandle_t mq_id, uint32_t timeout) {
 	unsigned long tick = millis();
-	while (!osMessageQueueGetSpace(mq_id) && (millis() - tick < timeout)) {
+	while (!ERaOs::osMessageQueueGetSpace(mq_id) && (millis() - tick < timeout)) {
 		osDelay(100);
 	}
 }
 
-osStatus_t osMessageQueueReset(QueueHandle_t mq_id) {
+osStatus_t ERaOs::osMessageQueueReset(QueueHandle_t mq_id) {
 	osStatus_t stat;
 
 	if (mq_id == NULL) {
@@ -208,9 +232,18 @@ osStatus_t osMessageQueueReset(QueueHandle_t mq_id) {
 	return (stat);
 }
 
-osStatus_t osSemaphoreRelease(SemaphoreHandle_t semaphore_id) {
-#if defined(STM32F4xx)
-    if (!started) {
+SemaphoreHandle_t ERaOs::osSemaphoreNew() {
+#if defined(STM32)
+    if (!osStarted) {
+        return NULL;
+    }
+#endif
+    return xSemaphoreCreateMutex();
+}
+
+osStatus_t ERaOs::osSemaphoreRelease(SemaphoreHandle_t semaphore_id) {
+#if defined(STM32)
+    if (!osStarted) {
         return osOK;
     }
 #endif
@@ -230,7 +263,8 @@ osStatus_t osSemaphoreRelease(SemaphoreHandle_t semaphore_id) {
     return (stat);
 }
 
-osStatus_t IRAM_ATTR osSemaphoreReleaseIRQ(SemaphoreHandle_t semaphore_id) {
+IRAM_ATTR
+osStatus_t ERaOs::osSemaphoreReleaseIRQ(SemaphoreHandle_t semaphore_id) {
     osStatus_t stat;
     BaseType_t yield;
 
@@ -252,9 +286,9 @@ osStatus_t IRAM_ATTR osSemaphoreReleaseIRQ(SemaphoreHandle_t semaphore_id) {
     return (stat);
 }
 
-osStatus_t osSemaphoreAcquire(SemaphoreHandle_t semaphore_id, uint32_t timeout) {
-#if defined(STM32F4xx)
-    if (!started) {
+osStatus_t ERaOs::osSemaphoreAcquire(SemaphoreHandle_t semaphore_id, uint32_t timeout) {
+#if defined(STM32)
+    if (!osStarted) {
         return osOK;
     }
 #endif
@@ -278,7 +312,8 @@ osStatus_t osSemaphoreAcquire(SemaphoreHandle_t semaphore_id, uint32_t timeout) 
     return (stat);
 }
 
-osStatus_t IRAM_ATTR osSemaphoreAcquireIRQ(SemaphoreHandle_t semaphore_id, uint32_t timeout) {
+IRAM_ATTR
+osStatus_t ERaOs::osSemaphoreAcquireIRQ(SemaphoreHandle_t semaphore_id, uint32_t timeout) {
     osStatus_t stat;
     BaseType_t yield;
 
@@ -297,10 +332,11 @@ osStatus_t IRAM_ATTR osSemaphoreAcquireIRQ(SemaphoreHandle_t semaphore_id, uint3
         }
     }
 
+    (void)timeout;
     return (stat);
 }
 
-uint32_t osEventFlagsSet(EventGroupHandle_t ef_id, uint32_t flags) {
+uint32_t ERaOs::osEventFlagsSet(EventGroupHandle_t ef_id, uint32_t flags) {
 	uint32_t rflags;
 
 	if (ef_id == NULL) {
@@ -313,7 +349,7 @@ uint32_t osEventFlagsSet(EventGroupHandle_t ef_id, uint32_t flags) {
 	return (rflags);
 }
 
-uint32_t osEventFlagsClear(EventGroupHandle_t ef_id, uint32_t flags) {
+uint32_t ERaOs::osEventFlagsClear(EventGroupHandle_t ef_id, uint32_t flags) {
 	uint32_t rflags;
 
 	if (ef_id == NULL) {
@@ -326,7 +362,7 @@ uint32_t osEventFlagsClear(EventGroupHandle_t ef_id, uint32_t flags) {
 	return (rflags);
 }
 
-uint32_t osEventFlagsWait(EventGroupHandle_t ef_id, uint32_t flags, uint32_t options, uint32_t timeout) {
+uint32_t ERaOs::osEventFlagsWait(EventGroupHandle_t ef_id, uint32_t flags, uint32_t options, uint32_t timeout) {
 	BaseType_t wait_all;
 	BaseType_t exit_clr;
 	uint32_t rflags;
@@ -353,7 +389,7 @@ uint32_t osEventFlagsWait(EventGroupHandle_t ef_id, uint32_t flags, uint32_t opt
 	return (rflags);
 }
 
-TimerHandle_t osTimerNew(const char *name, osTimerType_t type, void *argument, TimerCallbackFunction_t callback) {
+TimerHandle_t ERaOs::osTimerNew(const char *name, osTimerType_t type, void *argument, TimerCallbackFunction_t callback) {
 	TimerHandle_t hTimer;
 	UBaseType_t reload;
 
@@ -372,7 +408,7 @@ TimerHandle_t osTimerNew(const char *name, osTimerType_t type, void *argument, T
 	return (hTimer);
 }
 
-osStatus_t osTimerStart(TimerHandle_t timer_id, uint32_t ticks) {
+osStatus_t ERaOs::osTimerStart(TimerHandle_t timer_id, uint32_t ticks) {
 	osStatus_t stat;
 
 	if (timer_id == NULL) {
@@ -389,7 +425,7 @@ osStatus_t osTimerStart(TimerHandle_t timer_id, uint32_t ticks) {
 	return (stat);
 }
 
-osStatus_t osTimerStop(TimerHandle_t timer_id) {
+osStatus_t ERaOs::osTimerStop(TimerHandle_t timer_id) {
 	osStatus_t stat;
 
 	if (timer_id == NULL) {
@@ -411,7 +447,7 @@ osStatus_t osTimerStop(TimerHandle_t timer_id) {
 	return (stat);
 }
 
-uint32_t osTimerIsRunning(TimerHandle_t timer_id) {
+uint32_t ERaOs::osTimerIsRunning(TimerHandle_t timer_id) {
 	uint32_t running;
 
 	if (timer_id == NULL) {
@@ -423,7 +459,7 @@ uint32_t osTimerIsRunning(TimerHandle_t timer_id) {
 	return (running);
 }
 
-osStatus_t osTimerDelete(TimerHandle_t timer_id) {
+osStatus_t ERaOs::osTimerDelete(TimerHandle_t timer_id) {
 	osStatus_t stat;
 
 	if (timer_id == NULL) {

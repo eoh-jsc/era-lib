@@ -236,6 +236,7 @@ CJSON_PUBLIC(cJSON *) cJSON_DetachItemFromArray(cJSON *array, int which);
 CJSON_PUBLIC(void) cJSON_DeleteItemFromArray(cJSON *array, int which);
 CJSON_PUBLIC(cJSON *) cJSON_DetachItemFromObject(cJSON *object, const char *string);
 CJSON_PUBLIC(cJSON *) cJSON_DetachItemFromObjectCaseSensitive(cJSON *object, const char *string);
+CJSON_PUBLIC(void) cJSON_DeleteItemViaPointer(cJSON *parent, cJSON * const item);
 CJSON_PUBLIC(void) cJSON_DeleteItemFromObject(cJSON *object, const char *string);
 CJSON_PUBLIC(void) cJSON_DeleteItemFromObjectCaseSensitive(cJSON *object, const char *string);
 
@@ -272,6 +273,7 @@ CJSON_PUBLIC(cJSON*) cJSON_AddRawToObject(cJSON * const object, const char * con
 CJSON_PUBLIC(cJSON*) cJSON_AddRawNumberToObject(cJSON * const object, const char * const name, const char * const raw);
 CJSON_PUBLIC(cJSON*) cJSON_AddObjectToObject(cJSON * const object, const char * const name);
 CJSON_PUBLIC(cJSON*) cJSON_AddArrayToObject(cJSON * const object, const char * const name);
+CJSON_PUBLIC(cJSON_bool) cJSON_Rename(cJSON * const object, const char * const name);
 
 /* When assigning an integer value, it needs to be propagated to valuedouble too. */
 #define cJSON_SetIntValue(object, number) ((object) ? (object)->valueint = (object)->valuedouble = (number) : (number))

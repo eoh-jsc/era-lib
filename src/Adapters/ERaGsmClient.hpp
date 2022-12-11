@@ -21,15 +21,16 @@ static ERaConfig_t eraConfig{0};
 
 class ERaFlash;
 
+template <class Transport>
 class ERaGsm
-    : public ERaProto< ERaMqtt<TinyGsmClient, MQTTClient>, ERaFlash >
+    : public ERaProto<Transport, ERaFlash>
 {
     const char* TAG = "GSM";
-    friend class ERaProto< ERaMqtt<TinyGsmClient, MQTTClient>, ERaFlash >;
-    typedef ERaProto< ERaMqtt<TinyGsmClient, MQTTClient>, ERaFlash > Base;
+    friend class ERaProto<Transport, ERaFlash>;
+    typedef ERaProto<Transport, ERaFlash> Base;
 
 public:
-    ERaGsm(ERaMqtt<TinyGsmClient, MQTTClient>& _transp, ERaFlash& _flash)
+    ERaGsm(Transport& _transp, ERaFlash& _flash)
         : Base(_transp, _flash)
         , modem(nullptr)
         , authToken(nullptr)

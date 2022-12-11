@@ -2,9 +2,10 @@
 #define INC_ERA_TASK_HPP_
 
 #include <stdint.h>
+#include <ERa/ERaDefine.hpp>
 
-#define RUN_ERA_TASK void runERaLoopTask(void* args)
+#define RUN_ERA_TASK() void runERaLoopTask(void ERA_UNUSED *args)
 
-void runERaLoopTask(void* args);
+RUN_ERA_TASK();
 
 #endif /* INC_ERA_TASK_HPP_ */

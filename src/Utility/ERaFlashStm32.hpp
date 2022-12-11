@@ -25,7 +25,7 @@ public:
     template <typename T>
     size_t readFlash(const char* key, T& buffer);
 
-    void writeFlash(const char *filename, const char* buffer);
+    void writeFlash(const char* filename, const char* buffer);
 
     template <typename T>
     size_t writeFlash(const char* key, const T& value);
@@ -99,7 +99,7 @@ size_t ERaFlash::readFlash(const char* key, T& buffer) {
     return sizeof(buffer);
 }
 
-void ERaFlash::writeFlash(const char *filename, const char* buffer) {
+void ERaFlash::writeFlash(const char* filename, const char* buffer) {
     if (buffer == nullptr) {
         return;
     }

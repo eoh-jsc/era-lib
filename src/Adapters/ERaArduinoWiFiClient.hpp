@@ -21,15 +21,16 @@ static ERaConfig_t eraConfig{0};
 
 class ERaFlash;
 
+template <class Transport>
 class ERaWiFi
-    : public ERaProto< ERaMqtt<WiFiClient, MQTTClient>, ERaFlash >
+    : public ERaProto<Transport, ERaFlash>
 {
     const char* TAG = "WiFi";
-    friend class ERaProto< ERaMqtt<WiFiClient, MQTTClient>, ERaFlash >;
-    typedef ERaProto< ERaMqtt<WiFiClient, MQTTClient>, ERaFlash > Base;
+    friend class ERaProto<Transport, ERaFlash>;
+    typedef ERaProto<Transport, ERaFlash> Base;
 
 public:
-    ERaWiFi(ERaMqtt<WiFiClient, MQTTClient>& _transp, ERaFlash& _flash)
+    ERaWiFi(Transport& _transp, ERaFlash& _flash)
         : Base(_transp, _flash)
         , authToken(nullptr)
     {}

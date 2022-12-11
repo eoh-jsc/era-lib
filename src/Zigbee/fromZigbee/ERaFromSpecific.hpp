@@ -22,6 +22,8 @@ void ERaFromZigbee<Zigbee>::processFrameTypeSpecific(const DataAFMsg_t& afMsg, D
         default:
             break;
     }
+
+    ERA_FORCE_UNUSED(deviceInfo);
 }
 
 #endif /* INC_ERA_FROM_SPECIFIC_ZIGBEE_HPP_ */

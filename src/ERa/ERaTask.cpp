@@ -2,9 +2,8 @@
     #include <Arduino.h>
 #endif
 #include <ERa/ERaTask.hpp>
-#include <ERa/ERaDefine.hpp>
 
-ERA_WEAK void runERaLoopTask(void* args) {
+ERA_WEAK void runERaLoopTask(void ERA_UNUSED *args) {
 #if defined(ARDUINO)
     for (;;) {
         loop();

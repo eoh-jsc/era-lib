@@ -3,12 +3,14 @@
 
 #include <ERa/ERaApi.hpp>
 
-#define ERA_STM32_DECODE_PIN(pin) pinNametoDigitalPin(stringToPinName(pin))
+// #undef ERA_DECODE_PIN_NUMBER
+// #define ERA_DECODE_PIN_NUMBER(pin)	pinNametoDigitalPin((PinName)pin)
 
 #undef ERA_DECODE_PIN_NAME
-#define ERA_DECODE_PIN_NAME(pin) ((stringToPinName(pin) != PinName::NC) ? \
-									ERA_STM32_DECODE_PIN(pin) : \
-									(((pin[0] == 'a') || (pin[0] == 'A')) ? ERA_DECODE_PIN(atoi(pin + 1)) : atoi(pin)))
+#define ERA_DECODE_PIN_NAME(pin) 	((stringToPinName(pin) != PinName::NC) ? 	\
+									pinNametoDigitalPin(stringToPinName(pin)) : \
+									(((pin[0] == 'a') || (pin[0] == 'A')) ? 	\
+									ERA_DECODE_PIN(atoi(pin + 1)) : ERA_DECODE_PIN_NUMBER(atoi(pin))))
 
 inline
 static PinName stringToPinName(std::string str) {
@@ -109,7 +111,7 @@ void ERaApi<Proto, Flash>::handleReadPin(cJSON* root) {
 		}
 		item = cJSON_GetObjectItem(current, "pin_number");
 		if (cJSON_IsNumber(item)) {
-			pin.pin = item->valueint;
+			pin.pin = ERA_DECODE_PIN_NUMBER(item->valueint);
 		}
         else if (cJSON_IsString(item)) {
             pin.pin = ERA_DECODE_PIN_NAME(item->valuestring);
@@ -172,7 +174,7 @@ void ERaApi<Proto, Flash>::handleWritePin(cJSON* root) {
 		}
 		item = cJSON_GetObjectItem(current, "pin_number");
 		if (cJSON_IsNumber(item)) {
-			pin.pin = item->valueint;
+			pin.pin = ERA_DECODE_PIN_NUMBER(item->valueint);
 		}
         else if (cJSON_IsString(item)) {
             pin.pin = ERA_DECODE_PIN_NAME(item->valuestring);
@@ -370,6 +372,7 @@ void ERaApi<Proto, Flash>::handlePinRequest(const std::vector<std::string>& arra
 
 	cJSON_Delete(root);
 	root = nullptr;
+	ERA_FORCE_UNUSED(arrayTopic);
 }
 
 #endif /* INC_ERA_API_STM32_HPP_ */

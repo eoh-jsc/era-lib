@@ -7,7 +7,9 @@
 #elif defined(ESP8266) || \
     defined(ERA_FLASH_ESP8266)
     #include <Utility/ERaFlashEsp8266.hpp>
-#elif defined(STM32F4xx) || \
+#elif defined(STM32F0xx) || defined(STM32F1xx) || \
+    defined(STM32F2xx) || defined(STM32F3xx) ||   \
+    defined(STM32F4xx) || defined(STM32F7xx) ||   \
     defined(ERA_FLASH_STM32)
     #include <Utility/ERaFlashStm32.hpp>
 #elif defined(ARDUINO_ARCH_RP2040) || \

@@ -43,7 +43,7 @@ bool ERaModbus<Api>::waitResponse(ModbusConfig_t& param, uint8_t* modbusData) {
     MillisTime_t startMillis = ERaMillis();
 
     do {
-        if (osMessageQueueGet((QueueHandle_t)(this->messageHandle), &event, NULL, 1) == osOK) {
+        if (ERaOs::osMessageQueueGet((QueueHandle_t)(this->messageHandle), &event, NULL, 1) == osOK) {
             switch (event.type) {
                 case uart_event_type_t::UART_DATA:
                     ESP_ERROR_CHECK(uart_get_buffered_data_len(UART_MODBUS, (size_t*)&length));
@@ -62,7 +62,7 @@ bool ERaModbus<Api>::waitResponse(ModbusConfig_t& param, uint8_t* modbusData) {
                 case uart_event_type_t::UART_FIFO_OVF:
                 case uart_event_type_t::UART_BUFFER_FULL:
                     uart_flush_input(UART_MODBUS);
-                    osMessageQueueReset((QueueHandle_t)(this->messageHandle));
+                    ERaOs::osMessageQueueReset((QueueHandle_t)(this->messageHandle));
                     break;
                 default:
                     break;

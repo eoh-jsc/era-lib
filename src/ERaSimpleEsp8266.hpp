@@ -34,9 +34,9 @@ void ERaProto<Transp, Flash>::runERaTask() {
 #endif
 }
 
+static ERaFlash flash;
 static WiFiClient eraWiFiClient;
 static ERaMqtt<WiFiClient, MQTTClient> mqtt(eraWiFiClient);
-static ERaFlash flash;
-ERaPnP ERa(mqtt, flash);
+ERaPnP< ERaMqtt<WiFiClient, MQTTClient> > ERa(mqtt, flash);
 
 #endif /* INC_ERA_SIMPLE_ESP8266_HPP_ */

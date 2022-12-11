@@ -3,7 +3,17 @@
 
 #include <Modbus/ERaModbus.hpp>
 
-#define SerialMB    Serial1
+#if defined(ESP8266)
+    #include <SoftwareSerial.h>
+
+    SoftwareSerial      SerialMB(14, 12);
+#elif defined(STM32F0xx) || defined(STM32F1xx) || \
+    defined(STM32F2xx) || defined(STM32F3xx) ||   \
+	defined(STM32F4xx) || defined(STM32F7xx)
+    HardwareSerial      SerialMB(PA3, PA2);
+#else
+    #define SerialMB    Serial1
+#endif
 
 template <class Api>
 void ERaModbus<Api>::configModbus() {
@@ -12,9 +22,6 @@ void ERaModbus<Api>::configModbus() {
     }
 
     this->stream = &SerialMB;
-#if defined(ESP8266)
-    SerialMB.setRxBufferSize(MODBUS_BUFFER_SIZE);
-#endif
     SerialMB.begin(MODBUS_BAUDRATE);
     this->_streamDefault = true;
 }
@@ -27,12 +34,8 @@ void ERaModbus<Api>::setBaudRate(uint32_t baudrate) {
     }
 
     SerialMB.flush();
-#if defined(ESP8266)
-    SerialMB.updateBaudRate(baudrate);
-#else
     SerialMB.end();
     SerialMB.begin(baudrate);
-#endif
 }
 
 template <class Api>

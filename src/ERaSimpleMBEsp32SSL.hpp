@@ -1,0 +1,8 @@
+#ifndef INC_ERA_SIMPLE_MODBUS_ESP32_SSL_HPP_
+#define INC_ERA_SIMPLE_MODBUS_ESP32_SSL_HPP_
+
+#define ERA_MODBUS
+
+#include <ERaSimpleEsp32SSL.hpp>
+
+#endif /* INC_ERA_SIMPLE_MODBUS_ESP32_SSL_HPP_ */

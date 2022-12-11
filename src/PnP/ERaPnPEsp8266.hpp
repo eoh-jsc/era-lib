@@ -64,7 +64,7 @@ static DNSServer dnsServer;
 static const uint16_t DNS_PORT = 53;
 static ERaConfig_t eraConfig{};
 static const ERaConfig_t eraDefault = {
-    .magic = 0x27061995,
+    .magic = 0x27061994,
     .flags = 0x00,
     "",
     "",
@@ -89,16 +89,17 @@ enum ConfigFlagT {
 static WiFiUDP Udp;
 static ERaUdp<WiFiUDP> eraUdp(Udp);
 
+template <class Transport>
 class ERaPnP
-    : public ERaProto< ERaMqtt<WiFiClient, MQTTClient>, ERaFlash >
+    : public ERaProto<Transport, ERaFlash>
 {
     const char* TAG = "WiFi";
     const char* HOSTNAME = "ERa";
-    friend class ERaProto< ERaMqtt<WiFiClient, MQTTClient>, ERaFlash >;
-    typedef ERaProto< ERaMqtt<WiFiClient, MQTTClient>, ERaFlash > Base;
+    friend class ERaProto<Transport, ERaFlash>;
+    typedef ERaProto<Transport, ERaFlash> Base;
 
 public:
-    ERaPnP(ERaMqtt<WiFiClient, MQTTClient>& _transp, ERaFlash& _flash)
+    ERaPnP(Transport& _transp, ERaFlash& _flash)
         : Base(_transp, _flash)
         , authToken(nullptr)
     {}
@@ -178,7 +179,8 @@ private:
     const char* authToken;
 };
 
-void ERaPnP::begin(const char* auth) {
+template <class Transport>
+void ERaPnP<Transport>::begin(const char* auth) {
     this->authToken = auth;
     WiFi.persistent(false);
     WiFi.enableSTA(true);
@@ -187,7 +189,8 @@ void ERaPnP::begin(const char* auth) {
     this->configInit();
 }
 
-void ERaPnP::run() {
+template <class Transport>
+void ERaPnP<Transport>::run() {
     switch (ERaState::get()) {
         case StateT::STATE_WAIT_CONFIG:
         case StateT::STATE_CONFIGURING:
@@ -246,7 +249,8 @@ void ERaPnP::run() {
     }
 }
 
-void ERaPnP::configApi() {
+template <class Transport>
+void ERaPnP<Transport>::configApi() {
     static bool configured {false};
     if (!eraConfig.getFlag(ConfigFlagT::CONFIG_FLAG_API) &&
         configured) {
@@ -802,7 +806,8 @@ void ERaPnP::configApi() {
     });
 }
 
-void ERaPnP::configInit() {
+template <class Transport>
+void ERaPnP<Transport>::configInit() {
     this->configLoad();
     if (eraConfig.getFlag(ConfigFlagT::CONFIG_FLAG_VALID)) {
         ERaState::set(StateT::STATE_CONNECTING_NETWORK);
@@ -813,7 +818,8 @@ void ERaPnP::configInit() {
     }
 }
 
-void ERaPnP::configLoad() {
+template <class Transport>
+void ERaPnP<Transport>::configLoad() {
     if (eraConfig.getFlag(ConfigFlagT::CONFIG_FLAG_VALID)) {
         return;
     }
@@ -825,7 +831,8 @@ void ERaPnP::configLoad() {
     }
 }
 
-void ERaPnP::configLoadDefault() {
+template <class Transport>
+void ERaPnP<Transport>::configLoadDefault() {
     char imei[64] {0};
     eraConfig = eraDefault;
     this->getImeiChip(imei, sizeof(imei));
@@ -835,7 +842,8 @@ void ERaPnP::configLoadDefault() {
     ERA_LOG(TAG, ERA_PSTR("Using default config"));
 }
 
-void ERaPnP::configSave() {
+template <class Transport>
+void ERaPnP<Transport>::configSave() {
     if (!eraConfig.getFlag(ConfigFlagT::CONFIG_FLAG_STORE)) {
         return;
     }
@@ -844,7 +852,8 @@ void ERaPnP::configSave() {
     ERA_LOG(TAG, ERA_PSTR("Configuration stored to flash"));
 }
 
-void ERaPnP::configReset() {
+template <class Transport>
+void ERaPnP<Transport>::configReset() {
     this->configLoadDefault();
     eraConfig.setFlag(ConfigFlagT::CONFIG_FLAG_STORE, true);
     this->configSave();
@@ -852,7 +861,8 @@ void ERaPnP::configReset() {
     ERA_LOG(TAG, ERA_PSTR("Resetting configuration"));
 }
 
-void ERaPnP::configMode() {
+template <class Transport>
+void ERaPnP<Transport>::configMode() {
     this->configApi();
 
     ERA_LOG(TAG, ERA_PSTR("Config mode"));
@@ -885,7 +895,8 @@ void ERaPnP::configMode() {
     dnsServer.stop();
 }
 
-void ERaPnP::connectNetwork() {
+template <class Transport>
+void ERaPnP<Transport>::connectNetwork() {
     char ssidAP[64] {0};
     this->getWiFiName(ssidAP, sizeof(ssidAP));
     WiFi.setHostname(ssidAP);
@@ -906,7 +917,8 @@ void ERaPnP::connectNetwork() {
     }
 }
 
-void ERaPnP::connectCloud() {
+template <class Transport>
+void ERaPnP<Transport>::connectCloud() {
     ERA_LOG(TAG, ERA_PSTR("Connecting cloud..."));
     this->config(eraConfig.token, eraConfig.host, eraConfig.port, eraConfig.username, eraConfig.password);
     if (Base::connect()) {
@@ -918,7 +930,8 @@ void ERaPnP::connectCloud() {
     }
 }
 
-void ERaPnP::connectWiFi(const char* ssid, const char* pass) {
+template <class Transport>
+void ERaPnP<Transport>::connectWiFi(const char* ssid, const char* pass) {
     int status = WiFi.status();
 
     MillisTime_t started = ERaMillis();
@@ -952,7 +965,8 @@ void ERaPnP::connectWiFi(const char* ssid, const char* pass) {
     ERA_LOG(TAG, ERA_PSTR("IP: %s"), localIP.toString().c_str());
 }
 
-void ERaPnP::switchToAP() {
+template <class Transport>
+void ERaPnP<Transport>::switchToAP() {
     ERA_LOG(TAG, ERA_PSTR("Switching to AP..."));
 
     char ssidAP[64] {0};
@@ -967,13 +981,15 @@ void ERaPnP::switchToAP() {
     ERaDelay(500);
 
     IPAddress myIP = WiFi.softAPIP();
+    ERA_FORCE_UNUSED(myIP);
     ERA_LOG(TAG, ERA_PSTR("AP SSID: %s"), ssidAP);
     ERA_LOG(TAG, ERA_PSTR("AP IP: %s"), myIP.toString().c_str());
 
     ERaState::set(StateT::STATE_WAIT_CONFIG);
 }
 
-void ERaPnP::switchToSTA() {
+template <class Transport>
+void ERaPnP<Transport>::switchToSTA() {
     ERA_LOG(TAG, ERA_PSTR("Switching to STA..."));
 
     ERaDelay(1000);
@@ -984,7 +1000,8 @@ void ERaPnP::switchToSTA() {
     ERaState::set(StateT::STATE_CONNECTING_NETWORK);
 }
 
-void ERaPnP::switchToAPSTA() {
+template <class Transport>
+void ERaPnP<Transport>::switchToAPSTA() {
     ERA_LOG(TAG, ERA_PSTR("Switching to AP STA..."));
 
     ERaDelay(100);
@@ -993,7 +1010,8 @@ void ERaPnP::switchToAPSTA() {
     ERaState::set(StateT::STATE_CONNECTING_NETWORK);
 }
 
-void ERaPnP::getWiFiName(char* ptr, size_t size, bool withPrefix) {
+template <class Transport>
+void ERaPnP<Transport>::getWiFiName(char* ptr, size_t size, bool withPrefix) {
 	String macAddr = WiFi.macAddress();
 	macAddr.replace(":", "");
 	macAddr.toLowerCase();
@@ -1004,7 +1022,8 @@ void ERaPnP::getWiFiName(char* ptr, size_t size, bool withPrefix) {
     }
 }
 
-void ERaPnP::getImeiChip(char* ptr, size_t size) {
+template <class Transport>
+void ERaPnP<Transport>::getImeiChip(char* ptr, size_t size) {
 	String macAddr = WiFi.macAddress();
 	macAddr.replace(":", "");
 	macAddr.toLowerCase();

@@ -113,7 +113,7 @@ protected:
                     ZigbeeState::set(ZigbeeStateT::STATE_ZB_RUNNING);
                     break;
                 case ZigbeeStateT::STATE_ZB_DEVICE_JOINED:
-                    if (!this->timerJoined) {
+                    if (this->timerJoined == false) {
                         this->timerJoined = this->timer.setTimeout(JOIN_TIMEOUT, [=](void* args) {
                             this->zigbeeTimerCallback(args);
                         }, &this->timerJoined);

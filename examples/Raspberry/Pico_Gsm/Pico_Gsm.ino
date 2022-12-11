@@ -62,7 +62,7 @@ const int pwrPin = 7;
 
 /* This function print uptime every second */
 void timerEvent() {
-    ERA_LOG("Timer", "Uptime: %d\n", ERaMillis() / 1000L);
+    ERA_LOG("Timer", "Uptime: %d", ERaMillis() / 1000L);
 }
 
 void setup() {

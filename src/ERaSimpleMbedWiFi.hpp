@@ -153,8 +153,8 @@ void ERaApi<Proto, Flash>::addModbusInfo(cJSON* root) {
                                                     ERA_PROTO_TYPE : this->thisProto().transp.getSSID()));
 }
 
-static ERaMqtt<TinyGsmClient, MQTTClient> mqtt;
 static ERaFlash flash;
-ERaWiFi ERa(mqtt, flash);
+static ERaMqtt<TinyGsmClient, MQTTClient> mqtt;
+ERaWiFi< ERaMqtt<TinyGsmClient, MQTTClient> > ERa(mqtt, flash);
 
 #endif /* INC_ERA_SIMPLE_MBED_WIFI_HPP_ */

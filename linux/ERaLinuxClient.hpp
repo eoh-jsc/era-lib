@@ -5,14 +5,15 @@
 #include <MQTTLinux/ERaMqttLinux.hpp>
 #include <UtilityLinux/ERaFlashLinux.hpp>
 
+template <class Transport>
 class ERaLinux
-    : public ERaProto< ERaMqttLinux<MQTTLinuxClient>, ERaFlashLinux >
+    : public ERaProto<Transport, ERaFlashLinux>
 {
-    friend class ERaProto< ERaMqttLinux<MQTTLinuxClient>, ERaFlashLinux >;
-    typedef ERaProto< ERaMqttLinux<MQTTLinuxClient>, ERaFlashLinux > Base;
+    friend class ERaProto<Transport, ERaFlashLinux>;
+    typedef ERaProto<Transport, ERaFlashLinux> Base;
 
 public:
-    ERaLinux(ERaMqttLinux<MQTTLinuxClient>& _transp, ERaFlashLinux& _flash)
+    ERaLinux(Transport& _transp, ERaFlashLinux& _flash)
         : Base(_transp, _flash)
     {}
     ~ERaLinux()

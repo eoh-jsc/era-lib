@@ -6,8 +6,12 @@
 #include <Utility/ERaUtility.hpp>
 #include <ERa/ERaReport.hpp>
 
-#define TOGGLE                  0x2
-#define PWM                     0x27
+#if !defined(TOGGLE)
+    #define TOGGLE              0x2
+#endif
+#if !defined(PWM)
+    #define PWM                 0x27
+#endif
 #define VIRTUAL                 0xFF
 #define ERA_VIRTUAL             (int)(-1)
 
@@ -657,7 +661,8 @@ template <class Report>
 int ERaPin<Report>::findConfigId(uint8_t _pin) {
     for (int i = 0; i < MAX_PINS; ++i) {
         if (this->isValidPin(i)) {
-            if (this->pin[i].pin == _pin) {
+            if ((this->pin[i].pin == _pin) &&
+                this->pin[i].configId) {
                 return this->pin[i].configId;
             }
         }
@@ -681,7 +686,8 @@ template <class Report>
 int ERaPin<Report>::findPinOfChannel(uint8_t channel) {
     for (int i = 0; i < MAX_PINS; ++i) {
         if (this->isValidPin(i)) {
-            if (this->pin[i].channel == channel) {
+            if ((this->pin[i].channel == channel) &&
+                (this->pin[i].pinMode == PWM)) {
                 return i;
             }
         }

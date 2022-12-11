@@ -23,7 +23,7 @@ void ERaApi<Proto, Flash>::handleReadPin(cJSON* root) {
 		}
 		item = cJSON_GetObjectItem(current, "pin_number");
 		if (cJSON_IsNumber(item)) {
-			pin.pin = item->valueint;
+			pin.pin = ERA_DECODE_PIN_NUMBER(item->valueint);
 		}
         else if (cJSON_IsString(item)) {
             pin.pin = ERA_DECODE_PIN_NAME(item->valuestring);
@@ -63,7 +63,7 @@ void ERaApi<Proto, Flash>::handleWritePin(cJSON* root) {
 		}
 		item = cJSON_GetObjectItem(current, "pin_number");
 		if (cJSON_IsNumber(item)) {
-			pin.pin = item->valueint;
+			pin.pin = ERA_DECODE_PIN_NUMBER(item->valueint);
 		}
         else if (cJSON_IsString(item)) {
             pin.pin = ERA_DECODE_PIN_NAME(item->valuestring);
@@ -150,6 +150,7 @@ void ERaApi<Proto, Flash>::handlePinRequest(const std::vector<std::string>& arra
 
 	cJSON_Delete(root);
 	root = nullptr;
+	ERA_FORCE_UNUSED(arrayTopic);
 }
 
 template <class Proto, class Flash>

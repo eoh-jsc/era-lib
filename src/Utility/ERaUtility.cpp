@@ -17,7 +17,7 @@
         return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval);
     }
 
-    void ERaRestart(bool async) {
+    void ERaRestart(bool ERA_UNUSED async) {
         void(*resetMCU)(void) = 0;
         resetMCU();
         while (1) {}
@@ -30,7 +30,7 @@
 #elif defined(ARDUINO) && defined(ESP32)
 
     void ERaDelay(MillisTime_t ms) {
-        osDelay(ms);
+        ERaOs::osDelay(ms);
     }
 
     MillisTime_t ERaMillis() {
@@ -49,23 +49,23 @@
         return ESP.getFreeHeap();
     }
 
-    void ERaRestart(bool async) {
+    void ERaRestart(bool ERA_UNUSED async) {
         ESP.restart();
         while (1) {}
     }
 
     void ERaGuardLock(ERaMutex_t& mutex) {
         if (mutex == nullptr) {
-            mutex = (ERaMutex_t)xSemaphoreCreateMutex();
+            mutex = (ERaMutex_t)ERaOs::osSemaphoreNew();
         }
-        osSemaphoreAcquire((SemaphoreHandle_t)mutex, osWaitForever);
+        ERaOs::osSemaphoreAcquire((SemaphoreHandle_t)mutex, osWaitForever);
     }
 
     void ERaGuardUnlock(ERaMutex_t& mutex) {
         if (mutex == nullptr) {
-            mutex = (ERaMutex_t)xSemaphoreCreateMutex();
+            mutex = (ERaMutex_t)ERaOs::osSemaphoreNew();
         }
-        osSemaphoreRelease((SemaphoreHandle_t)mutex);
+        ERaOs::osSemaphoreRelease((SemaphoreHandle_t)mutex);
     }
 
 #elif defined(ARDUINO) && defined(ESP8266)
@@ -91,7 +91,7 @@
         return ESP.getFreeHeap();
     }
 
-    void ERaRestart(bool async) {
+    void ERaRestart(bool ERA_UNUSED async) {
         ESP.restart();
         while (1) {}
     }
@@ -111,7 +111,7 @@
         return (numRand % (max - min) + min);
     }
 
-    void ERaRestart(bool async) {
+    void ERaRestart(bool ERA_UNUSED async) {
         nvic_sys_reset();
         while (1) {}
     }
@@ -121,12 +121,15 @@
     #define ERA_USE_DEFAULT_FREE_RAM
     #define ERA_USE_DEFAULT_GUARD
 
-#elif defined(ARDUINO) && (defined(STM32F4xx) || defined(STM32F7xx))
+#elif defined(ARDUINO) &&                        \
+    (defined(STM32F0xx) || defined(STM32F1xx) || \
+    defined(STM32F2xx) || defined(STM32F3xx) ||  \
+    defined(STM32F4xx) || defined(STM32F7xx))
 
     extern "C" char *sbrk(int i);
 
     void ERaDelay(MillisTime_t ms) {
-        osDelay(ms);
+        ERaOs::osDelay(ms);
     }
 
     uint32_t ERaRandomNumber(uint32_t min, uint32_t max) {
@@ -143,23 +146,23 @@
         return &stack_dummy - sbrk(0);
     }
 
-    void ERaRestart(bool async) {
+    void ERaRestart(bool ERA_UNUSED async) {
         NVIC_SystemReset();
         while (1) {}
     }
 
     void ERaGuardLock(ERaMutex_t& mutex) {
         if (mutex == nullptr) {
-            mutex = (ERaMutex_t)xSemaphoreCreateMutex();
+            mutex = (ERaMutex_t)ERaOs::osSemaphoreNew();
         }
-        osSemaphoreAcquire((SemaphoreHandle_t)mutex, osWaitForever);
+        ERaOs::osSemaphoreAcquire((SemaphoreHandle_t)mutex, osWaitForever);
     }
 
     void ERaGuardUnlock(ERaMutex_t& mutex) {
         if (mutex == nullptr) {
-            mutex = (ERaMutex_t)xSemaphoreCreateMutex();
+            mutex = (ERaMutex_t)ERaOs::osSemaphoreNew();
         }
-        osSemaphoreRelease((SemaphoreHandle_t)mutex);
+        ERaOs::osSemaphoreRelease((SemaphoreHandle_t)mutex);
     }
 
     #define ERA_USE_DEFAULT_MILLIS
@@ -167,7 +170,7 @@
 #elif defined(ARDUINO) && defined(ARDUINO_ARCH_RP2040)
 
     void ERaDelay(MillisTime_t ms) {
-        osDelay(ms);
+        ERaOs::osDelay(ms);
     }
 
     MillisTime_t ERaMillis() {
@@ -185,16 +188,16 @@
 
     void ERaGuardLock(ERaMutex_t& mutex) {
         if (mutex == nullptr) {
-            mutex = (ERaMutex_t)xSemaphoreCreateMutex();
+            mutex = (ERaMutex_t)ERaOs::osSemaphoreNew();
         }
-        osSemaphoreAcquire((SemaphoreHandle_t)mutex, osWaitForever);
+        ERaOs::osSemaphoreAcquire((SemaphoreHandle_t)mutex, osWaitForever);
     }
 
     void ERaGuardUnlock(ERaMutex_t& mutex) {
         if (mutex == nullptr) {
-            mutex = (ERaMutex_t)xSemaphoreCreateMutex();
+            mutex = (ERaMutex_t)ERaOs::osSemaphoreNew();
         }
-        osSemaphoreRelease((SemaphoreHandle_t)mutex);
+        ERaOs::osSemaphoreRelease((SemaphoreHandle_t)mutex);
     }
 
     #define ERA_USE_DEFAULT_FREE_RAM
@@ -263,7 +266,7 @@
         wiringPiSetupGpio();
     }
 
-    void ERaRestart(bool async) {
+    void ERaRestart(bool ERA_UNUSED async) {
         exit(1);
         while (1) {}
     }
@@ -313,7 +316,7 @@
         return (ts.tv_sec * 1000 + ts.tv_nsec / 1000000L) - startupTime;
     }
 
-    void ERaRestart(bool async) {
+    void ERaRestart(bool ERA_UNUSED async) {
         exit(1);
         while (1) {}
     }
@@ -380,7 +383,7 @@
 #endif
 
 #if defined(ERA_USE_DEFAULT_RESET)
-    void ERaRestart(bool async) {
+    void ERaRestart(bool ERA_UNUSED async) {
         while (1) {}
         ERA_FORCE_UNUSED(async);
     }

@@ -8,6 +8,5 @@
 #define INPUT_PULLDOWN      0x11
 #define OUTPUT_OPEN_DRAIN   OUTPUT
 #define ANALOG              0xC0
-#define PWM                 PWM_OUTPUT
 
 #endif /* INC_ERA_API_LINUX_DEFINE_HPP_ */

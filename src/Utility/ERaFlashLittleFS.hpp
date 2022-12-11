@@ -17,7 +17,7 @@ public:
     void begin();
     char* readFlash(const char* filename);
     size_t readFlash(const char* key, void* buf, size_t maxLen);
-    void writeFlash(const char *filename, const char* buf);
+    void writeFlash(const char* filename, const char* buf);
     size_t writeFlash(const char* key, const void* value, size_t len);
 
 protected:
@@ -53,10 +53,13 @@ char* ERaFlash::readFlash(const char* filename) {
 }
 
 size_t ERaFlash::readFlash(const char* key, void* buf, size_t maxLen) {
+    ERA_FORCE_UNUSED(key);
+    ERA_FORCE_UNUSED(buf);
+    ERA_FORCE_UNUSED(maxLen);
     return 0;
 }
 
-void ERaFlash::writeFlash(const char *filename, const char* buf) {
+void ERaFlash::writeFlash(const char* filename, const char* buf) {
     if (buf == nullptr) {
         return;
     }
@@ -69,6 +72,9 @@ void ERaFlash::writeFlash(const char *filename, const char* buf) {
 }
 
 size_t ERaFlash::writeFlash(const char* key, const void* value, size_t len) {
+    ERA_FORCE_UNUSED(key);
+    ERA_FORCE_UNUSED(value);
+    ERA_FORCE_UNUSED(len);
     return 0;
 }
 

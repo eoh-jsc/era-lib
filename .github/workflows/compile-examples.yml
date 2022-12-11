@@ -1,0 +1,170 @@
+name: Compile Examples
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/compile-examples.yml"
+      - "library.properties"
+      - "examples/**"
+      - "linux/**"
+      - "src/**"
+  push:
+    paths:
+      - ".github/workflows/compile-examples.yml"
+      - "library.properties"
+      - "examples/**"
+      - "linux/**"
+      - "src/**"
+  schedule:
+    # Run every Tuesday at 7:AM GSM +7 to catch breakage caused by changes to external resources (libraries, platforms).
+    - cron: "0 14 * * TUE"
+  workflow_dispatch:
+  repository_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.board.name }}
+    runs-on: ubuntu-latest
+
+    env:
+      SKETCHES_REPORTS_PATH: sketches-reports
+    strategy:
+      matrix:
+        board:
+          - name: "Espressif32"
+            fqbn: "esp32:esp32:esp32"
+            platform-name: esp32:esp32
+            sketch-paths: examples/ESP32
+            libraries: |
+              - source-path: ./
+          - name: "Espressif32-C3"
+            fqbn: "esp32:esp32:esp32c3"
+            platform-name: esp32:esp32
+            sketch-paths: examples/ESP32
+            libraries: |
+              - source-path: ./
+          - name: "Espressif32-S2"
+            fqbn: "esp32:esp32:esp32s2"
+            platform-name: esp32:esp32
+            sketch-paths: examples/ESP32
+            libraries: |
+              - source-path: ./
+          - name: "Espressif32-S3"
+            fqbn: "esp32:esp32:esp32s3"
+            platform-name: esp32:esp32
+            sketch-paths: examples/ESP32
+            libraries: |
+              - source-path: ./
+          - name: "Espressif8266"
+            fqbn: "esp8266:esp8266:nodemcuv2"
+            platform-name: esp8266:esp8266
+            sketch-paths: examples/ESP8266
+            libraries: |
+              - source-path: ./
+              - name: Preferences
+          - name: "STMicroelectronics-F0"
+            fqbn: "STMicroelectronics:stm32:GenF0:pnum=GENERIC_F091RCTX"
+            platform-name: STMicroelectronics:stm32
+            sketch-paths: examples/STM32
+            libraries: |
+              - source-path: ./
+              - name: TinyGSM
+              - name: STM32duino FreeRTOS
+          - name: "STMicroelectronics-F1"
+            fqbn: "STMicroelectronics:stm32:GenF1:pnum=GENERIC_F103RETX"
+            platform-name: STMicroelectronics:stm32
+            sketch-paths: examples/STM32
+            libraries: |
+              - source-path: ./
+              - name: TinyGSM
+              - name: STM32duino FreeRTOS
+          - name: "STMicroelectronics-F2"
+            fqbn: "STMicroelectronics:stm32:GenF2"
+            platform-name: STMicroelectronics:stm32
+            sketch-paths: examples/STM32
+            libraries: |
+              - source-path: ./
+              - name: TinyGSM
+              - name: STM32duino FreeRTOS
+          - name: "STMicroelectronics-F3"
+            fqbn: "STMicroelectronics:stm32:GenF3:pnum=GENERIC_F303RETX"
+            platform-name: STMicroelectronics:stm32
+            sketch-paths: examples/STM32
+            libraries: |
+              - source-path: ./
+              - name: TinyGSM
+              - name: STM32duino FreeRTOS
+          - name: "STMicroelectronics-F4"
+            fqbn: "STMicroelectronics:stm32:GenF4"
+            platform-name: STMicroelectronics:stm32
+            sketch-paths: examples/STM32
+            libraries: |
+              - source-path: ./
+              - name: TinyGSM
+              - name: STM32duino FreeRTOS
+          - name: "STMicroelectronics-F7"
+            fqbn: "STMicroelectronics:stm32:GenF7"
+            platform-name: STMicroelectronics:stm32
+            sketch-paths: examples/STM32
+            libraries: |
+              - source-path: ./
+              - name: TinyGSM
+              - name: STM32duino FreeRTOS
+          - name: "Raspberry Pico"
+            fqbn: "rp2040:rp2040:rpipico"
+            platform-name: rp2040:rp2040
+            sketch-paths: examples/Raspberry
+            libraries: |
+              - source-path: ./
+              - name: TinyGSM
+
+        # Make board type-specific customizations to the matrix jobs
+        include:
+          - board:
+              platform-name: esp32:esp32
+            platforms: |
+              # Install ESP32 platform via Boards Manager
+              - name: esp32:esp32
+                source-url: https://github.com/espressif/arduino-esp32/raw/gh-pages/package_esp32_dev_index.json
+          - board:
+              platform-name: esp8266:esp8266
+            platforms: |
+              # Install ESP8266 platform via Boards Manager
+              - name: esp8266:esp8266
+                source-url: https://arduino.esp8266.com/stable/package_esp8266com_index.json
+          - board:
+              platform-name: STMicroelectronics:stm32
+            platforms: |
+              # Install STM32 platform via Boards Manager
+              - name: STMicroelectronics:stm32
+                source-url: https://github.com/stm32duino/BoardManagerFiles/raw/main/package_stmicroelectronics_index.json
+          - board:
+              platform-name: rp2040:rp2040
+            platforms: |
+              # Install Raspberry Pico RP2040 platform via Boards Manager
+              - name: rp2040:rp2040
+                source-url: https://github.com/earlephilhower/arduino-pico/releases/download/global/package_rp2040_index.json
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install platform dependencies
+        run: pip3 install pyserial
+
+      - name: Compile examples
+        uses: arduino/compile-sketches@v1
+        with:
+          platforms: ${{ matrix.platforms }}
+          fqbn: ${{ matrix.board.fqbn }}
+          sketch-paths: ${{ matrix.board.sketch-paths }}
+          libraries: ${{ matrix.board.libraries }}
+          enable-deltas-report: 'true'
+          sketches-report-path: ${{ env.SKETCHES_REPORTS_PATH }}
+
+      - name: Save memory usage change report as artifact
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v2
+        with:
+          if-no-files-found: error
+          name: ${{ env.SKETCHES_REPORTS_PATH }}
+          path: ${{ env.SKETCHES_REPORTS_PATH }}

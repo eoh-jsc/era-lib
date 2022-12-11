@@ -12,6 +12,9 @@
 
 using namespace std;
 
+ERaApplication ERaApplication::config {};
+ERaApplication ERaApplication::control {};
+
 template <class Api>
 class ERaModbus
 {
@@ -84,8 +87,8 @@ protected:
 
     void runRead() {
         ModbusState::set(ModbusStateT::STATE_MB_RUNNING);
-        if (!ERaRemainingTime(this->modbusConfig.modbusDelay.prevMillis, this->modbusConfig.modbusDelay.delay)) {
-            this->modbusConfig.modbusDelay.prevMillis = ERaMillis();
+        if (!ERaRemainingTime(this->modbusConfig.modbusInterval.prevMillis, this->modbusConfig.modbusInterval.delay)) {
+            this->modbusConfig.modbusInterval.prevMillis = ERaMillis();
             this->readModbusConfig();
         }
     }
@@ -101,6 +104,7 @@ protected:
         this->actionModbus(req.key);
         if (this->isEmptyRequest()) {
             this->executeNow();
+            ModbusState::set(ModbusStateT::STATE_MB_CONTROLLED);
         }
         free(req.key);
         req.key = nullptr;
@@ -175,7 +179,7 @@ private:
     ModbusConfigAlias_t* getModbusAlias(const char* key);
     ModbusConfig_t* getModbusConfig(int id);
     bool actionModbus(const char* key);
-    bool eachActionModbus(Action_t& action);
+    bool eachActionModbus(Action_t& action, ModbusConfig_t*& config);
     void sendModbusRead(ModbusConfig_t& param);
     bool sendModbusWrite(ModbusConfig_t& param);
     bool waitResponse(ModbusConfig_t& param, uint8_t* modbusData);
@@ -189,7 +193,7 @@ private:
     }
 
     void executeNow() {
-        this->modbusConfig.modbusDelay.prevMillis = ERaMillis() - this->modbusConfig.modbusDelay.delay;
+        this->modbusConfig.modbusInterval.prevMillis = ERaMillis() - this->modbusConfig.modbusInterval.delay + ERA_MODBUS_EXECUTE_MS;
     }
 
 	bool isRequest() {
@@ -245,12 +249,13 @@ void ERaModbus<Api>::readModbusConfig() {
         this->sendModbusRead(param);
         ERaGuardUnlock(this->mutex);
         this->delayModbus(param.addr);
-        if (ModbusState::is(ModbusStateT::STATE_MB_PARSE)) {
+        if (ModbusState::is(ModbusStateT::STATE_MB_PARSE) ||
+            ModbusState::is(ModbusStateT::STATE_MB_CONTROLLED)) {
             this->executeNow();
             return;
         }
     }
-    this->dataBuff.add_multi("fail_read", this->failRead, "fail_write", this->failWrite, "total", this->total);
+    this->dataBuff.add_multi(ERA_F("fail_read"), this->failRead, ERA_F("fail_write"), this->failWrite, ERA_F("total"), this->total);
     this->thisApi().modbusDataWrite(&this->dataBuff);
 }
 
@@ -269,7 +274,8 @@ void ERaModbus<Api>::delayModbus(const int address) {
         ERaOnWaiting();
         this->thisApi().run();
 #endif
-        if (ModbusState::is(ModbusStateT::STATE_MB_PARSE)) {
+        if (ModbusState::is(ModbusStateT::STATE_MB_PARSE) ||
+            ModbusState::is(ModbusStateT::STATE_MB_CONTROLLED)) {
             break;
         }
         ERA_MODBUS_YIELD();
@@ -300,10 +306,15 @@ bool ERaModbus<Api>::actionModbus(const char* key) {
         return false;
     }
 
+    ModbusConfig_t* config = nullptr;
     for (int i = 0; i < alias->readActionCount; ++i) {
         ERaGuardLock(this->mutex);
-        eachActionModbus(alias->action[i]);
+        eachActionModbus(alias->action[i], config);
         ERaGuardUnlock(this->mutex);
+        if ((config != nullptr) &&
+            (i != (alias->readActionCount - 1))) {
+            this->delayModbus(config->addr);
+        }
     }
     
     return true;
@@ -320,8 +331,8 @@ ModbusConfig_t* ERaModbus<Api>::getModbusConfig(int id) {
 }
 
 template <class Api>
-bool ERaModbus<Api>::eachActionModbus(Action_t& action) {
-    ModbusConfig_t* config = this->getModbusConfig(action.id);
+bool ERaModbus<Api>::eachActionModbus(Action_t& action, ModbusConfig_t*& config) {
+    config = this->getModbusConfig(action.id);
     if (config == nullptr) {
         return false;
     }
@@ -434,10 +445,14 @@ bool ERaModbus<Api>::sendModbusWrite(ModbusConfig_t& param) {
     }
 
     this->modbusCRC(command);
-    this->sendCommand(command);
-    if (this->waitResponse(param, modbusData)) {
-        return true;
+
+    for (size_t i = 0; i < 2; ++i) {
+        this->sendCommand(command);
+        if (this->waitResponse(param, modbusData)) {
+            return true;
+        }
     }
+
     this->failWrite++;
     return false;
 }

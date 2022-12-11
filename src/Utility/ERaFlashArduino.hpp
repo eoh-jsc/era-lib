@@ -11,10 +11,10 @@ public:
     {}
 
     void begin() {};
-    char* readFlash(const char* filename) { return nullptr; };
-    size_t readFlash(const char* key, void* buf, size_t maxLen) { return 0; };
-    void writeFlash(const char *filename, const char* buf) {};
-    size_t writeFlash(const char* key, const void* value, size_t len) { return 0; };
+    char* readFlash(const char ERA_UNUSED *filename) { return nullptr; };
+    size_t readFlash(const char ERA_UNUSED *key, void ERA_UNUSED *buf, size_t ERA_UNUSED maxLen) { return 0; };
+    void writeFlash(const char ERA_UNUSED *filename, const char ERA_UNUSED *buf) {};
+    size_t writeFlash(const char ERA_UNUSED *key, const void ERA_UNUSED *value, size_t ERA_UNUSED len) { return 0; };
 
 protected:
 private:

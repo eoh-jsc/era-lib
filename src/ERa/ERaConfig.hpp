@@ -26,7 +26,11 @@
 #if defined(DEFAULT_MQTT_PORT)
     #define ERA_MQTT_PORT           DEFAULT_MQTT_PORT
 #else
-    #define ERA_MQTT_PORT           1883
+    #if defined(ERA_MQTT_SSL)
+        #define ERA_MQTT_PORT       8883
+    #else
+        #define ERA_MQTT_PORT       1883
+    #endif
 #endif
 
 #if defined(ERA_AUTH_TOKEN)
@@ -48,7 +52,11 @@
 #if defined(DEFAULT_MQTT_KEEPALIVE)
     #define ERA_MQTT_KEEPALIVE      DEFAULT_MQTT_KEEPALIVE
 #else
-    #define ERA_MQTT_KEEPALIVE      60
+    #define ERA_MQTT_KEEPALIVE      30
+#endif
+
+#if !defined(ERA_PROTO_TYPE)
+    #define ERA_PROTO_TYPE          "WiFi"
 #endif
 
 #define LIMIT_CONNECT_BROKER_MQTT   10

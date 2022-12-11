@@ -42,7 +42,7 @@ void ERaZigbee<Api>::configZigbee() {
 template <class Api>
 void ERaZigbee<Api>::handleZigbeeData() {
     uart_event_t event;
-    if (osMessageQueueGet((QueueHandle_t)(this->messageHandle), &event, NULL, 1) != osOK) {
+    if (ERaOs::osMessageQueueGet((QueueHandle_t)(this->messageHandle), &event, NULL, 1) != osOK) {
         return;
     }
     int length {0};
@@ -50,7 +50,7 @@ void ERaZigbee<Api>::handleZigbeeData() {
     uint8_t payload[256] {0};
     do {
         if (index) {
-            if (osMessageQueueGet((QueueHandle_t)(this->messageHandle), &event, NULL, DEFAULT_TIMEOUT) != osOK) {
+            if (ERaOs::osMessageQueueGet((QueueHandle_t)(this->messageHandle), &event, NULL, DEFAULT_TIMEOUT) != osOK) {
                 break;
             }
         }
@@ -65,7 +65,7 @@ void ERaZigbee<Api>::handleZigbeeData() {
             case uart_event_type_t::UART_FIFO_OVF:
             case uart_event_type_t::UART_BUFFER_FULL:
                 uart_flush_input(UART_ZIGBEE);
-                osMessageQueueReset((QueueHandle_t)(this->messageHandle));
+                ERaOs::osMessageQueueReset((QueueHandle_t)(this->messageHandle));
                 break;
             default:
                 break;
@@ -77,16 +77,6 @@ template <class Zigbee>
 ResultT ERaToZigbee<Zigbee>::waitResponse(Response_t rspWait, void* value) {
     int length {0};
     uart_event_t event;
-    Response_t rsp {
-        .nwkAddr = NO_NWK_ADDR,
-        .type = TypeT::ERR,
-        .subSystem = 0,
-        .command = 0,
-        .zclId = ClusterIDT::NO_CLUSTER_ID,
-        .transId = 0,
-        .transIdZcl = 0,
-        .cmdStatus = ZnpCommandStatusT::INVALID_PARAM
-    };
     
 	if(!rspWait.timeout || rspWait.timeout > MAX_TIMEOUT) {
 		rspWait.timeout = MAX_TIMEOUT;
@@ -114,7 +104,7 @@ ResultT ERaToZigbee<Zigbee>::waitResponse(Response_t rspWait, void* value) {
         uint8_t index {0};
         uint8_t payload[256] {0};
         do {
-            if (osMessageQueueGet((QueueHandle_t)(this->thisZigbee().messageHandle), &event, NULL, (!index ? 1 : MAX_TIMEOUT)) == osOK) {
+            if (ERaOs::osMessageQueueGet((QueueHandle_t)(this->thisZigbee().messageHandle), &event, NULL, (!index ? 1 : MAX_TIMEOUT)) == osOK) {
                 switch (event.type) {
                     case uart_event_type_t::UART_DATA: {
                         ESP_ERROR_CHECK(uart_get_buffered_data_len(UART_ZIGBEE, (size_t*)&length));
@@ -129,7 +119,7 @@ ResultT ERaToZigbee<Zigbee>::waitResponse(Response_t rspWait, void* value) {
                     case uart_event_type_t::UART_FIFO_OVF:
                     case uart_event_type_t::UART_BUFFER_FULL:
                         uart_flush_input(UART_ZIGBEE);
-                        osMessageQueueReset((QueueHandle_t)(this->thisZigbee().messageHandle));
+                        ERaOs::osMessageQueueReset((QueueHandle_t)(this->thisZigbee().messageHandle));
                         break;
                     default:
                         break;

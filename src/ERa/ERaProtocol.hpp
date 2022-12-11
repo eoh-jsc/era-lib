@@ -1,6 +1,10 @@
 #ifndef INC_ERA_PROTOCOL_HPP_
 #define INC_ERA_PROTOCOL_HPP_
 
+#if __has_include("ERaOptions.hpp")
+    #include "ERaOptions.hpp"
+#endif
+
 #include <vector>
 #include <string>
 #include <Utility/ERaFlashDef.hpp>
@@ -45,12 +49,6 @@ public:
     }
     ~ERaProto()
     {}
-    
-	void init() {
-		Base::flash.begin();
-		this->initPinConfig();
-		this->initERaTask();
-	}
 
     void begin(const char* auth) {
 		this->ERA_AUTH = auth;
@@ -61,6 +59,24 @@ public:
 		this->transp.onMessage(this->messageCb);
     }
 
+	void run() {
+		if (!Base::run()) {
+			ERaState::set(StateT::STATE_DISCONNECTED);
+		}
+		this->runERaTask();
+	}
+
+	void askConfigWhenRestart(bool enable = true) {
+		this->transp.setAskConfig(enable);
+	}
+
+protected:
+	void init() {
+		Base::begin();
+		this->initPinConfig();
+		this->initERaTask();
+	}
+
     bool connect() {
         if (!this->transp.connect()) {
 			return false;
@@ -70,45 +86,6 @@ public:
 		return true;
     }
 
-	void run() {
-		if (!Base::run()) {
-			ERaState::set(StateT::STATE_DISCONNECTED);
-		}
-		this->runERaTask();
-	}
-
-	void processRequest(std::string& topic, const std::string& payload) {
-		ERA_LOG(TAG, ERA_PSTR("MQTT message: %s %s"), topic.c_str(), payload.c_str());
-		
-		if (topic.find(this->ERA_TOPIC) != 0) {
-			return;
-		}
-
-		topic.erase(0, strlen(this->ERA_TOPIC));
-		std::vector<std::string> arrayTopic;
-		this->splitString(topic, arrayTopic, '/');
-
-		if (arrayTopic.size() < 2) {
-			return;
-		}
-
-		if (arrayTopic.at(1) == "pin") {
-			this->processPinRequest(arrayTopic, payload);
-		}
-		else if (arrayTopic.at(1) == "arduino_pin") {
-			Base::processArduinoPinRequest(arrayTopic, payload);
-		}
-		else if (arrayTopic.at(1) == "down") {
-			this->processDownRequest(arrayTopic, payload);
-		}
-#if defined(ERA_ZIGBEE)
-		else if (arrayTopic.at(1) == "zigbee") {
-			this->processZigbeeRequest(arrayTopic, payload);
-		}
-#endif
-	}
-
-protected:
 	Transp& transp;
 
 private:
@@ -138,11 +115,13 @@ private:
 	bool sendModbusData(ERaRsp_t& rsp);
 	bool sendZigbeeData(ERaRsp_t& rsp);
 	void sendCommand(ERaRsp_t& rsp, ApiData_t data = nullptr);
+	void sendCommandVirtual(ERaRsp_t& rsp, ERaDataJson* data);
 	void sendCommandModbus(ERaRsp_t& rsp, ERaDataBuff* data);
 	void initPinConfig();
 	void parsePinConfig(const char* str);
 	void storePinConfig(const cJSON* const root);
 	void removePinConfig();
+	void processRequest(std::string& topic, const std::string& payload);
 	unsigned int splitString(const std::string& strInput, std::vector<std::string>& retList, char ch);
 
 	MessageCallback_t messageCb = [=](std::string& topic, std::string& payload) {
@@ -163,6 +142,38 @@ void ERaProto<Transp, Flash>::printBanner() {
 		"Connection successful (ping: %lums)!!!" ERA_NEWLINE),
 		(unsigned long)this->transp.getPing()
 	);
+}
+
+template <class Transp, class Flash>
+void ERaProto<Transp, Flash>::processRequest(std::string& topic, const std::string& payload) {
+	ERA_LOG(this->transp.getTag(), ERA_PSTR("Message %s: %s"), topic.c_str(), payload.c_str());
+
+	if (topic.find(this->ERA_TOPIC) != 0) {
+		return;
+	}
+
+	topic.erase(0, strlen(this->ERA_TOPIC));
+	std::vector<std::string> arrayTopic;
+	this->splitString(topic, arrayTopic, '/');
+
+	if (arrayTopic.size() < 2) {
+		return;
+	}
+
+	if (arrayTopic.at(1) == "pin") {
+		this->processPinRequest(arrayTopic, payload);
+	}
+	else if (arrayTopic.at(1) == "arduino_pin") {
+		Base::processArduinoPinRequest(arrayTopic, payload);
+	}
+	else if (arrayTopic.at(1) == "down") {
+		this->processDownRequest(arrayTopic, payload);
+	}
+#if defined(ERA_ZIGBEE)
+	else if (arrayTopic.at(1) == "zigbee") {
+		this->processZigbeeRequest(arrayTopic, payload);
+	}
+#endif
 }
 
 template <class Transp, class Flash>
@@ -193,6 +204,7 @@ void ERaProto<Transp, Flash>::processDownRequest(const std::vector<std::string>&
 	cJSON_Delete(root);
 	root = nullptr;
 	item = nullptr;
+	ERA_FORCE_UNUSED(arrayTopic);
 }
 
 template <class Transp, class Flash>
@@ -477,6 +489,7 @@ bool ERaProto<Transp, Flash>::sendData(ERaRsp_t& rsp) {
 			return this->sendPinData(rsp);
 		case Base::ERaTypeRspT::ERA_RESPONSE_CONFIG_ID:
 			return this->sendConfigIdData(rsp);
+		case Base::ERaTypeRspT::ERA_RESPONSE_VIRTUAL_PIN_MULTI:
 		case Base::ERaTypeRspT::ERA_RESPONSE_CONFIG_ID_MULTI:
 			return this->sendConfigIdMultiData(rsp);
 		case Base::ERaTypeRspT::ERA_RESPONSE_MODBUS_DATA:
@@ -490,11 +503,16 @@ bool ERaProto<Transp, Flash>::sendData(ERaRsp_t& rsp) {
 
 template <class Transp, class Flash>
 bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
+	int configId = rsp.id;
 	int pMode = this->eraPinReport.findPinMode((int)rsp.id);
 	switch (rsp.type) {
 		case Base::ERaTypeRspT::ERA_RESPONSE_VIRTUAL_PIN:
 			if (pMode == VIRTUAL) {
-				rsp.id = this->eraPinReport.findConfigId((int)rsp.id);
+				configId = this->eraPinReport.findConfigId((int)rsp.id);
+				if (configId == -1) {
+					break;
+				}
+				rsp.id = configId;
 				sendConfigIdData(rsp);
 				return true;
 			}
@@ -502,21 +520,33 @@ bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
 		case Base::ERaTypeRspT::ERA_RESPONSE_DIGITAL_PIN:
 			if ((pMode == OUTPUT) || (pMode == INPUT) ||
 				(pMode == INPUT_PULLUP) || (pMode == INPUT_PULLDOWN)) {
-				rsp.id = this->eraPinReport.findConfigId((int)rsp.id);
+				configId = this->eraPinReport.findConfigId((int)rsp.id);
+				if (configId == -1) {
+					break;
+				}
+				rsp.id = configId;
 				sendConfigIdData(rsp);
 				return true;
 			}
 			break;
 		case Base::ERaTypeRspT::ERA_RESPONSE_ANALOG_PIN:
 			if (pMode == ANALOG) {
-				rsp.id = this->eraPinReport.findConfigId((int)rsp.id);
+				configId = this->eraPinReport.findConfigId((int)rsp.id);
+				if (configId == -1) {
+					break;
+				}
+				rsp.id = configId;
 				sendConfigIdData(rsp);
 				return true;
 			}
 			break;
 		case Base::ERaTypeRspT::ERA_RESPONSE_PWM_PIN:
 			if (pMode == PWM) {
-				rsp.id = this->eraPinReport.findConfigId((int)rsp.id);
+				configId = this->eraPinReport.findConfigId((int)rsp.id);
+				if (configId == -1) {
+					break;
+				}
+				rsp.id = configId;
 				sendConfigIdData(rsp);
 				return true;
 			}
@@ -558,7 +588,7 @@ bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
 		free((char*)rsp.param);
 	}
 	else {
-		cJSON_AddNumberToObject(root, name, rsp.param);
+		cJSON_AddNumberWithDecimalToObject(root, name, rsp.param, 5);
 	}
 	payload = cJSON_PrintUnformatted(root);
 	if (payload != nullptr) {
@@ -587,7 +617,7 @@ bool ERaProto<Transp, Flash>::sendConfigIdData(ERaRsp_t& rsp) {
 		free((char*)rsp.param);
 	}
 	else {
-		cJSON_AddNumberToObject(root, "v", rsp.param);
+		cJSON_AddNumberWithDecimalToObject(root, "v", rsp.param, 5);
 	}
 	payload = cJSON_PrintUnformatted(root);
 	if (payload != nullptr) {
@@ -659,6 +689,11 @@ bool ERaProto<Transp, Flash>::sendZigbeeData(ERaRsp_t& rsp) {
 template <class Transp, class Flash>
 void ERaProto<Transp, Flash>::sendCommand(ERaRsp_t& rsp, ApiData_t data) {
 	switch (rsp.type) {
+		case Base::ERaTypeRspT::ERA_RESPONSE_VIRTUAL_PIN_MULTI: {
+			ERaDataJson* vrData = (ERaDataJson*)data;
+			this->sendCommandVirtual(rsp, vrData);
+		}
+			break;
 		case Base::ERaTypeRspT::ERA_RESPONSE_MODBUS_DATA: {
 			ERaDataBuff* modbusData = (ERaDataBuff*)data;
 			this->sendCommandModbus(rsp, modbusData);
@@ -668,6 +703,46 @@ void ERaProto<Transp, Flash>::sendCommand(ERaRsp_t& rsp, ApiData_t data) {
 			break;
 	}
 	this->sendData(rsp);
+}
+
+template <class Transp, class Flash>
+void ERaProto<Transp, Flash>::sendCommandVirtual(ERaRsp_t& rsp, ERaDataJson* data) {
+	if (data == nullptr) {
+		return;
+	}
+	ERaDataJson::iterator current;
+	const ERaDataJson::iterator e = data->end();
+	for (ERaDataJson::iterator it = data->begin(); it != e;) {
+		if (it.getName() == nullptr) {
+			continue;
+		}
+		int configId = this->eraPinReport.findConfigId(atoi(it.getName()));
+		if (configId == -1) {
+			if (it.isString()) {
+				Base::virtualWrite(atoi(it.getName()), it.getString());
+			}
+			else {
+				Base::virtualWrite(atoi(it.getName()), it.getDouble());
+			}
+			data->remove(it);
+			if (!current) {
+				it = data->begin();
+			}
+			else {
+				it = current;
+				++it;
+			}
+			continue;
+		}
+		char name[2 + 8 * sizeof(configId)] {0};
+		FormatString(name, "%d", configId);
+		it.rename(name);
+		current = it;
+		++it;
+	}
+	if (current) {
+		rsp.param = data->getJson();
+	}
 }
 
 template <class Transp, class Flash>
@@ -778,6 +853,7 @@ unsigned int ERaProto<Transp, Flash>::splitString(const std::string& strInput, s
 	}
 
 	unsigned int pos = strInput.find(ch);
+	unsigned int size = strInput.size();
 	unsigned int initPos = 0;
 	retList.clear();
 
@@ -788,7 +864,7 @@ unsigned int ERaProto<Transp, Flash>::splitString(const std::string& strInput, s
 		pos = strInput.find(ch, initPos);
 	}
 
-	std::string lastSub = strInput.substr(initPos, std::min(pos, strInput.size()) - initPos + 1);
+	std::string lastSub = strInput.substr(initPos, std::min(pos, size) - initPos + 1);
 	retList.push_back(lastSub);
 	return retList.size();
 }

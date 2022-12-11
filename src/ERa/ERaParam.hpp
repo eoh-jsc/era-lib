@@ -46,8 +46,9 @@ public:
 	}
 
 	template <typename T>
-	void operator= (T value) {
+	ERaParam& operator= (T value) {
 		add(value);
+		return *this;
 	}
 
 	template <typename T>

@@ -25,15 +25,16 @@
     #endif
 #endif
 
+template <class Transport>
 class ERaEthernet
-    : public ERaProto< ERaMqtt<WiFiClient, MQTTClient>, ERaFlash >
+    : public ERaProto<Transport, ERaFlash>
 {
     const char* TAG = "Ethernet";
-    friend class ERaProto< ERaMqtt<WiFiClient, MQTTClient>, ERaFlash >;
-    typedef ERaProto< ERaMqtt<WiFiClient, MQTTClient>, ERaFlash > Base;
+    friend class ERaProto<Transport, ERaFlash>;
+    typedef ERaProto<Transport, ERaFlash> Base;
 
 public:
-    ERaEthernet(ERaMqtt<WiFiClient, MQTTClient>& _transp, ERaFlash& _flash)
+    ERaEthernet(Transport& _transp, ERaFlash& _flash)
         : Base(_transp, _flash)
         , authToken(nullptr)
     {}

@@ -36,9 +36,9 @@ void ERaProto<Transp, Flash>::runERaTask() {
 #endif
 }
 
+static ERaFlash flash;
 static EthernetClient eraEthernetClient;
 static ERaMqtt<EthernetClient, MQTTClient> mqtt(eraEthernetClient);
-static ERaFlash flash;
-ERaPnP ERa(mqtt, flash);
+ERaEthernet< ERaMqtt<EthernetClient, MQTTClient> > ERa(mqtt, flash);
 
 #endif /* INC_ERA_SIMPLE_ETHERNET2_HPP_ */

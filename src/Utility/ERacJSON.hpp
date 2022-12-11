@@ -1,6 +1,7 @@
 #ifndef INC_ERA_CJSON_HPP_
 #define INC_ERA_CJSON_HPP_
 
+#include <stdio.h>
 #include <stdint.h>
 #include <stddef.h>
 #include <Utility/cJSON.hpp>

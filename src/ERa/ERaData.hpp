@@ -152,6 +152,10 @@ public:
     void add(float value);
     void add(double value);
 
+#if defined(ERA_HAS_PROGMEM)
+	void add(const __FlashStringHelper* ptr);
+#endif
+
 	template <typename T, typename... Args> 
 	void add_multi(const T last) {
 		add(last);
@@ -274,6 +278,22 @@ void ERaDataBuff::add(double value) {
     this->len += snprintf(this->buff + this->len, this->buffSize - this->len, "%.5f", value);
     this->buff[this->len++] = '\0';
 }
+
+#if defined(ERA_HAS_PROGMEM)
+	void ERaDataBuff::add(const __FlashStringHelper* ptr) {
+		if (ptr == nullptr) {
+			return;
+		}
+		PGM_P p = reinterpret_cast<PGM_P>(ptr);
+		size_t size = strlen_P(p);
+		if (this->len + size > this->buffSize) {
+			return;
+		}
+		memcpy_P(this->buff + this->len, p, size);
+		this->len += size;
+    	this->buff[this->len++] = '\0';
+	}
+#endif
 
 bool ERaDataBuff::next() {
 	char* ptr = this->buff + this->len;
@@ -461,6 +481,10 @@ public:
 			return cJSON_IsString(this->item);
 		}
 
+		bool rename(const char* name) const {
+			return cJSON_Rename(const_cast<cJSON*>(this->item), name);
+		}
+
 		bool isValid() const {
 			return this->item != nullptr;
 		}
@@ -471,6 +495,15 @@ public:
 
 		operator const cJSON* () const {
 			return this->getItem();
+		}
+
+		operator bool () const {
+			return this->isValid();
+		}
+
+		iterator& operator = (const iterator& it) {
+			this->item = it.item;
+			return *this;
 		}
 
 		bool operator != (const iterator& it) {
@@ -495,20 +528,13 @@ public:
 		const cJSON* item;
 	};
 
-	ERaDataJson()
+	ERaDataJson(cJSON* json = nullptr,
+				AddBool addBool = cJSON_AddBoolToObject,
+				AddNumber addNumber = cJSON_AddNumberToObject,
+				AddDouble addDouble = cJSON_AddNumberWithDecimalToObject,
+				AddString addString = cJSON_AddStringToObject)
 		: ptr(nullptr)
-		, root(nullptr)
-		, hooks {
-			.addBool = cJSON_AddBoolToObject,
-			.addNumber = cJSON_AddNumberToObject,
-			.addDouble = cJSON_AddNumberWithDecimalToObject,
-			.addString = cJSON_AddStringToObject
-		}
-	{}
-	ERaDataJson(AddBool addBool, AddNumber addNumber,
-				AddDouble addDouble, AddString addString)
-		: ptr(nullptr)
-		, root(nullptr)
+		, root(json)
 		, hooks {
 			.addBool = addBool,
 			.addNumber = addNumber,
@@ -524,6 +550,10 @@ public:
 
 	const cJSON* getJson() const {
 		return this->root;
+	}
+
+	void setJson(cJSON* const it) {
+		this->root = it;
 	}
 
 	const char* getString() {
@@ -588,6 +618,8 @@ public:
 
 	void remove(size_t index);
 	void remove(const char* key);
+	void remove(cJSON* const it);
+	void remove(const iterator& it);
 
 	iterator begin() const {
 		if (this->root == nullptr) {
@@ -662,13 +694,15 @@ void ERaDataJson::remove(size_t index) {
 }
 
 void ERaDataJson::remove(const char* key) {
-	const iterator e = this->end();
-	for (iterator it = this->begin(); it != e; ++it) {
-		if (!strcmp(it.getItem()->string, key)) {
-			cJSON_DeleteItemFromObject(this->root, it.getItem()->string);
-			break;
-		}
-	}
+	cJSON_DeleteItemFromObject(this->root, key);
+}
+
+void ERaDataJson::remove(cJSON* const it) {
+	cJSON_DeleteItemViaPointer(this->root, it);
+}
+
+void ERaDataJson::remove(const ERaDataJson::iterator& it) {
+	cJSON_DeleteItemViaPointer(this->root, const_cast<cJSON*>(it.getItem()));
 }
 
 ERaDataJson::iterator ERaDataJson::operator [] (int index) const {

@@ -50,8 +50,16 @@ ifeq ($(target),raspberry)
 	LDFLAGS += -lwiringPi
 endif
 
+ifeq ($(modbus),true)
+	CXXFLAGS += -DERA_MODBUS
+endif
+
 ifeq ($(zigbee),true)
 	CXXFLAGS += -DERA_ZIGBEE
+endif
+
+ifeq ($(config),true)
+	CXXFLAGS += -DERA_ASK_CONFIG_WHEN_RESTART
 endif
 
 ifeq ($(debug),true)
@@ -69,7 +77,6 @@ SOURCES=main.cpp \
 	../src/Utility/cJSON.cpp \
 	../src/Utility/ERacJSON.cpp \
 	../src/Utility/ERaUtility.cpp \
-	../src/Modbus/ERaParse.cpp \
 	MQTTLinux/MQTT/unix/unix.cpp \
 	MQTTLinux/MQTT/MQTTLinux.cpp
 

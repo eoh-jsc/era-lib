@@ -2,10 +2,21 @@
 #define INC_ERA_HPP_
 
 #if defined(ARDUINO) && defined(ESP32)
-    #include <ERaEsp32.hpp>
+    #if defined(ERA_USE_SSL)
+        #include <ERaEsp32SSL.hpp>
+    #else
+        #include <ERaEsp32.hpp>
+    #endif
 #elif defined(ARDUINO) && defined(ESP8266)
-    #include <ERaSimpleMBEsp8266.hpp>
-#elif defined(ARDUINO) && defined(STM32F4xx)
+    #if defined(ERA_USE_SSL)
+        #include <ERaEsp8266SSL.hpp>
+    #else
+        #include <ERaEsp8266.hpp>
+    #endif
+#elif defined(ARDUINO) &&                        \
+    (defined(STM32F0xx) || defined(STM32F1xx) || \
+    defined(STM32F2xx) || defined(STM32F3xx) ||  \
+    defined(STM32F4xx) || defined(STM32F7xx))
     #define ERA_NO_RTOS
     #include <ERa/ERaDetect.hpp>
     #define TINY_GSM_RX_BUFFER ERA_MQTT_BUFFER_SIZE

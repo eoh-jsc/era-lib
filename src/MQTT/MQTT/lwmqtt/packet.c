@@ -147,7 +147,8 @@ lwmqtt_err_t lwmqtt_encode_connect(uint8_t *buf, size_t buf_len, size_t *len, lw
   }
 
   // write keep alive
-  err = lwmqtt_write_num(&buf_ptr, buf_end, options.keep_alive);
+  // TODO: Increase by 5s
+  err = lwmqtt_write_num(&buf_ptr, buf_end, options.keep_alive + 5);
   if (err != LWMQTT_SUCCESS) {
     return err;
   }

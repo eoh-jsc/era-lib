@@ -2201,6 +2201,29 @@ CJSON_PUBLIC(cJSON*) cJSON_AddArrayToObject(cJSON * const object, const char * c
     return NULL;
 }
 
+CJSON_PUBLIC(cJSON_bool) cJSON_Rename(cJSON * const object, const char * const name)
+{
+    if ((object == NULL) || (name == NULL))
+    {
+        return false;
+    }
+
+    /* replace the name in the replacement */
+    if (!(object->type & cJSON_StringIsConst) && (object->string != NULL))
+    {
+        cJSON_free(object->string);
+    }
+    object->string = (char*)cJSON_strdup((const unsigned char*)name, &global_hooks);
+    if (object->string == NULL)
+    {
+        return false;
+    }
+
+    object->type &= ~cJSON_StringIsConst;
+
+    return true;
+}
+
 CJSON_PUBLIC(cJSON *) cJSON_DetachItemViaPointer(cJSON *parent, cJSON * const item)
 {
     if ((parent == NULL) || (item == NULL))
@@ -2264,6 +2287,13 @@ CJSON_PUBLIC(cJSON *) cJSON_DetachItemFromObjectCaseSensitive(cJSON *object, con
     cJSON *to_detach = cJSON_GetObjectItemCaseSensitive(object, string);
 
     return cJSON_DetachItemViaPointer(object, to_detach);
+}
+
+CJSON_PUBLIC(void) cJSON_DeleteItemViaPointer(cJSON *parent, cJSON * const item)
+{
+    cJSON *detach = cJSON_DetachItemViaPointer(parent, item);
+
+    cJSON_Delete(detach);
 }
 
 CJSON_PUBLIC(void) cJSON_DeleteItemFromObject(cJSON *object, const char *string)

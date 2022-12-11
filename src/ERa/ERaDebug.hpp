@@ -33,8 +33,10 @@
     #if defined(ARDUINO) && defined(ESP32) && \
         (CORE_DEBUG_LEVEL >= ARDUHAL_LOG_LEVEL_INFO)
         #define ERA_LOG(tag, ...)           ESP_LOGI(tag, ##__VA_ARGS__)
-    #elif defined(ARDUINO) && \
-        (defined(ESP32) || defined(ESP8266) || defined(__MBED__))
+    #elif defined(ARDUINO) &&                                                   \
+        (defined(ESP32) || defined(ESP8266) || defined(ARDUINO_ARCH_RP2040) ||  \
+        defined(STM32F0xx) || defined(STM32F1xx) || defined(STM32F2xx) ||       \
+        defined(STM32F3xx) || defined(STM32F4xx) || defined(STM32F7xx))
         #ifndef ERA_SERIAL
             #define ERA_SERIAL              Serial
         #endif
@@ -115,6 +117,10 @@
     #endif
 
     #pragma message "Debug enabled"
+    #if defined(ARDUINO) && defined(ESP32) && \
+        (CORE_DEBUG_LEVEL < ARDUHAL_LOG_LEVEL_INFO)
+        #pragma message "Recommend: Set Core Debug Level to Info(3)"
+    #endif
 #else
     #undef ERA_LOG
     #undef ERA_DEBUG_DUMP
@@ -122,7 +128,7 @@
 #endif
 
 static
-ERA_UNUSED void ERaLogHex(const char* title, const uint8_t* buf, size_t len) {
+ERA_UNUSED void ERaLogHex(const char ERA_UNUSED *title, const uint8_t ERA_UNUSED *buf, size_t ERA_UNUSED len) {
 #ifdef ERA_DEBUG_DUMP
     char str[5] {0};
     std::string out(title);

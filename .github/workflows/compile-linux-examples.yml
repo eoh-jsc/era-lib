@@ -1,0 +1,34 @@
+name: Compile Linux Examples
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/compile-linux-examples.yml"
+      - "library.properties"
+      - "examples/**"
+      - "linux/**"
+      - "src/**"
+  push:
+    paths:
+      - ".github/workflows/compile-linux-examples.yml"
+      - "library.properties"
+      - "examples/**"
+      - "linux/**"
+      - "src/**"
+  schedule:
+    # Run every Tuesday at 7:AM GSM +7 to catch breakage caused by changes to external resources (libraries, platforms).
+    - cron: "0 14 * * TUE"
+  workflow_dispatch:
+  repository_dispatch:
+
+jobs:
+  build:
+    name: "Linux"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Compile examples
+        working-directory: ./linux
+        run: make build=debug all

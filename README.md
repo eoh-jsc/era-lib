@@ -1,5 +1,13 @@
 # ERa Library
 
+[![GitHub version](https://img.shields.io/github/release/eoh-jsc/era-lib.svg)](https://github.com/eoh-jsc/era-lib/releases/latest)
+[![GitHub download](https://img.shields.io/github/downloads/eoh-jsc/era-lib/total.svg)](https://github.com/eoh-jsc/era-lib/releases/latest)
+[![GitHub stars](https://img.shields.io/github/stars/eoh-jsc/era-lib.svg)](https://github.com/eoh-jsc/era-lib/stargazers)
+[![GitHub issues](https://img.shields.io/github/issues/eoh-jsc/era-lib.svg)](https://github.com/eoh-jsc/era-lib/issues)
+[![Compile status](https://img.shields.io/github/workflow/status/eoh-jsc/era-lib/Compile%20Examples.svg)](https://github.com/eoh-jsc/era-lib/actions)
+[![Compile linux status](https://img.shields.io/github/workflow/status/eoh-jsc/era-lib/Compile%20Linux%20Examples.svg)](https://github.com/eoh-jsc/era-lib/actions)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/eoh-jsc/era-lib/blob/master/LICENSE)
+
 An IoT Market Enabler! It supports WiFi, Ethernet, Zigbee, Modbus, Serial. Works with boards like Arduino, ESP8266, ESP32, STM32, Raspberry Pi...
 
 Website: https://e-ra.io

@@ -11,72 +11,72 @@
 #if defined(ERA_MODBUS)
     template <class Api>
     void ERaModbus<Api>::initModbusTask() {
-        xTaskCreate(this->modbusTask, "modbusTask", 1024 * 5, this,
-                    configMAX_PRIORITIES - 3, (::TaskHandle_t*)(&this->_modbusTask));
-        xTaskCreate(this->writeModbusTask, "writeModbusTask", 1024 * 5, this,
-                    configMAX_PRIORITIES - 3, (::TaskHandle_t*)(&this->_writeModbusTask));
+        this->_modbusTask = ERaOs::osThreadNew(this->modbusTask, "modbusTask",
+                                            1024 * 5, this, configMAX_PRIORITIES - 3);
+        this->_writeModbusTask = ERaOs::osThreadNew(this->writeModbusTask, "writeModbusTask",
+                                            1024 * 5, this, configMAX_PRIORITIES - 3);
     }
 
     template <class Api>
     void ERaModbus<Api>::modbusTask(void* args) {
         if (args == NULL) {
-            vTaskDelete(NULL);
+            ERaOs::osThreadDelete(NULL);
         }
         ERaModbus* modbus = (ERaModbus*)args;
         modbus->run(true);
-        vTaskDelete(NULL);
+        ERaOs::osThreadDelete(NULL);
     }
 
     template <class Api>
     void ERaModbus<Api>::writeModbusTask(void* args) {
         if (args == NULL) {
-            vTaskDelete(NULL);
+            ERaOs::osThreadDelete(NULL);
         }
         ERaModbus* modbus = (ERaModbus*)args;
         modbus->run(false);
-        vTaskDelete(NULL);
+        ERaOs::osThreadDelete(NULL);
     }
 #endif
 
 #if defined(ERA_ZIGBEE)
     template <class Api>
     void ERaZigbee<Api>::initZigbeeTask() {
-        xTaskCreate(this->zigbeeTask, "zigbeeTask", 1024 * 12, this,
-                    configMAX_PRIORITIES - 1, (::TaskHandle_t*)(&this->_zigbeeTask));
-        xTaskCreate(this->controlZigbeeTask, "controlZigbeeTask", 1024 * 12, this,
-                    configMAX_PRIORITIES - 1, (::TaskHandle_t*)(&this->_controlZigbeeTask));
-        xTaskCreate(this->responseZigbeeTask, "responseZigbeeTask", 1024 * 12, this,
-                    configMAX_PRIORITIES - 2, (::TaskHandle_t*)(&this->_responseZigbeeTask));
+        this->_zigbeeTask = ERaOs::osThreadNew(this->zigbeeTask, "zigbeeTask",
+                                            1024 * 12, this, configMAX_PRIORITIES - 1);
+        this->_controlZigbeeTask = ERaOs::osThreadNew(this->controlZigbeeTask, "controlZigbeeTask",
+                                            1024 * 12, this, configMAX_PRIORITIES - 1);
+        this->_responseZigbeeTask = ERaOs::osThreadNew(this->responseZigbeeTask, "responseZigbeeTask",
+                                            1024 * 12, this, configMAX_PRIORITIES - 2);
     }
 
     template <class Api>
     void ERaZigbee<Api>::zigbeeTask(void* args) {
         if (args == NULL) {
-            vTaskDelete(NULL);
+            ERaOs::osThreadDelete(NULL);
         }
         ERaZigbee* zigbee = (ERaZigbee*)args;
         zigbee->run();
-        vTaskDelete(NULL);
+        ERaOs::osThreadDelete(NULL);
     }
 
     template <class Api>
     void ERaZigbee<Api>::controlZigbeeTask(void* args) {
         if (args == NULL) {
-            vTaskDelete(NULL);
+            ERaOs::osThreadDelete(NULL);
         }
         ERaZigbee* zigbee = (ERaZigbee*)args;
         zigbee->runControl();
-        vTaskDelete(NULL);
+        ERaOs::osThreadDelete(NULL);
     }
 
     template <class Api>
     void ERaZigbee<Api>::responseZigbeeTask(void* args) {
         if (args == NULL) {
-            vTaskDelete(NULL);
+            ERaOs::osThreadDelete(NULL);
         }
         ERaZigbee* zigbee = (ERaZigbee*)args;
         zigbee->runResponse();
-        vTaskDelete(NULL);
+        ERaOs::osThreadDelete(NULL);
     }
 #endif
 
@@ -120,8 +120,8 @@ void ERaApi<Proto, Flash>::addModbusInfo(cJSON* root) {
                                                     ERA_PROTO_TYPE : this->thisProto().transp.getSSID()));
 }
 
-static ERaMqtt<TinyGsmClient, MQTTClient> mqtt;
 static ERaFlash flash;
-ERaWiFi ERa(mqtt, flash);
+static ERaMqtt<TinyGsmClient, MQTTClient> mqtt;
+ERaWiFi< ERaMqtt<TinyGsmClient, MQTTClient> > ERa(mqtt, flash);
 
 #endif /* INC_ERA_SIMPLE_RP2040_WIFI_HPP_ */

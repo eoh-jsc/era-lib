@@ -60,8 +60,8 @@ void ERaApi<Proto, Flash>::addModbusInfo(cJSON* root) {
 	cJSON_AddStringToObject(root, INFO_MB_WIFI_USING, ERA_PROTO_TYPE);
 }
 
-static ERaMqtt<ERaClient, MQTTClient> mqtt;
 static ERaFlash flash;
-ERaStream ERa(mqtt, flash);
+static ERaMqtt<ERaClient, MQTTClient> mqtt;
+ERaStream< ERaMqtt<ERaClient, MQTTClient> > ERa(mqtt, flash);
 
 #endif /* INC_ERA_SIMPLE_SERIAL_HPP_ */
