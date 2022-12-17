@@ -20,6 +20,7 @@ void ERaZigbee<Api>::configZigbee() {
     #else
         if (uart_is_driver_installed(UART_ZIGBEE)) {
     #endif
+        ZigbeeState::set(ZigbeeStateT::STATE_ZB_IGNORE);
         ERA_LOG(TAG, ERA_PSTR("[Warning] UART %d installed, please setup another UART for Zigbee!"), UART_ZIGBEE);
         ERA_LOG(TAG, ERA_PSTR("[Warning] Or disable Modbus first!"));
         ERA_LOG(TAG, ERA_PSTR("[Warning] Exclude header file ERa.hpp and Include specific header file ERaSimpleZBEsp32.hpp"));

@@ -1333,6 +1333,7 @@ static cJSON_bool parse_value(cJSON * const item, parse_buffer * const input_buf
     {
         item->type = cJSON_False;
         item->valueint = 0;
+        item->valuedouble = 0;
         input_buffer->offset += 5;
         return true;
     }
@@ -1341,6 +1342,7 @@ static cJSON_bool parse_value(cJSON * const item, parse_buffer * const input_buf
     {
         item->type = cJSON_True;
         item->valueint = 1;
+        item->valuedouble = 1;
         input_buffer->offset += 4;
         return true;
     }
@@ -2447,6 +2449,7 @@ CJSON_PUBLIC(cJSON *) cJSON_CreateTrue(void)
     {
         item->type = cJSON_True;
         item->valueint = 1;
+        item->valuedouble = 1;
     }
 
     return item;
@@ -2459,6 +2462,7 @@ CJSON_PUBLIC(cJSON *) cJSON_CreateFalse(void)
     {
         item->type = cJSON_False;
         item->valueint = 0;
+        item->valuedouble = 0;
     }
 
     return item;
@@ -2471,6 +2475,7 @@ CJSON_PUBLIC(cJSON *) cJSON_CreateBool(cJSON_bool boolean)
     {
         item->type = boolean ? cJSON_True : cJSON_False;
         item->valueint = boolean ? 1 : 0;
+        item->valuedouble = boolean ? 1 : 0;
     }
 
     return item;

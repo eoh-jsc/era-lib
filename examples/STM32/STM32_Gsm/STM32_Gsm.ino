@@ -22,6 +22,7 @@
 /* Select your modem */
 #define TINY_GSM_MODEM_SIM800
 // #define TINY_GSM_MODEM_SIM900
+// #define TINY_GSM_MODEM_SIM7600
 
 // You should get Auth Token in the ERa App or ERa Dashboard
 #define ERA_AUTH_TOKEN "ERA2706"

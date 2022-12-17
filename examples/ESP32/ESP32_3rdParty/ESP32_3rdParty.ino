@@ -18,6 +18,7 @@
 #include <ERa.hpp>
 #include <ERa/ERaTimer.hpp>
 
+#define RELAY_PIN      25
 #define LED_PIN        33
 #define BUTTON_PIN     32
 
@@ -32,18 +33,26 @@ const char password[] = "MQTT_PASS";
 
 ERaTimer timer;
 ERaReport report;
-int reportId {0};
+ERaReport::iterator reportIt;
+
+/* This function is called every time the Virtual Pin 0 state change */
+ERA_WRITE(V0) {
+    /* Get value from Virtual Pin 0 and write Pin 32 */
+    uint8_t value = param.getInt();
+    digitalWrite(RELAY_PIN, value ? HIGH : LOW);
+    ERa.virtualWrite(V0, digitalRead(RELAY_PIN));
+}
 
 /* This is a callback function that is called when the pin 15 is written. */
-ERA_PIN_WRITE(ERA15) {
-    int pinValue = (int)param;
+ERA_PIN_WRITE(V15) {
+    int pinValue = param.getInt();
     Serial.print("Pin 15 write value: ");
     Serial.println(pinValue);
 }
 
 /* This is a callback function that is called when the pin 0 is read. */
-ERA_PIN_READ(ERA0) {
-    int pinValue = (int)param;
+ERA_PIN_READ(V0) {
+    int pinValue = param.getInt();
     Serial.print("Pin 0 value is: ");
     Serial.println(pinValue);
 }
@@ -61,22 +70,24 @@ ERA_DISCONNECTED() {
 }
 
 /* This function is called every second by the timer.
-* It writes the current time in seconds to the configId 2706 and
+* It writes the current time in seconds to the Virtual pin 1 and
 * updates the report with the current value of the button. */
 void timerEvent() {
-    ERa.configIdWrite(2706, millis() / 1000L);
-    report.updateReport(reportId, digitalRead(BUTTON_PIN));
+    ERa.virtualWrite(V1, millis() / 1000L);
+    reportIt.updateReport(digitalRead(BUTTON_PIN));
 }
 
-/* It writes the current value of the button to the configId 2706. */
+/* It writes the current value of the button to the configId Virtual pin 2. */
 void reportEvent() {
-    ERa.configIdWrite(2706, digitalRead(BUTTON_PIN));
+    ERa.virtualWrite(V2, digitalRead(BUTTON_PIN));
 }
 
 void setup() {
     /* Setup debug console */
     Serial.begin(115200);
 
+    /* Setup pin mode pin */
+    pinMode(RELAY_PIN, OUTPUT);
     pinMode(LED_PIN, OUTPUT);
     pinMode(BUTTON_PIN, INPUT);
 
@@ -88,7 +99,7 @@ void setup() {
     timer.setInterval(1000L, timerEvent);
 
     /* Setting up a report */
-    reportId = report.setReporting(1000L, 60000L, 1.0f, reportEvent);
+    reportIt = report.setReporting(1000L, 60000L, 1.0f, reportEvent);
 }
 
 void loop() {

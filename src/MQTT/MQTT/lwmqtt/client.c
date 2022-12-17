@@ -245,8 +245,8 @@ static lwmqtt_err_t lwmqtt_send_packet_in_buffer(lwmqtt_client_t *client, size_t
     return err;
   }
 
-  // reset keep alive timer
-  client->timer_set(client->keep_alive_timer, client->keep_alive_interval);
+  // reset keep alive timer (TODO: interval is reduce by half)
+  client->timer_set(client->keep_alive_timer, client->keep_alive_interval / 2);
 
   return LWMQTT_SUCCESS;
 }
@@ -423,8 +423,8 @@ lwmqtt_err_t lwmqtt_connect(lwmqtt_client_t *client, lwmqtt_options_t options, l
   // save keep alive interval
   client->keep_alive_interval = (uint32_t)(options.keep_alive) * 1000;
 
-  // set keep alive timer
-  client->timer_set(client->keep_alive_timer, client->keep_alive_interval);
+  // set keep alive timer (TODO: interval is reduce by half)
+  client->timer_set(client->keep_alive_timer, client->keep_alive_interval / 2);
 
   // reset pong pending flag
   client->pong_pending = false;

@@ -95,7 +95,8 @@ public:
 protected:
     void begin() { 
         this->configZigbee();
-        if (ToZigbee::CommandZigbee::pingSystem(3) != ResultT::RESULT_SUCCESSFUL) {
+        if ((ZigbeeState::is(ZigbeeStateT::STATE_ZB_IGNORE)) ||
+            (ToZigbee::CommandZigbee::pingSystem(5, 1000) != ResultT::RESULT_SUCCESSFUL)) {
             return;
         }
         InfoDevice_t::getInstance();
@@ -135,6 +136,7 @@ protected:
                 case ZigbeeStateT::STATE_ZB_FACTORY_RESET:
                     this->factoryResetZigbee();
                     break;
+                case ZigbeeStateT::STATE_ZB_IGNORE:
                 case ZigbeeStateT::STATE_ZB_INIT_FAIL:
                 case ZigbeeStateT::STATE_ZB_INIT_FORMAT:
                 case ZigbeeStateT::STATE_ZB_INIT_MAX:
@@ -153,6 +155,7 @@ protected:
                 case ZigbeeStateT::STATE_ZB_DEVICE_INTERVIEWING:
                     this->timer.run();
                 case ZigbeeStateT::STATE_ZB_FACTORY_RESET:
+                case ZigbeeStateT::STATE_ZB_IGNORE:
                 case ZigbeeStateT::STATE_ZB_INIT_FAIL:
                 case ZigbeeStateT::STATE_ZB_INIT_FORMAT:
                 case ZigbeeStateT::STATE_ZB_INIT_MAX:
@@ -169,6 +172,7 @@ protected:
         for (;;) {
             switch (ZigbeeState::get()) {
                 case ZigbeeStateT::STATE_ZB_FACTORY_RESET:
+                case ZigbeeStateT::STATE_ZB_IGNORE:
                 case ZigbeeStateT::STATE_ZB_INIT_FAIL:
                 case ZigbeeStateT::STATE_ZB_INIT_FORMAT:
                 case ZigbeeStateT::STATE_ZB_INIT_MAX:
@@ -215,6 +219,10 @@ private:
     void removeDevice(const cJSON* const root, AFAddrType_t& dstAddr);
     void removeDeviceWithAddr(AFAddrType_t& dstAddr);
     void pingCoordinator();
+
+    template <int size>
+    void generateNetworkKey(uint8_t(&nwkKey)[size]);
+
     void createInfoCoordinator();
     ResultT permitJoinDuration(AFAddrType_t& dstAddr, uint8_t seconds);
     ResultT readAttrDevice(AFAddrType_t& dstAddr,

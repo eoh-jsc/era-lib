@@ -27,7 +27,7 @@ class ERaProto
 		CHIP_SCAN_MODBUS = 3,
 		CHIP_SEND_SMS = 4,
 		CHIP_CONTROL_ALIAS = 5,
-		CHIP_ARDUINO_PIN = 6
+		CHIP_IO_PIN = 6
 	};
 	typedef void* ApiData_t;
     typedef std::function<void(std::string&, std::string&)> MessageCallback_t;
@@ -66,6 +66,10 @@ public:
 		this->runERaTask();
 	}
 
+	void syncConfig() {
+		this->transp.syncConfig();
+	}
+
 	void askConfigWhenRestart(bool enable = true) {
 		this->transp.setAskConfig(enable);
 	}
@@ -100,7 +104,7 @@ private:
 	void processFinalize(cJSON* root);
 	void processConfiguration(cJSON* root);
 	void processDeviceConfig(cJSON* root, uint8_t type);
-	void processArduinoPin(cJSON* root);
+	void processIOPin(cJSON* root);
 #if defined(ERA_ZIGBEE)
 	void processZigbeeRequest(const std::vector<std::string>& arrayTopic, const std::string& payload);
 	void processDeviceZigbee(const std::string& payload);
@@ -165,6 +169,9 @@ void ERaProto<Transp, Flash>::processRequest(std::string& topic, const std::stri
 	}
 	else if (arrayTopic.at(1) == "arduino_pin") {
 		Base::processArduinoPinRequest(arrayTopic, payload);
+	}
+	else if (arrayTopic.at(1) == "virtual_pin") {
+		Base::processVirtualPinRequest(arrayTopic, payload);
 	}
 	else if (arrayTopic.at(1) == "down") {
 		this->processDownRequest(arrayTopic, payload);
@@ -298,8 +305,8 @@ template <class Transp, class Flash>
 void ERaProto<Transp, Flash>::processConfiguration(cJSON* root) {
 	cJSON* item = cJSON_GetObjectItem(root, "arduino_pin");
 	if (cJSON_IsObject(item)) {
-		Base::eraPinReport.deleteAll();
-		this->processDeviceConfig(item, ERaChipCfgT::CHIP_ARDUINO_PIN);
+		Base::ERaPinRp.deleteAll();
+		this->processDeviceConfig(item, ERaChipCfgT::CHIP_IO_PIN);
 		this->storePinConfig(item);
 	}
 }
@@ -314,8 +321,8 @@ void ERaProto<Transp, Flash>::processDeviceConfig(cJSON* root, uint8_t type) {
 
 	for (current = item->child; current != nullptr; current = current->next) {
 		switch (type) {
-			case ERaChipCfgT::CHIP_ARDUINO_PIN:
-				this->processArduinoPin(current);
+			case ERaChipCfgT::CHIP_IO_PIN:
+				this->processIOPin(current);
 				break;
 			default:
 				break;
@@ -324,7 +331,7 @@ void ERaProto<Transp, Flash>::processDeviceConfig(cJSON* root, uint8_t type) {
 }
 
 template <class Transp, class Flash>
-void ERaProto<Transp, Flash>::processArduinoPin(cJSON* root) {
+void ERaProto<Transp, Flash>::processIOPin(cJSON* root) {
 	if (!cJSON_IsObject(root)) {
 		return;
 	}
@@ -336,6 +343,9 @@ void ERaProto<Transp, Flash>::processArduinoPin(cJSON* root) {
 		}
 		if (ERaStrCmp(current->string, "control_pins")) {
 			Base::handleWritePin(current);
+		}
+		if (ERaStrCmp(current->string, "virtual_pins")) {
+			Base::handleVirtualPin(current);
 		}
 	}
 }
@@ -504,11 +514,10 @@ bool ERaProto<Transp, Flash>::sendData(ERaRsp_t& rsp) {
 template <class Transp, class Flash>
 bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
 	int configId = rsp.id;
-	int pMode = this->eraPinReport.findPinMode((int)rsp.id);
+	int pMode = Base::ERaPinRp.findPinMode((int)rsp.id);
 	switch (rsp.type) {
-		case Base::ERaTypeRspT::ERA_RESPONSE_VIRTUAL_PIN:
-			if (pMode == VIRTUAL) {
-				configId = this->eraPinReport.findConfigId((int)rsp.id);
+		case Base::ERaTypeRspT::ERA_RESPONSE_VIRTUAL_PIN: {
+				configId = Base::ERaPinRp.findVPinConfigId((int)rsp.id);
 				if (configId == -1) {
 					break;
 				}
@@ -520,7 +529,7 @@ bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
 		case Base::ERaTypeRspT::ERA_RESPONSE_DIGITAL_PIN:
 			if ((pMode == OUTPUT) || (pMode == INPUT) ||
 				(pMode == INPUT_PULLUP) || (pMode == INPUT_PULLDOWN)) {
-				configId = this->eraPinReport.findConfigId((int)rsp.id);
+				configId = Base::ERaPinRp.findConfigId((int)rsp.id);
 				if (configId == -1) {
 					break;
 				}
@@ -531,7 +540,7 @@ bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
 			break;
 		case Base::ERaTypeRspT::ERA_RESPONSE_ANALOG_PIN:
 			if (pMode == ANALOG) {
-				configId = this->eraPinReport.findConfigId((int)rsp.id);
+				configId = Base::ERaPinRp.findConfigId((int)rsp.id);
 				if (configId == -1) {
 					break;
 				}
@@ -542,7 +551,7 @@ bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
 			break;
 		case Base::ERaTypeRspT::ERA_RESPONSE_PWM_PIN:
 			if (pMode == PWM) {
-				configId = this->eraPinReport.findConfigId((int)rsp.id);
+				configId = Base::ERaPinRp.findConfigId((int)rsp.id);
 				if (configId == -1) {
 					break;
 				}
@@ -716,7 +725,7 @@ void ERaProto<Transp, Flash>::sendCommandVirtual(ERaRsp_t& rsp, ERaDataJson* dat
 		if (it.getName() == nullptr) {
 			continue;
 		}
-		int configId = this->eraPinReport.findConfigId(atoi(it.getName()));
+		int configId = Base::ERaPinRp.findVPinConfigId(atoi(it.getName()));
 		if (configId == -1) {
 			if (it.isString()) {
 				Base::virtualWrite(atoi(it.getName()), it.getString());
@@ -821,7 +830,7 @@ void ERaProto<Transp, Flash>::parsePinConfig(const char* str) {
 	}
 	cJSON* root = cJSON_Parse(str);
 	if (cJSON_IsObject(root)) {
-		this->processDeviceConfig(root, ERaChipCfgT::CHIP_ARDUINO_PIN);
+		this->processDeviceConfig(root, ERaChipCfgT::CHIP_IO_PIN);
 	}
 	cJSON_Delete(root);
 	root = nullptr;
@@ -842,7 +851,7 @@ void ERaProto<Transp, Flash>::storePinConfig(const cJSON* const root) {
 
 template <class Transp, class Flash>
 void ERaProto<Transp, Flash>::removePinConfig() {
-	Base::eraPinReport.deleteAll();
+	Base::ERaPinRp.deleteAll();
 	Base::removeFromFlash(FILENAME_CONFIG);
 }
 

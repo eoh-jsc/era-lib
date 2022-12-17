@@ -4,107 +4,107 @@
 #include <ERa/ERaDetect.hpp>
 #include <ERa/ERaParam.hpp>
 
-#define ERA0  0
-#define ERA1  1
-#define ERA2  2
-#define ERA3  3
-#define ERA4  4
-#define ERA5  5
-#define ERA6  6
-#define ERA7  7
-#define ERA8  8
-#define ERA9  9
-#define ERA10 10
-#define ERA11 11
-#define ERA12 12
-#define ERA13 13
-#define ERA14 14
-#define ERA15 15
-#define ERA16 16
-#define ERA17 17
-#define ERA18 18
-#define ERA19 19
-#define ERA20 20
-#define ERA21 21
-#define ERA22 22
-#define ERA23 23
-#define ERA24 24
-#define ERA25 25
-#define ERA26 26
-#define ERA27 27
-#define ERA28 28
-#define ERA29 29
-#define ERA30 30
-#define ERA31 31
-#define ERA32 32
-#define ERA33 33
-#define ERA34 34
-#define ERA35 35
-#define ERA36 36
-#define ERA37 37
-#define ERA38 38
-#define ERA39 39
-#define ERA40 40
-#define ERA41 41
-#define ERA42 42
-#define ERA43 43
-#define ERA44 44
-#define ERA45 45
-#define ERA46 46
-#define ERA47 47
-#define ERA48 48
-#define ERA49 49
+#define V0  0
+#define V1  1
+#define V2  2
+#define V3  3
+#define V4  4
+#define V5  5
+#define V6  6
+#define V7  7
+#define V8  8
+#define V9  9
+#define V10 10
+#define V11 11
+#define V12 12
+#define V13 13
+#define V14 14
+#define V15 15
+#define V16 16
+#define V17 17
+#define V18 18
+#define V19 19
+#define V20 20
+#define V21 21
+#define V22 22
+#define V23 23
+#define V24 24
+#define V25 25
+#define V26 26
+#define V27 27
+#define V28 28
+#define V29 29
+#define V30 30
+#define V31 31
+#define V32 32
+#define V33 33
+#define V34 34
+#define V35 35
+#define V36 36
+#define V37 37
+#define V38 38
+#define V39 39
+#define V40 40
+#define V41 41
+#define V42 42
+#define V43 43
+#define V44 44
+#define V45 45
+#define V46 46
+#define V47 47
+#define V48 48
+#define V49 49
 #if defined(ERA_100_PINS)
-    #define ERA50 50
-    #define ERA51 51
-    #define ERA52 52
-    #define ERA53 53
-    #define ERA54 54
-    #define ERA55 55
-    #define ERA56 56
-    #define ERA57 57
-    #define ERA58 58
-    #define ERA59 59
-    #define ERA60 60
-    #define ERA61 61
-    #define ERA62 62
-    #define ERA63 63
-    #define ERA64 64
-    #define ERA65 65
-    #define ERA66 66
-    #define ERA67 67
-    #define ERA68 68
-    #define ERA69 69
-    #define ERA70 70
-    #define ERA71 71
-    #define ERA72 72
-    #define ERA73 73
-    #define ERA74 74
-    #define ERA75 75
-    #define ERA76 76
-    #define ERA77 77
-    #define ERA78 78
-    #define ERA79 79
-    #define ERA80 80
-    #define ERA81 81
-    #define ERA82 82
-    #define ERA83 83
-    #define ERA84 84
-    #define ERA85 85
-    #define ERA86 86
-    #define ERA87 87
-    #define ERA88 88
-    #define ERA89 89
-    #define ERA90 90
-    #define ERA91 91
-    #define ERA92 92
-    #define ERA93 93
-    #define ERA94 94
-    #define ERA95 95
-    #define ERA96 96
-    #define ERA97 97
-    #define ERA98 98
-    #define ERA99 99
+    #define V50 50
+    #define V51 51
+    #define V52 52
+    #define V53 53
+    #define V54 54
+    #define V55 55
+    #define V56 56
+    #define V57 57
+    #define V58 58
+    #define V59 59
+    #define V60 60
+    #define V61 61
+    #define V62 62
+    #define V63 63
+    #define V64 64
+    #define V65 65
+    #define V66 66
+    #define V67 67
+    #define V68 68
+    #define V69 69
+    #define V70 70
+    #define V71 71
+    #define V72 72
+    #define V73 73
+    #define V74 74
+    #define V75 75
+    #define V76 76
+    #define V77 77
+    #define V78 78
+    #define V79 79
+    #define V80 80
+    #define V81 81
+    #define V82 82
+    #define V83 83
+    #define V84 84
+    #define V85 85
+    #define V86 86
+    #define V87 87
+    #define V88 88
+    #define V89 89
+    #define V90 90
+    #define V91 91
+    #define V92 92
+    #define V93 93
+    #define V94 94
+    #define V95 95
+    #define V96 96
+    #define V97 97
+    #define V98 98
+    #define V99 99
 #endif
 
 #define ERA_CONNECTED()         void ERaOnConnected()

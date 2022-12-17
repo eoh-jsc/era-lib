@@ -30,7 +30,7 @@ void ERaApi<Proto, Flash>::handleReadPin(cJSON* root) {
         }
 		pin.pinMode = this->getPinMode(current);
 		if (pin.pinMode == VIRTUAL) {
-			this->eraPinReport.setPinVirtual(pin.pin, pin.configId);
+			this->ERaPinRp.setPinVirtual(pin.pin, pin.configId);
 			continue;
 		}
 		if (!this->isReadPinMode(pin.pinMode)) {
@@ -38,7 +38,7 @@ void ERaApi<Proto, Flash>::handleReadPin(cJSON* root) {
 		}
 		item = cJSON_GetObjectItem(current, "value_type");
 		if (cJSON_IsString(item)) {
-			this->eraPinReport.setPinVirtual(pin.pin, pin.configId);
+			this->ERaPinRp.setPinVirtual(pin.pin, pin.configId);
 		}
 	}
 }
@@ -70,7 +70,7 @@ void ERaApi<Proto, Flash>::handleWritePin(cJSON* root) {
         }
 		pin.pinMode = this->getPinMode(current);
 		if (pin.pinMode == VIRTUAL) {
-			this->eraPinReport.setPinVirtual(pin.pin, pin.configId);
+			this->ERaPinRp.setPinVirtual(pin.pin, pin.configId);
 			continue;
 		}
 		if (this->isReadPinMode(pin.pinMode)) {
@@ -78,7 +78,7 @@ void ERaApi<Proto, Flash>::handleWritePin(cJSON* root) {
 		}
 		item = cJSON_GetObjectItem(current, "value_type");
 		if (cJSON_IsString(item)) {
-			this->eraPinReport.setPinVirtual(pin.pin, pin.configId);
+			this->ERaPinRp.setPinVirtual(pin.pin, pin.configId);
 		}
 	}
 }
@@ -100,9 +100,10 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const std::vector<std::strin
 	}
 	uint8_t pin = ERA_DECODE_PIN_NAME(str.c_str());
 	cJSON* item = cJSON_GetObjectItem(root, "value");
-	if (cJSON_IsNumber(item)) {
+	if (cJSON_IsNumber(item) ||
+		cJSON_IsBool(item)) {
 		ERaParam param(item->valuedouble);
-		int pMode = this->eraPinReport.findPinMode(pin);
+		int pMode = this->ERaPinRp.findPinMode(pin);
 		switch (pMode) {
 			case VIRTUAL:
 			case ERA_VIRTUAL:

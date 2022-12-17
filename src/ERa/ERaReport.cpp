@@ -55,7 +55,7 @@ int ERaReport::setupReport(unsigned long minInterval, unsigned long maxInterval,
 		return -1;
 	}
 	if (!minInterval) {
-		return -1;
+        minInterval = 1;
 	}
 	if (maxInterval < minInterval) {
 		return -1;
@@ -87,7 +87,7 @@ int ERaReport::setupReport(unsigned long minInterval, unsigned long maxInterval,
 		return -1;
 	}
 	if (!minInterval) {
-		return -1;
+        minInterval = 1;
 	}
 	if (maxInterval < minInterval) {
 		return -1;
@@ -119,7 +119,7 @@ int ERaReport::setupReport(unsigned long minInterval, unsigned long maxInterval,
 		return -1;
 	}
 	if (!minInterval) {
-		return -1;
+        minInterval = 1;
 	}
 	if (maxInterval < minInterval) {
 		return -1;
@@ -149,7 +149,7 @@ bool ERaReport::changeReportableChange(unsigned int id, unsigned long minInterva
 		return false;
 	}
 	if (!minInterval) {
-		return false;
+        minInterval = 1;
 	}
 	if (maxInterval < minInterval) {
 		return false;
@@ -171,7 +171,7 @@ bool ERaReport::changeReportableChange(unsigned int id, unsigned long minInterva
 		return false;
 	}
 	if (!minInterval) {
-		return false;
+        minInterval = 1;
 	}
 	if (maxInterval < minInterval) {
 		return false;

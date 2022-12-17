@@ -51,7 +51,7 @@ int ERaTimer::setupTimer(unsigned long interval, TimerCallback_t cb, unsigned in
         return -1;
     }
     if (!interval) {
-        return -1;
+        interval = 1;
     }
 
     this->timer[id].delay = interval;
@@ -73,7 +73,7 @@ int ERaTimer::setupTimer(unsigned long interval, TimerCallback_p_t cb, void* arg
         return -1;
     }
     if (!interval) {
-        return -1;
+        interval = 1;
     }
 
     this->timer[id].delay = interval;
@@ -94,7 +94,7 @@ bool ERaTimer::changeInterval(unsigned int id, unsigned long interval) {
         return false;
     }
     if (!interval) {
-        return false;
+        interval = 1;
     }
 
     if (!this->isValidTimer(id)) {

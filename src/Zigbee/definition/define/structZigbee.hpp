@@ -69,11 +69,11 @@ typedef struct __CheckInfoCoordinator_t : std::unary_function<InfoCoordinator_t,
         : coord(_coord)
     {}
 	operator bool () const {
-		if(coord->hasConfigured != FLAG_ZIGBEE_HAS_CONFIGURED) {
+		if (coord->hasConfigured != FLAG_ZIGBEE_HAS_CONFIGURED) {
 			return false;
         }
 		else {
-			if(coord->channel != NO_LOAD_CHANNEL && coord->address.panId != 1) {
+			if (coord->channel != NO_LOAD_CHANNEL && coord->address.panId != 1) {
 				return ((coord->channel != CHANNEL_NONE) && (coord->address.panId != 0) &&
                         (coord->address.panId != 0xFFFF) && (coord->nIB.nwkPanId != 0) &&
                         (coord->nIB.nwkPanId != 0xFFFF) && (coord->nIB.nwkLogicalChannel != 0));

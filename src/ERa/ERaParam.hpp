@@ -32,8 +32,28 @@ public:
 		this->valuestring = nullptr;
 	}
 
+	int getInt() const {
+		return this->valueint;
+	}
+
+	float getFloat() const {
+		return static_cast<float>(this->valuedouble);
+	}
+
+	double getDouble() const {
+		return this->valuedouble;
+	}
+
+	char* getString() const {
+		return this->valuestring;
+	}
+
 	template <typename T>
 	void add(T value) {
+		addParam(value);
+	}
+
+	void add(ERaParam& value) {
 		addParam(value);
 	}
 
@@ -51,9 +71,15 @@ public:
 		return *this;
 	}
 
+	ERaParam& operator= (ERaParam& value) {
+		add(value);
+		return *this;
+	}
+
 	template <typename T>
 	operator T() const { return static_cast<T>(this->valueint); }
 
+	operator ERaParam&() { return *this; }
 	operator float() const { return static_cast<float>(this->valuedouble); }
 	operator double() const { return this->valuedouble; }
 	operator char*() const { return this->valuestring; }
@@ -69,6 +95,12 @@ private:
 	void addParam(T value) {
 		this->valueint = (int)value;
 		this->valuedouble = value;
+	}
+
+	void addParam(ERaParam& value) {
+		this->valueint = value.valueint;
+		this->valuedouble = value.valuedouble;
+		this->valuestring = value.valuestring;
 	}
 
 	void addParam(char* value) {

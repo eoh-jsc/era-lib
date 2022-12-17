@@ -54,7 +54,7 @@ protected:
 private:
 	typedef std::function<void(void*)> ReportPinCallback_t;
 
-	ERaReport eraReport;
+	ERaReport ERaRp;
 
 protected:
 #if defined(ERA_MODBUS)
@@ -152,20 +152,20 @@ protected:
 	void addModbusInfo(cJSON* root);
 	void handleReadPin(cJSON* root);
 	void handleWritePin(cJSON* root);
+	void handleVirtualPin(cJSON* root);
 	void handlePinRequest(const std::vector<std::string>& arrayTopic, const std::string& payload);
 	void processArduinoPinRequest(const std::vector<std::string>& arrayTopic, const std::string& payload);
+	void processVirtualPinRequest(const std::vector<std::string>& arrayTopic, const std::string& payload);
 
 	void begin() {
-#if !defined(ERA_ASK_CONFIG_WHEN_RESTART)
 		if (!this->thisProto().transp.getAskConfig()) {
 			this->flash.begin();
 		}
-#endif
 	}
 
 	bool run() {
 		ERA_RUN_YIELD();
-		this->eraPinReport.run();
+		this->ERaPinRp.run();
         return this->thisProto().transp.run();
 	}
 
@@ -190,34 +190,28 @@ protected:
 		}
 	}
 
-	void writeToFlash(const char ERA_UNUSED *filename, const char ERA_UNUSED *buf) {
-#if !defined(ERA_ASK_CONFIG_WHEN_RESTART)
+	void writeToFlash(const char* filename, const char* buf) {
 		if (!this->thisProto().transp.getAskConfig()) {
 			this->flash.writeFlash(filename, buf);
 		}
-#endif
 	}
 
-	char* readFromFlash(const char ERA_UNUSED *filename) {
+	char* readFromFlash(const char* filename) {
 		char* buf = nullptr;
-#if !defined(ERA_ASK_CONFIG_WHEN_RESTART)
 		if (!this->thisProto().transp.getAskConfig()) {
 			buf = this->flash.readFlash(filename);
 		}
-#endif
 		return buf;
 	}
 
-	void removeFromFlash(const char ERA_UNUSED *filename) {
-#if !defined(ERA_ASK_CONFIG_WHEN_RESTART)
+	void removeFromFlash(const char* filename) {
 		if (!this->thisProto().transp.getAskConfig()) {
 			this->flash.writeFlash(filename, "");
 		}
-#endif
 	}
 
 	Flash& flash;
-	ERaPin<ERaReport> eraPinReport {eraReport};
+	ERaPin<ERaReport> ERaPinRp {ERaRp};
 
 private:
 	template <typename... Args>
@@ -306,6 +300,74 @@ private:
 		this->sendPinConfigEvent(args);
 	};
 };
+
+
+template <class Proto, class Flash>
+void ERaApi<Proto, Flash>::handleVirtualPin(cJSON* root) {
+	if (!cJSON_IsArray(root)) {
+		return;
+	}
+
+	PinConfig_t pin {};
+	cJSON* current = nullptr;
+
+	for (current = root->child; current != nullptr; current = current->next) {
+		if (!cJSON_IsObject(current)) {
+			continue;
+		}
+		pin = PinConfig_t();
+		cJSON* item = cJSON_GetObjectItem(current, "config_id");
+		if (cJSON_IsNumber(item)) {
+			pin.configId = item->valueint;
+		}
+		item = cJSON_GetObjectItem(current, "pin_number");
+		if (cJSON_IsNumber(item)) {
+			pin.pin = ERA_DECODE_PIN_NUMBER(item->valueint);
+		}
+        else if (cJSON_IsString(item)) {
+            pin.pin = ERA_DECODE_PIN_NAME(item->valuestring);
+        }
+		item = cJSON_GetObjectItem(current, "value_type");
+		if (cJSON_IsString(item)) {
+			if (ERaStrCmp(item->valuestring, "virtual")) {
+				this->ERaPinRp.setPinVirtual(pin.pin, pin.configId);
+			}
+		}
+	}
+}
+
+template <class Proto, class Flash>
+void ERaApi<Proto, Flash>::processVirtualPinRequest(const std::vector<std::string>& arrayTopic, const std::string& payload) {
+	if (arrayTopic.size() != 3) {
+		return;
+	}
+	const std::string& str = arrayTopic.at(2);
+	if (str.empty()) {
+		return;
+	}
+	cJSON* root = cJSON_Parse(payload.c_str());
+	if (!cJSON_IsObject(root)) {
+		cJSON_Delete(root);
+		root = nullptr;
+		return;
+	}
+	uint8_t pin = ERA_DECODE_PIN_NAME(str.c_str());
+	cJSON* item = cJSON_GetObjectItem(root, "value");
+	if (cJSON_IsNumber(item) ||
+		cJSON_IsBool(item)) {
+		ERaParam param(item->valuedouble);
+		this->callERaWriteHandler(pin, param);
+	}
+	else if (cJSON_IsString(item)) {
+		ERaParam param;
+		param.add_static(item->valuestring);
+		this->callERaWriteHandler(pin, param);
+	}
+
+	cJSON_Delete(root);
+	root = nullptr;
+	item = nullptr;
+}
 
 template <class Proto, class Flash>
 void ERaApi<Proto, Flash>::getScaleConfig(const cJSON* const root, PinConfig_t& pin) {
@@ -418,6 +480,9 @@ uint8_t ERaApi<Proto, Flash>::getPinMode(const cJSON* const root, const uint8_t 
 	}
 	else if (ERaStrCmp(item->valuestring, "analog")) {
 		mode = ANALOG;
+	}
+	else if (ERaStrCmp(item->valuestring, "virtual")) {
+		mode = VIRTUAL;
 	}
 
 	return mode;

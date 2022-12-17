@@ -34,7 +34,7 @@ void ERaApi<Proto, Flash>::handleReadPin(cJSON* root) {
         }
 		pin.pinMode = this->getPinMode(current);
 		if (pin.pinMode == VIRTUAL) {
-			this->eraPinReport.setPinVirtual(pin.pin, pin.configId);
+			this->ERaPinRp.setPinVirtual(pin.pin, pin.configId);
 			continue;
 		}
 		if (!this->isReadPinMode(pin.pinMode)) {
@@ -43,12 +43,12 @@ void ERaApi<Proto, Flash>::handleReadPin(cJSON* root) {
 		item = cJSON_GetObjectItem(current, "value_type");
 		if (cJSON_IsString(item)) {
 #if defined(FORCE_VIRTUAL_PIN)
-			this->eraPinReport.setPinVirtual(pin.pin, pin.configId);
+			this->ERaPinRp.setPinVirtual(pin.pin, pin.configId);
 #else
 			if (ERaStrCmp(item->valuestring, "boolean")) {
 				this->getPinConfig(current, pin);
 				pinMode(pin.pin, pin.pinMode);
-				this->eraPinReport.setPinReport(pin.pin, pin.pinMode, digitalRead, pin.report.interval,
+				this->ERaPinRp.setPinReport(pin.pin, pin.pinMode, digitalRead, pin.report.interval,
 												pin.report.minInterval, pin.report.maxInterval, pin.report.reportableChange, this->reportPinConfigCb,
 												pin.configId);
 			}
@@ -59,10 +59,13 @@ void ERaApi<Proto, Flash>::handleReadPin(cJSON* root) {
 				uint8_t adcUnit = (digitalPinToAnalogChannel(pin.pin) / SOC_ADC_MAX_CHANNEL_NUM);
 				if (adcUnit == 0) {
 					pinMode(pin.pin, ANALOG);
-					this->eraPinReport.setPinReport(pin.pin, ANALOG, analogRead, pin.report.interval,
+					this->ERaPinRp.setPinReport(pin.pin, ANALOG, analogRead, pin.report.interval,
 													pin.report.minInterval, pin.report.maxInterval, pin.report.reportableChange, this->reportPinConfigCb,
 													pin.configId).setScale(pin.scale.min, pin.scale.max, pin.scale.rawMin, pin.scale.rawMax);
 				}
+			}
+			else if (ERaStrCmp(item->valuestring, "virtual")) {
+				this->ERaPinRp.setPinVirtual(pin.pin, pin.configId);
 			}
 #endif
 		}
@@ -96,7 +99,7 @@ void ERaApi<Proto, Flash>::handleWritePin(cJSON* root) {
         }
 		pin.pinMode = this->getPinMode(current);
 		if (pin.pinMode == VIRTUAL) {
-			this->eraPinReport.setPinVirtual(pin.pin, pin.configId);
+			this->ERaPinRp.setPinVirtual(pin.pin, pin.configId);
 			continue;
 		}
 		if (this->isReadPinMode(pin.pinMode)) {
@@ -105,27 +108,30 @@ void ERaApi<Proto, Flash>::handleWritePin(cJSON* root) {
 		item = cJSON_GetObjectItem(current, "value_type");
 		if (cJSON_IsString(item)) {
 #if defined(FORCE_VIRTUAL_PIN)
-			this->eraPinReport.setPinVirtual(pin.pin, pin.configId);
+			this->ERaPinRp.setPinVirtual(pin.pin, pin.configId);
 #else
 			if (ERaStrCmp(item->valuestring, "boolean")) {
 				this->getPinConfig(current, pin);
 				pinMode(pin.pin, pin.pinMode);
-				this->eraPinReport.setPinReport(pin.pin, pin.pinMode, digitalRead, pin.report.interval,
+				this->ERaPinRp.setPinReport(pin.pin, pin.pinMode, digitalRead, pin.report.interval,
 												pin.report.minInterval, pin.report.maxInterval, pin.report.reportableChange, this->reportPinConfigCb,
 												pin.configId);
 			}
 			else if (ERaStrCmp(item->valuestring, "integer")) {
-				pin.pwm.channel = this->eraPinReport.findChannelFree();
+				pin.pwm.channel = this->ERaPinRp.findChannelFree();
 				this->getPinConfig(current, pin);
 				this->getScaleConfig(current, pin);
 				if (pin.pwm.channel >= 0) {
 					ledcSetup(pin.pwm.channel, pin.pwm.frequency, pin.pwm.resolution);
 					ledcDetachPin(pin.pin);
 					ledcAttachPin(pin.pin, pin.pwm.channel);
-					this->eraPinReport.setPWMPinReport(pin.pin, PWM, pin.pwm.channel, ledcRead,
+					this->ERaPinRp.setPWMPinReport(pin.pin, PWM, pin.pwm.channel, ledcRead,
 														pin.report.interval, pin.report.minInterval, pin.report.maxInterval, pin.report.reportableChange,
 														this->reportPinConfigCb, pin.configId).setScale(pin.scale.min, pin.scale.max, pin.scale.rawMin, pin.scale.rawMax);
 				}
+			}
+			else if (ERaStrCmp(item->valuestring, "virtual")) {
+				this->ERaPinRp.setPinVirtual(pin.pin, pin.configId);
 			}
 #endif
 		}
@@ -149,20 +155,21 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const std::vector<std::strin
 	}
 	uint8_t pin = ERA_DECODE_PIN_NAME(str.c_str());
 	cJSON* item = cJSON_GetObjectItem(root, "value");
-	if (cJSON_IsNumber(item)) {
+	if (cJSON_IsNumber(item) ||
+		cJSON_IsBool(item)) {
 		ERaParam raw;
 		ERaParam param(item->valuedouble);
 		int8_t channel {0};
 		float value = item->valuedouble;
-		int pMode = this->eraPinReport.findPinMode(pin);
-		const ERaReport::ScaleData_t* scale = this->eraPinReport.findScale(pin);
+		int pMode = this->ERaPinRp.findPinMode(pin);
+		const ERaReport::ScaleData_t* scale = this->ERaPinRp.findScale(pin);
 		if ((scale != nullptr) && scale->enable) {
 			value = ERaMapNumberRange((float)item->valuedouble, scale->min, scale->max, scale->rawMin, scale->rawMax);
 		}
 		switch (pMode) {
 			case PWM:
 			case ANALOG:
-				channel = this->eraPinReport.findChannelPWM(pin);
+				channel = this->ERaPinRp.findChannelPWM(pin);
 				if (channel >= 0) {
 					ledcWrite(channel, value);
 				}
@@ -181,7 +188,8 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const std::vector<std::strin
 				}
 				break;
 		}
-		if (pMode != ERA_VIRTUAL) {
+		if ((pMode != VIRTUAL) &&
+			(pMode != ERA_VIRTUAL)) {
 			raw = value;
 			this->callERaPinWriteHandler(pin, param, raw);
 		}
@@ -238,35 +246,35 @@ void ERaApi<Proto, Flash>::handlePinRequest(const std::vector<std::string>& arra
 				ledcSetup(pin.pwm.channel, pin.pwm.frequency, pin.pwm.resolution);
 				ledcDetachPin(pin.pin);
 				ledcAttachPin(pin.pin, pin.pwm.channel);
-				this->eraPinReport.setPWMPinReport(pin.pin, PWM, pin.pwm.channel, ledcRead,
+				this->ERaPinRp.setPWMPinReport(pin.pin, PWM, pin.pwm.channel, ledcRead,
 													pin.report.interval, pin.report.minInterval, pin.report.maxInterval, pin.report.reportableChange,
 													this->reportPinCb);
             }
             else if (ERaStrCmp(current->valuestring, "input")) {
 				pinMode(pin.pin, INPUT);
-				this->eraPinReport.setPinReport(pin.pin, INPUT, digitalRead, pin.report.interval,
+				this->ERaPinRp.setPinReport(pin.pin, INPUT, digitalRead, pin.report.interval,
 												pin.report.minInterval, pin.report.maxInterval, pin.report.reportableChange, this->reportPinCb);
             }
             else if (ERaStrCmp(current->valuestring, "pullup")) {
 				pinMode(pin.pin, INPUT_PULLUP);
-				this->eraPinReport.setPinReport(pin.pin, INPUT_PULLUP, digitalRead, pin.report.interval,
+				this->ERaPinRp.setPinReport(pin.pin, INPUT_PULLUP, digitalRead, pin.report.interval,
 												pin.report.minInterval, pin.report.maxInterval, pin.report.reportableChange, this->reportPinCb);
             }
             else if (ERaStrCmp(current->valuestring, "pulldown")) {
 				pinMode(pin.pin, INPUT_PULLDOWN);
-				this->eraPinReport.setPinReport(pin.pin, INPUT_PULLDOWN, digitalRead, pin.report.interval,
+				this->ERaPinRp.setPinReport(pin.pin, INPUT_PULLDOWN, digitalRead, pin.report.interval,
 												pin.report.minInterval, pin.report.maxInterval, pin.report.reportableChange, this->reportPinCb);
             }
 			else if (ERaStrCmp(current->valuestring, "analog")) {
 				uint8_t adcUnit = (digitalPinToAnalogChannel(pin.pin) / SOC_ADC_MAX_CHANNEL_NUM);
 				if (adcUnit == 0) {
 					pinMode(pin.pin, ANALOG);
-					this->eraPinReport.setPinReport(pin.pin, ANALOG, analogRead, pin.report.interval,
+					this->ERaPinRp.setPinReport(pin.pin, ANALOG, analogRead, pin.report.interval,
 													pin.report.minInterval, pin.report.maxInterval, pin.report.reportableChange, this->reportPinCb);
 				}
             }
 			else if (ERaStrCmp(current->valuestring, "remove")) {
-				this->eraPinReport.deleteWithPin(pin.pin);
+				this->ERaPinRp.deleteWithPin(pin.pin);
 			}
             continue;
         }
@@ -284,7 +292,7 @@ void ERaApi<Proto, Flash>::handlePinRequest(const std::vector<std::string>& arra
             continue;
         }
 		if (getGPIOPin(current, "pwm_pin", pin.pin)) {
-			pin.pwm.channel = this->eraPinReport.findChannelPWM(pin.pin);
+			pin.pwm.channel = this->ERaPinRp.findChannelPWM(pin.pin);
 			if (pin.pwm.channel >= 0) {
 				ledcWrite(pin.pwm.channel, current->valueint);
 			}

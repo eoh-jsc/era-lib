@@ -16,14 +16,12 @@
 
 // You should get Auth Token in the ERa App or ERa Dashboard
 #define ERA_AUTH_TOKEN "ERA2706"
-// Force using virtual pin
-#define FORCE_VIRTUAL_PIN
 
 #include <Arduino.h>
 #include <ERa.hpp>
 #include <ERa/ERaTimer.hpp>
 
-#define YOU_RELAY_PIN  32
+#define RELAY_PIN  25
 
 ERaTimer timer;
 
@@ -31,20 +29,24 @@ const char ssid[] = "YOUR_SSID";
 const char pass[] = "YOUR_PASSWORD";
 
 /* This function is called every time the Virtual Pin 0 state change */
-ERA_WRITE(ERA0) {
+ERA_WRITE(V0) {
     /* Get value from Virtual Pin 0 and write Pin 32 */
-    uint8_t value = (int)param;
-    digitalWrite(YOU_RELAY_PIN, value ? HIGH : LOW);
+    uint8_t value = param.getInt();
+    digitalWrite(RELAY_PIN, value ? HIGH : LOW);
+    ERa.virtualWrite(V0, digitalRead(RELAY_PIN));
 }
 
 /* This function send uptime every second to Virtual Pin 1 */
 void timerEvent() {
-    ERa.virtualWrite(ERA1, millis() / 1000L);
+    ERa.virtualWrite(V1, millis() / 1000L);
 }
 
 void setup() {
     /* Setup debug console */
     Serial.begin(115200);
+
+    /* Setup pin mode relay pin */
+    pinMode(RELAY_PIN, OUTPUT);
 
     ERa.begin(ssid, pass);
 

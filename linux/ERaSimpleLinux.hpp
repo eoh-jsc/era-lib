@@ -2,6 +2,7 @@
 #define INC_ERA_SIMPLE_LINUX_HPP_
 
 #if defined(LINUX) && defined(RASPBERRY)
+    #include <wiringPi.h>
     #include <ERaApiWiringPiDef.hpp>
     #include <wiringSerial.h>
 #elif defined(LINUX)

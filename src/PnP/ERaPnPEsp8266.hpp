@@ -126,7 +126,7 @@ public:
         this->connectWiFi(ssid, pass);
         Base::init();
         this->config(auth, host, port, username, password);
-        if (this->connected() && Base::connect()) {
+        if (this->connected()) {
             CopyToArray(ssid, eraConfig.ssid);
             CopyToArray(pass, eraConfig.pass);
             CopyToArray(auth, eraConfig.token);
@@ -135,7 +135,12 @@ public:
             CopyToArray(username, eraConfig.username);
             CopyToArray(password, eraConfig.password);
             eraConfig.setFlag(ConfigFlagT::CONFIG_FLAG_VALID, true);
-            ERaState::set(StateT::STATE_CONNECTED);
+            if (Base::connect()) {
+                ERaState::set(StateT::STATE_CONNECTED);
+            }
+            else {
+                ERaState::set(StateT::STATE_CONNECTING_CLOUD);
+            }
         }
         else {
             this->configInit();

@@ -18,7 +18,7 @@ class ERaMqttLinux
         QOS0 = 0x00,
         QOS1 = 0x01,
         QOS2 = 0x02,
-        SUBFAIL=0x80
+        SUBFAIL = 0x80
     };
     typedef std::function<void(std::string&, std::string&)> MessageCallback;
 
@@ -50,7 +50,9 @@ public:
     void config(const char* _host, uint16_t _port, const char* _user, const char* _password);
     bool connect();
     bool run();
-    bool publishData(const char* topic, const char* payload);
+    bool publishData(const char* topic, const char* payload,
+                    QoST qos = (QoST)ERA_MQTT_PUBLISH_QOS, bool retained = ERA_MQTT_PUBLISH_RETAINED);
+    bool syncConfig();
 
     void setTimeout(uint32_t timeout) {
         this->mqtt.setTimeout(timeout);
@@ -81,7 +83,11 @@ public:
     }
 
     bool getAskConfig() {
+#if defined(ERA_ASK_CONFIG_WHEN_RESTART)
+        return true;
+#else
         return this->askConfig;
+#endif
     }
 
     const char* getTag() {
@@ -95,7 +101,7 @@ public:
 protected:
 private:
     bool subscribeTopic(const char* baseTopic, const char* topic, QoST qos);
-    bool publishLWT();
+    bool publishLWT(bool sync = false);
 
     MQTT mqtt{ERA_MQTT_BUFFER_SIZE};
     const char* host;
@@ -120,7 +126,7 @@ void ERaMqttLinux<MQTT>::config(const char* _host, uint16_t _port, const char* _
     ClearArray(this->willTopic);
     FormatString(this->willTopic, this->ERaTopic);
     FormatString(this->willTopic, LWT_TOPIC);
-    this->mqtt.setKeepAlive(ERA_MQTT_KEEPALIVE);
+    this->mqtt.setKeepAlive(ERA_MQTT_KEEP_ALIVE);
     this->mqtt.setWill(this->willTopic, OFFLINE_MESSAGE, LWT_RETAINED, LWT_QOS);
     this->mqtt.begin(this->host, this->port);
 }
@@ -144,12 +150,14 @@ bool ERaMqttLinux<MQTT>::connect() {
 #endif
 
     subscribeTopic(this->ERaTopic, "/arduino_pin/+", QoST::QOS0);
+    subscribeTopic(this->ERaTopic, "/virtual_pin/+", QoST::QOS0);
     subscribeTopic(this->ERaTopic, "/pin/down", QoST::QOS0);
     subscribeTopic(this->ERaTopic, "/down", QoST::QOS0);
 
-    this->publishLWT();
-
-	ERaOnConnected();
+    if (!this->publishLWT(this->getAskConfig())) {
+        return false;
+    }
+    ERaOnConnected();
     return true;
 }
 
@@ -180,13 +188,14 @@ bool ERaMqttLinux<MQTT>::subscribeTopic(const char* baseTopic, const char* topic
 }
 
 template <class MQTT>
-bool ERaMqttLinux<MQTT>::publishData(const char* topic, const char* payload) {
+bool ERaMqttLinux<MQTT>::publishData(const char* topic, const char* payload,
+                                    QoST qos, bool retained) {
     bool status {false};
 
     ERaGuardLock(this->mutex);
     if (this->mqtt.connected()) {
         ERA_LOG(TAG, ERA_PSTR("Publish %s: %s"), topic, payload);
-        status = this->mqtt.publish(topic, payload);
+        status = this->mqtt.publish(topic, payload, retained, qos);
     }
     ERaGuardUnlock(this->mutex);
 
@@ -194,7 +203,12 @@ bool ERaMqttLinux<MQTT>::publishData(const char* topic, const char* payload) {
 }
 
 template <class MQTT>
-bool ERaMqttLinux<MQTT>::publishLWT() {
+bool ERaMqttLinux<MQTT>::syncConfig() {
+    return this->publishLWT(true);
+}
+
+template <class MQTT>
+bool ERaMqttLinux<MQTT>::publishLWT(bool sync) {
     bool status {false};
     char wifiInfo[50] {0};
     char payload[100] {0};
@@ -202,11 +216,8 @@ bool ERaMqttLinux<MQTT>::publishLWT() {
     if (this->getSSID() != nullptr) {
         FormatString(wifiInfo, WIFI_INFO, this->getSSID());
     }
-#if defined(ERA_ASK_CONFIG_WHEN_RESTART)
-    FormatString(payload, ONLINE_MESSAGE, wifiInfo, ASK_CONFIG_INFO);
-#else
-    FormatString(payload, ONLINE_MESSAGE, wifiInfo, this->getAskConfig() ? ASK_CONFIG_INFO : "");
-#endif
+
+    FormatString(payload, ONLINE_MESSAGE, wifiInfo, sync ? ASK_CONFIG_INFO : "");
 
     ERaGuardLock(this->mutex);
     if (this->mqtt.connected()) {

@@ -15,9 +15,14 @@
         #define ERA_MAX_GPIO_PIN        200
     #endif
 
+    #if !defined(ERA_MAX_VIRTUAL_PIN)
+        #define ERA_MAX_VIRTUAL_PIN     100
+    #endif
+
     #define ERA_100_PINS
 
-    #if defined(CONFIG_FREERTOS_UNICORE)
+    #if defined(CONFIG_FREERTOS_UNICORE) || \
+        (portNUM_PROCESSORS == 1)
         #define ERA_MCU_CORE            0
     #else
         #define ERA_MCU_CORE            1
@@ -61,6 +66,10 @@
         #define ERA_MAX_GPIO_PIN        100
     #endif
 
+    #if !defined(ERA_MAX_VIRTUAL_PIN)
+        #define ERA_MAX_VIRTUAL_PIN     50
+    #endif
+
     #if !defined(ERA_BOARD_TYPE)
         #if defined(ARDUINO_ESP8266_NODEMCU)
             #define ERA_BOARD_TYPE      "NodeMCU"
@@ -87,7 +96,9 @@
         #define ERA_MAX_GPIO_PIN        100
     #endif
 
-    #define ERA_100_PINS
+    #if !defined(ERA_MAX_VIRTUAL_PIN)
+        #define ERA_MAX_VIRTUAL_PIN     50
+    #endif
 
     #define STM32
 
@@ -116,6 +127,10 @@
 
     #if !defined(ERA_MAX_GPIO_PIN)
         #define ERA_MAX_GPIO_PIN        200
+    #endif
+
+    #if !defined(ERA_MAX_VIRTUAL_PIN)
+        #define ERA_MAX_VIRTUAL_PIN     100
     #endif
 
     #define ERA_100_PINS
@@ -148,6 +163,10 @@
         #define ERA_MAX_GPIO_PIN        200
     #endif
 
+    #if !defined(ERA_MAX_VIRTUAL_PIN)
+        #define ERA_MAX_VIRTUAL_PIN     100
+    #endif
+
     #define ERA_100_PINS
 
     #if !defined(ERA_BOARD_TYPE)
@@ -168,6 +187,10 @@
         #define ERA_MAX_GPIO_PIN        100
     #endif
 
+    #if !defined(ERA_MAX_VIRTUAL_PIN)
+        #define ERA_MAX_VIRTUAL_PIN     50
+    #endif
+
     #if !defined(ERA_BOARD_TYPE)
         #define ERA_BOARD_TYPE          "Arduino"
     #endif
@@ -186,7 +209,9 @@
         #define ERA_MAX_GPIO_PIN        100
     #endif
 
-    #define ERA_100_PINS
+    #if !defined(ERA_MAX_VIRTUAL_PIN)
+        #define ERA_MAX_VIRTUAL_PIN     50
+    #endif
 
     #if !defined(ERA_BOARD_TYPE)
         #define ERA_BOARD_TYPE          "MBED"
@@ -207,6 +232,10 @@
 
     #if !defined(ERA_MAX_GPIO_PIN)
         #define ERA_MAX_GPIO_PIN        200
+    #endif
+
+    #if !defined(ERA_MAX_VIRTUAL_PIN)
+        #define ERA_MAX_VIRTUAL_PIN     100
     #endif
 
     #define ERA_100_PINS
@@ -231,6 +260,10 @@
 
     #if !defined(ERA_MAX_GPIO_PIN)
         #define ERA_MAX_GPIO_PIN        100
+    #endif
+
+    #if !defined(ERA_MAX_VIRTUAL_PIN)
+        #define ERA_MAX_VIRTUAL_PIN     50
     #endif
 
     #if !defined(ERA_BOARD_TYPE)

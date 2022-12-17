@@ -32,7 +32,8 @@ void ERaZigbee<Api>::startZigbee(bool& format, bool& invalid) {
         if (this->coordinator->address.panId < 0x1000 || this->coordinator->address.panId > 0xF000) {
             this->coordinator->address.panId = this->DefaultPanId;
         }
-        if (invalid || (this->coordinator->channel == ZBChannelT::CHANNEL_NONE) ||
+        if (invalid || (this->coordinator->hasConfigured != FLAG_ZIGBEE_HAS_CONFIGURED) ||
+                        (this->coordinator->channel == ZBChannelT::CHANNEL_NONE) ||
                         (this->coordinator->channel == ZBChannelT::NO_LOAD_CHANNEL)) {
             index = ERaRandomNumber(0, 15);
             if (index > 15) {
@@ -51,6 +52,7 @@ void ERaZigbee<Api>::startZigbee(bool& format, bool& invalid) {
         }
 
         // Network key (update soon...)
+        this->generateNetworkKey(this->coordinator->networkKey);
         CopyArray(this->DefaultNetworkKey, this->coordinator->networkKey);
 
         ToZigbee::CommandZigbee::requestResetZstack(ResetTypeT::RST_SOFT, 1);
@@ -195,6 +197,21 @@ void ERaZigbee<Api>::pingCoordinator() {
     }
     ERA_LOG(TAG, ERA_PSTR("Ping coordinator failed, resetting coordinator!"));
     ZigbeeState::set(ZigbeeStateT::STATE_ZB_INIT_MAX);
+}
+
+template <class Api>
+template <int size>
+void ERaZigbee<Api>::generateNetworkKey(uint8_t(&nwkKey)[size]) {
+    if ((size != LENGTH_NETWORK_KEY) ||
+        IsZeroArray(this->coordinator->address.addr.ieeeAddr)) {
+        return CopyArray(this->DefaultNetworkKey, nwkKey);
+    }
+
+	size_t index {0};
+	size_t len = sizeof(this->DefaultNetworkKey) / sizeof(this->DefaultNetworkKey[0]);
+	for (size_t i = 0; i < len; ++i) {
+		nwkKey[i] = this->coordinator->address.addr.ieeeAddr[index++ % LENGTH_EXTADDR_IEEE] ^ this->DefaultNetworkKey[i];
+	}
 }
 
 template <class Api>
