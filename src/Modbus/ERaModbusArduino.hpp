@@ -39,12 +39,13 @@ void ERaModbus<Api>::setBaudRate(uint32_t baudrate) {
 }
 
 template <class Api>
-bool ERaModbus<Api>::waitResponse(ModbusConfig_t& param, uint8_t* modbusData) {
+bool ERaModbus<Api>::waitResponse(ERaModbusResponse* response) {
+    if (response == nullptr) {
+        return false;
+    }
     if (this->stream == NULL) {
         return false;
     }
-
-    int length {0};
 
     if (this->total++ > 99) {
         this->total = 1;
@@ -68,15 +69,12 @@ bool ERaModbus<Api>::waitResponse(ModbusConfig_t& param, uint8_t* modbusData) {
         }
 
         do {
-            modbusData[length] = this->stream->read();
-        } while ((++length < 256) && this->stream->available());
+            response->add(this->stream->read());
+        } while (this->stream->available());
 
-        ERaLogHex("MB <<", modbusData, length);
-
-        if (modbusData[0] == param.addr && modbusData[1] == param.func) {
-            if (this->checkReceiveCRC(param, modbusData)) {
-                return true;
-            }
+        if (response->isComplete()) {
+            ERaLogHex("MB <<", response->getMessage(), response->getPosition());
+            return response->isSuccess();
         }
         ERA_MODBUS_YIELD();
     } while (ERaRemainingTime(startMillis, MAX_TIMEOUT_MODBUS));
@@ -84,14 +82,19 @@ bool ERaModbus<Api>::waitResponse(ModbusConfig_t& param, uint8_t* modbusData) {
 }
 
 template <class Api>
-void ERaModbus<Api>::sendCommand(const vector<uint8_t>& data) {
+void ERaModbus<Api>::sendCommand(uint8_t* data, size_t size) {
+    if (data == nullptr) {
+        return;
+    }
     if (this->stream == NULL) {
         return;
     }
 
-    ERaLogHex("MB >>", data.data(), data.size());
-    this->stream->write(data.data(), data.size());
+    ERaLogHex("MB >>", data, size);
+    this->switchToTransmit();
+    this->stream->write(data, size);
     this->stream->flush();
+    this->switchToReceive();
 }
 
 #endif /* INC_ERA_MODBUS_ARDUINO_HPP_ */

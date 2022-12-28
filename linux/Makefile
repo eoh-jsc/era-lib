@@ -2,7 +2,7 @@
 # To build on RaspberryPi:
 # 1. Install WiringPi: http://wiringpi.com/download-and-install/
 # 2. Run:
-#    make target=raspberry
+#    make clean all target=raspberry
 #    sudo era --token=YourAuthToken
 #
 

@@ -7,8 +7,9 @@
 #include <Utility/ERaUtility.hpp>
 #include <Modbus/ERaModbusState.hpp>
 #include <Modbus/ERaParse.hpp>
-#include "ERaModbusConfig.hpp"
-#include "ERaDefineModbus.hpp"
+#include <Modbus/ERaModbusConfig.hpp>
+#include <Modbus/ERaDefineModbus.hpp>
+#include <Modbus/ERaModbusTransp.hpp>
 
 using namespace std;
 
@@ -17,36 +18,37 @@ ERaApplication ERaApplication::control {};
 
 template <class Api>
 class ERaModbus
+    : public ERaModbusTransp < ERaModbus<Api> >
 {
-    enum ModbusFunctionT {
-        READ_COIL_STATUS = 0x01,
-        READ_INPUT_STATUS = 0x02,
-        READ_HOLDING_REGISTERS = 0x03,
-        READ_INPUT_REGISTERS = 0x04,
-        FORCE_SINGLE_COIL = 0x05,
-        PRESET_SINGLE_REGISTER = 0x06,
-        FORCE_MULTIPLE_COILS = 0x0F,
-        PRESET_MULTIPLE_REGISTERS = 0x10
-    };
     typedef struct __ModbusAction_t {
         char* key;
     } ModbusAction_t;
+    typedef struct __TCPIp_t {
+        IPAddress ip;
+        uint16_t port;
+    } TCPIp_t;
     typedef void* TaskHandle_t;
     typedef void* QueueMessage_t;
     const char* TAG = "Modbus";
     const char* FILENAME_CONFIG = FILENAME_MODBUS_CONFIG;
     const char* FILENAME_CONTROL = FILENAME_MODBUS_CONTROL;
 
+    friend class ERaModbusTransp < ERaModbus<Api> >;
+	typedef ERaModbusTransp < ERaModbus<Api> > ModbusTransp;
+
 public:
     ERaModbus()
         : total(0)
         , failRead(0)
         , failWrite(0)
-#if defined(ARDUINO)
+        , dePin(-1)
+        , transp(0)
+        , client(NULL)
+        , ip {
+            .ip = {},
+            .port = 502
+        }
         , stream(NULL)
-#elif defined(LINUX)
-        , fd(-1)
-#endif
         , _streamDefault(false)
         , _modbusTask(NULL)
         , _writeModbusTask(NULL)
@@ -54,17 +56,30 @@ public:
         , mutex(NULL)
     {}
     ~ERaModbus()
-    {}
+    {
+        this->switchToModbusRTU();
+    }
 
-#if defined(ARDUINO)
+    void setModbusClient(Client& _client, IPAddress _ip, uint16_t _port = 502) {
+        this->client = &_client;
+        this->ip.ip = _ip;
+        this->ip.port = _port;
+        this->setModbusStream(_client);
+    }
+
     void setModbusStream(Stream& _stream) {
         this->stream = &_stream;
     }
-#elif defined(LINUX)
-    void setModbusStream(int _fd) {
-        this->fd = _fd;
+
+    void switchToModbusRTU() {
+        this->transp = ModbusTransportT::MODBUS_TRANSPORT_RTU;
     }
-#endif
+
+    void switchToModbusTCP() {
+        this->transp = ModbusTransportT::MODBUS_TRANSPORT_TCP;
+    }
+
+    void setModbusDEPin(int _pin);
 
 protected:
     void begin() {
@@ -172,6 +187,16 @@ private:
         ptr = nullptr;
     }
 
+    bool connectTCPIp() {
+        if (this->client == nullptr) {
+            return true;
+        }
+        if (!this->client->connected()) {
+            return this->client->connect(ip.ip, ip.port);
+        }
+        return true;
+    }
+
     void configModbus();
     void setBaudRate(uint32_t baudrate);
     void readModbusConfig();
@@ -182,11 +207,16 @@ private:
     bool eachActionModbus(Action_t& action, ModbusConfig_t*& config);
     void sendModbusRead(ModbusConfig_t& param);
     bool sendModbusWrite(ModbusConfig_t& param);
-    bool waitResponse(ModbusConfig_t& param, uint8_t* modbusData);
-    void processData(ModbusConfig_t& param, uint8_t* modbusData);
-    bool checkReceiveCRC(ModbusConfig_t& param, uint8_t* data);
-    void sendCommand(const vector<uint8_t>& data);
-    void modbusCRC(vector<uint8_t>& cmd);
+    void onData(ERaModbusRequest* request, ERaModbusResponse* response);
+    void onError(ERaModbusRequest* request);
+    bool waitResponse(ERaModbusResponse* response);
+    void sendCommand(uint8_t* data, size_t size);
+    void switchToTransmit();
+    void switchToReceive();
+
+    bool getBit(uint8_t byte, uint8_t pos) {
+        return ((byte >> pos) & 0x01);
+    }
 
     bool streamDefault() {
         return this->_streamDefault;
@@ -225,11 +255,11 @@ private:
     int total;
     int failRead;
     int failWrite;
-#if defined(ARDUINO)
+    int dePin;
+    uint8_t transp;
+    Client* client;
+    TCPIp_t ip;
     Stream* stream;
-#elif defined(LINUX)
-    int fd;
-#endif
     bool _streamDefault;
     TaskHandle_t _modbusTask;
     TaskHandle_t _writeModbusTask;
@@ -240,6 +270,9 @@ private:
 template <class Api>
 void ERaModbus<Api>::readModbusConfig() {
     if (this->modbusConfig.modbusConfigParam.isEmpty()) {
+        return;
+    }
+    if (!this->connectTCPIp()) {
         return;
     }
     this->dataBuff.clear();
@@ -306,6 +339,10 @@ bool ERaModbus<Api>::actionModbus(const char* key) {
         return false;
     }
 
+    if (!this->connectTCPIp()) {
+        return false;
+    }
+
     ModbusConfig_t* config = nullptr;
     for (int i = 0; i < alias->readActionCount; ++i) {
         ERaGuardLock(this->mutex);
@@ -347,177 +384,149 @@ bool ERaModbus<Api>::eachActionModbus(Action_t& action, ModbusConfig_t*& config)
 
 template <class Api>
 void ERaModbus<Api>::sendModbusRead(ModbusConfig_t& param) {
-    uint16_t len = param.len1 << 8 | param.len2;
-    uint16_t lenByte {0};
+    bool status {false};
     switch (param.func) {
         case ModbusFunctionT::READ_COIL_STATUS:
+            status = ModbusTransp::readCoilStatus(this->transp, param);
+            break;
         case ModbusFunctionT::READ_INPUT_STATUS:
-            lenByte = ceil(static_cast<float>(len)/8);
+            status = ModbusTransp::readInputStatus(this->transp, param);
             break;
         case ModbusFunctionT::READ_HOLDING_REGISTERS:
+            status = ModbusTransp::readHoldingRegisters(this->transp, param);
+            break;
         case ModbusFunctionT::READ_INPUT_REGISTERS:
-            lenByte = len * 2;
+            status = ModbusTransp::readInputRegisters(this->transp, param);
             break;
         default:
             return;
     }
-    
-    uint8_t modbusData[256] {0};
-    vector<uint8_t> command;
-    command.assign(reinterpret_cast<uint8_t*>(&param.addr), reinterpret_cast<uint8_t*>(&param.addr) + 6);
-    this->modbusCRC(command);
-    this->sendCommand(command);
-    if (this->waitResponse(param, modbusData)) {
-        switch (param.func) {
-            case ModbusFunctionT::READ_COIL_STATUS:
-            case ModbusFunctionT::READ_INPUT_STATUS: {
-                uint8_t lenBit = len;
-                uint8_t pData[len + 1] {0};
-                for (int i = 0; i < lenByte; ++i) {
-                    for (int j = 0; j < ((lenBit > 8) ? 8 : lenBit); ++j) {
-                        pData[i * 8 + j] = ((modbusData[i + 3] >> j) & 0x01);
-                    }
-                    lenBit -= (lenBit > 8) ? 8 : lenBit;
-                }
-                this->dataBuff.add_hex_array(pData, len);
-            }
-                break;
-            default:
-                this->dataBuff.add_hex_array(modbusData + 3, lenByte);
-                break;
-        }
+
+    if (status) {
         param.totalFail = 0;
-        this->dataBuff.add("1");
     }
     else {
-        if (ModbusState::is(ModbusStateT::STATE_MB_PARSE)) {
-            return;
-        }
-        switch (param.func) {
-            case ModbusFunctionT::READ_COIL_STATUS:
-            case ModbusFunctionT::READ_INPUT_STATUS:
-                if (!this->dataBuff.next()) {
-                    uint8_t pData[len + 1] {0};
-                    this->dataBuff.add_hex_array(pData, len);
-                }
-                break;
-            default:
-                if (!this->dataBuff.next()) {
-                    uint8_t pData[lenByte + 1] {0};
-                    this->dataBuff.add_hex_array(pData, lenByte);
-                }
-                break;
-        }
         this->failRead++;
         param.totalFail++;
-        this->dataBuff.add("0");
     }
 }
 
 template <class Api>
 bool ERaModbus<Api>::sendModbusWrite(ModbusConfig_t& param) {
-    uint16_t lenByte = param.len1 << 8 | param.len2;
-
-    uint8_t modbusData[256] {0};
-    vector<uint8_t> command;
-    command.assign(reinterpret_cast<uint8_t*>(&param.addr), reinterpret_cast<uint8_t*>(&param.addr) + 6);
-    
+    bool status {false};
     switch (param.func) {
         case ModbusFunctionT::FORCE_SINGLE_COIL:
+            status = ModbusTransp::forceSingleCoil(this->transp, param);
+            break;
         case ModbusFunctionT::PRESET_SINGLE_REGISTER:
+            status = ModbusTransp::presetSingleRegister(this->transp, param);
             break;
         case ModbusFunctionT::FORCE_MULTIPLE_COILS:
-            lenByte = std::ceil(static_cast<float>(lenByte) / 8);
-            command.push_back(lenByte & 0xFF);
-            for(int i = 0; i < lenByte; ++i) {
-                command.push_back(param.extra[i]);
-            }
+            status = ModbusTransp::forceMultipleCoils(this->transp, param);
             break;
         case ModbusFunctionT::PRESET_MULTIPLE_REGISTERS:
-            lenByte *= 2;
-            command.push_back(lenByte & 0xFF);
-            for(int i = 0; i < lenByte; ++i) {
-                command.push_back(param.extra[i]);
-            }
+            status = ModbusTransp::presetMultipleRegisters(this->transp, param);
             break;
         default:
             return false;
     }
 
-    this->modbusCRC(command);
+    if (!status) {
+        this->failWrite++;
+    }
+    return status;
+}
 
-    for (size_t i = 0; i < 2; ++i) {
-        this->sendCommand(command);
-        if (this->waitResponse(param, modbusData)) {
-            return true;
-        }
+template <class Api>
+void ERaModbus<Api>::onData(ERaModbusRequest* request, ERaModbusResponse* response) {
+    if ((request == nullptr) ||
+        (response == nullptr)) {
+        return;
     }
 
-    this->failWrite++;
-    return false;
+    switch (request->getFunction()) {
+        case ModbusFunctionT::READ_COIL_STATUS:
+        case ModbusFunctionT::READ_INPUT_STATUS: {
+            uint16_t bits = request->getLength();
+            uint8_t pData[request->getLength()] {0};
+            for (int i = 0; (i < response->getBytes()) && (bits > 0); ++i) {
+                for (int j = 0; j < ((bits > 8) ? 8 : bits); ++j) {
+                    pData[i * 8 + j] = this->getBit(response->getData()[i], j);
+                }
+                bits -= ((bits > 8) ? 8 : bits);
+            }
+            this->dataBuff.add_hex_array(pData, request->getLength());
+        }
+            break;
+        default:
+            this->dataBuff.add_hex_array(response->getData(), response->getBytes());
+            break;
+    }
+    this->dataBuff.add("1");
 }
 
 template <class Api>
-void ERaModbus<Api>::processData(ModbusConfig_t& param, uint8_t* modbusData) {
+void ERaModbus<Api>::onError(ERaModbusRequest* request) {
+    if (request == nullptr) {
+        return;
+    }
+    if (ModbusState::is(ModbusStateT::STATE_MB_PARSE)) {
+        return;
+    }
 
-}
-
-template <class Api>
-bool ERaModbus<Api>::checkReceiveCRC(ModbusConfig_t& param, uint8_t* data) {
-    uint8_t len{0};
-    uint16_t lenByte = param.len1 << 8 | param.len2;
-    switch (param.func) {
+    switch (request->getFunction()) {
         case ModbusFunctionT::READ_COIL_STATUS:
         case ModbusFunctionT::READ_INPUT_STATUS:
-            len = 3 + std::ceil(static_cast<float>(lenByte) / 8);
-            break;
-        case ModbusFunctionT::READ_HOLDING_REGISTERS:
-        case ModbusFunctionT::READ_INPUT_REGISTERS:
-            len = 3 + 2 * lenByte;
-            break;
-        case ModbusFunctionT::FORCE_SINGLE_COIL:
-        case ModbusFunctionT::PRESET_SINGLE_REGISTER:
-        case ModbusFunctionT::FORCE_MULTIPLE_COILS:
-        case ModbusFunctionT::PRESET_MULTIPLE_REGISTERS:
-            len = 6;
+            if (!this->dataBuff.next()) {
+                uint8_t pData[request->getLength()] {0};
+                this->dataBuff.add_hex_array(pData, request->getLength());
+            }
             break;
         default:
-            return false;
+            if (!this->dataBuff.next()) {
+                uint8_t pData[request->getLength() * 2] {0};
+                this->dataBuff.add_hex_array(pData, request->getLength() * 2);
+            }
+            break;
     }
-    if (len < 4) {
-        return false;
-    }
-    vector<uint8_t> command;
-    command.assign(data, data + len);
-    modbusCRC(command);
-    if (data[len] == command.at(len)) {
-        if (data[len + 1] == command.at(len + 1)) {
-            return true;
-        }
-    }
-    return false;
+    this->dataBuff.add("0");
 }
 
 template <class Api>
-void ERaModbus<Api>::modbusCRC(vector<uint8_t>& cmd) {
-    uint16_t crc = 0xFFFF;
-
-    for (size_t pos = 0; pos < cmd.size(); pos++) {
-        crc ^= (uint16_t)cmd.at(pos);
-
-        for (int i = 8; i != 0; i--) {
-            if ((crc & 0x0001) != 0) {
-                crc >>= 1;
-                crc ^= 0xA001;
-            }
-            else {
-                crc >>= 1;
-            }
-        }
+void ERaModbus<Api>::setModbusDEPin(int _pin) {
+    if (_pin < 0) {
+        return;
     }
-    
-    cmd.push_back(crc & 0xFF);
-    cmd.push_back(crc >> 8);
+    this->dePin = _pin;
+#if defined(ARDUINO) || \
+    (defined(LINUX) &&  \
+    defined(RASPBERRY))
+    pinMode(this->dePin, OUTPUT);
+#endif
+}
+
+template <class Api>
+void ERaModbus<Api>::switchToTransmit() {
+    if (this->dePin < 0) {
+        return;
+    }
+#if defined(ARDUINO) || \
+    (defined(LINUX) &&  \
+    defined(RASPBERRY))
+    ::digitalWrite(this->dePin, HIGH);
+#endif
+}
+
+template <class Api>
+void ERaModbus<Api>::switchToReceive() {
+    if (this->dePin < 0) {
+        return;
+    }
+#if defined(ARDUINO) || \
+    (defined(LINUX) &&  \
+    defined(RASPBERRY))
+    ::digitalWrite(this->dePin, LOW);
+#endif
 }
 
 #endif /* INC_ERA_MODBUS_HPP_ */

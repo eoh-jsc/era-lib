@@ -21,32 +21,27 @@
 #include <ERa.hpp>
 #include <ERa/ERaTimer.hpp>
 
-#define LED_PIN  2
-
-ERaTimer timer;
-
 const char ssid[] = "YOUR_SSID";
 const char pass[] = "YOUR_PASSWORD";
 
-/* This function is called every time the Virtual Pin 0 state change */
-ERA_WRITE(V0) {
-    /* Get value from Virtual Pin 0 and write Pin 2 */
-    uint8_t value = param.getInt();
-    digitalWrite(LED_PIN, value ? HIGH : LOW);
-    ERa.virtualWrite(V0, digitalRead(LED_PIN));
-}
+ERaTimer timer;
+IPAddress ipSlave(192, 168, 1, 27);
+uint16_t portSlave = 502;
+WiFiClient clientSlave;
 
-/* This function send uptime every second to Virtual Pin 1 */
+/* This function print uptime every second */
 void timerEvent() {
-    ERa.virtualWrite(V1, millis() / 1000L);
+    ERA_LOG("Timer", "Uptime: %d", ERaMillis() / 1000L);
 }
 
 void setup() {
     /* Setup debug console */
     Serial.begin(115200);
 
-    /* Setup pin mode relay pin */
-    pinMode(LED_PIN, OUTPUT);
+    /* Enable Modbus TCP */
+    ERa.switchToModbusTCP();
+    /* Setup Modbus TCP/IP: Ip 192.168.1.27, Port 502 */
+    ERa.setModbusClient(clientSlave, ipSlave, portSlave);
 
     ERa.begin(ssid, pass);
 

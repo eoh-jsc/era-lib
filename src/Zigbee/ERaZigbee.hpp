@@ -69,11 +69,7 @@ public:
         , timerJoin()
         , device(InfoDevice_t::instance)
         , coordinator(InfoCoordinator_t::instance)
-#if defined(ARDUINO)
         , stream(NULL)
-#elif defined(LINUX)
-        , fd(-1)
-#endif
         , mutexData(NULL)
         , _zigbeeTask(NULL)
         , _controlZigbeeTask(NULL)
@@ -82,15 +78,9 @@ public:
     ~ERaZigbee()
     {}
 
-#if defined(ARDUINO)
     void setZigbeeStream(Stream& _stream) {
         this->stream = &_stream;
     }
-#elif defined(LINUX)
-    void setZigbeeStream(int _fd) {
-        this->fd = _fd;
-    }
-#endif
 
 protected:
     void begin() { 
@@ -251,16 +241,16 @@ private:
     void getZigbeeAction();
     void zigbeeTimerCallback(void* args);
 
-    void writeDataToFlash(const char* filename, const char* buf) {
-        this->thisApi().writeToFlash(filename, buf);
+    void writeDataToFlash(const char* filename, const char* buf, bool force = true) {
+        this->thisApi().writeToFlash(filename, buf, force);
     }
 
-    char* readDataFromFlash(const char* filename) {
-        return this->thisApi().readFromFlash(filename);
+    char* readDataFromFlash(const char* filename, bool force = true) {
+        return this->thisApi().readFromFlash(filename, force);
     }
 
-    void removeDataFromFlash(const char* filename) {
-        this->thisApi().removeFromFlash(filename);
+    void removeDataFromFlash(const char* filename, bool force = true) {
+        this->thisApi().removeFromFlash(filename, force);
     }
 
 	bool isRequest() {
@@ -309,11 +299,7 @@ private:
 
     InfoDevice_t*& device;
     InfoCoordinator_t*& coordinator;
-#if defined(ARDUINO)
     Stream* stream;
-#elif defined(LINUX)
-    int fd;
-#endif
     ERaMutex_t mutexData;
     TaskHandle_t _zigbeeTask;
     TaskHandle_t _controlZigbeeTask;

@@ -94,8 +94,8 @@ void ERaProto<Transp, Flash>::runERaTask() {
 }
 
 static ERaFlash flash;
-static WiFiClientSecure eraWiFiClient;
-static ERaMqttSecure<WiFiClientSecure, MQTTClient> mqtt(eraWiFiClient);
+static WiFiClientSecure ERaWiFiClient;
+static ERaMqttSecure<WiFiClientSecure, MQTTClient> mqtt(ERaWiFiClient);
 ERaEthernet< ERaMqttSecure<WiFiClientSecure, MQTTClient> > ERa(mqtt, flash);
 
 #endif /* INC_ERA_SIMPLE_ESP32_SSL_ETHERNET_HPP_ */

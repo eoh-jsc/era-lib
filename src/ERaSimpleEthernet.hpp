@@ -3,7 +3,9 @@
 
 #include <Ethernet.h>
 #include <EthernetClient.h>
+#include <ERa/ERaApiArduinoDef.hpp>
 #include <Adapters/ERaEthernetClient.hpp>
+#include <ERa/ERaApiArduino.hpp>
 #include <Modbus/ERaModbusArduino.hpp>
 #include <Utility/ERaFlashConfig.hpp>
 
@@ -37,8 +39,8 @@ void ERaProto<Transp, Flash>::runERaTask() {
 }
 
 static ERaFlash flash;
-static EthernetClient eraEthernetClient;
-static ERaMqtt<EthernetClient, MQTTClient> mqtt(eraEthernetClient);
+static EthernetClient ERaEthernetClient;
+static ERaMqtt<EthernetClient, MQTTClient> mqtt(ERaEthernetClient);
 ERaEthernet< ERaMqtt<EthernetClient, MQTTClient> > ERa(mqtt, flash);
 
 #endif /* INC_ERA_SIMPLE_ETHERNET_HPP_ */

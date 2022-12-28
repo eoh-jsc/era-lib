@@ -32,6 +32,7 @@ void ERaApi<Proto, Flash>::handleReadPin(cJSON* root) {
         else if (cJSON_IsString(item)) {
             pin.pin = ERA_DECODE_PIN_NAME(item->valuestring);
         }
+		ERA_CHECK_PIN(pin.pin);
 		pin.pinMode = this->getPinMode(current);
 		if (pin.pinMode == VIRTUAL) {
 			this->ERaPinRp.setPinVirtual(pin.pin, pin.configId);
@@ -42,9 +43,6 @@ void ERaApi<Proto, Flash>::handleReadPin(cJSON* root) {
 		}
 		item = cJSON_GetObjectItem(current, "value_type");
 		if (cJSON_IsString(item)) {
-#if defined(FORCE_VIRTUAL_PIN)
-			this->ERaPinRp.setPinVirtual(pin.pin, pin.configId);
-#else
 			if (ERaStrCmp(item->valuestring, "boolean")) {
 				this->getPinConfig(current, pin);
 				pinMode(pin.pin, pin.pinMode);
@@ -67,7 +65,6 @@ void ERaApi<Proto, Flash>::handleReadPin(cJSON* root) {
 			else if (ERaStrCmp(item->valuestring, "virtual")) {
 				this->ERaPinRp.setPinVirtual(pin.pin, pin.configId);
 			}
-#endif
 		}
 	}
 }
@@ -97,6 +94,7 @@ void ERaApi<Proto, Flash>::handleWritePin(cJSON* root) {
         else if (cJSON_IsString(item)) {
             pin.pin = ERA_DECODE_PIN_NAME(item->valuestring);
         }
+		ERA_CHECK_PIN(pin.pin);
 		pin.pinMode = this->getPinMode(current);
 		if (pin.pinMode == VIRTUAL) {
 			this->ERaPinRp.setPinVirtual(pin.pin, pin.configId);
@@ -107,9 +105,6 @@ void ERaApi<Proto, Flash>::handleWritePin(cJSON* root) {
 		}
 		item = cJSON_GetObjectItem(current, "value_type");
 		if (cJSON_IsString(item)) {
-#if defined(FORCE_VIRTUAL_PIN)
-			this->ERaPinRp.setPinVirtual(pin.pin, pin.configId);
-#else
 			if (ERaStrCmp(item->valuestring, "boolean")) {
 				this->getPinConfig(current, pin);
 				pinMode(pin.pin, pin.pinMode);
@@ -133,7 +128,6 @@ void ERaApi<Proto, Flash>::handleWritePin(cJSON* root) {
 			else if (ERaStrCmp(item->valuestring, "virtual")) {
 				this->ERaPinRp.setPinVirtual(pin.pin, pin.configId);
 			}
-#endif
 		}
 	}
 }
@@ -153,13 +147,16 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const std::vector<std::strin
 		root = nullptr;
 		return;
 	}
+	ERaDataJson data(root);
+	ERaParam param(data);
 	uint8_t pin = ERA_DECODE_PIN_NAME(str.c_str());
+	ERA_CHECK_PIN_RETURN(pin);
 	cJSON* item = cJSON_GetObjectItem(root, "value");
 	if (cJSON_IsNumber(item) ||
 		cJSON_IsBool(item)) {
 		ERaParam raw;
-		ERaParam param(item->valuedouble);
 		int8_t channel {0};
+		param.add(item->valuedouble);
 		float value = item->valuedouble;
 		int pMode = this->ERaPinRp.findPinMode(pin);
 		const ERaReport::ScaleData_t* scale = this->ERaPinRp.findScale(pin);
@@ -195,12 +192,10 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const std::vector<std::strin
 		}
 	}
 	else if (cJSON_IsString(item)) {
-		ERaParam param;
 		param.add_static(item->valuestring);
 		this->callERaWriteHandler(pin, param);
 	}
 
-	cJSON_Delete(root);
 	root = nullptr;
 	item = nullptr;
 }
@@ -229,10 +224,11 @@ void ERaApi<Proto, Flash>::handlePinRequest(const std::vector<std::string>& arra
 			this->callERaWriteHandler(pin.pin, param);
 			continue;
 		}
-        if (getGPIOPin(current, "pin_mode", pin.pin)) {
+        if (this->getGPIOPin(current, "pin_mode", pin.pin)) {
             if (!cJSON_IsString(current)) {
                 continue;
 			}
+			ERA_CHECK_PIN(pin.pin);
 
 			this->getReportConfig(root, pin);
 
@@ -278,7 +274,8 @@ void ERaApi<Proto, Flash>::handlePinRequest(const std::vector<std::string>& arra
 			}
             continue;
         }
-        if (getGPIOPin(current, "digital_pin", pin.pin)) {
+        if (this->getGPIOPin(current, "digital_pin", pin.pin)) {
+			ERA_CHECK_PIN(pin.pin);
 			ERaParam param(current->valueint);
             pinMode(pin.pin, OUTPUT);
 			if (current->valueint == TOGGLE) {
@@ -291,7 +288,8 @@ void ERaApi<Proto, Flash>::handlePinRequest(const std::vector<std::string>& arra
 			this->callERaPinWriteHandler(pin.pin, param, param);
             continue;
         }
-		if (getGPIOPin(current, "pwm_pin", pin.pin)) {
+		if (this->getGPIOPin(current, "pwm_pin", pin.pin)) {
+			ERA_CHECK_PIN(pin.pin);
 			pin.pwm.channel = this->ERaPinRp.findChannelPWM(pin.pin);
 			if (pin.pwm.channel >= 0) {
 				ledcWrite(pin.pwm.channel, current->valueint);

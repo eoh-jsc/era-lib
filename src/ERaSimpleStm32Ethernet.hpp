@@ -1,9 +1,11 @@
-#ifndef INC_ERA_SIMPLE_STM32_WIFI_HPP_
-#define INC_ERA_SIMPLE_STM32_WIFI_HPP_
+#ifndef INC_ERA_SIMPLE_STM32_ETHERNET_HPP_
+#define INC_ERA_SIMPLE_STM32_ETHERNET_HPP_
 
+#include <LwIP.h>
+#include <STM32Ethernet.h>
 #include <ERa/ERaTask.hpp>
 #include <ERa/ERaApiStm32Def.hpp>
-#include <Adapters/ERaWiFiClient.hpp>
+#include <Adapters/ERaEthernetClient.hpp>
 #include <ERa/ERaApiStm32.hpp>
 #include <Modbus/ERaModbusStm32.hpp>
 #include <Utility/ERaFlashStm32.hpp>
@@ -63,7 +65,8 @@ void ERaProto<Transp, Flash>::runERaTask() {
 }
 
 static ERaFlash flash;
-static ERaMqtt<TinyGsmClient, MQTTClient> mqtt;
-ERaWiFi< ERaMqtt<TinyGsmClient, MQTTClient> > ERa(mqtt, flash);
+static EthernetClient ERaEthernetClient;
+static ERaMqtt<EthernetClient, MQTTClient> mqtt(ERaEthernetClient);
+ERaEthernet< ERaMqtt<EthernetClient, MQTTClient> > ERa(mqtt, flash);
 
-#endif /* INC_ERA_SIMPLE_STM32_WIFI_HPP_ */
+#endif /* INC_ERA_SIMPLE_STM32_ETHERNET_HPP_ */

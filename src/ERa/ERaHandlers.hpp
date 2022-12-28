@@ -121,6 +121,10 @@
 #define ERA_PIN_READ_2(Pin)     void ERaWidgetPinRead ## Pin (uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param, const ERaParam ERA_UNUSED &raw)
 #define ERA_PIN_READ(Pin)       ERA_PIN_READ_2(Pin)
 
+#define ERA_WRITE_DEFAULT()		ERA_WRITE_2(Default)
+#define ERA_PIN_WRITE_DEFAULT()	ERA_PIN_WRITE_2(Default)
+#define ERA_PIN_READ_DEFAULT()	ERA_PIN_READ_2(Default)
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -132,6 +136,10 @@ ERA_CONNECTED();
 ERA_DISCONNECTED();
 ERA_WAITING();
 ERA_MODBUS_BAUDRATE();
+
+ERA_WRITE_DEFAULT();
+ERA_PIN_WRITE_DEFAULT();
+ERA_PIN_READ_DEFAULT();
 
 ERA_WRITE(  );
 ERA_WRITE( 0);

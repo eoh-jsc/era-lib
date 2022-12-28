@@ -4,12 +4,12 @@
 #if defined(LINUX) && defined(RASPBERRY)
     #include <wiringPi.h>
     #include <ERaApiWiringPiDef.hpp>
-    #include <wiringSerial.h>
 #elif defined(LINUX)
     #include <ERaApiLinuxDef.hpp>
-    #include <UtilityLinux/ERaSerialLinux.hpp>
 #endif
 
+#include <UtilityLinux/ERaSocketLinux.hpp>
+#include <UtilityLinux/ERaSerialLinux.hpp>
 #include <ERaLinuxClient.hpp>
 #include <ModbusLinux/ERaModbusLinux.hpp>
 #include <ZigbeeLinux/ERaZigbeeLinux.hpp>

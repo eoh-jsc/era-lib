@@ -3,6 +3,14 @@
 
 #include <ERa/ERaApi.hpp>
 
+#undef ERA_DECODE_PIN_NUMBER
+#define ERA_DECODE_PIN_NUMBER(pin)	((pin <= MAX_GPIO_WIRING_PI) ?				\
+									pin : ERA_INVALID_PIN)
+
+#undef ERA_DECODE_PIN_NAME
+#define ERA_DECODE_PIN_NAME(pin) 	(((pin[0] == 'a') || (pin[0] == 'A')) ? 	\
+									ERA_DECODE_PIN(atoi(pin + 1)) : ERA_DECODE_PIN_NUMBER(atoi(pin)))
+
 template <class Proto, class Flash>
 void ERaApi<Proto, Flash>::handleReadPin(cJSON* root) {
 	if (!cJSON_IsArray(root)) {
@@ -28,6 +36,7 @@ void ERaApi<Proto, Flash>::handleReadPin(cJSON* root) {
         else if (cJSON_IsString(item)) {
             pin.pin = ERA_DECODE_PIN_NAME(item->valuestring);
         }
+		ERA_CHECK_PIN(pin.pin);
 		pin.pinMode = this->getPinMode(current);
 		if (pin.pinMode == VIRTUAL) {
 			this->ERaPinRp.setPinVirtual(pin.pin, pin.configId);
@@ -36,14 +45,8 @@ void ERaApi<Proto, Flash>::handleReadPin(cJSON* root) {
 		if (!this->isReadPinMode(pin.pinMode)) {
 			continue;
 		}
-		if (pin.pin > MAX_GPIO_WIRING_PI) {
-			continue;
-		}
 		item = cJSON_GetObjectItem(current, "value_type");
 		if (cJSON_IsString(item)) {
-#if defined(FORCE_VIRTUAL_PIN)
-			this->ERaPinRp.setPinVirtual(pin.pin, pin.configId);
-#else
 			if (ERaStrCmp(item->valuestring, "boolean")) {
 				this->getPinConfig(current, pin);
 				pinMode(pin.pin, INPUT);
@@ -72,7 +75,9 @@ void ERaApi<Proto, Flash>::handleReadPin(cJSON* root) {
 												pin.report.minInterval, pin.report.maxInterval, pin.report.reportableChange, this->reportPinConfigCb,
 												pin.configId).setScale(pin.scale.min, pin.scale.max, pin.scale.rawMin, pin.scale.rawMax);
 			}
-#endif
+			else if (ERaStrCmp(item->valuestring, "virtual")) {
+				this->ERaPinRp.setPinVirtual(pin.pin, pin.configId);
+			}
 		}
 	}
 }
@@ -102,6 +107,7 @@ void ERaApi<Proto, Flash>::handleWritePin(cJSON* root) {
         else if (cJSON_IsString(item)) {
             pin.pin = ERA_DECODE_PIN_NAME(item->valuestring);
         }
+		ERA_CHECK_PIN(pin.pin);
 		pin.pinMode = this->getPinMode(current);
 		if (pin.pinMode == VIRTUAL) {
 			this->ERaPinRp.setPinVirtual(pin.pin, pin.configId);
@@ -110,14 +116,8 @@ void ERaApi<Proto, Flash>::handleWritePin(cJSON* root) {
 		if (this->isReadPinMode(pin.pinMode)) {
 			continue;
 		}
-		if (pin.pin > MAX_GPIO_WIRING_PI) {
-			continue;
-		}
 		item = cJSON_GetObjectItem(current, "value_type");
 		if (cJSON_IsString(item)) {
-#if defined(FORCE_VIRTUAL_PIN)
-			this->ERaPinRp.setPinVirtual(pin.pin, pin.configId);
-#else
 			if (ERaStrCmp(item->valuestring, "boolean")) {
 				this->getPinConfig(current, pin);
 				pinMode(pin.pin, pin.pinMode);
@@ -134,7 +134,9 @@ void ERaApi<Proto, Flash>::handleWritePin(cJSON* root) {
                                                 pin.report.minInterval, pin.report.maxInterval, pin.report.reportableChange, this->reportPinConfigCb,
                                                 pin.configId).setScale(pin.scale.min, pin.scale.max, pin.scale.rawMin, pin.scale.rawMax);
 			}
-#endif
+			else if (ERaStrCmp(item->valuestring, "virtual")) {
+				this->ERaPinRp.setPinVirtual(pin.pin, pin.configId);
+			}
 		}
 	}
 }
@@ -154,12 +156,15 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const std::vector<std::strin
 		root = nullptr;
 		return;
 	}
+	ERaDataJson data(root);
+	ERaParam param(data);
 	uint8_t pin = ERA_DECODE_PIN_NAME(str.c_str());
+	ERA_CHECK_PIN_RETURN(pin);
 	cJSON* item = cJSON_GetObjectItem(root, "value");
 	if (cJSON_IsNumber(item) ||
 		cJSON_IsBool(item)) {
 		ERaParam raw;
-		ERaParam param(item->valuedouble);
+		param.add(item->valuedouble);
 		float value = item->valuedouble;
 		int pMode = this->ERaPinRp.findPinMode(pin);
 		const ERaReport::iterator* rp = this->ERaPinRp.getReport(pin);
@@ -201,12 +206,10 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const std::vector<std::strin
 		}
 	}
 	else if (cJSON_IsString(item)) {
-		ERaParam param;
 		param.add_static(item->valuestring);
 		this->callERaWriteHandler(pin, param);
 	}
 
-	cJSON_Delete(root);
 	root = nullptr;
 	item = nullptr;
 }
@@ -235,13 +238,11 @@ void ERaApi<Proto, Flash>::handlePinRequest(const std::vector<std::string>& arra
 			this->callERaWriteHandler(pin.pin, param);
 			continue;
 		}
-        if (getGPIOPin(current, "pin_mode", pin.pin)) {
+        if (this->getGPIOPin(current, "pin_mode", pin.pin)) {
             if (!cJSON_IsString(current)) {
                 continue;
 			}
-			if (pin.pin > MAX_GPIO_WIRING_PI) {
-				continue;
-			}
+			ERA_CHECK_PIN(pin.pin);
 
 			this->getReportConfig(root, pin);
 
@@ -253,8 +254,7 @@ void ERaApi<Proto, Flash>::handlePinRequest(const std::vector<std::string>& arra
 			}
             else if (ERaStrCmp(current->valuestring, "pwm")) {
                 this->ERaPinRp.setPinReport(pin.pin, PWM, nullptr, pin.report.interval,
-                                                pin.report.minInterval, pin.report.maxInterval, pin.report.reportableChange, this->reportPinConfigCb,
-                                                pin.configId);
+                                                pin.report.minInterval, pin.report.maxInterval, pin.report.reportableChange, this->reportPinCb);
             }
             else if (ERaStrCmp(current->valuestring, "input")) {
 				pinMode(pin.pin, INPUT);
@@ -283,7 +283,8 @@ void ERaApi<Proto, Flash>::handlePinRequest(const std::vector<std::string>& arra
 			}
             continue;
         }
-        if (getGPIOPin(current, "digital_pin", pin.pin)) {
+        if (this->getGPIOPin(current, "digital_pin", pin.pin)) {
+			ERA_CHECK_PIN(pin.pin);
 		    ERaParam param(current->valueint);
             pinMode(pin.pin, OUTPUT);
 			if (current->valueint == TOGGLE) {
@@ -296,7 +297,8 @@ void ERaApi<Proto, Flash>::handlePinRequest(const std::vector<std::string>& arra
 		    this->callERaPinWriteHandler(pin.pin, param, param);
             continue;
         }
-		if (getGPIOPin(current, "pwm_pin", pin.pin)) {
+		if (this->getGPIOPin(current, "pwm_pin", pin.pin)) {
+			ERA_CHECK_PIN(pin.pin);
             pinMode(pin.pin, PWM_OUTPUT);
             ::pwmWrite(pin.pin, current->valueint);
 			continue;
@@ -306,32 +308,6 @@ void ERaApi<Proto, Flash>::handlePinRequest(const std::vector<std::string>& arra
 	cJSON_Delete(root);
 	root = nullptr;
 	ERA_FORCE_UNUSED(arrayTopic);
-}
-
-template <class Proto, class Flash>
-void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
-    cJSON_AddStringToObject(root, INFO_BOARD, ERA_BOARD_TYPE);
-    cJSON_AddStringToObject(root, INFO_MODEL, ERA_MODEL_TYPE);
-	cJSON_AddStringToObject(root, INFO_AUTH_TOKEN, this->thisProto().ERA_AUTH);
-    cJSON_AddStringToObject(root, INFO_FIRMWARE_VERSION, ERA_FIRMWARE_VERSION);
-    cJSON_AddStringToObject(root, INFO_SSID, ((this->thisProto().transp.getSSID() == nullptr) ?
-                                            ERA_PROTO_TYPE : this->thisProto().transp.getSSID()));
-    cJSON_AddStringToObject(root, INFO_BSSID, ERA_PROTO_TYPE);
-    cJSON_AddNumberToObject(root, INFO_RSSI, 100);
-    cJSON_AddStringToObject(root, INFO_MAC, ERA_PROTO_TYPE);
-    cJSON_AddStringToObject(root, INFO_LOCAL_IP, ERA_PROTO_TYPE);
-    cJSON_AddNumberToObject(root, INFO_PING, this->thisProto().transp.getPing());
-}
-
-template <class Proto, class Flash>
-void ERaApi<Proto, Flash>::addModbusInfo(cJSON* root) {
-	cJSON_AddNumberToObject(root, INFO_MB_CHIP_TEMPERATURE, 5000);
-	cJSON_AddNumberToObject(root, INFO_MB_TEMPERATURE, 0);
-	cJSON_AddNumberToObject(root, INFO_MB_VOLTAGE, 999);
-	cJSON_AddNumberToObject(root, INFO_MB_IS_BATTERY, 0);
-	cJSON_AddNumberToObject(root, INFO_MB_RSSI, 100);
-	cJSON_AddStringToObject(root, INFO_MB_WIFI_USING, ((this->thisProto().transp.getSSID() == nullptr) ?
-                                            		ERA_PROTO_TYPE : this->thisProto().transp.getSSID()));
 }
 
 #endif /* INC_ERA_API_WIRING_PI_HPP_ */

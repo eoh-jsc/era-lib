@@ -5,9 +5,7 @@
     #define ERA_PROTO_TYPE            "Ethernet"
 #endif
 
-#include <ERa/ERaApiArduinoDef.hpp>
 #include <ERa/ERaProtocol.hpp>
-#include <ERa/ERaApiArduino.hpp>
 #include <MQTT/ERaMqtt.hpp>
 
 class ERaFlash;
@@ -39,7 +37,8 @@ public:
         ERaDelay(1000);
         IPAddress localIP = Ethernet.localIP();
         ERA_FORCE_UNUSED(localIP);
-        ERA_LOG(TAG, ERA_PSTR("IP: %s"), localIP.toString().c_str());
+        ERA_LOG(TAG, ERA_PSTR("IP: %d.%d.%d.%d"), localIP[0], localIP[1],
+                                                localIP[2], localIP[3]);
         return true;
     }
 
@@ -104,15 +103,19 @@ private:
 
 template <class Proto, class Flash>
 void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
+    char ip[20] {0};
+    IPAddress localIP = Ethernet.localIP();
+    FormatString(ip, "%d.%d.%d.%d", localIP[0], localIP[1],
+                                    localIP[2], localIP[3]);
     cJSON_AddStringToObject(root, INFO_BOARD, ERA_BOARD_TYPE);
     cJSON_AddStringToObject(root, INFO_MODEL, ERA_MODEL_TYPE);
 	cJSON_AddStringToObject(root, INFO_AUTH_TOKEN, this->thisProto().ERA_AUTH);
     cJSON_AddStringToObject(root, INFO_FIRMWARE_VERSION, ERA_FIRMWARE_VERSION);
     cJSON_AddStringToObject(root, INFO_SSID, ERA_PROTO_TYPE);
     cJSON_AddStringToObject(root, INFO_BSSID, ERA_PROTO_TYPE);
-    cJSON_AddNumberToObject(root, INFO_RSSI, ETH.linkSpeed());
-    cJSON_AddStringToObject(root, INFO_MAC, ETH.macAddress().c_str());
-    cJSON_AddStringToObject(root, INFO_LOCAL_IP, ETH.localIP().toString().c_str());
+    cJSON_AddNumberToObject(root, INFO_RSSI, 100);
+    cJSON_AddStringToObject(root, INFO_MAC, ERA_PROTO_TYPE);
+    cJSON_AddStringToObject(root, INFO_LOCAL_IP, ip);
     cJSON_AddNumberToObject(root, INFO_PING, this->thisProto().transp.getPing());
 }
 
@@ -122,7 +125,7 @@ void ERaApi<Proto, Flash>::addModbusInfo(cJSON* root) {
 	cJSON_AddNumberToObject(root, INFO_MB_TEMPERATURE, 0);
 	cJSON_AddNumberToObject(root, INFO_MB_VOLTAGE, 999);
 	cJSON_AddNumberToObject(root, INFO_MB_IS_BATTERY, 0);
-	cJSON_AddNumberToObject(root, INFO_MB_RSSI, ETH.linkSpeed());
+	cJSON_AddNumberToObject(root, INFO_MB_RSSI, 100);
 	cJSON_AddStringToObject(root, INFO_MB_WIFI_USING, ERA_PROTO_TYPE);
 }
 

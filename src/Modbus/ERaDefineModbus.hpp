@@ -20,4 +20,24 @@
 
 #define BUILD_FLOAT(value)              ((float)(*reinterpret_cast<float*>(&value)))
 
+#define BUILD_WORD(hi, lo)              ((uint16_t)((hi << 8) | lo))
+#define HI_WORD(a)                      (((a) >> 8) & 0xFF)
+#define LO_WORD(a)                      ((a) & 0xFF)
+
+enum ModbusFunctionT : uint8_t {
+    READ_COIL_STATUS = 0x01,
+    READ_INPUT_STATUS = 0x02,
+    READ_HOLDING_REGISTERS = 0x03,
+    READ_INPUT_REGISTERS = 0x04,
+    FORCE_SINGLE_COIL = 0x05,
+    PRESET_SINGLE_REGISTER = 0x06,
+    FORCE_MULTIPLE_COILS = 0x0F,
+    PRESET_MULTIPLE_REGISTERS = 0x10
+};
+
+enum ModbusTransportT : uint8_t {
+    MODBUS_TRANSPORT_RTU = 0x00,
+    MODBUS_TRANSPORT_TCP = 0x01
+};
+
 #endif /* INC_ERA_DEFINE_MODBUS_HPP_ */

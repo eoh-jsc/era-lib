@@ -66,6 +66,8 @@ public:
 		this->runERaTask();
 	}
 
+	void sendCommand(const char* auth, ERaRsp_t& rsp, ApiData_t data = nullptr);
+
 	void syncConfig() {
 		this->transp.syncConfig();
 	}
@@ -118,6 +120,7 @@ private:
 	bool sendConfigIdMultiData(ERaRsp_t& rsp);
 	bool sendModbusData(ERaRsp_t& rsp);
 	bool sendZigbeeData(ERaRsp_t& rsp);
+	void sendCommandMulti(const char* auth, ERaRsp_t& rsp, ERaDataJson* data);
 	void sendCommand(ERaRsp_t& rsp, ApiData_t data = nullptr);
 	void sendCommandVirtual(ERaRsp_t& rsp, ERaDataJson* data);
 	void sendCommandModbus(ERaRsp_t& rsp, ERaDataBuff* data);
@@ -492,19 +495,19 @@ bool ERaProto<Transp, Flash>::sendInfo() {
 template <class Transp, class Flash>
 bool ERaProto<Transp, Flash>::sendData(ERaRsp_t& rsp) {
 	switch (rsp.type) {
-		case Base::ERaTypeRspT::ERA_RESPONSE_VIRTUAL_PIN:
-		case Base::ERaTypeRspT::ERA_RESPONSE_DIGITAL_PIN:
-		case Base::ERaTypeRspT::ERA_RESPONSE_ANALOG_PIN:
-		case Base::ERaTypeRspT::ERA_RESPONSE_PWM_PIN:
+		case ERaTypeWriteT::ERA_WRITE_VIRTUAL_PIN:
+		case ERaTypeWriteT::ERA_WRITE_DIGITAL_PIN:
+		case ERaTypeWriteT::ERA_WRITE_ANALOG_PIN:
+		case ERaTypeWriteT::ERA_WRITE_PWM_PIN:
 			return this->sendPinData(rsp);
-		case Base::ERaTypeRspT::ERA_RESPONSE_CONFIG_ID:
+		case ERaTypeWriteT::ERA_WRITE_CONFIG_ID:
 			return this->sendConfigIdData(rsp);
-		case Base::ERaTypeRspT::ERA_RESPONSE_VIRTUAL_PIN_MULTI:
-		case Base::ERaTypeRspT::ERA_RESPONSE_CONFIG_ID_MULTI:
+		case ERaTypeWriteT::ERA_WRITE_VIRTUAL_PIN_MULTI:
+		case ERaTypeWriteT::ERA_WRITE_CONFIG_ID_MULTI:
 			return this->sendConfigIdMultiData(rsp);
-		case Base::ERaTypeRspT::ERA_RESPONSE_MODBUS_DATA:
+		case ERaTypeWriteT::ERA_WRITE_MODBUS_DATA:
 			return this->sendModbusData(rsp);
-		case Base::ERaTypeRspT::ERA_RESPONSE_ZIGBEE_DATA:
+		case ERaTypeWriteT::ERA_WRITE_ZIGBEE_DATA:
 			return this->sendZigbeeData(rsp);
 		default:
 			return false;
@@ -514,10 +517,10 @@ bool ERaProto<Transp, Flash>::sendData(ERaRsp_t& rsp) {
 template <class Transp, class Flash>
 bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
 	int configId = rsp.id;
-	int pMode = Base::ERaPinRp.findPinMode((int)rsp.id);
+	int pMode = Base::ERaPinRp.findPinMode(rsp.id.getInt());
 	switch (rsp.type) {
-		case Base::ERaTypeRspT::ERA_RESPONSE_VIRTUAL_PIN: {
-				configId = Base::ERaPinRp.findVPinConfigId((int)rsp.id);
+		case ERaTypeWriteT::ERA_WRITE_VIRTUAL_PIN: {
+				configId = Base::ERaPinRp.findVPinConfigId(rsp.id.getInt());
 				if (configId == -1) {
 					break;
 				}
@@ -526,10 +529,10 @@ bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
 				return true;
 			}
 			break;
-		case Base::ERaTypeRspT::ERA_RESPONSE_DIGITAL_PIN:
+		case ERaTypeWriteT::ERA_WRITE_DIGITAL_PIN:
 			if ((pMode == OUTPUT) || (pMode == INPUT) ||
 				(pMode == INPUT_PULLUP) || (pMode == INPUT_PULLDOWN)) {
-				configId = Base::ERaPinRp.findConfigId((int)rsp.id);
+				configId = Base::ERaPinRp.findConfigId(rsp.id.getInt());
 				if (configId == -1) {
 					break;
 				}
@@ -538,9 +541,9 @@ bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
 				return true;
 			}
 			break;
-		case Base::ERaTypeRspT::ERA_RESPONSE_ANALOG_PIN:
+		case ERaTypeWriteT::ERA_WRITE_ANALOG_PIN:
 			if (pMode == ANALOG) {
-				configId = Base::ERaPinRp.findConfigId((int)rsp.id);
+				configId = Base::ERaPinRp.findConfigId(rsp.id.getInt());
 				if (configId == -1) {
 					break;
 				}
@@ -549,9 +552,9 @@ bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
 				return true;
 			}
 			break;
-		case Base::ERaTypeRspT::ERA_RESPONSE_PWM_PIN:
+		case ERaTypeWriteT::ERA_WRITE_PWM_PIN:
 			if (pMode == PWM) {
-				configId = Base::ERaPinRp.findConfigId((int)rsp.id);
+				configId = Base::ERaPinRp.findConfigId(rsp.id.getInt());
 				if (configId == -1) {
 					break;
 				}
@@ -575,26 +578,25 @@ bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
 		return false;
 	}
 	switch (rsp.type) {
-	case Base::ERaTypeRspT::ERA_RESPONSE_VIRTUAL_PIN:
-		FormatString(name, "virtual_pin_%d", (int)rsp.id);
+	case ERaTypeWriteT::ERA_WRITE_VIRTUAL_PIN:
+		FormatString(name, "virtual_pin_%d", rsp.id.getInt());
 		break;
-	case Base::ERaTypeRspT::ERA_RESPONSE_DIGITAL_PIN:
-		FormatString(name, "digital_pin_%d", (int)rsp.id);
+	case ERaTypeWriteT::ERA_WRITE_DIGITAL_PIN:
+		FormatString(name, "digital_pin_%d", rsp.id.getInt());
 		break;
-	case Base::ERaTypeRspT::ERA_RESPONSE_ANALOG_PIN:
-		FormatString(name, "analog_pin_%d", (int)rsp.id);
+	case ERaTypeWriteT::ERA_WRITE_ANALOG_PIN:
+		FormatString(name, "analog_pin_%d", rsp.id.getInt());
 		break;
-	case Base::ERaTypeRspT::ERA_RESPONSE_PWM_PIN:
-		FormatString(name, "pwm_pin_%d", (int)rsp.id);
+	case ERaTypeWriteT::ERA_WRITE_PWM_PIN:
+		FormatString(name, "pwm_pin_%d", rsp.id.getInt());
 		break;
 	default:
 		cJSON_Delete(root);
 		root = nullptr;
 		return false;
 	}
-	if ((char*)rsp.param != nullptr) {
+	if (rsp.param.getString() != nullptr) {
 		cJSON_AddStringToObject(root, name, rsp.param);
-		free((char*)rsp.param);
 	}
 	else {
 		cJSON_AddNumberWithDecimalToObject(root, name, rsp.param, 5);
@@ -616,14 +618,13 @@ bool ERaProto<Transp, Flash>::sendConfigIdData(ERaRsp_t& rsp) {
 	char* payload = nullptr;
 	char topicName[MAX_TOPIC_LENGTH] {0};
 	FormatString(topicName, this->ERA_TOPIC);
-	FormatString(topicName, "/config/%d/value", (int)rsp.id);
+	FormatString(topicName, "/config/%d/value", rsp.id.getInt());
 	cJSON* root = cJSON_CreateObject();
 	if (root == nullptr) {
 		return false;
 	}
-	if ((char*)rsp.param != nullptr) {
+	if (rsp.param.getString() != nullptr) {
 		cJSON_AddStringToObject(root, "v", rsp.param);
-		free((char*)rsp.param);
 	}
 	else {
 		cJSON_AddNumberWithDecimalToObject(root, "v", rsp.param, 5);
@@ -650,7 +651,6 @@ bool ERaProto<Transp, Flash>::sendConfigIdMultiData(ERaRsp_t& rsp) {
 	FormatString(topicName, this->ERA_TOPIC);
 	FormatString(topicName, "/config_value");
 	status = this->transp.publishData(topicName, payload);
-	free(payload);
 	payload = nullptr;
 	return status;
 }
@@ -666,7 +666,6 @@ bool ERaProto<Transp, Flash>::sendModbusData(ERaRsp_t& rsp) {
 	FormatString(topicName, this->ERA_TOPIC);
 	FormatString(topicName, "/data");
 	status = this->transp.publishData(topicName, payload);
-	free(payload);
 	payload = nullptr;
 	return status;
 }
@@ -680,7 +679,6 @@ bool ERaProto<Transp, Flash>::sendZigbeeData(ERaRsp_t& rsp) {
 		return false;
 	}
 	if (payload == nullptr) {
-		free(topic);
 		topic = nullptr;
 		return false;
 	}
@@ -688,22 +686,89 @@ bool ERaProto<Transp, Flash>::sendZigbeeData(ERaRsp_t& rsp) {
 	FormatString(topicName, this->ERA_TOPIC);
 	FormatString(topicName, topic);
 	status = this->transp.publishData(topicName, payload);
-	free(topic);
-	free(payload);
 	topic = nullptr;
 	payload = nullptr;
 	return status;
 }
 
 template <class Transp, class Flash>
+void ERaProto<Transp, Flash>::sendCommand(const char* auth, ERaRsp_t& rsp, ApiData_t data) {
+	if (auth == nullptr) {
+		return;
+	}
+
+	char* payload = nullptr;
+	char topicName[MAX_TOPIC_LENGTH] {0};
+    FormatString(topicName, "%s/%s", BASE_TOPIC, auth);
+	switch (rsp.type) {
+		case ERaTypeWriteT::ERA_WRITE_VIRTUAL_PIN:
+			FormatString(topicName, "/virtual_pin/%d", rsp.id.getInt());
+			break;
+		case ERaTypeWriteT::ERA_WRITE_DIGITAL_PIN:
+		case ERaTypeWriteT::ERA_WRITE_ANALOG_PIN:
+		case ERaTypeWriteT::ERA_WRITE_PWM_PIN:
+			FormatString(topicName, "/arduino_pin/%d", rsp.id.getInt());
+			break;
+		case ERaTypeWriteT::ERA_WRITE_VIRTUAL_PIN_MULTI: {
+			ERaDataJson* vrData = (ERaDataJson*)data;
+			this->sendCommandMulti(auth, rsp, vrData);
+		}
+			return;
+		default:
+			return;
+	}
+
+	cJSON* root = cJSON_CreateObject();
+	if (root == nullptr) {
+		return;
+	}
+	if (rsp.param.getString() != nullptr) {
+		cJSON_AddStringToObject(root, "value", rsp.param);
+	}
+	else {
+		cJSON_AddNumberWithDecimalToObject(root, "value", rsp.param, 5);
+	}
+	payload = cJSON_PrintUnformatted(root);
+	if (payload != nullptr) {
+		this->transp.publishData(topicName, payload);
+	}
+	cJSON_Delete(root);
+	free(payload);
+	root = nullptr;
+	payload = nullptr;
+}
+
+template <class Transp, class Flash>
+void ERaProto<Transp, Flash>::sendCommandMulti(const char* auth, ERaRsp_t& rsp, ERaDataJson* data) {
+	if (data == nullptr) {
+		return;
+	}
+	rsp.type = ERaTypeWriteT::ERA_WRITE_VIRTUAL_PIN;
+	const ERaDataJson::iterator e = data->end();
+	for (ERaDataJson::iterator it = data->begin(); it != e; ++it) {
+		if (it.getName() == nullptr) {
+			continue;
+		}
+		rsp.id = atoi(it.getName());
+		if (it.isString()) {
+			rsp.param = it.getString();
+		}
+		else {
+			rsp.param = it.getDouble();
+		}
+		this->sendCommand(auth, rsp);
+	}
+}
+
+template <class Transp, class Flash>
 void ERaProto<Transp, Flash>::sendCommand(ERaRsp_t& rsp, ApiData_t data) {
 	switch (rsp.type) {
-		case Base::ERaTypeRspT::ERA_RESPONSE_VIRTUAL_PIN_MULTI: {
+		case ERaTypeWriteT::ERA_WRITE_VIRTUAL_PIN_MULTI: {
 			ERaDataJson* vrData = (ERaDataJson*)data;
 			this->sendCommandVirtual(rsp, vrData);
 		}
 			break;
-		case Base::ERaTypeRspT::ERA_RESPONSE_MODBUS_DATA: {
+		case ERaTypeWriteT::ERA_WRITE_MODBUS_DATA: {
 			ERaDataBuff* modbusData = (ERaDataBuff*)data;
 			this->sendCommandModbus(rsp, modbusData);
 		}
@@ -750,7 +815,7 @@ void ERaProto<Transp, Flash>::sendCommandVirtual(ERaRsp_t& rsp, ERaDataJson* dat
 		++it;
 	}
 	if (current) {
-		rsp.param = data->getJson();
+		rsp.param = data->getObject();
 	}
 }
 

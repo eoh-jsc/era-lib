@@ -32,6 +32,10 @@ ERA_DISCONNECTED() __attribute__((weak, alias("ERaNoHandler")));
 ERA_WAITING() __attribute__((weak, alias("ERaNoHandler")));
 ERA_MODBUS_BAUDRATE() __attribute__((weak, alias("ERaNoModbusBaudrate")));
 
+ERA_ON_WRITE(Default);
+ERA_ON_PIN_WRITE(Default);
+ERA_ON_PIN_READ(Default);
+
 ERA_ON_WRITE( 0);
 ERA_ON_WRITE( 1);
 ERA_ON_WRITE( 2);

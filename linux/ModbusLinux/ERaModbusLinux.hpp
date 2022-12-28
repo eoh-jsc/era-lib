@@ -3,33 +3,37 @@
 
 #include <Modbus/ERaModbus.hpp>
 
+ERaSerialLinux SerialMB;
+
 template <class Api>
 void ERaModbus<Api>::configModbus() {
-    if (this->fd < 0) {
-        this->fd = serialOpen("/dev/ttyAMA0", MODBUS_BAUDRATE);
-        this->_streamDefault = true;
+    if (this->stream != NULL) {
+        return;
     }
+
+    this->stream = &SerialMB;
+    SerialMB.begin("/dev/ttyAMA0", MODBUS_BAUDRATE);
+    this->_streamDefault = true;
 }
 
 template <class Api>
 void ERaModbus<Api>::setBaudRate(uint32_t baudrate) {
     ERaModbusBaudrate(baudrate);
-    if ((this->fd < 0) || !this->streamDefault()) {
+    if (!this->streamDefault()) {
         return;
     }
 
-    serialFlush(this->fd);
-    serialClose(this->fd);
-    this->fd = serialOpen("/dev/ttyAMA0", baudrate);
+    SerialMB.begin("/dev/ttyAMA0", baudrate);
 }
 
 template <class Api>
-bool ERaModbus<Api>::waitResponse(ModbusConfig_t& param, uint8_t* modbusData) {
-    if (this->fd < 0) {
+bool ERaModbus<Api>::waitResponse(ERaModbusResponse* response) {
+    if (response == nullptr) {
         return false;
     }
-
-    int length {0};
+    if (this->stream == NULL) {
+        return false;
+    }
 
     if (this->total++ > 99) {
         this->total = 1;
@@ -39,9 +43,8 @@ bool ERaModbus<Api>::waitResponse(ModbusConfig_t& param, uint8_t* modbusData) {
 
     MillisTime_t startMillis = ERaMillis();
 
-    do
-    {
-        if (!serialDataAvail(this->fd)) {
+    do {
+        if (!this->stream->available()) {
 #if defined(ERA_NO_RTOS)
             ERaOnWaiting();
             this->thisApi().run();
@@ -54,15 +57,12 @@ bool ERaModbus<Api>::waitResponse(ModbusConfig_t& param, uint8_t* modbusData) {
         }
 
         do {
-            modbusData[length] = serialGetchar(this->fd);
-        } while ((++length < 256) && serialDataAvail(this->fd));
+            response->add(this->stream->read());
+        } while (this->stream->available());
 
-        ERaLogHex("MB <<", modbusData, length);
-
-        if (modbusData[0] == param.addr && modbusData[1] == param.func) {
-            if (this->checkReceiveCRC(param, modbusData)) {
-                return true;
-            }
+        if (response->isComplete()) {
+            ERaLogHex("MB <<", response->getMessage(), response->getPosition());
+            return response->isSuccess();
         }
         ERA_MODBUS_YIELD();
     } while (ERaRemainingTime(startMillis, MAX_TIMEOUT_MODBUS));
@@ -70,16 +70,19 @@ bool ERaModbus<Api>::waitResponse(ModbusConfig_t& param, uint8_t* modbusData) {
 }
 
 template <class Api>
-void ERaModbus<Api>::sendCommand(const vector<uint8_t>& data) {
-    if (this->fd < 0) {
+void ERaModbus<Api>::sendCommand(uint8_t* data, size_t size) {
+    if (data == nullptr) {
+        return;
+    }
+    if (this->stream == NULL) {
         return;
     }
 
-    ERaLogHex("MB >>", data.data(), data.size());
-    for (const auto& var : data) {
-        serialPutchar(this->fd, var);
-    }
-    serialFlush(this->fd);
+    ERaLogHex("MB >>", data, size);
+    this->switchToTransmit();
+    this->stream->write(data, size);
+    this->stream->flush();
+    this->switchToReceive();
 }
 
 #endif /* INC_ERA_MODBUS_LINUX_HPP_ */

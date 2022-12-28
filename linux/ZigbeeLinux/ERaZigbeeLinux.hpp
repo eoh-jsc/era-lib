@@ -3,20 +3,25 @@
 
 #include <Zigbee/ERaZigbee.hpp>
 
+ERaSerialLinux SerialZB;
+
 template <class Api>
 void ERaZigbee<Api>::configZigbee() {
-    if (this->fd < 0) {
-        this->fd = serialOpen("/dev/ttyACM0", ZIGBEE_BAUDRATE);
+    if (this->stream != NULL) {
+        return;
     }
+
+    this->stream = &SerialZB;
+    SerialZB.begin("/dev/ttyACM0", ZIGBEE_BAUDRATE);
 }
 
 template <class Api>
 void ERaZigbee<Api>::handleZigbeeData() {
-    if (this->fd < 0) {
+    if (this->stream == NULL) {
         return;
     }
 
-    if (!serialDataAvail(this->fd)) {
+    if (!this->stream->available()) {
         return;
     }
     int remain {0};
@@ -24,16 +29,16 @@ void ERaZigbee<Api>::handleZigbeeData() {
     uint8_t payload[256] {0};
     MillisTime_t startMillis = ERaMillis();
     do {
-        if (!serialDataAvail(this->fd)) {
+        if (!this->stream->available()) {
             ERA_ZIGBEE_YIELD();
             continue;
         }
         int position {0};
-        int length = serialDataAvail(this->fd);
+        int length = this->stream->available();
         uint8_t receive[(length < 256) ? 256 : length] {0};
         ERaGuardLock(this->mutexData);
         do {
-            receive[position] = serialGetchar(this->fd);
+            receive[position] = this->stream->read();
             if (index && !position) {
                 length = remain;
             }
@@ -60,7 +65,7 @@ void ERaZigbee<Api>::handleZigbeeData() {
 
 template <class Zigbee>
 ResultT ERaToZigbee<Zigbee>::waitResponse(Response_t rspWait, void* value) {
-    if (this->thisZigbee().fd < 0) {
+    if (this->thisZigbee().stream == NULL) {
         return ResultT::RESULT_FAIL;
     }
     
@@ -87,7 +92,7 @@ ResultT ERaToZigbee<Zigbee>::waitResponse(Response_t rspWait, void* value) {
                 }
             }
         }
-        if (!serialDataAvail(this->thisZigbee().fd)) {
+        if (!this->thisZigbee().stream->available()) {
             ERA_ZIGBEE_YIELD();
             continue;
         }
@@ -95,16 +100,16 @@ ResultT ERaToZigbee<Zigbee>::waitResponse(Response_t rspWait, void* value) {
         uint8_t index {0};
         uint8_t payload[256] {0};
         do {
-            if (!serialDataAvail(this->thisZigbee().fd)) {
+            if (!this->thisZigbee().stream->available()) {
                 ERA_ZIGBEE_YIELD();
                 continue;
             }
             int position = 0;
-            int length = serialDataAvail(this->thisZigbee().fd);
+            int length = this->thisZigbee().stream->available();
             uint8_t receive[(length < 256) ? 256 : length] {0};
             ERaGuardLock(this->thisZigbee().mutexData);
             do {
-                receive[position] = serialGetchar(this->thisZigbee().fd);
+                receive[position] = this->thisZigbee().stream->read();
                 if (index && !position) {
                     length = remain;
                 }
@@ -137,29 +142,25 @@ ResultT ERaToZigbee<Zigbee>::waitResponse(Response_t rspWait, void* value) {
 
 template <class Zigbee>
 void ERaToZigbee<Zigbee>::sendByte(uint8_t byte) {
-    if (this->thisZigbee().fd < 0) {
+    if (this->thisZigbee().stream == NULL) {
         return;
     }
 
     ERaGuardLock(this->mutex);
     ERaLogHex("ZB >>", &byte, 1);
-    serialPutchar(this->thisZigbee().fd, byte);
-    serialFlush(this->thisZigbee().fd);
+    this->thisZigbee().stream->write(byte);
     ERaGuardUnlock(this->mutex);
 }
 
 template <class Zigbee>
 void ERaToZigbee<Zigbee>::sendCommand(const vector<uint8_t>& data) {
-    if (this->thisZigbee().fd < 0) {
+    if (this->thisZigbee().stream == NULL) {
         return;
     }
 
     ERaGuardLock(this->mutex);
     ERaLogHex("ZB >>", data.data(), data.size());
-    for (const auto& var : data) {
-        serialPutchar(this->thisZigbee().fd, var);
-    }
-    serialFlush(this->thisZigbee().fd);
+    this->thisZigbee().stream->write(data.data(), data.size());
     ERaGuardUnlock(this->mutex);
 }
 

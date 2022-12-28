@@ -44,7 +44,7 @@ typedef struct __ERaConfig_t {
     uint16_t port;
     char username[64];
     char password[64];
-    
+
     void setFlag(uint8_t mask, bool value) {
         if (value) {
             flags |= mask;

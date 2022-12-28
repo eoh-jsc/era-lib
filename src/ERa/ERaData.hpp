@@ -6,6 +6,8 @@
 #include <string.h>
 #include <ERa/ERaDefine.hpp>
 
+class ERaParam;
+
 class ERaDataBuff
 {
 public:
@@ -206,6 +208,7 @@ protected:
 	size_t buffSize;
 };
 
+inline
 void ERaDataBuff::add(const void* ptr, size_t size) {
 	if (ptr == nullptr) {
 		return;
@@ -218,6 +221,7 @@ void ERaDataBuff::add(const void* ptr, size_t size) {
 	this->buff[this->len++] = '\0';
 }
 
+inline
 void ERaDataBuff::add_hex(uint8_t value) {
 	if (this->len + 2 > this->buffSize) {
 		return;
@@ -226,6 +230,7 @@ void ERaDataBuff::add_hex(uint8_t value) {
 	this->buff[this->len++] = '\0';
 }
 
+inline
 void ERaDataBuff::add_hex_array(const uint8_t* ptr, size_t size) {
 	if (ptr == nullptr || !size) {
 		return;
@@ -239,47 +244,56 @@ void ERaDataBuff::add_hex_array(const uint8_t* ptr, size_t size) {
 	this->buff[this->len++] = '\0';
 }
 
+inline
 void ERaDataBuff::add(int value) {
     this->len += snprintf(this->buff + this->len, this->buffSize - this->len, "%i", value);
     this->buff[this->len++] = '\0';
 }
 
+inline
 void ERaDataBuff::add(unsigned int value) {
     this->len += snprintf(this->buff + this->len, this->buffSize - this->len, "%u", value);
     this->buff[this->len++] = '\0';
 }
 
+inline
 void ERaDataBuff::add(long value) {
     this->len += snprintf(this->buff + this->len, this->buffSize - this->len, "%li", value);
     this->buff[this->len++] = '\0';
 }
 
+inline
 void ERaDataBuff::add(unsigned long value) {
     this->len += snprintf(this->buff + this->len, this->buffSize - this->len, "%lu", value);
     this->buff[this->len++] = '\0';
 }
 
+inline
 void ERaDataBuff::add(long long value) {
     this->len += snprintf(this->buff + this->len, this->buffSize - this->len, "%lli", value);
     this->buff[this->len++] = '\0';
 }
 
+inline
 void ERaDataBuff::add(unsigned long long value) {
     this->len += snprintf(this->buff + this->len, this->buffSize - this->len, "%llu", value);
     this->buff[this->len++] = '\0';
 }
 
+inline
 void ERaDataBuff::add(float value) {
     this->len += snprintf(this->buff + this->len, this->buffSize - this->len, "%.2f", value);
     this->buff[this->len++] = '\0';
 }
 
+inline
 void ERaDataBuff::add(double value) {
     this->len += snprintf(this->buff + this->len, this->buffSize - this->len, "%.5f", value);
     this->buff[this->len++] = '\0';
 }
 
 #if defined(ERA_HAS_PROGMEM)
+	inline
 	void ERaDataBuff::add(const __FlashStringHelper* ptr) {
 		if (ptr == nullptr) {
 			return;
@@ -295,6 +309,7 @@ void ERaDataBuff::add(double value) {
 	}
 #endif
 
+inline
 bool ERaDataBuff::next() {
 	char* ptr = this->buff + this->len;
 	if (*ptr != '\0') {
@@ -305,6 +320,7 @@ bool ERaDataBuff::next() {
 	return false;
 }
 
+inline
 void ERaDataBuff::remove(size_t index) {
 	const iterator e = this->end();
 	for (iterator it = this->begin(); it < e; ++it) {
@@ -319,6 +335,7 @@ void ERaDataBuff::remove(size_t index) {
 	}
 }
 
+inline
 void ERaDataBuff::remove(const char* key) {
 	const iterator e = this->end();
 	for (iterator it = this->begin(); it < e; ++it) {
@@ -333,6 +350,7 @@ void ERaDataBuff::remove(const char* key) {
 	}
 }
 
+inline
 ERaDataBuff::operator char* () const {
 	char* ptr = reinterpret_cast<char*>(ERA_MALLOC(this->len));
 	if (ptr == nullptr) {
@@ -346,6 +364,7 @@ ERaDataBuff::operator char* () const {
 	return ptr;
 }
 
+inline
 ERaDataBuff::iterator ERaDataBuff::operator [] (int index) const {
 	const iterator e = this->end();
 	for (iterator it = this->begin(); it < e; ++it) {
@@ -356,6 +375,7 @@ ERaDataBuff::iterator ERaDataBuff::operator [] (int index) const {
 	return iterator::invalid();
 }
 
+inline
 ERaDataBuff::iterator ERaDataBuff::operator [] (const char* key) const {
 	const iterator e = this->end();
 	for (iterator it = this->begin(); it < e; ++it) {
@@ -397,11 +417,13 @@ class ERaDataJson
 	typedef cJSON* (CJSON_STDCALL* AddNumber)(cJSON* const object, const char* const name, const double number);
 	typedef cJSON* (CJSON_STDCALL* AddDouble)(cJSON* const object, const char* const name, const double number, int decimal);
 	typedef cJSON* (CJSON_STDCALL* AddString)(cJSON* const object, const char* const name, const char* const string);
+	typedef cJSON_bool (CJSON_STDCALL* AddItem)(cJSON* object, const char* name, cJSON* item);
 	typedef struct __DataHooks {
 		AddBool addBool;
 		AddNumber addNumber;
 		AddDouble addDouble;
 		AddString addString;
+		AddItem addItem;
 	} DataHooks;
 
 public:
@@ -460,6 +482,10 @@ public:
             return this->item->string;
         }
 
+		const cJSON* getObject() const {
+			return this->item;
+		}
+
 		bool isBool() const {
 			if (!this->isValid()) {
 				return false;
@@ -479,6 +505,13 @@ public:
 				return false;
 			}
 			return cJSON_IsString(this->item);
+		}
+
+		bool isObject() const {
+			if (!this->isValid()) {
+				return false;
+			}
+			return cJSON_IsObject(this->item);
 		}
 
 		bool rename(const char* name) const {
@@ -532,27 +565,35 @@ public:
 				AddBool addBool = cJSON_AddBoolToObject,
 				AddNumber addNumber = cJSON_AddNumberToObject,
 				AddDouble addDouble = cJSON_AddNumberWithDecimalToObject,
-				AddString addString = cJSON_AddStringToObject)
+				AddString addString = cJSON_AddStringToObject,
+				AddItem addItem = cJSON_AddItemToObject)
 		: ptr(nullptr)
 		, root(json)
 		, hooks {
 			.addBool = addBool,
 			.addNumber = addNumber,
 			.addDouble = addDouble,
-			.addString = addString
+			.addString = addString,
+			.addItem = addItem
 		}
 	{}
 	~ERaDataJson()
 	{
 		this->clear();
-		this->clearJson();
+		this->clearObject();
 	}
 
-	const cJSON* getJson() const {
+	const cJSON* getObject() const {
 		return this->root;
 	}
 
-	void setJson(cJSON* const it) {
+	cJSON* detachObject() {
+		cJSON* it = this->root;
+		this->root = nullptr;
+		return it;
+	}
+
+	void setObject(cJSON* const it) {
 		this->root = it;
 	}
 
@@ -574,11 +615,13 @@ public:
 	}
 
 	void clear() {
-		free(this->ptr);
+		if (this->ptr != nullptr) {
+			free(this->ptr);
+		}
 		this->ptr = nullptr;
 	}
 
-	void clearJson() {
+	void clearObject() {
 		cJSON_Delete(this->root);
 		this->root = nullptr;
 	}
@@ -590,6 +633,13 @@ public:
 	void add(const char* name, double value);
 	void add(const char* name, char* value);
 	void add(const char* name, const char* value);
+	void add(const char* name, cJSON* value);
+	void add(const char* name, ERaDataJson& value);
+	void add(const char* name, ERaParam& value);
+
+#if defined(ERA_HAS_PROGMEM)
+	void add(const char* name, const __FlashStringHelper* value);
+#endif
 
 	template <typename T, typename... Args> 
 	void add_multi(const char* name, const T last) {
@@ -653,36 +703,68 @@ protected:
 };
 
 template <typename T>
+inline
 void ERaDataJson::add(const char* name, T value) {
 	this->create();
 	this->hooks.addNumber(this->root, name, value);
 }
 
+inline
 void ERaDataJson::add(const char* name, bool value) {
 	this->create();
 	this->hooks.addBool(this->root, name, value);
 }
 
+inline
 void ERaDataJson::add(const char* name, float value) {
 	this->create();
 	this->hooks.addDouble(this->root, name, value, 5);
 }
 
+inline
 void ERaDataJson::add(const char* name, double value) {
 	this->create();
 	this->hooks.addDouble(this->root, name, value, 5);
 }
 
+inline
 void ERaDataJson::add(const char* name, char* value) {
 	this->create();
 	this->hooks.addString(this->root, name, value);
 }
 
+inline
 void ERaDataJson::add(const char* name, const char* value) {
 	this->create();
 	this->hooks.addString(this->root, name, value);
 }
 
+inline
+void ERaDataJson::add(const char* name, cJSON* value) {
+	this->create();
+	this->hooks.addItem(this->root, name, value);
+}
+
+inline
+void ERaDataJson::add(const char* name, ERaDataJson& value) {
+	this->add(name, value.detachObject());
+}
+
+#if defined(ERA_HAS_PROGMEM)
+	inline
+	void ERaDataJson::add(const char* name, const __FlashStringHelper* value) {
+		if (value == nullptr) {
+			return;
+		}
+		PGM_P p = reinterpret_cast<PGM_P>(value);
+		size_t size = strlen_P(p);
+		char str[size + 1] {0};
+		memcpy_P(str, p, size);
+		this->add(name, str);
+	}
+#endif
+
+inline
 void ERaDataJson::remove(size_t index) {
 	const iterator e = this->end();
 	for (iterator it = this->begin(); it != e; ++it) {
@@ -693,18 +775,22 @@ void ERaDataJson::remove(size_t index) {
 	}
 }
 
+inline
 void ERaDataJson::remove(const char* key) {
 	cJSON_DeleteItemFromObject(this->root, key);
 }
 
+inline
 void ERaDataJson::remove(cJSON* const it) {
 	cJSON_DeleteItemViaPointer(this->root, it);
 }
 
+inline
 void ERaDataJson::remove(const ERaDataJson::iterator& it) {
 	cJSON_DeleteItemViaPointer(this->root, const_cast<cJSON*>(it.getItem()));
 }
 
+inline
 ERaDataJson::iterator ERaDataJson::operator [] (int index) const {
 	const iterator e = this->end();
 	for (iterator it = this->begin(); it != e; ++it) {
@@ -715,6 +801,7 @@ ERaDataJson::iterator ERaDataJson::operator [] (int index) const {
 	return iterator::invalid();
 }
 
+inline
 ERaDataJson::iterator ERaDataJson::operator [] (const char* key) const {
 	const iterator e = this->end();
 	for (iterator it = this->begin(); it != e; ++it) {

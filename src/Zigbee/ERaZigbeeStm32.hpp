@@ -149,7 +149,6 @@ void ERaToZigbee<Zigbee>::sendByte(uint8_t byte) {
     ERaGuardLock(this->mutex);
     ERaLogHex("ZB >>", &byte, 1);
     this->thisZigbee().stream->write(byte);
-    this->thisZigbee().stream->flush();
     ERaGuardUnlock(this->mutex);
 }
 
@@ -162,7 +161,6 @@ void ERaToZigbee<Zigbee>::sendCommand(const vector<uint8_t>& data) {
     ERaGuardLock(this->mutex);
     ERaLogHex("ZB >>", data.data(), data.size());
     this->thisZigbee().stream->write(data.data(), data.size());
-    this->thisZigbee().stream->flush();
     ERaGuardUnlock(this->mutex);
 }
 
