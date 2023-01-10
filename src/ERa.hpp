@@ -13,10 +13,7 @@
     #else
         #include <ERaEsp8266.hpp>
     #endif
-#elif defined(ARDUINO) &&                        \
-    (defined(STM32F0xx) || defined(STM32F1xx) || \
-    defined(STM32F2xx) || defined(STM32F3xx) ||  \
-    defined(STM32F4xx) || defined(STM32F7xx))
+#elif defined(ARDUINO) && defined(ARDUINO_ARCH_STM32)
     #define ERA_NO_RTOS
     #include <ERa/ERaDetect.hpp>
     #define TINY_GSM_RX_BUFFER ERA_MQTT_BUFFER_SIZE

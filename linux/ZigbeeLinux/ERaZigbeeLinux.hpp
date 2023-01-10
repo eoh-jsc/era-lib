@@ -3,7 +3,7 @@
 
 #include <Zigbee/ERaZigbee.hpp>
 
-ERaSerialLinux SerialZB;
+#define SerialZB SerialZigbee<ERaSerialLinux>::serial()
 
 template <class Api>
 void ERaZigbee<Api>::configZigbee() {

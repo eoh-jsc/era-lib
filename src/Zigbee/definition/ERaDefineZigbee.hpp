@@ -437,15 +437,18 @@ typedef struct __InfoCoordinator_t {
 		, epTick(0)
 	{}
 
-	static __InfoCoordinator_t* instance;
-	static __InfoCoordinator_t* getInstance() {
-        if (__InfoCoordinator_t::instance == nullptr) {
-            void* ptr = ERA_CALLOC(1, sizeof(__InfoCoordinator_t));
-			__InfoCoordinator_t::instance = new(ptr) __InfoCoordinator_t();
-		}
-        return __InfoCoordinator_t::instance;
+	static __InfoCoordinator_t*& instance() {
+		static __InfoCoordinator_t* _instance = nullptr;
+		return _instance;
 	}
-	void reset(__InfoCoordinator_t*& _instance = __InfoCoordinator_t::instance) {
+	static __InfoCoordinator_t* getInstance() {
+        if (__InfoCoordinator_t::instance() == nullptr) {
+            void* ptr = ERA_CALLOC(1, sizeof(__InfoCoordinator_t));
+			__InfoCoordinator_t::instance() = new(ptr) __InfoCoordinator_t();
+		}
+        return __InfoCoordinator_t::instance();
+	}
+	void reset(__InfoCoordinator_t*& _instance = __InfoCoordinator_t::instance()) {
 		_instance->freeAllDevice();
 		memset((void*)_instance, 0, sizeof(__InfoCoordinator_t));
 		new(_instance) __InfoCoordinator_t();
@@ -548,15 +551,18 @@ typedef struct __InfoDevice_t
 		, power(PWS_NEED_GET)
 	{}
 
-    static __InfoDevice_t* instance;
+    static __InfoDevice_t*& instance() {
+		static __InfoDevice_t* _instance = nullptr;
+		return _instance;
+	}
     static __InfoDevice_t* getInstance() {
-        if (__InfoDevice_t::instance == nullptr) {
+        if (__InfoDevice_t::instance() == nullptr) {
             void* ptr = ERA_CALLOC(1, sizeof(__InfoDevice_t));
-			__InfoDevice_t::instance = new(ptr) __InfoDevice_t();
+			__InfoDevice_t::instance() = new(ptr) __InfoDevice_t();
 		}
-        return __InfoDevice_t::instance;
+        return __InfoDevice_t::instance();
     }
-	void reset(__InfoDevice_t*& _instance = __InfoDevice_t::instance) {
+	void reset(__InfoDevice_t*& _instance = __InfoDevice_t::instance()) {
 		memset((void*)_instance, 0, sizeof(__InfoDevice_t));
 		new(_instance) __InfoDevice_t();
 	}

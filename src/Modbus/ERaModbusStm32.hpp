@@ -3,7 +3,7 @@
 
 #include <Modbus/ERaModbus.hpp>
 
-HardwareSerial SerialMB(PA3, PA2);
+#define SerialMB SerialModBus<HardwareSerial, uint32_t, uint32_t>::serial(PA3, PA2)
 
 template <class Api>
 void ERaModbus<Api>::configModbus() {

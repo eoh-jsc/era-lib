@@ -47,6 +47,7 @@ private:
     size_t position;
 };
 
+inline
 char* ERaFlash::readFlash(const char* filename) {
 #if defined(DATA_EEPROM_BASE)
     size_t size = this->getSize(filename);
@@ -90,6 +91,7 @@ char* ERaFlash::readFlash(const char* filename) {
 }
 
 template <typename T>
+inline
 size_t ERaFlash::readFlash(const char* key, T& buffer) {
     if (sizeof(buffer) > EEPROM.length()) {
         return 0;
@@ -99,6 +101,7 @@ size_t ERaFlash::readFlash(const char* key, T& buffer) {
     return sizeof(buffer);
 }
 
+inline
 void ERaFlash::writeFlash(const char* filename, const char* buffer) {
     if (buffer == nullptr) {
         return;
@@ -167,6 +170,7 @@ void ERaFlash::writeFlash(const char* filename, const char* buffer) {
 }
 
 template <typename T>
+inline
 size_t ERaFlash::writeFlash(const char* key, const T& value) {
     if (sizeof(value) > EEPROM.length()) {
         return 0;
@@ -178,6 +182,7 @@ size_t ERaFlash::writeFlash(const char* key, const T& value) {
 
 #if !defined(DATA_EEPROM_BASE)
 
+    inline
     bool ERaFlash::readFlashUntil(const char c, char* buffer) {
         size_t length {0};
         for (size_t i = this->position; i < EEPROM.length(); ++i) {
@@ -192,6 +197,7 @@ size_t ERaFlash::writeFlash(const char* key, const T& value) {
         return false;
     }
 
+    inline
     bool ERaFlash::clearFlashUntil(const char c) {
         for (size_t i = this->position; i < EEPROM.length(); ++i) {
             if (eeprom_buffered_read_byte(i) == c) {
@@ -203,6 +209,7 @@ size_t ERaFlash::writeFlash(const char* key, const T& value) {
         return false;
     }
 
+    inline
     void ERaFlash::flashMove(size_t dst, size_t src) {
         size_t length = src - dst;
         size_t e = EEPROM.length() - length - 1;
@@ -214,6 +221,7 @@ size_t ERaFlash::writeFlash(const char* key, const T& value) {
         }
     }
 
+    inline
     size_t ERaFlash::getSizeFromPosition() {
         char c {0};
         size_t size {0};
@@ -225,6 +233,7 @@ size_t ERaFlash::writeFlash(const char* key, const T& value) {
 
 #endif
 
+inline
 size_t ERaFlash::getSize(const char* filename) {
     char c {0};
     size_t size {0};

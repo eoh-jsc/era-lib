@@ -57,6 +57,7 @@ public:
         ERaDelay(1000);
         IPAddress localIP = ETH.localIP();
         ERA_FORCE_UNUSED(localIP);
+        ERA_LOG(TAG, ERA_PSTR("Connected to network"));
         ERA_LOG(TAG, ERA_PSTR("IP: %s"), localIP.toString().c_str());
         return true;
     }

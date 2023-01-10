@@ -121,10 +121,7 @@
     #define ERA_USE_DEFAULT_FREE_RAM
     #define ERA_USE_DEFAULT_GUARD
 
-#elif defined(ARDUINO) &&                        \
-    (defined(STM32F0xx) || defined(STM32F1xx) || \
-    defined(STM32F2xx) || defined(STM32F3xx) ||  \
-    defined(STM32F4xx) || defined(STM32F7xx))
+#elif defined(ARDUINO) && defined(ARDUINO_ARCH_STM32)
 
     extern "C" char *sbrk(int i);
 

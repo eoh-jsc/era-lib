@@ -1,6 +1,7 @@
 #ifndef INC_ERA_REPORT_HPP_
 #define INC_ERA_REPORT_HPP_
 
+#include <cmath>
 #include <stdlib.h>
 #include <stdint.h>
 #include <functional>
@@ -80,11 +81,11 @@ public:
 			return ((this->rp != nullptr) && (this->id >= 0));
 		}
 
-        void updateReport(float value) const {
+        void updateReport(float value, bool isRound = false) const {
             if (!this->isValid()) {
                 return;
             }
-            this->rp->updateReport(this->id, value);
+            this->rp->updateReport(this->id, value, isRound);
         }
 
         bool changeReportableChange(unsigned long minInterval, unsigned long maxInterval, float minChange) {
@@ -197,7 +198,7 @@ public:
         return iterator(this, this->setupReport(minInterval, maxInterval, minChange, cb, pin, pinMode));
     }
 
-	void updateReport(unsigned int id, float value);
+	void updateReport(unsigned int id, float value, bool isRound = false);
 	bool changeReportableChange(unsigned int id, unsigned long minInterval, unsigned long maxInterval, float minChange);
 	bool changeReportableChange(unsigned int id, unsigned long minInterval, unsigned long maxInterval, float minChange,
 								ERaReport::ReportCallback_p_t cb, uint8_t pin, uint8_t pinMode, unsigned int configId);

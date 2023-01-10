@@ -6,34 +6,41 @@
 #define MAX_TOPIC_LENGTH 100
 
 template <int size>
+inline
 bool CompareArray(const uint8_t* arr, const uint8_t(&arr2)[size]) {
     return !memcmp(arr, arr2, size);
 }
 
+inline
 bool CompareString(const char* str, const char* str2) {
     return !strcmp(str, str2);
 }
 
+inline
 bool CompareNString(const char* str, const char* str2, int size) {
     return !strncmp(str, str2, size);
 }
 
 template <int size>
+inline
 bool CompareNString(const char* str, const char(&str2)[size]) {
     return !strncmp(str, str2, size - 1);
 }
 
 template <int len, int size>
+inline
 void CopyArray(const uint8_t(&src)[len], uint8_t(&dst)[size]) {
     memcpy(dst, src, std::min(len, size));
 }
 
 template <int size>
+inline
 void CopyString(const char* src, char(&dst)[size]) {
     snprintf(dst, size, "%s", src);
 }
 
 template <typename... Args>
+inline
 void StringPrint(char* buf, size_t len, Args... tail) {
     if (buf == nullptr) {
         return;
@@ -42,20 +49,24 @@ void StringPrint(char* buf, size_t len, Args... tail) {
 }
 
 template <int size, typename... Args>
+inline
 void StringPrint(char(&buf)[size], Args... tail) {
     snprintf(buf + strlen(buf), size - strlen(buf), tail...);
 }
 
+inline
 void ClearMem(void* ptr, size_t size) {
     memset(ptr, 0, size);
 }
 
 template <typename T, int size>
+inline
 void ClearMem(T(&arr)[size]) {
     memset(arr, 0, sizeof(T) * size);
 }
 
 template <typename T, int size>
+inline
 bool IsZeroArray(const T(&data)[size]) {
     for (size_t i = 0; i < size; ++i) {
         if (data[i]) {
@@ -65,6 +76,7 @@ bool IsZeroArray(const T(&data)[size]) {
     return true;
 }
 
+inline
 bool IsDigit(const std::string& str) {
     if (str.empty()) {
         return false;
@@ -84,6 +96,7 @@ bool IsDigit(const std::string& str) {
     return true;
 }
 
+inline
 bool IsHexDigit(const std::string& str) {
     if (str.empty()) {
         return false;
@@ -97,6 +110,7 @@ bool IsHexDigit(const std::string& str) {
 }
 
 template <typename T, int size>
+inline
 std::string IEEEToString(const T(&arr)[size]) {
     char str[20] {0};
     strcat(str, "0x");
@@ -107,6 +121,7 @@ std::string IEEEToString(const T(&arr)[size]) {
 }
 
 template <typename T, int size>
+inline
 bool StringToIEEE(const char* str, T(&ieee)[size]) {
     if (str == nullptr) {
         return false;

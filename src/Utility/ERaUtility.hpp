@@ -27,16 +27,19 @@ char* ERaStrdup(const char* str);
 MillisTime_t ERaRemainingTime(MillisTime_t startMillis, MillisTime_t timeout);
 
 template<typename T>
+inline
 const T& ERaMin(const T& a, const T& b) {
     return (b < a) ? b : a;
 }
 
 template<typename T>
+inline
 const T& ERaMax(const T& a, const T& b) {
     return (b < a) ? a : b;
 }
 
 template<typename T>
+inline
 T ERaMapNumberRange(T value, T fromLow, T fromHigh, T toLow, T toHigh) {
 	return (toLow + (ERaMin(value, fromHigh) - ERaMin(value, fromLow)) * (toHigh - toLow) / (fromHigh - fromLow));
 }
@@ -44,10 +47,8 @@ T ERaMapNumberRange(T value, T fromLow, T fromHigh, T toLow, T toHigh) {
 #if defined(ARDUINO) && defined(ESP32)
     #include "driver/uart.h"
     #include <Utility/ERaOs.hpp>
-#elif defined(ARDUINO) &&                        \
-    (defined(STM32F0xx) || defined(STM32F1xx) || \
-    defined(STM32F2xx) || defined(STM32F3xx) ||  \
-    defined(STM32F4xx) || defined(STM32F7xx) ||  \
+#elif defined(ARDUINO) &&           \
+    (defined(ARDUINO_ARCH_STM32) || \
     defined(ARDUINO_ARCH_RP2040))
     #include <Utility/ERaOs.hpp>
 #endif
@@ -56,42 +57,50 @@ T ERaMapNumberRange(T value, T fromLow, T fromHigh, T toLow, T toHigh) {
     #include <Arduino.h>
 
     template <typename T, int size>
+    inline
     void CopyToArray(const String& src, T(&dst)[size]) {
         src.toCharArray(dst, size);
     }
 #endif
 
 template <typename T, int len, int size>
+inline
 void CopyToArray(const char(&src)[len], T(&dst)[size]) {
     memcpy(dst, src, ERaMin(len, size));
 }
 
 template <typename T, int size>
+inline
 void CopyToArray(const uint8_t& src, T(&dst)[size]) {
     memcpy(dst, &src, size);
 }
 
 template <typename T, int size>
+inline
 void CopyToArray(const uint8_t& src, T(&dst)[size], int len) {
     memcpy(dst, &src, ERaMin(len, size));
 }
 
 template <typename T>
+inline
 void CopyToStruct(const uint8_t& src, T& dst, int size) {
     memcpy(&dst, &src, size);
 }
 
 template <typename T>
+inline
 void ClearStruct(T& arr, int size) {
     memset(&arr, 0, size);
 }
 
 template <typename T, int size>
+inline
 void ClearArray(T(&arr)[size]) {
     memset(arr, 0, sizeof(T) * size);
 }
 
 template <typename... Args>
+inline
 void FormatString(char* buf, size_t len, Args... tail) {
     if (buf == nullptr) {
         return;
@@ -100,6 +109,7 @@ void FormatString(char* buf, size_t len, Args... tail) {
 }
 
 template <int size>
+inline
 void FormatString(char(&buf)[size], const char* format, ...) {
     va_list args;
     va_start(args, format);
@@ -110,6 +120,7 @@ void FormatString(char(&buf)[size], const char* format, ...) {
 bool ERaStrCmp(const char* str, const char* str2);
 
 template <int size>
+inline
 bool ERaStrNCmp(const char* str, const char(&str2)[size]) {
     return !strncmp(str, str2, size - 1);
 }
@@ -118,6 +129,7 @@ bool ERaStrNCmp(const char* str, const char(&str2)[size]) {
     #include <sstream>
 
     template<typename T>
+    inline
     std::string to_string(const T& n)
     {
         std::ostringstream ss;

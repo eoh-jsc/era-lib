@@ -24,9 +24,11 @@ private:
     void mkdir(const char* path);
 };
 
+inline
 void ERaFlashLinux::begin() {
 }
 
+inline
 char* ERaFlashLinux::readFlash(const char* filename) {
     FILE* file = fopen(filename, "r");
     if (file == nullptr) {
@@ -50,6 +52,7 @@ char* ERaFlashLinux::readFlash(const char* filename) {
     return buf;
 }
 
+inline
 size_t ERaFlashLinux::readFlash(const char* key, void* buf, size_t maxLen) {
     if (buf == nullptr) {
         return 0;
@@ -63,6 +66,7 @@ size_t ERaFlashLinux::readFlash(const char* key, void* buf, size_t maxLen) {
     return maxLen;
 }
 
+inline
 void ERaFlashLinux::writeFlash(const char *filename, const char* buf) {
     if (buf == nullptr) {
         return;
@@ -79,6 +83,7 @@ void ERaFlashLinux::writeFlash(const char *filename, const char* buf) {
     fclose(file);
 }
 
+inline
 size_t ERaFlashLinux::writeFlash(const char* key, const void* value, size_t len) {
     if (value == nullptr) {
         return 0;
@@ -96,6 +101,7 @@ size_t ERaFlashLinux::writeFlash(const char* key, const void* value, size_t len)
     return len;
 }
 
+inline
 void ERaFlashLinux::mkdir(const char* path) {
     if (path == nullptr) {
         return;

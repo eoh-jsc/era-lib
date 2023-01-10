@@ -32,6 +32,8 @@ const char pass[] = "YOUR_PASSWORD";
 
 const int rstPin = PB7;
 
+ERA_ATTACH_RUN(timer)
+
 /* This function print uptime every second */
 void timerEvent() {
     ERA_LOG("Timer", "Uptime: %d", ERaMillis() / 1000L);

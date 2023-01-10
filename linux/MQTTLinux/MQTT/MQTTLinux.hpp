@@ -11,10 +11,10 @@ using namespace std;
 
 class MQTTLinuxClient;
 
-typedef void (*MQTTLinuxClientCallbackSimple)(std::string &topic, std::string &payload);
+typedef void (*MQTTLinuxClientCallbackSimple)(std::string &topic, const char* payload);
 typedef void (*MQTTLinuxClientCallbackAdvanced)(MQTTLinuxClient *client, char topic[], char bytes[], int length);
 #if MQTT_HAS_FUNCTIONAL
-typedef std::function<void(std::string &topic, std::string &payload)> MQTTLinuxClientCallbackSimpleFunction;
+typedef std::function<void(std::string &topic, const char* payload)> MQTTLinuxClientCallbackSimpleFunction;
 typedef std::function<void(MQTTLinuxClient *client, char topic[], char bytes[], int length)>
     MQTTLinuxClientCallbackAdvancedFunction;
 #endif
@@ -31,7 +31,8 @@ typedef struct {
 
 class MQTTLinuxClient {
  private:
-  size_t bufSize = 0;
+  size_t readBufSize = 0;
+  size_t writeBufSize = 0;
   uint8_t *readBuf = nullptr;
   uint8_t *writeBuf = nullptr;
 
@@ -57,6 +58,7 @@ class MQTTLinuxClient {
   void *ref = nullptr;
 
   explicit MQTTLinuxClient(int bufSize = 128);
+  explicit MQTTLinuxClient(int readBufSize, int writeBufSize);
 
   ~MQTTLinuxClient();
 

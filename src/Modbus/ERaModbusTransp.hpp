@@ -26,10 +26,7 @@ public:
         if (this->transp == ModbusTransportT::MODBUS_TRANSPORT_RTU) {
             return;
         }
-        if (++lastPacketId == 0) {
-            lastPacketId = 1;
-        }
-        this->packetId = lastPacketId;
+        this->packetId = ERaModbusRequest::nextPacketId();
     }
 
     virtual uint8_t responseLength() = 0;
@@ -79,7 +76,14 @@ protected:
         return crc;
     }
 
-    static uint16_t lastPacketId;
+    static uint16_t nextPacketId() {
+        static uint16_t lastPacketId = 0;
+        if (++lastPacketId == 0) {
+            lastPacketId = 1;
+        }
+        return lastPacketId;
+    }
+
     uint8_t transp;
     uint16_t packetId;
     uint8_t slaveAddr;
@@ -87,8 +91,6 @@ protected:
     uint16_t addr;
     uint16_t len;
 };
-
-uint16_t ERaModbusRequest::lastPacketId = 0;
 
 class ERaModbusResponse
     : public ERaModbusMessage

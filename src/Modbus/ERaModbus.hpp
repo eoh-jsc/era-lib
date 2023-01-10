@@ -13,9 +13,6 @@
 
 using namespace std;
 
-ERaApplication ERaApplication::config {};
-ERaApplication ERaApplication::control {};
-
 template <class Api>
 class ERaModbus
     : public ERaModbusTransp < ERaModbus<Api> >
@@ -38,7 +35,9 @@ class ERaModbus
 
 public:
     ERaModbus()
-        : total(0)
+        : modbusConfig(ERaApplication::config())
+        , modbusControl(ERaApplication::control())
+        , total(0)
         , failRead(0)
         , failWrite(0)
         , dePin(-1)
@@ -83,6 +82,8 @@ public:
 
 protected:
     void begin() {
+        ERaApplication::getConfig();
+        ERaApplication::getControl();
         this->dataBuff.allocate(MODBUS_DATA_BUFFER_SIZE);
         this->configModbus();
         this->initModbusConfig();
@@ -102,8 +103,8 @@ protected:
 
     void runRead() {
         ModbusState::set(ModbusStateT::STATE_MB_RUNNING);
-        if (!ERaRemainingTime(this->modbusConfig.modbusInterval.prevMillis, this->modbusConfig.modbusInterval.delay)) {
-            this->modbusConfig.modbusInterval.prevMillis = ERaMillis();
+        if (!ERaRemainingTime(this->modbusConfig->modbusInterval.prevMillis, this->modbusConfig->modbusInterval.delay)) {
+            this->modbusConfig->modbusInterval.prevMillis = ERaMillis();
             this->readModbusConfig();
         }
     }
@@ -127,11 +128,11 @@ protected:
 
     void parseModbusConfig(char* ptr, bool isControl = false) {
         if (isControl) {
-            this->modbusControl.parseConfig(ptr);
+            this->modbusControl->parseConfig(ptr);
             this->thisApi().writeToFlash(FILENAME_CONTROL, ptr);
         } else {
-            this->modbusConfig.parseConfig(ptr);
-            this->setBaudRate(this->modbusConfig.baudSpeed);
+            this->modbusConfig->parseConfig(ptr);
+            this->setBaudRate(this->modbusConfig->baudSpeed);
             this->executeNow();
             this->thisApi().writeToFlash(FILENAME_CONFIG, ptr);
         }
@@ -139,8 +140,8 @@ protected:
     }
 
     void removeConfigFromFlash() {
-        this->modbusConfig.deleteAll();
-        this->modbusControl.deleteAll();
+        this->modbusConfig->deleteAll();
+        this->modbusControl->deleteAll();
         this->thisApi().removeFromFlash(FILENAME_CONFIG);
         this->thisApi().removeFromFlash(FILENAME_CONTROL);
     }
@@ -178,11 +179,11 @@ private:
     void initModbusConfig() {
         char* ptr = nullptr;
         ptr = this->thisApi().readFromFlash(FILENAME_CONFIG);
-        this->modbusConfig.parseConfig(ptr);
-        this->setBaudRate(this->modbusConfig.baudSpeed);
+        this->modbusConfig->parseConfig(ptr);
+        this->setBaudRate(this->modbusConfig->baudSpeed);
         free(ptr);
         ptr = this->thisApi().readFromFlash(FILENAME_CONTROL);
-        this->modbusControl.parseConfig(ptr);
+        this->modbusControl->parseConfig(ptr);
         free(ptr);
         ptr = nullptr;
     }
@@ -223,7 +224,7 @@ private:
     }
 
     void executeNow() {
-        this->modbusConfig.modbusInterval.prevMillis = ERaMillis() - this->modbusConfig.modbusInterval.delay + ERA_MODBUS_EXECUTE_MS;
+        this->modbusConfig->modbusInterval.prevMillis = ERaMillis() - this->modbusConfig->modbusInterval.delay + ERA_MODBUS_EXECUTE_MS;
     }
 
 	bool isRequest() {
@@ -250,8 +251,8 @@ private:
 
 	ERaQueue<ModbusAction_t, 10> queue;
     ERaDataBuffDynamic dataBuff;
-    ERaApplication& modbusConfig = ERaApplication::config;
-    ERaApplication& modbusControl = ERaApplication::control;
+    ERaApplication*& modbusConfig;
+    ERaApplication*& modbusControl;
     int total;
     int failRead;
     int failWrite;
@@ -269,15 +270,15 @@ private:
 
 template <class Api>
 void ERaModbus<Api>::readModbusConfig() {
-    if (this->modbusConfig.modbusConfigParam.isEmpty()) {
+    if (this->modbusConfig->modbusConfigParam.isEmpty()) {
         return;
     }
     if (!this->connectTCPIp()) {
         return;
     }
     this->dataBuff.clear();
-    for (size_t i = 0; i < this->modbusConfig.readConfigCount; ++i) {
-        ModbusConfig_t& param = *this->modbusConfig.modbusConfigParam[i];
+    for (size_t i = 0; i < this->modbusConfig->readConfigCount; ++i) {
+        ModbusConfig_t& param = *this->modbusConfig->modbusConfigParam[i];
         ERaGuardLock(this->mutex);
         this->sendModbusRead(param);
         ERaGuardUnlock(this->mutex);
@@ -296,7 +297,7 @@ template <class Api>
 void ERaModbus<Api>::delayModbus(const int address) {
     MillisTime_t delayMs {10L};
     MillisTime_t startMillis = ERaMillis();
-    for (ERaList<SensorDelay_t>::iterator* it = this->modbusConfig.sensorDelay.begin(); it != nullptr; it = it->getNext()) {
+    for (ERaList<SensorDelay_t>::iterator* it = this->modbusConfig->sensorDelay.begin(); it != nullptr; it = it->getNext()) {
         if (it->get().address == address) {
             delayMs = it->get().delay;
             break;
@@ -317,7 +318,7 @@ void ERaModbus<Api>::delayModbus(const int address) {
 
 template <class Api>
 ModbusConfigAlias_t* ERaModbus<Api>::getModbusAlias(const char* key) {
-    for (ERaList<ModbusConfigAlias_t>::iterator* it = this->modbusConfig.modbusConfigAliasParam.begin(); it != nullptr; it = it->getNext()) {
+    for (ERaList<ModbusConfigAlias_t>::iterator* it = this->modbusConfig->modbusConfigAliasParam.begin(); it != nullptr; it = it->getNext()) {
         if (!strcmp(it->get().key, key)) {
             return &it->get();
         }
@@ -359,7 +360,7 @@ bool ERaModbus<Api>::actionModbus(const char* key) {
 
 template <class Api>
 ModbusConfig_t* ERaModbus<Api>::getModbusConfig(int id) {
-    for (ERaList<ModbusConfig_t>::iterator* it = this->modbusControl.modbusConfigParam.begin(); it != nullptr; it = it->getNext()) {
+    for (ERaList<ModbusConfig_t>::iterator* it = this->modbusControl->modbusConfigParam.begin(); it != nullptr; it = it->getNext()) {
         if (it->get().id == id) {
             return &it->get();
         }
@@ -528,5 +529,14 @@ void ERaModbus<Api>::switchToReceive() {
     ::digitalWrite(this->dePin, LOW);
 #endif
 }
+
+template <class S, typename... Args>
+class SerialModBus {
+public:
+    static S& serial(Args... tail) {
+        static S _serial(tail...);
+        return _serial;
+    }
+};
 
 #endif /* INC_ERA_MODBUS_HPP_ */

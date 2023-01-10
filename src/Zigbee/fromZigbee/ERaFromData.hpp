@@ -12,9 +12,18 @@ IdentDeviceAddr_t* ERaFromZigbee<Zigbee>::createDataGlobal(const DataAFMsg_t& af
 		if (ZigbeeState::is(ZigbeeStateT::STATE_ZB_INIT_MAX)) {
 			return nullptr;
         }
-		if (ZigbeeState::is(ZigbeeStateT::STATE_ZB_DEVICE_INTERVIEWING)) {
-			return nullptr;
+		if (ZigbeeState::is(ZigbeeStateT::STATE_ZB_DEVICE_JOINED) ||
+            ZigbeeState::is(ZigbeeStateT::STATE_ZB_DEVICE_INTERVIEWING)) {
+			if (afMsg.srcAddr.addr.nwkAddr == this->device->address.addr.nwkAddr) {
+                deviceInfo = std::find_if(std::begin(this->coordinator->deviceIdent), std::end(this->coordinator->deviceIdent),
+                                            find_deviceWithIEEEAddr_t(this->device->address.addr.ieeeAddr));
+            }
+            if (deviceInfo == std::end(this->coordinator->deviceIdent)) {
+                return nullptr;
+            }
         }
+    }
+    if (deviceInfo == std::end(this->coordinator->deviceIdent)) {
 		if (afMsg.zclId == ClusterIDT::ZCL_CLUSTER_GREEN_POWER) {
 			return nullptr;
         }
@@ -116,14 +125,23 @@ template <class Zigbee>
 IdentDeviceAddr_t* ERaFromZigbee<Zigbee>::createDataSpecific(const DataAFMsg_t& afMsg, DefaultRsp_t& defaultRsp) {
     bool defined {false};
     IdentDeviceAddr_t* deviceInfo = std::find_if(std::begin(this->coordinator->deviceIdent), std::end(this->coordinator->deviceIdent),
-                                                            find_deviceWithNwkAddr_t(afMsg.srcAddr.addr.nwkAddr));
+                                                find_deviceWithNwkAddr_t(afMsg.srcAddr.addr.nwkAddr));
     if (deviceInfo == std::end(this->coordinator->deviceIdent)) {
 		if (ZigbeeState::is(ZigbeeStateT::STATE_ZB_INIT_MAX)) {
 			return nullptr;
         }
-		if (ZigbeeState::is(ZigbeeStateT::STATE_ZB_DEVICE_INTERVIEWING)) {
-			return nullptr;
+		if (ZigbeeState::is(ZigbeeStateT::STATE_ZB_DEVICE_JOINED) ||
+            ZigbeeState::is(ZigbeeStateT::STATE_ZB_DEVICE_INTERVIEWING)) {
+			if (afMsg.srcAddr.addr.nwkAddr == this->device->address.addr.nwkAddr) {
+                deviceInfo = std::find_if(std::begin(this->coordinator->deviceIdent), std::end(this->coordinator->deviceIdent),
+                                            find_deviceWithIEEEAddr_t(this->device->address.addr.ieeeAddr));
+            }
+            if (deviceInfo == std::end(this->coordinator->deviceIdent)) {
+                return nullptr;
+            }
         }
+    }
+    if (deviceInfo == std::end(this->coordinator->deviceIdent)) {
 		if (afMsg.zclId == ClusterIDT::ZCL_CLUSTER_GREEN_POWER) {
 			return nullptr;
         }
@@ -524,6 +542,7 @@ void ERaFromZigbee<Zigbee>::createDeviceEvent(const DeviceEventT event, const AF
 					cJSON_AddNumberToObject(definitionItem, "power", this->device->power);
 					break;
 			}
+			cJSON_AddNumberToObject(definitionItem, "app_ver", this->device->appVer);
 			cJSON_AddNumberToObject(definitionItem, "zcl_ver", this->device->zclVer);
 			cJSON_AddNumberToObject(definitionItem, "stack_ver", this->device->stackVer);
 			cJSON_AddNumberToObject(definitionItem, "hw_ver", this->device->hwVer);
@@ -555,10 +574,10 @@ void ERaFromZigbee<Zigbee>::createDeviceEvent(const DeviceEventT event, const AF
 
 	cJSON_AddItemToObject(root, "data", dataItem);
 
-    this->thisZigbee().publishZigbeeData(TOPIC_ZIGBEE_BRIDGE_EVENT, root);
+    this->thisZigbee().publishZigbeeData(TOPIC_ZIGBEE_BRIDGE_EVENT, root, false);
     if ((event == DeviceEventT::DEVICE_EVENT_INTERVIEW_SUCCESSFUL) ||
         (event == DeviceEventT::DEVICE_EVENT_INTERVIEW_BASIC_INFO)) {
-        this->thisZigbee().publishZigbeeData(TOPIC_ZIGBEE_DEVICE_EVENT, root);
+        this->thisZigbee().publishZigbeeData(TOPIC_ZIGBEE_DEVICE_EVENT, root, false);
     }
 
     cJSON_Delete(root);

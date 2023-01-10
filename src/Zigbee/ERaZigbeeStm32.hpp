@@ -3,7 +3,7 @@
 
 #include <Zigbee/ERaZigbee.hpp>
 
-HardwareSerial SerialZB(PB11, PB10);
+#define SerialZB SerialZigbee<HardwareSerial, uint32_t, uint32_t>::serial(PB11, PB10)
 
 template <class Api>
 void ERaZigbee<Api>::configZigbee() {

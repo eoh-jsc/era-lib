@@ -7,39 +7,15 @@
 #include <WiFiClientSecure.h>
 #include <PnP/ERaPnPEsp8266.hpp>
 #include <MQTT/ERaMqttSecure.hpp>
+#include <Task/ERaTaskEsp8266.hpp>
 
-#if defined(ERA_MODBUS)
-    template <class Api>
-    void ERaModbus<Api>::initModbusTask() {
-    }
-
-    template <class Api>
-    void ERaModbus<Api>::modbusTask(void* args) {
-    }
-
-    template <class Api>
-    void ERaModbus<Api>::writeModbusTask(void* args) {
-    }
+#if !defined(NO_GLOBAL_INSTANCES) && !defined(NO_GLOBAL_ERA)
+    static ERaFlash flash;
+    static WiFiClientSecure ERaWiFiClient;
+    static ERaMqttSecure<WiFiClientSecure, MQTTClient> mqtt(ERaWiFiClient);
+    ERaPnP< ERaMqttSecure<WiFiClientSecure, MQTTClient> > ERa(mqtt, flash);
+#else
+    extern ERaPnP< ERaMqttSecure<WiFiClientSecure, MQTTClient> > ERa;
 #endif
-
-template <class Transp, class Flash>
-void ERaProto<Transp, Flash>::initERaTask() {
-#if defined(ERA_MODBUS)
-	Base::Modbus::begin();
-#endif
-}
-
-template <class Transp, class Flash>
-void ERaProto<Transp, Flash>::runERaTask() {
-#if defined(ERA_MODBUS)
-	Base::Modbus::runRead();
-	Base::Modbus::runWrite();
-#endif
-}
-
-static ERaFlash flash;
-static WiFiClientSecure ERaWiFiClient;
-static ERaMqttSecure<WiFiClientSecure, MQTTClient> mqtt(ERaWiFiClient);
-ERaPnP< ERaMqttSecure<WiFiClientSecure, MQTTClient> > ERa(mqtt, flash);
 
 #endif /* INC_ERA_SIMPLE_ESP8266_SSL_HPP_ */

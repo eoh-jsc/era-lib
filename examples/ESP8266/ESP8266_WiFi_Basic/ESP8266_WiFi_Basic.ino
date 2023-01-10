@@ -26,6 +26,8 @@ const char pass[] = "YOUR_PASSWORD";
 
 ERaTimer timer;
 
+ERA_ATTACH_RUN(timer)
+
 /* This function print uptime every second */
 void timerEvent() {
     ERA_LOG(ERA_PSTR("Timer"), ERA_PSTR("Uptime: %d"), ERaMillis() / 1000L);

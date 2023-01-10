@@ -38,6 +38,7 @@ enum ERaTypeWriteT {
 
 typedef struct __ERaRsp_t {
     uint8_t type;
+	bool retained;
     ERaParam id;
     ERaParam param;
 } ERaRsp_t;
@@ -79,6 +80,7 @@ public:
 	void virtualWrite(int pin, T value) {
 		ERaRsp_t rsp;
 		rsp.type = ERaTypeWriteT::ERA_WRITE_VIRTUAL_PIN;
+		rsp.retained = true;
 		rsp.id = pin;
 		rsp.param = value;
 		this->thisProto().sendCommand(rsp);
@@ -92,6 +94,7 @@ public:
 	void digitalWrite(int pin, bool value) {
 		ERaRsp_t rsp;
 		rsp.type = ERaTypeWriteT::ERA_WRITE_DIGITAL_PIN;
+		rsp.retained = true;
 		rsp.id = pin;
 		rsp.param = value;
 		this->thisProto().sendCommand(rsp);
@@ -100,6 +103,7 @@ public:
 	void analogWrite(int pin, int value) {
 		ERaRsp_t rsp;
 		rsp.type = ERaTypeWriteT::ERA_WRITE_ANALOG_PIN;
+		rsp.retained = true;
 		rsp.id = pin;
 		rsp.param = value;
 		this->thisProto().sendCommand(rsp);
@@ -108,6 +112,7 @@ public:
 	void pwmWrite(int pin, int value) {
 		ERaRsp_t rsp;
 		rsp.type = ERaTypeWriteT::ERA_WRITE_PWM_PIN;
+		rsp.retained = true;
 		rsp.id = pin;
 		rsp.param = value;
 		this->thisProto().sendCommand(rsp);
@@ -117,6 +122,7 @@ public:
 	void configIdWrite(int configId, T value) {
 		ERaRsp_t rsp;
 		rsp.type = ERaTypeWriteT::ERA_WRITE_CONFIG_ID;
+		rsp.retained = true;
 		rsp.id = configId;
 		rsp.param = value;
 		this->thisProto().sendCommand(rsp);
@@ -125,22 +131,6 @@ public:
 	template <typename T, typename... Args>
 	void configIdWrite(int configId, T value, Args... tail) {
 		this->configIdMultiWrite(configId, value, tail...);
-	}
-
-	void modbusDataWrite(ERaDataBuff* value) {
-		ERaRsp_t rsp;
-		rsp.type = ERaTypeWriteT::ERA_WRITE_MODBUS_DATA;
-		rsp.id = 0;
-		rsp.param = 0;
-		this->thisProto().sendCommand(rsp, value);
-	}
-
-	void zigbeeDataWrite(const char* id, cJSON* value) {
-		ERaRsp_t rsp;
-		rsp.type = ERaTypeWriteT::ERA_WRITE_ZIGBEE_DATA;
-		rsp.id = id;
-		rsp.param = value;
-		this->thisProto().sendCommand(rsp);
 	}
 
 	void delays(MillisTime_t ms) {
@@ -170,9 +160,9 @@ protected:
 	void handleReadPin(cJSON* root);
 	void handleWritePin(cJSON* root);
 	void handleVirtualPin(cJSON* root);
-	void handlePinRequest(const std::vector<std::string>& arrayTopic, const std::string& payload);
-	void processArduinoPinRequest(const std::vector<std::string>& arrayTopic, const std::string& payload);
-	void processVirtualPinRequest(const std::vector<std::string>& arrayTopic, const std::string& payload);
+	void handlePinRequest(const std::vector<std::string>& arrayTopic, const char* payload);
+	void processArduinoPinRequest(const std::vector<std::string>& arrayTopic, const char* payload);
+	void processVirtualPinRequest(const std::vector<std::string>& arrayTopic, const char* payload);
 
 	void begin() {
 		this->flash.begin();
@@ -182,6 +172,24 @@ protected:
 		ERA_RUN_YIELD();
 		this->ERaPinRp.run();
         return this->thisProto().transp.run();
+	}
+
+	void modbusDataWrite(ERaDataBuff* value) {
+		ERaRsp_t rsp;
+		rsp.type = ERaTypeWriteT::ERA_WRITE_MODBUS_DATA;
+		rsp.retained = true;
+		rsp.id = 0;
+		rsp.param = 0;
+		this->thisProto().sendCommand(rsp, value);
+	}
+
+	void zigbeeDataWrite(const char* id, cJSON* value, bool retained = true) {
+		ERaRsp_t rsp;
+		rsp.type = ERaTypeWriteT::ERA_WRITE_ZIGBEE_DATA;
+		rsp.retained = retained;
+		rsp.id = id;
+		rsp.param = value;
+		this->thisProto().sendCommand(rsp);
 	}
 
 	void callERaWriteHandler(uint8_t pin, const ERaParam& param) {
@@ -247,6 +255,7 @@ private:
 		ERaDataJson data;
 		data.add_multi(tail...);
 		rsp.type = ERaTypeWriteT::ERA_WRITE_VIRTUAL_PIN_MULTI;
+		rsp.retained = true;
 		rsp.id = 0;
 		rsp.param = 0;
 		this->thisProto().sendCommand(rsp, &data);
@@ -258,6 +267,7 @@ private:
 		ERaDataJson data;
 		data.add_multi(tail...);
 		rsp.type = ERaTypeWriteT::ERA_WRITE_CONFIG_ID_MULTI;
+		rsp.retained = true;
 		rsp.id = 0;
 		rsp.param = data.getObject();
 		this->thisProto().sendCommand(rsp);
@@ -328,8 +338,8 @@ private:
 	};
 };
 
-
 template <class Proto, class Flash>
+inline
 void ERaApi<Proto, Flash>::handleVirtualPin(cJSON* root) {
 	if (!cJSON_IsArray(root)) {
 		return;
@@ -364,7 +374,8 @@ void ERaApi<Proto, Flash>::handleVirtualPin(cJSON* root) {
 }
 
 template <class Proto, class Flash>
-void ERaApi<Proto, Flash>::processVirtualPinRequest(const std::vector<std::string>& arrayTopic, const std::string& payload) {
+inline
+void ERaApi<Proto, Flash>::processVirtualPinRequest(const std::vector<std::string>& arrayTopic, const char* payload) {
 	if (arrayTopic.size() != 3) {
 		return;
 	}
@@ -372,7 +383,7 @@ void ERaApi<Proto, Flash>::processVirtualPinRequest(const std::vector<std::strin
 	if (str.empty()) {
 		return;
 	}
-	cJSON* root = cJSON_Parse(payload.c_str());
+	cJSON* root = cJSON_Parse(payload);
 	if (!cJSON_IsObject(root)) {
 		cJSON_Delete(root);
 		root = nullptr;
@@ -396,6 +407,7 @@ void ERaApi<Proto, Flash>::processVirtualPinRequest(const std::vector<std::strin
 }
 
 template <class Proto, class Flash>
+inline
 void ERaApi<Proto, Flash>::getScaleConfig(const cJSON* const root, PinConfig_t& pin) {
 	if (!cJSON_IsObject(root)) {
 		return;
@@ -420,6 +432,7 @@ void ERaApi<Proto, Flash>::getScaleConfig(const cJSON* const root, PinConfig_t& 
 }
 
 template <class Proto, class Flash>
+inline
 void ERaApi<Proto, Flash>::getReportConfig(const cJSON* const root, PinConfig_t& pin) {
 	if (!cJSON_IsObject(root)) {
 		return;
@@ -456,6 +469,7 @@ void ERaApi<Proto, Flash>::getReportConfig(const cJSON* const root, PinConfig_t&
 }
 
 template <class Proto, class Flash>
+inline
 void ERaApi<Proto, Flash>::getPinConfig(const cJSON* const root, PinConfig_t& pin) {
 	if (root == nullptr) {
 		return;
@@ -470,6 +484,7 @@ void ERaApi<Proto, Flash>::getPinConfig(const cJSON* const root, PinConfig_t& pi
 }
 
 template <class Proto, class Flash>
+inline
 uint8_t ERaApi<Proto, Flash>::getPinMode(const cJSON* const root, const uint8_t defaultMode) {
 	uint8_t mode = defaultMode;
 	if (root == nullptr) {
@@ -515,6 +530,7 @@ uint8_t ERaApi<Proto, Flash>::getPinMode(const cJSON* const root, const uint8_t 
 }
 
 template <class Proto, class Flash>
+inline
 bool ERaApi<Proto, Flash>::isReadPinMode(uint8_t pMode) {
 	switch (pMode) {
 		case INPUT:
@@ -528,6 +544,7 @@ bool ERaApi<Proto, Flash>::isReadPinMode(uint8_t pMode) {
 }
 
 template <class Proto, class Flash>
+inline
 bool ERaApi<Proto, Flash>::getGPIOPin(const cJSON* const root, const char* key, uint8_t& pin) {
 	if (root == nullptr || key == nullptr) {
 		return false;
@@ -550,6 +567,7 @@ bool ERaApi<Proto, Flash>::getGPIOPin(const cJSON* const root, const char* key, 
 }
 
 template <class Proto, class Flash>
+inline
 bool ERaApi<Proto, Flash>::isDigit(const std::string& str) {
     if (str.empty()) {
         return false;
@@ -568,5 +586,24 @@ bool ERaApi<Proto, Flash>::isDigit(const std::string& str) {
     }
     return true;
 }
+
+template <typename T>
+inline
+void ERaAttachNoRTOSRun(T& last) {
+	last.run();
+}
+
+template <typename T, typename... Args>
+inline
+void ERaAttachNoRTOSRun(T& head, Args&... tail) {
+	ERaAttachNoRTOSRun(head);
+	ERaAttachNoRTOSRun(tail...);
+}
+
+#if defined(ERA_NO_RTOS)
+	#define ERA_ATTACH_RUN(...) ERA_WAITING() { ERaAttachNoRTOSRun(__VA_ARGS__); }
+#else
+	#define ERA_ATTACH_RUN(...)
+#endif
 
 #endif /* INC_ERA_API_HPP_ */

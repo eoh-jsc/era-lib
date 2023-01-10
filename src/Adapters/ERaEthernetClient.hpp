@@ -22,6 +22,7 @@ public:
     ERaEthernet(Transport& _transp, ERaFlash& _flash)
         : Base(_transp, _flash)
         , authToken(nullptr)
+        , _connected(false)
     {}
     ~ERaEthernet()
     {}
@@ -37,8 +38,10 @@ public:
         ERaDelay(1000);
         IPAddress localIP = Ethernet.localIP();
         ERA_FORCE_UNUSED(localIP);
+        ERA_LOG(TAG, ERA_PSTR("Connected to network"));
         ERA_LOG(TAG, ERA_PSTR("IP: %d.%d.%d.%d"), localIP[0], localIP[1],
                                                 localIP[2], localIP[3]);
+        this->_connected = true;
         return true;
     }
 
@@ -48,6 +51,7 @@ public:
                 const char* username = ERA_MQTT_USERNAME,
                 const char* password = ERA_MQTT_PASSWORD) {
         Base::begin(auth);
+        this->authToken = auth;
         this->transp.config(host, port, username, password);
     }
 
@@ -59,7 +63,6 @@ public:
         Base::init();
         this->config(auth, host, port, username, password);
         this->connectNetwork(auth);
-        Base::connect();
     }
 
     void begin() {
@@ -68,8 +71,34 @@ public:
                     ERA_MQTT_USERNAME, ERA_MQTT_PASSWORD);
     }
 
+    void run() {
+        switch (ERaState::get()) {
+            case StateT::STATE_CONNECTING_CLOUD:
+                if (Base::connect()) {
+                    ERaState::set(StateT::STATE_CONNECTED);
+                }
+                break;
+            case StateT::STATE_CONNECTED:
+                ERaState::set(StateT::STATE_RUNNING);
+                break;
+            case StateT::STATE_RUNNING:
+                Base::run();
+                break;
+            default:
+                if (this->connected() ||
+                    this->connectNetwork(this->authToken)) {
+                    ERaState::set(StateT::STATE_CONNECTING_CLOUD);
+                }
+                break;
+        }
+    }
+
 protected:
 private:
+    bool connected() const {
+        return this->_connected;
+    }
+
     void getMacAddress(const char* auth) {
         this->macAddress[0] = 0x27;
         this->macAddress[1] = 0x06;
@@ -99,6 +128,7 @@ private:
 
     const char* authToken;
     uint8_t macAddress[6];
+    bool _connected;
 };
 
 template <class Proto, class Flash>

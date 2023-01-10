@@ -13,6 +13,9 @@
 
 #define ERA_NEWLINE             "\r\n"
 
+#define ERA_CONCAT_2(x, y)      x ## y
+#define ERA_CONCAT(x, y)        ERA_CONCAT_2(x, y)
+
 #define ERA_STRINGIFY(x)        # x
 #define ERA_TOSTRING(x)         ERA_STRINGIFY(x)
 

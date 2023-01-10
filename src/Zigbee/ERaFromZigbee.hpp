@@ -10,8 +10,8 @@ class ERaFromZigbee
 {
 public:
     ERaFromZigbee()
-        : device(InfoDevice_t::instance)
-        , coordinator(InfoCoordinator_t::instance)
+        : device(InfoDevice_t::instance())
+        , coordinator(InfoCoordinator_t::instance())
     {}
     ~ERaFromZigbee()
     {}

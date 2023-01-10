@@ -17,7 +17,7 @@ typedef struct __ERaConfig_t {
     char pass[64];
 } ERA_ATTR_PACKED ERaConfig_t;
 
-static ERaConfig_t eraConfig{0};
+static ERaConfig_t ERaConfig{0};
 
 class ERaFlash;
 
@@ -77,6 +77,7 @@ public:
         }
         else {
             ERA_LOG(TAG, ERA_PSTR("Register in network failed"));
+            return false;
         }
 
         ERA_LOG(TAG, ERA_PSTR("Connecting to %s..."), apn);
@@ -144,8 +145,9 @@ public:
                 break;
             default:
                 if (this->modem->isNetworkConnected() ||
-                    this->connectNetwork(eraConfig.apn,
-                                        eraConfig.user, eraConfig.pass)) {
+                    this->connectNetwork(ERaConfig.apn,
+                                        ERaConfig.user, ERaConfig.pass)) {
+                    this->transp.setSignalQuality(this->modem->getSignalQuality());
                     ERaState::set(StateT::STATE_CONNECTING_CLOUD);
                 }
                 break;
@@ -155,9 +157,9 @@ public:
 protected:
 private:
     void setNetwork(const char* apn, const char* user, const char* pass) {
-        CopyToArray(apn, eraConfig.apn);
-        CopyToArray(user, eraConfig.user);
-        CopyToArray(pass, eraConfig.pass);
+        CopyToArray(apn, ERaConfig.apn);
+        CopyToArray(user, ERaConfig.user);
+        CopyToArray(pass, ERaConfig.pass);
     }
 
     void setPower(int pin) {
@@ -203,7 +205,7 @@ void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
     cJSON_AddStringToObject(root, INFO_FIRMWARE_VERSION, ERA_FIRMWARE_VERSION);
     cJSON_AddStringToObject(root, INFO_SSID, ERA_PROTO_TYPE);
     cJSON_AddStringToObject(root, INFO_BSSID, ERA_PROTO_TYPE);
-    cJSON_AddNumberToObject(root, INFO_RSSI, 100);
+    cJSON_AddNumberToObject(root, INFO_RSSI, this->thisProto().transp.getSignalQuality());
     cJSON_AddStringToObject(root, INFO_MAC, ERA_PROTO_TYPE);
     cJSON_AddStringToObject(root, INFO_LOCAL_IP, ERA_PROTO_TYPE);
     cJSON_AddNumberToObject(root, INFO_PING, this->thisProto().transp.getPing());
@@ -215,7 +217,7 @@ void ERaApi<Proto, Flash>::addModbusInfo(cJSON* root) {
 	cJSON_AddNumberToObject(root, INFO_MB_TEMPERATURE, 0);
 	cJSON_AddNumberToObject(root, INFO_MB_VOLTAGE, 999);
 	cJSON_AddNumberToObject(root, INFO_MB_IS_BATTERY, 0);
-	cJSON_AddNumberToObject(root, INFO_MB_RSSI, 100);
+	cJSON_AddNumberToObject(root, INFO_MB_RSSI, this->thisProto().transp.getSignalQuality());
 	cJSON_AddStringToObject(root, INFO_MB_WIFI_USING, ERA_PROTO_TYPE);
 }
 

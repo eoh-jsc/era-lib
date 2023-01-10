@@ -33,10 +33,10 @@
     #if defined(ARDUINO) && defined(ESP32) && \
         (CORE_DEBUG_LEVEL >= ARDUHAL_LOG_LEVEL_INFO)
         #define ERA_LOG(tag, ...)           ESP_LOGI(tag, ##__VA_ARGS__)
-    #elif defined(ARDUINO) &&                                                   \
-        (defined(ESP32) || defined(ESP8266) || defined(ARDUINO_ARCH_RP2040) ||  \
-        defined(STM32F0xx) || defined(STM32F1xx) || defined(STM32F2xx) ||       \
-        defined(STM32F3xx) || defined(STM32F4xx) || defined(STM32F7xx))
+    #elif defined(ARDUINO) &&                   \
+        (defined(ESP32) || defined(ESP8266) ||  \
+        defined(ARDUINO_ARCH_STM32) ||          \
+        defined(ARDUINO_ARCH_RP2040))
         #ifndef ERA_SERIAL
             #define ERA_SERIAL              Serial
         #endif

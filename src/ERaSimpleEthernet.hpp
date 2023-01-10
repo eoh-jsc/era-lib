@@ -8,39 +8,15 @@
 #include <ERa/ERaApiArduino.hpp>
 #include <Modbus/ERaModbusArduino.hpp>
 #include <Utility/ERaFlashConfig.hpp>
+#include <Task/ERaTaskArduino.hpp>
 
-#if defined(ERA_MODBUS)
-    template <class Api>
-    void ERaModbus<Api>::initModbusTask() {
-    }
-
-    template <class Api>
-    void ERaModbus<Api>::modbusTask(void* args) {
-    }
-
-    template <class Api>
-    void ERaModbus<Api>::writeModbusTask(void* args) {
-    }
+#if !defined(NO_GLOBAL_INSTANCES) && !defined(NO_GLOBAL_ERA)
+    static ERaFlash flash;
+    static EthernetClient ERaEthernetClient;
+    static ERaMqtt<EthernetClient, MQTTClient> mqtt(ERaEthernetClient);
+    ERaEthernet< ERaMqtt<EthernetClient, MQTTClient> > ERa(mqtt, flash);
+#else
+    extern ERaEthernet< ERaMqtt<EthernetClient, MQTTClient> > ERa;
 #endif
-
-template <class Transp, class Flash>
-void ERaProto<Transp, Flash>::initERaTask() {
-#if defined(ERA_MODBUS)
-	Base::Modbus::begin();
-#endif
-}
-
-template <class Transp, class Flash>
-void ERaProto<Transp, Flash>::runERaTask() {
-#if defined(ERA_MODBUS)
-	Base::Modbus::runRead();
-	Base::Modbus::runWrite();
-#endif
-}
-
-static ERaFlash flash;
-static EthernetClient ERaEthernetClient;
-static ERaMqtt<EthernetClient, MQTTClient> mqtt(ERaEthernetClient);
-ERaEthernet< ERaMqtt<EthernetClient, MQTTClient> > ERa(mqtt, flash);
 
 #endif /* INC_ERA_SIMPLE_ETHERNET_HPP_ */

@@ -14,9 +14,6 @@
 #include <Zigbee/ERaDBZigbee.hpp>
 #include "utility/ERaUtilityZigbee.hpp"
 
-InfoDevice_t* InfoDevice_t::instance = nullptr;
-InfoCoordinator_t* InfoCoordinator_t::instance = nullptr;
-
 template <class Api>
 class ERaZigbee
     : public ERaToZigbee< ERaZigbee<Api> >
@@ -67,8 +64,8 @@ public:
         : messageHandle(NULL)
         , timerPing()
         , timerJoin()
-        , device(InfoDevice_t::instance)
-        , coordinator(InfoCoordinator_t::instance)
+        , device(InfoDevice_t::instance())
+        , coordinator(InfoCoordinator_t::instance())
         , stream(NULL)
         , mutexData(NULL)
         , _zigbeeTask(NULL)
@@ -235,8 +232,8 @@ private:
     template <typename T>
     bool isElementExist(const std::vector<T>& elementList, const T element);
 
-    void publishZigbeeData(const IdentDeviceAddr_t* deviceInfo);
-    void publishZigbeeData(const char* topic, cJSON* payload);
+    void publishZigbeeData(const IdentDeviceAddr_t* deviceInfo, bool retained = true);
+    void publishZigbeeData(const char* topic, cJSON* payload, bool retained = true);
     bool actionZigbee(const ZigbeeActionT type, const char* ieeeAddr, const cJSON* const payload);
     void getZigbeeAction();
     void zigbeeTimerCallback(void* args);
@@ -431,20 +428,24 @@ bool ERaZigbee<Api>::processZigbee(uint8_t* buffer,
 }
 
 template <class Api>
-void ERaZigbee<Api>::publishZigbeeData(const IdentDeviceAddr_t* deviceInfo) {
-    if (deviceInfo == nullptr ||
-        deviceInfo == std::end(this->coordinator->deviceIdent)) {
+void ERaZigbee<Api>::publishZigbeeData(const IdentDeviceAddr_t* deviceInfo, bool retained) {
+    if ((deviceInfo == nullptr) ||
+        (deviceInfo == std::end(this->coordinator->deviceIdent))) {
         return;
     }
-    this->thisApi().zigbeeDataWrite(deviceInfo->data.topic, deviceInfo->data.payload);
+    if ((deviceInfo->data.topic == nullptr) ||
+        (deviceInfo->data.payload == nullptr)) {
+        return;
+    }
+    this->thisApi().zigbeeDataWrite(deviceInfo->data.topic, deviceInfo->data.payload, retained);
 }
 
 template <class Api>
-void ERaZigbee<Api>::publishZigbeeData(const char* topic, cJSON* payload) {
-    if (topic == nullptr || payload == nullptr) {
+void ERaZigbee<Api>::publishZigbeeData(const char* topic, cJSON* payload, bool retained) {
+    if ((topic == nullptr) || (payload == nullptr)) {
         return;
     }
-    this->thisApi().zigbeeDataWrite(topic, payload);
+    this->thisApi().zigbeeDataWrite(topic, payload, retained);
 }
 
 template <class Api>
@@ -520,6 +521,15 @@ bool ERaZigbee<Api>::addZigbeeAction(const ZigbeeActionT type, const char* ieeeA
     this->queue += req;
     return true;
 }
+
+template <class S, typename... Args>
+class SerialZigbee {
+public:
+    static S& serial(Args... tail) {
+        static S _serial(tail...);
+        return _serial;
+    }
+};
 
 #include "adapter/ERaReportingZigbee.hpp"
 #include "adapter/ERaEndpointsZigbee.hpp"

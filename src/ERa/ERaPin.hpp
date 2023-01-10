@@ -254,7 +254,7 @@ void ERaPin<Report>::run() {
             this->pin[i].report.updateReport(this->pin[i].readPin(this->pin[i].pin));
         }
         else if (this->pin[i].readPin != nullptr) {
-            this->pin[i].report.updateReport(this->pin[i].readPin(this->pin[i].channel));
+            this->pin[i].report.updateReport(this->pin[i].readPin(this->pin[i].channel), true);
         }
     }
     this->report.run();

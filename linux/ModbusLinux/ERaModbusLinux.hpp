@@ -3,7 +3,7 @@
 
 #include <Modbus/ERaModbus.hpp>
 
-ERaSerialLinux SerialMB;
+#define SerialMB SerialModBus<ERaSerialLinux>::serial()
 
 template <class Api>
 void ERaModbus<Api>::configModbus() {

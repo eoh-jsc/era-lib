@@ -26,7 +26,7 @@ public:
     ERaToZigbee()
         : transId(0)
         , transIdZcl(0)
-        , coordinator(InfoCoordinator_t::instance)
+        , coordinator(InfoCoordinator_t::instance())
         , mutex(NULL)
     {}
     ~ERaToZigbee()

@@ -15,16 +15,27 @@ enum ZigbeeStateT {
 };
 
 namespace ZigbeeState {
-    volatile ZigbeeStateT state = ZigbeeStateT::STATE_ZB_INIT_MAX;
+    class ZigbeeState {
+    public:
+        static volatile ZigbeeStateT& state() {
+            static volatile ZigbeeStateT _state = ZigbeeStateT::STATE_ZB_INIT_MAX;
+            return _state;
+        }
+    };
 
+    inline
     ZigbeeStateT get() {
-        return state;
+        return ZigbeeState::state();
     }
+
+    inline
     bool is(ZigbeeStateT _state) {
-        return state == _state;
+        return ZigbeeState::state() == _state;
     }
+
+    inline
     void set(ZigbeeStateT _state) {
-        state = _state;
+        ZigbeeState::state() = _state;
     }
 };
 

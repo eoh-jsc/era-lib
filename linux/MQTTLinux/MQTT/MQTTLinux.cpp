@@ -44,10 +44,7 @@ static void MQTTLinuxClientHandler(lwmqtt_client_t * /*client*/, void *ref, lwmq
   std::string str_topic(terminated_topic);
 
   // create payload string
-  std::string str_payload;
-  if (message.payload != nullptr) {
-    str_payload.append((const char *)message.payload);
-  }
+  const char* str_payload = (const char *)message.payload;
 
   // call simple callback
 #if MQTT_HAS_FUNCTIONAL
@@ -63,9 +60,18 @@ static void MQTTLinuxClientHandler(lwmqtt_client_t * /*client*/, void *ref, lwmq
 
 MQTTLinuxClient::MQTTLinuxClient(int bufSize) {
   // allocate buffers
-  this->bufSize = (size_t)bufSize;
+  this->readBufSize = (size_t)bufSize;
+  this->writeBufSize = (size_t)bufSize;
   this->readBuf = (uint8_t *)ERA_MALLOC((size_t)bufSize + 1);
   this->writeBuf = (uint8_t *)ERA_MALLOC((size_t)bufSize);
+}
+
+MQTTLinuxClient::MQTTLinuxClient(int readBufSize, int writeBufSize) {
+  // allocate buffers
+  this->readBufSize = (size_t)readBufSize;
+  this->writeBufSize = (size_t)writeBufSize;
+  this->readBuf = (uint8_t *)ERA_MALLOC((size_t)readBufSize + 1);
+  this->writeBuf = (uint8_t *)ERA_MALLOC((size_t)writeBufSize);
 }
 
 MQTTLinuxClient::~MQTTLinuxClient() {
@@ -84,7 +90,7 @@ MQTTLinuxClient::~MQTTLinuxClient() {
 
 void MQTTLinuxClient::begin() {
   // initialize client
-  lwmqtt_init(&this->client, this->writeBuf, this->bufSize, this->readBuf, this->bufSize);
+  lwmqtt_init(&this->client, this->writeBuf, this->writeBufSize, this->readBuf, this->readBufSize);
 
   // set timers
   lwmqtt_set_timers(&this->client, &this->timer1, &this->timer2, lwmqtt_unix_timer_set, lwmqtt_unix_timer_get);

@@ -26,6 +26,7 @@ private:
     Preferences preferences;
 };
 
+inline
 void ERaFlash::begin() {
     SPIFFS.end();
     if (!SPIFFS.begin()) {
@@ -37,6 +38,7 @@ void ERaFlash::begin() {
     }
 }
 
+inline
 char* ERaFlash::readFlash(const char* filename) {
     File file = SPIFFS.open(filename, "r");
     if (!file) {
@@ -58,10 +60,12 @@ char* ERaFlash::readFlash(const char* filename) {
     return buf;
 }
 
+inline
 size_t ERaFlash::readFlash(const char* key, void* buf, size_t maxLen) {
     return preferences.getBytes(key, buf, maxLen);
 }
 
+inline
 void ERaFlash::writeFlash(const char* filename, const char* buf) {
     if (buf == nullptr) {
         return;
@@ -74,6 +78,7 @@ void ERaFlash::writeFlash(const char* filename, const char* buf) {
     file.close();
 }
 
+inline
 size_t ERaFlash::writeFlash(const char* key, const void* value, size_t len) {
     return preferences.putBytes(key, value, len);
 }

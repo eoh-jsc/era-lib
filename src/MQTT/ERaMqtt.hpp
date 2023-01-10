@@ -20,7 +20,7 @@ class ERaMqtt
         QOS2 = 0x02,
         SUBFAIL = 0x80
     };
-    typedef std::function<void(std::string&, std::string&)> MessageCallback;
+    typedef std::function<void(std::string&, const char*)> MessageCallback;
 
     const char* TAG = "MQTT";
     const char* ONLINE_MESSAGE = R"json({"ol":1%s%s})json";
@@ -40,6 +40,7 @@ public:
         , password(ERA_MQTT_PASSWORD)
         , ssid(NULL)
         , ping(0L)
+        , signalQuality(0)
         , askConfig(false)
         , mutex(NULL)
     {
@@ -53,6 +54,7 @@ public:
         , password(ERA_MQTT_PASSWORD)
         , ssid(NULL)
         , ping(0L)
+        , signalQuality(0)
         , askConfig(false)
         , mutex(NULL)
     {
@@ -68,9 +70,10 @@ public:
 
     void config(const char* _host, uint16_t _port, const char* _user, const char* _password);
     bool connect();
+    void disconnect();
     bool run();
     bool publishData(const char* topic, const char* payload,
-                    QoST qos = (QoST)ERA_MQTT_PUBLISH_QOS, bool retained = ERA_MQTT_PUBLISH_RETAINED);
+                    bool retained = ERA_MQTT_PUBLISH_RETAINED, QoST qos = (QoST)ERA_MQTT_PUBLISH_QOS);
     bool syncConfig();
 
     void setTimeout(uint32_t timeout) {
@@ -89,19 +92,27 @@ public:
         this->ssid = _ssid;
     }
 
-    const char* getSSID() {
+    const char* getSSID() const {
         return this->ssid;
     }
 
-    MillisTime_t getPing() {
+    MillisTime_t getPing() const {
         return this->ping;
+    }
+
+    void setSignalQuality(int16_t signal) {
+        this->signalQuality = signal;
+    }
+
+    int16_t getSignalQuality() const {
+        return this->signalQuality;
     }
 
     void setAskConfig(bool enable) {
         this->askConfig = enable;
     }
 
-    bool getAskConfig() {
+    bool getAskConfig() const {
 #if defined(ERA_ASK_CONFIG_WHEN_RESTART)
         return true;
 #else
@@ -109,7 +120,7 @@ public:
 #endif
     }
 
-    const char* getTag() {
+    const char* getTag() const {
         return this->TAG;
     }
 
@@ -123,7 +134,7 @@ private:
     bool publishLWT(bool sync = false);
 
     Client* client;
-    MQTT mqtt{ERA_MQTT_BUFFER_SIZE};
+    MQTT mqtt{ERA_MQTT_BUFFER_SIZE, ERA_MQTT_TX_BUFFER_SIZE};
     const char* host;
     uint16_t port;
     const char* username;
@@ -132,12 +143,14 @@ private:
     const char* ERaAuth;
     const char* ssid;
     MillisTime_t ping;
+    int16_t signalQuality;
     bool askConfig;
     char willTopic[MAX_TOPIC_LENGTH];
     ERaMutex_t mutex;
 };
 
 template <class Client, class MQTT>
+inline
 void ERaMqtt<Client, MQTT>::config(const char* _host, uint16_t _port, const char* _user, const char* _password) {
     this->host = _host;
     this->port = _port;
@@ -152,6 +165,7 @@ void ERaMqtt<Client, MQTT>::config(const char* _host, uint16_t _port, const char
 }
 
 template <class Client, class MQTT>
+inline
 bool ERaMqtt<Client, MQTT>::connect() {
     size_t count {0};
     this->mqtt.disconnect();
@@ -182,6 +196,13 @@ bool ERaMqtt<Client, MQTT>::connect() {
 }
 
 template <class Client, class MQTT>
+inline
+void ERaMqtt<Client, MQTT>::disconnect() {
+    this->mqtt.disconnect();
+}
+
+template <class Client, class MQTT>
+inline
 bool ERaMqtt<Client, MQTT>::run() {
     if (!this->mqtt.loop()) {
         ERaOnDisconnected();
@@ -191,6 +212,7 @@ bool ERaMqtt<Client, MQTT>::run() {
 }
 
 template <class Client, class MQTT>
+inline
 bool ERaMqtt<Client, MQTT>::subscribeTopic(const char* baseTopic, const char* topic, QoST qos) {
     bool status {false};
     char topicName[MAX_TOPIC_LENGTH] {0};
@@ -208,8 +230,9 @@ bool ERaMqtt<Client, MQTT>::subscribeTopic(const char* baseTopic, const char* to
 }
 
 template <class Client, class MQTT>
+inline
 bool ERaMqtt<Client, MQTT>::publishData(const char* topic, const char* payload,
-                                        QoST qos, bool retained) {
+                                        bool retained, QoST qos) {
     bool status {false};
 
     ERaGuardLock(this->mutex);
@@ -223,11 +246,13 @@ bool ERaMqtt<Client, MQTT>::publishData(const char* topic, const char* payload,
 }
 
 template <class Client, class MQTT>
+inline
 bool ERaMqtt<Client, MQTT>::syncConfig() {
     return this->publishLWT(true);
 }
 
 template <class Client, class MQTT>
+inline
 bool ERaMqtt<Client, MQTT>::publishLWT(bool sync) {
     bool status {false};
     char wifiInfo[50] {0};

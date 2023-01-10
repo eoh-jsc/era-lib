@@ -4,6 +4,7 @@
 #include <ERa/ERaApi.hpp>
 
 template <class Proto, class Flash>
+inline
 void ERaApi<Proto, Flash>::handleReadPin(cJSON* root) {
 	if (!cJSON_IsArray(root)) {
 		return;
@@ -45,6 +46,7 @@ void ERaApi<Proto, Flash>::handleReadPin(cJSON* root) {
 }
 
 template <class Proto, class Flash>
+inline
 void ERaApi<Proto, Flash>::handleWritePin(cJSON* root) {
 	if (!cJSON_IsArray(root)) {
 		return;
@@ -86,7 +88,8 @@ void ERaApi<Proto, Flash>::handleWritePin(cJSON* root) {
 }
 
 template <class Proto, class Flash>
-void ERaApi<Proto, Flash>::processArduinoPinRequest(const std::vector<std::string>& arrayTopic, const std::string& payload) {
+inline
+void ERaApi<Proto, Flash>::processArduinoPinRequest(const std::vector<std::string>& arrayTopic, const char* payload) {
 	if (arrayTopic.size() != 3) {
 		return;
 	}
@@ -94,7 +97,7 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const std::vector<std::strin
 	if (str.empty()) {
 		return;
 	}
-	cJSON* root = cJSON_Parse(payload.c_str());
+	cJSON* root = cJSON_Parse(payload);
 	if (!cJSON_IsObject(root)) {
 		cJSON_Delete(root);
 		root = nullptr;
@@ -128,8 +131,9 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const std::vector<std::strin
 }
 
 template <class Proto, class Flash>
-void ERaApi<Proto, Flash>::handlePinRequest(const std::vector<std::string>& arrayTopic, const std::string& payload) {
-	cJSON* root = cJSON_Parse(payload.c_str());
+inline
+void ERaApi<Proto, Flash>::handlePinRequest(const std::vector<std::string>& arrayTopic, const char* payload) {
+	cJSON* root = cJSON_Parse(payload);
 	if (!cJSON_IsObject(root)) {
 		cJSON_Delete(root);
 		root = nullptr;

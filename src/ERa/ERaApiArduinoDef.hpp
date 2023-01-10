@@ -3,9 +3,7 @@
 
 #if defined(ESP8266)
     #define INPUT_PULLDOWN    INPUT_PULLDOWN_16
-#elif defined(STM32F0xx) || defined(STM32F1xx) || \
-	defined(STM32F2xx) || defined(STM32F3xx) ||   \
-	defined(STM32F4xx) || defined(STM32F7xx)
+#elif defined(ARDUINO_ARCH_STM32)
     #define ANALOG            INPUT_ANALOG
 #elif defined(__MBED__)
     #define OUTPUT_OPEN_DRAIN OUTPUT_OPENDRAIN

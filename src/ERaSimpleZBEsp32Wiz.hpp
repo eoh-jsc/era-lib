@@ -1,0 +1,8 @@
+#ifndef INC_ERA_SIMPLE_ZIGBEE_ESP32_WIZ_HPP_
+#define INC_ERA_SIMPLE_ZIGBEE_ESP32_WIZ_HPP_
+
+#define ERA_ZIGBEE
+
+#include <ERaSimpleEsp32Wiz.hpp>
+
+#endif /* INC_ERA_SIMPLE_ZIGBEE_ESP32_WIZ_HPP_ */

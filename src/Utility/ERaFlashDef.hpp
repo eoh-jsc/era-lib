@@ -18,6 +18,11 @@
     #define FILENAME_MODBUS_CONFIG      "database/modbus/config.txt"
     #define FILENAME_MODBUS_CONTROL     "database/modbus/control.txt"
     #define FILENAME_ZIGBEE_DEVICES     "database/zigbee/devices.txt"
+#elif defined(ARDUINO_ARCH_STM32)
+    #define FILENAME_PIN_CONFIG         "pin/config.txt"
+    #define FILENAME_MODBUS_CONFIG      "modbus/config.txt"
+    #define FILENAME_MODBUS_CONTROL     "modbus/control.txt"
+    #define FILENAME_ZIGBEE_DEVICES     "zigbee/devices.txt"
 #else
     #define FILENAME_PIN_CONFIG         "pin/config.txt"
     #define FILENAME_MODBUS_CONFIG      "modbus/config.txt"

@@ -12,8 +12,8 @@ class ERaDBZigbee
 
 public:
     ERaDBZigbee()
-        : device(InfoDevice_t::instance)
-        , coordinator(InfoCoordinator_t::instance)
+        : device(InfoDevice_t::instance())
+        , coordinator(InfoCoordinator_t::instance())
     {}
     ~ERaDBZigbee()
     {}
@@ -22,7 +22,7 @@ protected:
     void parseZigbeeDevice();
     void storeZigbeeDevice();
     IdentDeviceAddr_t* getDeviceFromCoordinator();
-    void setDeviceToCoordinator();
+    IdentDeviceAddr_t* setDeviceToCoordinator(bool final);
 
 private:
     void parseDevice(const cJSON* const root);
@@ -165,21 +165,21 @@ IdentDeviceAddr_t* ERaDBZigbee<Zigbee>::getDeviceFromCoordinator() {
 }
 
 template <class Zigbee>
-void ERaDBZigbee<Zigbee>::setDeviceToCoordinator() {
+IdentDeviceAddr_t* ERaDBZigbee<Zigbee>::setDeviceToCoordinator(bool final) {
     if (IsZeroArray(this->device->address.addr.ieeeAddr)) {
-        return;
+        return nullptr;
     }
     IdentDeviceAddr_t* deviceInfo = this->getDeviceFromCoordinator();
     if (deviceInfo != nullptr) {
-        if (deviceInfo->address.addr.nwkAddr == this->device->address.addr.nwkAddr) {
-            return;
-        }
         deviceInfo->address.addr.nwkAddr = this->device->address.addr.nwkAddr;
+        if (!final) {
+            return deviceInfo;
+        }
     }
     else {
-        if (this->coordinator->deviceCount >= MAX_DEVICE_ZIGBEE ||
+        if ((this->coordinator->deviceCount >= MAX_DEVICE_ZIGBEE) ||
             !strlen(this->device->modelName)) {
-            return;
+            return nullptr;
         }
         deviceInfo = &this->coordinator->deviceIdent[this->coordinator->deviceCount++];
         deviceInfo->address.addr.nwkAddr = this->device->address.addr.nwkAddr;
@@ -187,9 +187,14 @@ void ERaDBZigbee<Zigbee>::setDeviceToCoordinator() {
     }
     deviceInfo->typeDevice = this->device->typeDevice;
     deviceInfo->appVer = this->device->appVer;
-    ClearMem(deviceInfo->modelName);
-    CopyString(this->device->modelName, deviceInfo->modelName);
-    this->storeZigbeeDevice();
+    if (strlen(this->device->modelName)) {
+        ClearMem(deviceInfo->modelName);
+        CopyString(this->device->modelName, deviceInfo->modelName);
+    }
+    if (final) {
+        this->storeZigbeeDevice();
+    }
+    return deviceInfo;
 }
 
 template <class Zigbee>

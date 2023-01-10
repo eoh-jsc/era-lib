@@ -37,24 +37,28 @@ jobs:
             sketch-paths: examples/ESP32
             libraries: |
               - source-path: ./
+              - name: TinyGSM
           - name: "Espressif32-C3"
             fqbn: "esp32:esp32:esp32c3"
             platform-name: esp32:esp32
             sketch-paths: examples/ESP32
             libraries: |
               - source-path: ./
+              - name: TinyGSM
           - name: "Espressif32-S2"
             fqbn: "esp32:esp32:esp32s2"
             platform-name: esp32:esp32
             sketch-paths: examples/ESP32
             libraries: |
               - source-path: ./
+              - name: TinyGSM
           - name: "Espressif32-S3"
             fqbn: "esp32:esp32:esp32s3"
             platform-name: esp32:esp32
             sketch-paths: examples/ESP32
             libraries: |
               - source-path: ./
+              - name: TinyGSM
           - name: "Espressif8266"
             fqbn: "esp8266:esp8266:nodemcuv2"
             platform-name: esp8266:esp8266

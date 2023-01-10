@@ -23,16 +23,27 @@ enum StateT {
 };
 
 namespace ERaState {
-    volatile StateT state = StateT::STATE_MAX;
+    class ERaState {
+    public:
+        static volatile StateT& state() {
+            static volatile StateT _state = StateT::STATE_MAX;
+            return _state;
+        }
+    };
 
+    inline
     StateT get() {
-        return state;
+        return ERaState::state();
     }
+
+    inline
     bool is(StateT _state) {
-        return state == _state;
+        return ERaState::state() == _state;
     }
+
+    inline
     void set(StateT _state) {
-        state = _state;
+        ERaState::state() = _state;
     }
 };
 

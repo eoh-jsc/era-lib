@@ -72,8 +72,8 @@ typedef struct __ERaConfig_t {
 static WebServer server(80);
 static DNSServer dnsServer;
 static const uint16_t DNS_PORT = 53;
-static ERaConfig_t eraConfig{};
-static const ERaConfig_t eraDefault = {
+static ERaConfig_t ERaConfig{};
+static const ERaConfig_t ERaDefault = {
     .magic = 0x27061995,
     .flags = 0x00,
     "",
@@ -140,14 +140,14 @@ public:
         Base::init();
         this->config(auth, host, port, username, password);
         if (this->connected()) {
-            CopyToArray(ssid, eraConfig.ssid);
-            CopyToArray(pass, eraConfig.pass);
-            CopyToArray(auth, eraConfig.token);
-            CopyToArray(host, eraConfig.host);
-            eraConfig.port = port;
-            CopyToArray(username, eraConfig.username);
-            CopyToArray(password, eraConfig.password);
-            eraConfig.setFlag(ConfigFlagT::CONFIG_FLAG_VALID, true);
+            CopyToArray(ssid, ERaConfig.ssid);
+            CopyToArray(pass, ERaConfig.pass);
+            CopyToArray(auth, ERaConfig.token);
+            CopyToArray(host, ERaConfig.host);
+            ERaConfig.port = port;
+            CopyToArray(username, ERaConfig.username);
+            CopyToArray(password, ERaConfig.password);
+            ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_VALID, true);
             if (Base::connect()) {
                 ERaState::set(StateT::STATE_CONNECTED);
             }
@@ -188,7 +188,7 @@ private:
     void getWiFiName(char* ptr, size_t size, bool withPrefix = true);
     void getImeiChip(char* ptr, size_t size);
 
-    bool connected() {
+    bool connected() const {
         return (WiFi.status() == WL_CONNECTED);
     }
 
@@ -275,12 +275,12 @@ void ERaPnP<Transport>::run() {
 template <class Transport>
 void ERaPnP<Transport>::configApi() {
     static bool configured {false};
-    if (!eraConfig.getFlag(ConfigFlagT::CONFIG_FLAG_API) &&
+    if (!ERaConfig.getFlag(ConfigFlagT::CONFIG_FLAG_API) &&
         configured) {
         return;
     }
     configured = true;
-    eraConfig.setFlag(ConfigFlagT::CONFIG_FLAG_API, false);
+    ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_API, false);
 
     ERA_LOG(TAG, ERA_PSTR("Config api"));
 
@@ -308,48 +308,48 @@ void ERaPnP<Transport>::configApi() {
         String content;
 
         if (ssid.length()) {
-            CopyToArray(ssid, eraConfig.ssid);
-            CopyToArray(pass, eraConfig.pass);
+            CopyToArray(ssid, ERaConfig.ssid);
+            CopyToArray(pass, ERaConfig.pass);
         }
 
         if (backupSsid.length()) {
-            eraConfig.hasBackup = true;
-            CopyToArray(backupSsid, eraConfig.backupSSID);
-            CopyToArray(backupPass, eraConfig.backupPass);
+            ERaConfig.hasBackup = true;
+            CopyToArray(backupSsid, ERaConfig.backupSSID);
+            CopyToArray(backupPass, ERaConfig.backupPass);
         } else {
-            eraConfig.hasBackup = false;
+            ERaConfig.hasBackup = false;
         }
 
         if (token.length()) {
-            CopyToArray(token, eraConfig.token);
+            CopyToArray(token, ERaConfig.token);
         }
         else {
-            CopyToArray(imei, eraConfig.token);
+            CopyToArray(imei, ERaConfig.token);
         }
         if (host.length()) {
-            CopyToArray(host, eraConfig.host);
+            CopyToArray(host, ERaConfig.host);
         }
         if (port.length()) {
-            eraConfig.port = port.toInt();
+            ERaConfig.port = port.toInt();
         }
         if (user.length()) {
-            CopyToArray(user, eraConfig.username);
+            CopyToArray(user, ERaConfig.username);
         }
         else {
-            CopyToArray(imei, eraConfig.username);
+            CopyToArray(imei, ERaConfig.username);
         }
         if (password.length()) {
-            CopyToArray(password, eraConfig.password);
+            CopyToArray(password, ERaConfig.password);
         }
         else {
-            CopyToArray(imei, eraConfig.password);
+            CopyToArray(imei, ERaConfig.password);
         }
 
         content = ERA_F(R"json({"status":"ok","message":"Connecting wifi..."})json");
         server.send(200, "application/json", content);
         if (ssid.length()) {
-            eraConfig.setFlag(ConfigFlagT::CONFIG_FLAG_VALID, true);
-            eraConfig.setFlag(ConfigFlagT::CONFIG_FLAG_STORE, true);
+            ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_VALID, true);
+            ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_STORE, true);
             ERaState::set(StateT::STATE_SWITCH_TO_STA);
         }
     });
@@ -504,16 +504,16 @@ void ERaPnP<Transport>::configApi() {
         std::vector<std::string> listWifi;
 
         if (ssid.length()) {
-            CopyToArray(ssid, eraConfig.ssid);
-            CopyToArray(pass, eraConfig.pass);
+            CopyToArray(ssid, ERaConfig.ssid);
+            CopyToArray(pass, ERaConfig.pass);
         }
 
         if (backupSsid.length()) {
-            eraConfig.hasBackup = true;
-            CopyToArray(backupSsid, eraConfig.backupSSID);
-            CopyToArray(backupPass, eraConfig.backupPass);
+            ERaConfig.hasBackup = true;
+            CopyToArray(backupSsid, ERaConfig.backupSSID);
+            CopyToArray(backupPass, ERaConfig.backupPass);
         } else {
-            eraConfig.hasBackup = false;
+            ERaConfig.hasBackup = false;
         }
 
         if (scanWifi) {
@@ -532,8 +532,8 @@ void ERaPnP<Transport>::configApi() {
         content += ERA_F("<table border=1 width='100%'>");
         content += ERA_F("<tr><th width='50%' height='30px'>Wifi</th>");
         content += ERA_F("<th width='50%'>Wifi 2</th></tr>");
-        content += ERA_F("<tr><td style='text-align:center'>") + String(strlen(eraConfig.ssid) ? eraConfig.ssid : "--");
-        content += ERA_F("</td><td style='text-align:center'>") + String(strlen(eraConfig.backupSSID) ? eraConfig.backupSSID : "--");
+        content += ERA_F("<tr><td style='text-align:center'>") + String(strlen(ERaConfig.ssid) ? ERaConfig.ssid : "--");
+        content += ERA_F("</td><td style='text-align:center'>") + String(strlen(ERaConfig.backupSSID) ? ERaConfig.backupSSID : "--");
         content += ERA_F("</td></tr></table>");
 
         if (nets > 0) {
@@ -620,8 +620,8 @@ void ERaPnP<Transport>::configApi() {
         webProcessor(content);
         server.send(200, "text/html", content);
         if (ssid.length() && hasConnect) {
-            eraConfig.setFlag(ConfigFlagT::CONFIG_FLAG_VALID, true);
-            eraConfig.setFlag(ConfigFlagT::CONFIG_FLAG_STORE, true);
+            ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_VALID, true);
+            ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_STORE, true);
             ERaState::set(StateT::STATE_SWITCH_TO_STA);
         }
     });
@@ -694,48 +694,48 @@ void ERaPnP<Transport>::configApi() {
         String content;
 
         if (ssid.length()) {
-            CopyToArray(ssid, eraConfig.ssid);
-            CopyToArray(pass, eraConfig.pass);
+            CopyToArray(ssid, ERaConfig.ssid);
+            CopyToArray(pass, ERaConfig.pass);
         }
 
         if (backupSsid.length()) {
-            eraConfig.hasBackup = true;
-            CopyToArray(backupSsid, eraConfig.backupSSID);
-            CopyToArray(backupPass, eraConfig.backupPass);
+            ERaConfig.hasBackup = true;
+            CopyToArray(backupSsid, ERaConfig.backupSSID);
+            CopyToArray(backupPass, ERaConfig.backupPass);
         } else {
-            eraConfig.hasBackup = false;
+            ERaConfig.hasBackup = false;
         }
 
         if (token.length()) {
-            CopyToArray(token, eraConfig.token);
+            CopyToArray(token, ERaConfig.token);
         }
         else {
-            CopyToArray(imei, eraConfig.token);
+            CopyToArray(imei, ERaConfig.token);
         }
         if (host.length()) {
-            CopyToArray(host, eraConfig.host);
+            CopyToArray(host, ERaConfig.host);
         }
         if (port.length()) {
-            eraConfig.port = port.toInt();
+            ERaConfig.port = port.toInt();
         }
         if (user.length()) {
-            CopyToArray(user, eraConfig.username);
+            CopyToArray(user, ERaConfig.username);
         }
         else {
-            CopyToArray(imei, eraConfig.username);
+            CopyToArray(imei, ERaConfig.username);
         }
         if (password.length()) {
-            CopyToArray(password, eraConfig.password);
+            CopyToArray(password, ERaConfig.password);
         }
         else {
-            CopyToArray(imei, eraConfig.password);
+            CopyToArray(imei, ERaConfig.password);
         }
 
         content = ERA_F(R"json({"status":"ok","message":"Connecting wifi..."})json");
         eraUdp.send(content.c_str());
         if (ssid.length()) {
-            eraConfig.setFlag(ConfigFlagT::CONFIG_FLAG_VALID, true);
-            eraConfig.setFlag(ConfigFlagT::CONFIG_FLAG_STORE, true);
+            ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_VALID, true);
+            ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_STORE, true);
             ERaState::set(StateT::STATE_SWITCH_TO_AP_STA);
         }
     });
@@ -832,24 +832,24 @@ void ERaPnP<Transport>::configApi() {
 template <class Transport>
 void ERaPnP<Transport>::configInit() {
     this->configLoad();
-    if (eraConfig.getFlag(ConfigFlagT::CONFIG_FLAG_VALID)) {
+    if (ERaConfig.getFlag(ConfigFlagT::CONFIG_FLAG_VALID)) {
         ERaState::set(StateT::STATE_CONNECTING_NETWORK);
     }
     else {
         ERaState::set(StateT::STATE_SWITCH_TO_AP);
-        eraConfig.setFlag(ConfigFlagT::CONFIG_FLAG_API, true);
+        ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_API, true);
     }
 }
 
 template <class Transport>
 void ERaPnP<Transport>::configLoad() {
-    if (eraConfig.getFlag(ConfigFlagT::CONFIG_FLAG_VALID)) {
+    if (ERaConfig.getFlag(ConfigFlagT::CONFIG_FLAG_VALID)) {
         return;
     }
-    memset(&eraConfig, 0, sizeof(eraConfig));
-    Base::ERaApi::flash.readFlash("config", &eraConfig, sizeof(eraConfig));
+    memset(&ERaConfig, 0, sizeof(ERaConfig));
+    Base::ERaApi::flash.readFlash("config", &ERaConfig, sizeof(ERaConfig));
     ERA_LOG(TAG, ERA_PSTR("Configuration loaded from flash"));
-    if (eraConfig.magic != eraDefault.magic) {
+    if (ERaConfig.magic != ERaDefault.magic) {
         this->configLoadDefault();
     }
 }
@@ -857,28 +857,28 @@ void ERaPnP<Transport>::configLoad() {
 template <class Transport>
 void ERaPnP<Transport>::configLoadDefault() {
     char imei[64] {0};
-    eraConfig = eraDefault;
+    ERaConfig = ERaDefault;
     this->getImeiChip(imei, sizeof(imei));
-    CopyToArray(imei, eraConfig.token);
-    CopyToArray(imei, eraConfig.username);
-    CopyToArray(imei, eraConfig.password);
+    CopyToArray(imei, ERaConfig.token);
+    CopyToArray(imei, ERaConfig.username);
+    CopyToArray(imei, ERaConfig.password);
     ERA_LOG(TAG, ERA_PSTR("Using default config"));
 }
 
 template <class Transport>
 void ERaPnP<Transport>::configSave() {
-    if (!eraConfig.getFlag(ConfigFlagT::CONFIG_FLAG_STORE)) {
+    if (!ERaConfig.getFlag(ConfigFlagT::CONFIG_FLAG_STORE)) {
         return;
     }
-    eraConfig.setFlag(ConfigFlagT::CONFIG_FLAG_STORE, false);
-    Base::ERaApi::flash.writeFlash("config", &eraConfig, sizeof(eraConfig));
+    ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_STORE, false);
+    Base::ERaApi::flash.writeFlash("config", &ERaConfig, sizeof(ERaConfig));
     ERA_LOG(TAG, ERA_PSTR("Configuration stored to flash"));
 }
 
 template <class Transport>
 void ERaPnP<Transport>::configReset() {
     this->configLoadDefault();
-    eraConfig.setFlag(ConfigFlagT::CONFIG_FLAG_STORE, true);
+    ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_STORE, true);
     this->configSave();
     ERaState::set(StateT::STATE_SWITCH_TO_AP);
     ERA_LOG(TAG, ERA_PSTR("Resetting configuration"));
@@ -905,7 +905,7 @@ void ERaPnP<Transport>::configMode() {
         if (ERaState::is(StateT::STATE_CONFIGURING) && !WiFi.softAPgetStationNum()) {
             ERaState::set(StateT::STATE_WAIT_CONFIG);
         }
-        if (eraConfig.getFlag(ConfigFlagT::CONFIG_FLAG_VALID)) {
+        if (ERaConfig.getFlag(ConfigFlagT::CONFIG_FLAG_VALID)) {
             if (!ERaRemainingTime(tick, WIFI_NET_CHECK_TIMEOUT)) {
                 ERaState::set(StateT::STATE_SWITCH_TO_STA);
                 break;
@@ -924,7 +924,7 @@ void ERaPnP<Transport>::connectNetwork() {
     this->getWiFiName(ssidAP, sizeof(ssidAP));
     WiFi.setHostname(ssidAP);
 
-    this->connectWiFi(eraConfig.ssid, eraConfig.pass);
+    this->connectWiFi(ERaConfig.ssid, ERaConfig.pass);
     if (this->connected()) {
         /* Udp */
         eraUdp.sendBoardInfo();
@@ -936,14 +936,14 @@ void ERaPnP<Transport>::connectNetwork() {
     }
     else {
         ERaState::set(StateT::STATE_SWITCH_TO_AP);
-        eraConfig.setFlag(ConfigFlagT::CONFIG_FLAG_API, true);
+        ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_API, true);
     }
 }
 
 template <class Transport>
 void ERaPnP<Transport>::connectCloud() {
     ERA_LOG(TAG, ERA_PSTR("Connecting cloud..."));
-    this->config(eraConfig.token, eraConfig.host, eraConfig.port, eraConfig.username, eraConfig.password);
+    this->config(ERaConfig.token, ERaConfig.host, ERaConfig.port, ERaConfig.username, ERaConfig.password);
     if (Base::connect()) {
         this->configSave();
         ERaState::set(StateT::STATE_CONNECTED);

@@ -106,8 +106,10 @@ template <class Transp, class Flash>
 void ERaProto<Transp, Flash>::runERaTask() {
 }
 
-static ERaFlashLinux flash;
-static ERaMqttLinux<MQTTLinuxClient> mqtt;
-ERaLinux< ERaMqttLinux<MQTTLinuxClient> > ERa(mqtt, flash);
+#if !defined(NO_GLOBAL_INSTANCES) && !defined(NO_GLOBAL_ERA)
+    static ERaFlashLinux flash;
+    static ERaMqttLinux<MQTTLinuxClient> mqtt;
+    ERaLinux< ERaMqttLinux<MQTTLinuxClient> > ERa(mqtt, flash);
+#endif
 
 #endif /* INC_ERA_SIMPLE_LINUX_HPP_ */

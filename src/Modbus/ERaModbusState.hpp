@@ -9,16 +9,27 @@ enum ModbusStateT {
 };
 
 namespace ModbusState {
-    volatile ModbusStateT state = ModbusStateT::STATE_MB_INIT;
+    class ModbusState {
+    public:
+        static volatile ModbusStateT& state() {
+            static volatile ModbusStateT _state = ModbusStateT::STATE_MB_INIT;
+            return _state;
+        }
+    };
 
+    inline
     ModbusStateT get() {
-        return state;
+        return ModbusState::state();
     }
+
+    inline
     bool is(ModbusStateT _state) {
-        return state == _state;
+        return ModbusState::state() == _state;
     }
+
+    inline
     void set(ModbusStateT _state) {
-        state = _state;
+        ModbusState::state() = _state;
     }
 };
 

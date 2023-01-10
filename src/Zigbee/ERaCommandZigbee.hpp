@@ -66,8 +66,8 @@ public:
             .disableRsp = true,
             .reservedBits = 0
         }
-        , device(InfoDevice_t::instance)
-        , coordinator(InfoCoordinator_t::instance)
+        , device(InfoDevice_t::instance())
+        , coordinator(InfoCoordinator_t::instance())
     {}
     ~ERaCommandZigbee()
     {}

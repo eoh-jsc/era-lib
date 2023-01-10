@@ -192,7 +192,7 @@ bool ERaReport::changeReportableChange(unsigned int id, unsigned long minInterva
     return true;
 }
 
-void ERaReport::updateReport(unsigned int id, float value) {
+void ERaReport::updateReport(unsigned int id, float value, bool isRound) {
 	if (id >= MAX_REPORTS) {
 		return;
 	}
@@ -202,6 +202,9 @@ void ERaReport::updateReport(unsigned int id, float value) {
 									this->report[id].data.scale.rawMax,
 									this->report[id].data.scale.min,
 									this->report[id].data.scale.max);
+		if (isRound) {
+			value = std::round(value);
+		}
 	}
 	this->report[id].data.value = value;
     if (!this->report[id].updated) {

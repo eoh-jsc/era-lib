@@ -47,10 +47,10 @@ typedef struct {
 
 class MQTTClient;
 
-typedef void (*MQTTClientCallbackSimple)(std::string &topic, std::string &payload);
+typedef void (*MQTTClientCallbackSimple)(std::string &topic, const char* payload);
 typedef void (*MQTTClientCallbackAdvanced)(MQTTClient *client, char topic[], char bytes[], int length);
 #if MQTT_HAS_FUNCTIONAL
-typedef std::function<void(std::string &topic, std::string &payload)> MQTTClientCallbackSimpleFunction;
+typedef std::function<void(std::string &topic, const char* payload)> MQTTClientCallbackSimpleFunction;
 typedef std::function<void(MQTTClient *client, char topic[], char bytes[], int length)>
     MQTTClientCallbackAdvancedFunction;
 #endif
@@ -67,7 +67,8 @@ typedef struct {
 
 class MQTTClient {
  private:
-  size_t bufSize = 0;
+  size_t readBufSize = 0;
+  size_t writeBufSize = 0;
   uint8_t *readBuf = nullptr;
   uint8_t *writeBuf = nullptr;
 
@@ -95,6 +96,7 @@ class MQTTClient {
   void *ref = nullptr;
 
   explicit MQTTClient(int bufSize = 128);
+  explicit MQTTClient(int readBufSize, int writeBufSize);
 
   ~MQTTClient();
 

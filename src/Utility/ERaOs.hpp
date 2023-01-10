@@ -1,11 +1,10 @@
 #ifndef INC_ERA_OS_HPP_
 #define INC_ERA_OS_HPP_
 
-#if defined(ARDUINO) && 					 	        \
-	(defined(ESP32) || defined(STM32F0xx) || 	        \
-	defined(STM32F1xx) || defined(STM32F2xx) ||         \
-	defined(STM32F3xx) || defined(STM32F4xx) ||         \
-	defined(STM32F7xx) || defined(ARDUINO_ARCH_RP2040))
+#if defined(ARDUINO) &&				\
+	(defined(ESP32) || 				\
+	defined(ARDUINO_ARCH_STM32) || 	\
+	defined(ARDUINO_ARCH_RP2040))
 
 #define ERA_RTOS
 

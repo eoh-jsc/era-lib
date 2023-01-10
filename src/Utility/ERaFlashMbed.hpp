@@ -29,6 +29,7 @@ private:
     BlockDevice* bd = BlockDevice::get_default_instance();
 };
 
+inline
 void ERaFlash::begin() {
     int err = fs.mount(bd);
     if (err) {
@@ -39,6 +40,7 @@ void ERaFlash::begin() {
     }
 }
 
+inline
 char* ERaFlash::readFlash(const char* filename) {
     FILE* file = fopen(filename, "r");
     if (file == nullptr) {
@@ -62,6 +64,7 @@ char* ERaFlash::readFlash(const char* filename) {
     return buf;
 }
 
+inline
 size_t ERaFlash::readFlash(const char* key, void* buf, size_t maxLen) {
     if (buf == nullptr) {
         return 0;
@@ -75,6 +78,7 @@ size_t ERaFlash::readFlash(const char* key, void* buf, size_t maxLen) {
     return maxLen;
 }
 
+inline
 void ERaFlash::writeFlash(const char* filename, const char* buf) {
     if (buf == nullptr) {
         return;
@@ -91,6 +95,7 @@ void ERaFlash::writeFlash(const char* filename, const char* buf) {
     fclose(file);
 }
 
+inline
 size_t ERaFlash::writeFlash(const char* key, const void* value, size_t len) {
     if (value == nullptr) {
         return 0;
@@ -108,6 +113,7 @@ size_t ERaFlash::writeFlash(const char* key, const void* value, size_t len) {
     return len;
 }
 
+inline
 void ERaFlash::mkdir(const char* path) {
     if (path == nullptr) {
         return;

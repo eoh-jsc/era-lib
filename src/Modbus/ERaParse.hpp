@@ -132,8 +132,29 @@ public:
     IntervalDelay_t modbusInterval;
     IntervalDelay_t pushInterval;
 
-    static ERaApplication config;
-    static ERaApplication control;
+    static ERaApplication*& config() {
+        static ERaApplication* _config = nullptr;
+        return _config;
+    }
+
+    static ERaApplication*& control() {
+        static ERaApplication* _control = nullptr;
+        return _control;
+    }
+
+    static ERaApplication* getConfig() {
+        if (ERaApplication::config() == nullptr) {
+            ERaApplication::config() = new ERaApplication();
+        }
+        return ERaApplication::config();
+    }
+
+    static ERaApplication* getControl() {
+        if (ERaApplication::control() == nullptr) {
+            ERaApplication::control() = new ERaApplication();
+        }
+        return ERaApplication::control();
+    }
 
 private:
     void processParseConfig(int part, char* ptr, size_t len);
@@ -162,6 +183,7 @@ private:
 
 };
 
+inline
 void ERaApplication::parseConfig(char* ptr) {
     if (ptr == nullptr) {
         return;
@@ -186,6 +208,7 @@ void ERaApplication::parseConfig(char* ptr) {
     }
 }
 
+inline
 void ERaApplication::deleteAll() {
     this->sensorDelay.clear();
     this->modbusConfigParam.clear();
@@ -193,6 +216,7 @@ void ERaApplication::deleteAll() {
     *this = {};
 }
 
+inline
 void ERaApplication::processParseConfig(int part, char* ptr, size_t len) {
 	switch(part) {
 		case ParseConfigT::PARSE_CONFIG_ID:
@@ -236,12 +260,14 @@ void ERaApplication::processParseConfig(int part, char* ptr, size_t len) {
 	}
 }
 
+inline
 void ERaApplication::processParseConfigId(char* ptr, size_t len) {
     char buff[len + 1] {0};
     memcpy(buff, ptr, len);
     this->id = atoi(buff);
 }
 
+inline
 void ERaApplication::processParseConfigBaudSpeed(char* ptr, size_t len) {
     char buff[len + 1] {0};
     memcpy(buff, ptr, len);
@@ -280,11 +306,13 @@ void ERaApplication::processParseConfigBaudSpeed(char* ptr, size_t len) {
     }
 }
 
+inline
 void ERaApplication::processParseConfigTotalRow(char* ptr, size_t len) {
     ERA_FORCE_UNUSED(ptr);
     ERA_FORCE_UNUSED(len);
 }
 
+inline
 void ERaApplication::processParseConfigSensorDelay(char* ptr, size_t len) {
     bool newSensor {true};
     char buff[len + 1] {0};
@@ -317,6 +345,7 @@ void ERaApplication::processParseConfigSensorDelay(char* ptr, size_t len) {
     }
 }
 
+inline
 void ERaApplication::processParseConfigSensorReadWrite(char* ptr, size_t len) {
     size_t position {0};
 
@@ -335,6 +364,7 @@ void ERaApplication::processParseConfigSensorReadWrite(char* ptr, size_t len) {
     }
 }
 
+inline
 void ERaApplication::parseOneConfigSensorReadWrite(char* ptr, size_t len, ModbusConfig_t& config) {
     char buff[len + 1] {0};
     size_t position {0};
@@ -355,6 +385,7 @@ void ERaApplication::parseOneConfigSensorReadWrite(char* ptr, size_t len, Modbus
     this->actOneConfigSensorReadWrite(configParam, configIndex, config);
 }
 
+inline
 void ERaApplication::actOneConfigSensorReadWrite(int* ptr, size_t len, ModbusConfig_t& config) {
     if (ptr == nullptr) {
         return;
@@ -376,6 +407,7 @@ void ERaApplication::actOneConfigSensorReadWrite(int* ptr, size_t len, ModbusCon
     }
 }
 
+inline
 void ERaApplication::processParseConfigLocalAlarm(char* ptr, size_t len) {
     size_t position = 0;
 
@@ -387,11 +419,13 @@ void ERaApplication::processParseConfigLocalAlarm(char* ptr, size_t len) {
     }
 }
 
+inline
 void ERaApplication::parseOneConfigLocalAlarm(char* ptr, size_t len) {
     ERA_FORCE_UNUSED(ptr);
     ERA_FORCE_UNUSED(len);
 }
 
+inline
 void ERaApplication::processParseStationContactPhone(char* ptr, size_t len) {
     size_t position = 0;
 
@@ -403,11 +437,13 @@ void ERaApplication::processParseStationContactPhone(char* ptr, size_t len) {
     }
 }
 
+inline
 void ERaApplication::parseOneConfigPhoneNumber(char* ptr, size_t len) {
     ERA_FORCE_UNUSED(ptr);
     ERA_FORCE_UNUSED(len);
 }
 
+inline
 void ERaApplication::processParseIsWifi(char* ptr, size_t len) {
     if (!len) {
         return;
@@ -415,6 +451,7 @@ void ERaApplication::processParseIsWifi(char* ptr, size_t len) {
     this->isWifi = (ptr[0] == '1') ? true : false;
 }
 
+inline
 void ERaApplication::processParseConfigWifi(char* ptr, size_t len) {
     bool isSsid {true};
 
@@ -435,11 +472,13 @@ void ERaApplication::processParseConfigWifi(char* ptr, size_t len) {
     }
 }
 
+inline
 void ERaApplication::processParseConfigAliasTotalRow(char* ptr, size_t len) {
     ERA_FORCE_UNUSED(ptr);
     ERA_FORCE_UNUSED(len);
 }
 
+inline
 void ERaApplication::processParseConfigAliasData(char* ptr, size_t len) {
     size_t position {0};
 
@@ -458,6 +497,7 @@ void ERaApplication::processParseConfigAliasData(char* ptr, size_t len) {
     }
 }
 
+inline
 void ERaApplication::processOneConfigAlias(char* ptr, size_t len, ModbusConfigAlias_t& config) {
     if (len < 2) {
         return;
@@ -475,6 +515,7 @@ void ERaApplication::processOneConfigAlias(char* ptr, size_t len, ModbusConfigAl
     }
 }
 
+inline
 void ERaApplication::parseOneConfigAlias(char* ptr, size_t len, ModbusConfigAlias_t& config) {
     if (len < 36) {
         return;
@@ -507,6 +548,7 @@ void ERaApplication::parseOneConfigAlias(char* ptr, size_t len, ModbusConfigAlia
     this->actOneConfigAlias(configParam, configIndex, config, key);
 }
 
+inline
 void ERaApplication::actOneConfigAlias(int* ptr, size_t len, ModbusConfigAlias_t& config, const char* key) {
     if (!len) {
         return;
@@ -518,6 +560,7 @@ void ERaApplication::actOneConfigAlias(int* ptr, size_t len, ModbusConfigAlias_t
     memcpy(config.key, key, 36);
 }
 
+inline
 void ERaApplication::processParseAction(char* ptr, size_t len, ModbusConfigAlias_t& config) {
     size_t position {0};
     size_t numHyphen {0};
@@ -538,6 +581,7 @@ void ERaApplication::processParseAction(char* ptr, size_t len, ModbusConfigAlias
     }
 }
 
+inline
 void ERaApplication::parseOneAction(char* ptr, size_t len, ModbusConfigAlias_t& config) {
     char buff[len + 1] {0};
     size_t position {0};
@@ -558,6 +602,7 @@ void ERaApplication::parseOneAction(char* ptr, size_t len, ModbusConfigAlias_t& 
     this->actOneAction(configParam, configIndex, config);
 }
 
+inline
 void ERaApplication::actOneAction(int* ptr, size_t len, ModbusConfigAlias_t& config) {
     Action_t& action = config.action[config.readActionCount];
 
@@ -569,6 +614,7 @@ void ERaApplication::actOneAction(int* ptr, size_t len, ModbusConfigAlias_t& con
     }
 }
 
+inline
 void ERaApplication::processParseIsEnableBluetooth(char* ptr, size_t len) {
     if (!len) {
         return;
