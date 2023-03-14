@@ -38,7 +38,7 @@ class MQTTLinuxClient {
 
   uint16_t keepAlive = 10;
   bool cleanSession = true;
-  uint32_t timeout = 1000;
+  uint32_t timeout = 2000;
 
   const char *hostname = nullptr;
   int port = 0;
