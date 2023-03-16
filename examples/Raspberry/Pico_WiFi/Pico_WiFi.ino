@@ -18,12 +18,15 @@
 // #define ERA_DEBUG
 // #define ERA_SERIAL Serial
 
+/* Select your modem */
+#define TINY_GSM_MODEM_ESP8266
+// #define TINY_GSM_MODEM_ESP32
+
 /* Select ERa host location (VN: Viet Nam, SG: Singapore) */
 #define ERA_LOCATION_VN
 // #define ERA_LOCATION_SG
 
 // You should get Auth Token in the ERa App or ERa Dashboard
-#define TINY_GSM_MODEM_ESP8266
 #define ERA_AUTH_TOKEN "ERA2706"
 
 #include <Arduino.h>
