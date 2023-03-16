@@ -1,4 +1,5 @@
-#ifndef INC_ERA_MODBUS_ESP32_HPP_
+#if !defined(INC_ERA_MODBUS_ESP32_HPP_) && \
+    defined(ERA_MODBUS)
 #define INC_ERA_MODBUS_ESP32_HPP_
 
 #include <Modbus/ERaModbus.hpp>
@@ -9,7 +10,7 @@
 
 template <class Api>
 void ERaModbus<Api>::configModbus() {
-    if (this->stream != NULL) {
+    if (this->streamRTU != NULL) {
         return;
     }
 
@@ -78,7 +79,7 @@ bool ERaModbus<Api>::waitResponse(ERaModbusResponse* response) {
                 return response->isSuccess();
             }
             ERA_MODBUS_YIELD();
-        } while (ERaRemainingTime(startMillis, MAX_TIMEOUT_MODBUS));
+        } while (ERaRemainingTime(startMillis, this->timeout));
         return false;
     }
 
@@ -117,7 +118,7 @@ bool ERaModbus<Api>::waitResponse(ERaModbusResponse* response) {
             }
         }
         ERA_MODBUS_YIELD();
-    } while (ERaRemainingTime(startMillis, MAX_TIMEOUT_MODBUS));
+    } while (ERaRemainingTime(startMillis, this->timeout));
     return false;
 }
 

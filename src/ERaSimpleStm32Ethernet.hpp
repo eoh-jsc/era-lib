@@ -20,4 +20,6 @@
     extern ERaEthernet< ERaMqtt<EthernetClient, MQTTClient> > ERa;
 #endif
 
+#include <ERa/ERaStatic.hpp>
+
 #endif /* INC_ERA_SIMPLE_STM32_ETHERNET_HPP_ */

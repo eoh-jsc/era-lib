@@ -13,8 +13,16 @@ $ git clone https://github.com/eoh-jsc/era-lib.git
 $ cd era-lib/linux
 $ make clean all target=raspberry
 ```
+Enable TLS (Raspbian 32-bit)
+```bash
+$ make clean all target=raspberry tls=true
+```
 
 Step 5: Run ERa with your token:
 ```bash
 $ sudo ./era --token=YourAuthToken
+```
+or
+```bash
+$ sudo ./era --token=YourAuthToken --id=YourBoardID
 ```

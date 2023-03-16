@@ -89,12 +89,12 @@ void ERaApi<Proto, Flash>::handleWritePin(cJSON* root) {
 
 template <class Proto, class Flash>
 inline
-void ERaApi<Proto, Flash>::processArduinoPinRequest(const std::vector<std::string>& arrayTopic, const char* payload) {
+void ERaApi<Proto, Flash>::processArduinoPinRequest(const ERaDataBuff& arrayTopic, const char* payload) {
 	if (arrayTopic.size() != 3) {
 		return;
 	}
-	const std::string& str = arrayTopic.at(2);
-	if (str.empty()) {
+	const char* str = arrayTopic.at(2).getString();
+	if (str == nullptr) {
 		return;
 	}
 	cJSON* root = cJSON_Parse(payload);
@@ -105,7 +105,7 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const std::vector<std::strin
 	}
 	ERaDataJson data(root);
 	ERaParam param(data);
-	uint8_t pin = ERA_DECODE_PIN_NAME(str.c_str());
+	uint8_t pin = ERA_DECODE_PIN_NAME(str);
 	ERA_CHECK_PIN_RETURN(pin);
 	cJSON* item = cJSON_GetObjectItem(root, "value");
 	if (cJSON_IsNumber(item) ||
@@ -132,7 +132,7 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const std::vector<std::strin
 
 template <class Proto, class Flash>
 inline
-void ERaApi<Proto, Flash>::handlePinRequest(const std::vector<std::string>& arrayTopic, const char* payload) {
+void ERaApi<Proto, Flash>::handlePinRequest(const ERaDataBuff& arrayTopic, const char* payload) {
 	cJSON* root = cJSON_Parse(payload);
 	if (!cJSON_IsObject(root)) {
 		cJSON_Delete(root);

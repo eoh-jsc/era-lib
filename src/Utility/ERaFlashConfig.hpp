@@ -10,8 +10,9 @@
 #elif defined(ARDUINO_ARCH_STM32) ||    \
     defined(ERA_FLASH_STM32)
     #include <Utility/ERaFlashStm32.hpp>
-#elif defined(ARDUINO_ARCH_RP2040) ||   \
-    defined(ERA_FLASH_LITTLEFS)
+#elif !defined(__MBED__) &&             \
+    (defined(ARDUINO_ARCH_RP2040) ||    \
+    defined(ERA_FLASH_LITTLEFS))
     #include <Utility/ERaFlashLittleFS.hpp>
 #elif defined(__MBED__) ||              \
     defined(ERA_FLASH_MBED)

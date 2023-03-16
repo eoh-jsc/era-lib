@@ -6,9 +6,20 @@
 #include <ERa/ERaPinDef.hpp>
 #include <ERa/ERaData.hpp>
 #include <ERa/ERaParam.hpp>
+#include <ERa/ERaHooks.hpp>
+#include <ERa/ERaProperty.hpp>
+#include <ERa/ERaHelper.hpp>
+#include <ERa/ERaTransp.hpp>
 #include <Utility/ERaQueue.hpp>
 #include <Modbus/ERaModbusSimple.hpp>
 #include <Zigbee/ERaZigbeeSimple.hpp>
+
+#if defined(__has_include) &&       \
+    __has_include(<functional>) &&  \
+    !defined(ERA_IGNORE_STD_FUNCTIONAL_STRING)
+    #include <functional>
+    #define API_HAS_FUNCTIONAL_H
+#endif
 
 #if defined(analogInputToDigitalPin)
 	#define ERA_DECODE_PIN(pin)		analogInputToDigitalPin(pin)
@@ -48,6 +59,7 @@ class Internal {};
 template <class Proto, class Flash>
 class ERaApi
 	: public Internal
+	, public ERaProperty< ERaApi<Proto, Flash> >
 #if defined(ERA_MODBUS)
 	, public ERaModbus< ERaApi<Proto, Flash> >
 #endif
@@ -55,11 +67,17 @@ class ERaApi
 	, public ERaZigbee< ERaApi<Proto, Flash> >
 #endif
 {
+#if defined(API_HAS_FUNCTIONAL_H)
 	typedef std::function<void(void*)> ReportPinCallback_t;
-
-	ERaReport ERaRp;
+#else
+    typedef void (*ReportPinCallback_t)(void*);
+#endif
+    const char* FILENAME_BT_CFG = FILENAME_BT_CONFIG;
+    const char* FILENAME_PIN_CFG = FILENAME_PIN_CONFIG;
 
 protected:
+    friend class ERaProperty< ERaApi<Proto, Flash> >;
+	typedef ERaProperty< ERaApi<Proto, Flash> > Property;
 #if defined(ERA_MODBUS)
     friend class ERaModbus< ERaApi<Proto, Flash> >;
 	typedef ERaModbus< ERaApi<Proto, Flash> > Modbus;
@@ -72,6 +90,7 @@ protected:
 public:
     ERaApi(Flash& _flash)
 		: flash(_flash)
+		, ERaPinRp(ERaRp)
     {}
     ~ERaApi()
     {}
@@ -133,6 +152,17 @@ public:
 		this->configIdMultiWrite(configId, value, tail...);
 	}
 
+	void eraseAllConfigs() {
+		this->flash.begin();
+		this->removePinConfig();
+#if defined(ERA_BT)
+		this->removeBluetoothConfig();
+#endif
+#if defined(ERA_MODBUS)
+		Modbus::removeConfigFromFlash();
+#endif
+	}
+
 	void delays(MillisTime_t ms) {
 		if (!ms) {
 			return;
@@ -154,26 +184,48 @@ public:
 #endif
 	}
 
+	Flash& getFlash() const {
+		return this->flash;
+	}
+
 protected:
 	void addInfo(cJSON* root);
 	void addModbusInfo(cJSON* root);
 	void handleReadPin(cJSON* root);
 	void handleWritePin(cJSON* root);
 	void handleVirtualPin(cJSON* root);
-	void handlePinRequest(const std::vector<std::string>& arrayTopic, const char* payload);
-	void processArduinoPinRequest(const std::vector<std::string>& arrayTopic, const char* payload);
-	void processVirtualPinRequest(const std::vector<std::string>& arrayTopic, const char* payload);
+	void handlePinRequest(const ERaDataBuff& arrayTopic, const char* payload);
+	void processArduinoPinRequest(const ERaDataBuff& arrayTopic, const char* payload);
+	void processVirtualPinRequest(const ERaDataBuff& arrayTopic, const char* payload);
+	void initPinConfig();
+	void parsePinConfig(const char* str);
+	void storePinConfig(const char* str);
+	void removePinConfig();
+
+#if defined(ERA_BT)
+	void initBluetoothConfig();
+	void updateBluetoothConfig(ERaTransp* transport, char* buf);
+	void parseBluetoothConfig(char* config, const char* hash, const char* buf);
+	void storeBluetoothConfig(const char* str);
+	void removeBluetoothConfig();
+#endif
 
 	void begin() {
 		this->flash.begin();
+		this->initPinConfig();
+#if defined(ERA_BT)
+		this->initBluetoothConfig();
+#endif
 	}
 
 	bool run() {
 		ERA_RUN_YIELD();
+		Property::run();
 		this->ERaPinRp.run();
-        return this->thisProto().transp.run();
+        return this->thisProto().getTransp().run();
 	}
 
+#if defined(ERA_MODBUS)
 	void modbusDataWrite(ERaDataBuff* value) {
 		ERaRsp_t rsp;
 		rsp.type = ERaTypeWriteT::ERA_WRITE_MODBUS_DATA;
@@ -182,7 +234,9 @@ protected:
 		rsp.param = 0;
 		this->thisProto().sendCommand(rsp, value);
 	}
+#endif
 
+#if defined(ERA_ZIGBEE)
 	void zigbeeDataWrite(const char* id, cJSON* value, bool retained = true) {
 		ERaRsp_t rsp;
 		rsp.type = ERaTypeWriteT::ERA_WRITE_ZIGBEE_DATA;
@@ -191,8 +245,10 @@ protected:
 		rsp.param = value;
 		this->thisProto().sendCommand(rsp);
 	}
+#endif
 
 	void callERaWriteHandler(uint8_t pin, const ERaParam& param) {
+		Property::handler(pin, param);
 		ERaWriteHandler handle = getERaWriteHandler(pin);
 		if ((handle != nullptr) &&
 			(handle != ERaWidgetWrite)) {
@@ -225,28 +281,73 @@ protected:
 		}
 	}
 
+    void beginReadFromFlash(const char* filename, bool force = false) {
+		if (!this->thisProto().getTransp().getAskConfig() || force) {
+			this->flash.beginRead(filename);
+		}
+    }
+
+    char* readLineFromFlash(bool force = false) {
+		char* buf = nullptr;
+		if (!this->thisProto().getTransp().getAskConfig() || force) {
+			buf = this->flash.readLine();
+		}
+		return buf;
+    }
+
+    void endReadFromFlash(bool force = false) {
+		if (!this->thisProto().getTransp().getAskConfig() || force) {
+			this->flash.endRead();
+		}
+    }
+
+    void beginWriteToFlash(const char* filename, bool force = false) {
+		if (!this->thisProto().getTransp().getAskConfig() || force) {
+			this->flash.beginWrite(filename);
+		}
+    }
+
+    void writeLineToFlash(const char* buf, bool force = false) {
+		if (!this->thisProto().getTransp().getAskConfig() || force) {
+			this->flash.writeLine(buf);
+		}
+    }
+
+    void endWriteToFlash(bool force = false) {
+		if (!this->thisProto().getTransp().getAskConfig() || force) {
+			this->flash.endWrite();
+		}
+    }
+
 	void writeToFlash(const char* filename, const char* buf, bool force = false) {
-		if (!this->thisProto().transp.getAskConfig() || force) {
+		if (!this->thisProto().getTransp().getAskConfig() || force) {
 			this->flash.writeFlash(filename, buf);
+		}
+	}
+
+	void writeBytesToFlash(const char* key, const void* value, size_t len, bool force = false) {
+		if (!this->thisProto().getTransp().getAskConfig() || force) {
+			this->flash.writeFlash(key, value, len);
 		}
 	}
 
 	char* readFromFlash(const char* filename, bool force = false) {
 		char* buf = nullptr;
-		if (!this->thisProto().transp.getAskConfig() || force) {
+		if (!this->thisProto().getTransp().getAskConfig() || force) {
 			buf = this->flash.readFlash(filename);
 		}
 		return buf;
 	}
 
 	void removeFromFlash(const char* filename, bool force = false) {
-		if (!this->thisProto().transp.getAskConfig() || force) {
-			this->flash.writeFlash(filename, "");
+		if (!this->thisProto().getTransp().getAskConfig() || force) {
+			this->flash.writeFlash(filename, "{}");
 		}
 	}
 
-	Flash& flash;
-	ERaPin<ERaReport> ERaPinRp {ERaRp};
+	ERaPin<ERaReport>& getPinRp() {
+		return this->ERaPinRp;
+	}
 
 private:
 	template <typename... Args>
@@ -279,44 +380,16 @@ private:
 	uint8_t getPinMode(const cJSON* const root, const uint8_t defaultMode = VIRTUAL);
 	bool isReadPinMode(uint8_t pMode);
 	bool getGPIOPin(const cJSON* const root, const char* key, uint8_t& pin);
-	bool isDigit(const std::string& str);
 
-	void sendPinEvent(void* args) {
-		ERaReport::ReportData_t* rp = (ERaReport::ReportData_t*)args;
-		if (rp == nullptr) {
-			return;
-		}
-		switch (rp->pinMode) {
-			case ANALOG:
-				this->analogWrite(rp->pin, rp->value);
-				break;
-			case INPUT:
-			case INPUT_PULLUP:
-			case INPUT_PULLDOWN:
-			case OUTPUT:
-				this->digitalWrite(rp->pin, rp->value);
-				break;
-			case PWM:
-				this->pwmWrite(rp->pin, rp->value);
-				break;
-			default:
-				break;
-		}
-	}
+	void sendPinEvent(void* args);
+	void sendPinConfigEvent(void* args);
+#if !defined(API_HAS_FUNCTIONAL_H)
+	static void _sendPinEvent(void* args);
+	static void _sendPinConfigEvent(void* args);
+#endif
 
-	void sendPinConfigEvent(void* args) {
-		ERaReport::ReportData_t* rp = (ERaReport::ReportData_t*)args;
-		if (rp == nullptr) {
-			return;
-		}
-		ERaParam raw(rp->value);
-		ERaParam param(rp->value);
-		if (rp->scale.enable) {
-			raw = ERaMapNumberRange(rp->value, rp->scale.min, rp->scale.max,
-											rp->scale.rawMin, rp->scale.rawMax);
-		}
-		this->configIdWrite(rp->configId, rp->value);
-		this->callERaPinReadHandler(rp->pin, param, raw);
+	bool connected() const {
+		return this->thisProto().connected();
 	}
 
 	inline
@@ -329,6 +402,7 @@ private:
 		return static_cast<Proto&>(*this);
 	}
 
+#if defined(API_HAS_FUNCTIONAL_H)
 	ReportPinCallback_t reportPinCb = [=](void* args) {
 		this->sendPinEvent(args);
 	};
@@ -336,6 +410,19 @@ private:
 	ReportPinCallback_t reportPinConfigCb = [=](void* args) {
 		this->sendPinConfigEvent(args);
 	};
+#else
+	ReportPinCallback_t reportPinCb = [](void* args) {
+		ERaApi::_sendPinEvent(args);
+	};
+
+	ReportPinCallback_t reportPinConfigCb = [](void* args) {
+		ERaApi::_sendPinConfigEvent(args);
+	};
+#endif
+
+	Flash& flash;
+	ERaReport ERaRp;
+	ERaPin<ERaReport> ERaPinRp;
 };
 
 template <class Proto, class Flash>
@@ -375,12 +462,12 @@ void ERaApi<Proto, Flash>::handleVirtualPin(cJSON* root) {
 
 template <class Proto, class Flash>
 inline
-void ERaApi<Proto, Flash>::processVirtualPinRequest(const std::vector<std::string>& arrayTopic, const char* payload) {
+void ERaApi<Proto, Flash>::processVirtualPinRequest(const ERaDataBuff& arrayTopic, const char* payload) {
 	if (arrayTopic.size() != 3) {
 		return;
 	}
-	const std::string& str = arrayTopic.at(2);
-	if (str.empty()) {
+	const char* str = arrayTopic.at(2).getString();
+	if (str == nullptr) {
 		return;
 	}
 	cJSON* root = cJSON_Parse(payload);
@@ -391,7 +478,7 @@ void ERaApi<Proto, Flash>::processVirtualPinRequest(const std::vector<std::strin
 	}
 	ERaDataJson data(root);
 	ERaParam param(data);
-	uint8_t pin = ERA_DECODE_PIN_NAME(str.c_str());
+	uint8_t pin = ERA_DECODE_PIN_NAME(str);
 	cJSON* item = cJSON_GetObjectItem(root, "value");
 	if (cJSON_IsNumber(item) ||
 		cJSON_IsBool(item)) {
@@ -405,6 +492,126 @@ void ERaApi<Proto, Flash>::processVirtualPinRequest(const std::vector<std::strin
 	root = nullptr;
 	item = nullptr;
 }
+
+template <class Proto, class Flash>
+inline
+void ERaApi<Proto, Flash>::initPinConfig() {
+    char* ptr = nullptr;
+    ptr = this->readFromFlash(FILENAME_PIN_CFG);
+    this->parsePinConfig(ptr);
+    free(ptr);
+	ptr = nullptr;
+}
+
+template <class Proto, class Flash>
+inline
+void ERaApi<Proto, Flash>::parsePinConfig(const char* str) {
+	cJSON* root = cJSON_Parse(str);
+	if (!cJSON_IsObject(root)) {
+		cJSON_Delete(root);
+		root = nullptr;
+		return;
+	}
+
+	cJSON* item = cJSON_GetObjectItem(root, "hash_id");
+	if (cJSON_IsString(item)) {
+		this->ERaPinRp.updateHashID(item->valuestring);
+	}
+	item = cJSON_GetObjectItem(root, "command");
+	if (cJSON_IsString(item)) {
+		this->thisProto().processDownCommand(str, root, item);
+	}
+
+	cJSON_Delete(root);
+	root = nullptr;
+	item = nullptr;
+}
+
+template <class Proto, class Flash>
+inline
+void ERaApi<Proto, Flash>::storePinConfig(const char* str) {
+	if (str == nullptr) {
+		return;
+	}
+
+	this->writeToFlash(FILENAME_PIN_CFG, str);
+}
+
+template <class Proto, class Flash>
+inline
+void ERaApi<Proto, Flash>::removePinConfig() {
+	this->ERaPinRp.deleteAll();
+	this->removeFromFlash(FILENAME_PIN_CFG);
+}
+
+#if defined(ERA_BT)
+	template <class Proto, class Flash>
+	inline
+	void ERaApi<Proto, Flash>::initBluetoothConfig() {
+		ERaTransp* transport = this->thisProto().getERaTransp();
+		if (transport == nullptr) {
+			return;
+		}
+
+		char* ptr = nullptr;
+		ptr = this->readFromFlash(FILENAME_BT_CFG);
+		this->updateBluetoothConfig(transport, ptr);
+		free(ptr);
+		ptr = nullptr;
+	}
+
+	template <class Proto, class Flash>
+	inline
+	void ERaApi<Proto, Flash>::updateBluetoothConfig(ERaTransp* transport, char* buf) {
+		cJSON* root = cJSON_Parse(buf);
+		if (!cJSON_IsObject(root)) {
+			cJSON_Delete(root);
+			root = nullptr;
+			return;
+		}
+		cJSON* data = cJSON_GetObjectItem(root, "data");
+		cJSON* item = cJSON_GetObjectItem(data, "hash_id");
+		if (cJSON_IsString(item)) {
+			// Update later
+		}
+		item = cJSON_GetObjectItem(data, "bluetooth");
+		if (cJSON_IsString(item)) {
+			transport->begin(item->valuestring);
+		}
+		cJSON_Delete(root);
+		root = nullptr;
+	}
+
+	template <class Proto, class Flash>
+	inline
+	void ERaApi<Proto, Flash>::parseBluetoothConfig(char* config, const char* hash, const char* buf) {
+		ERaTransp* transport = this->thisProto().getERaTransp();
+		if (transport == nullptr) {
+			return;
+		}
+
+		transport->begin(config);
+		// Hash ID update later
+		this->storeBluetoothConfig(buf);
+		ERA_FORCE_UNUSED(hash);
+	}
+
+	template <class Proto, class Flash>
+	inline
+	void ERaApi<Proto, Flash>::storeBluetoothConfig(const char* str) {
+		if (str == nullptr) {
+			return;
+		}
+
+		this->writeToFlash(FILENAME_BT_CFG, str);
+	}
+
+	template <class Proto, class Flash>
+	inline
+	void ERaApi<Proto, Flash>::removeBluetoothConfig() {
+		this->removeFromFlash(FILENAME_BT_CFG);
+	}
+#endif
 
 template <class Proto, class Flash>
 inline
@@ -535,7 +742,9 @@ bool ERaApi<Proto, Flash>::isReadPinMode(uint8_t pMode) {
 	switch (pMode) {
 		case INPUT:
 		case INPUT_PULLUP:
+#if !defined(ERA_IGNORE_INPUT_PULLDOWN)
 		case INPUT_PULLDOWN:
+#endif
 		case ANALOG:
 			return true;
 		default:
@@ -557,9 +766,9 @@ bool ERaApi<Proto, Flash>::getGPIOPin(const cJSON* const root, const char* key, 
 	char* ptr = strstr(root->string, key);
 
 	if (strchr((ptr += strlen(key)), '_')) {
-		std::string str(strchr(ptr, '_') + 1);
-		if (!str.empty()) {
-			pin = ERA_DECODE_PIN_NAME(str.c_str());
+		const char* str = (strchr(ptr, '_') + 1);
+		if (str != nullptr) {
+			pin = ERA_DECODE_PIN_NAME(str);
 		}
 	}
 
@@ -568,23 +777,46 @@ bool ERaApi<Proto, Flash>::getGPIOPin(const cJSON* const root, const char* key, 
 
 template <class Proto, class Flash>
 inline
-bool ERaApi<Proto, Flash>::isDigit(const std::string& str) {
-    if (str.empty()) {
-        return false;
-    }
-    size_t position {0};
-    if (str.at(0) == '-' || str.at(0) == '+') {
-        position = 1;
-        if (str.size() < 2) {
-            return false;
-        }
-    }
-    for (auto i = str.begin() + position; i != str.end(); ++i) {
-        if (!isdigit(*i)) {
-            return false;
-        }
-    }
-    return true;
+void ERaApi<Proto, Flash>::sendPinEvent(void* args) {
+	ERaReport::ReportData_t* rp = (ERaReport::ReportData_t*)args;
+	if (rp == nullptr) {
+		return;
+	}
+	switch (rp->pinMode) {
+		case ANALOG:
+			this->analogWrite(rp->pin, rp->value);
+			break;
+		case INPUT:
+		case INPUT_PULLUP:
+#if !defined(ERA_IGNORE_INPUT_PULLDOWN)
+		case INPUT_PULLDOWN:
+#endif
+		case OUTPUT:
+			this->digitalWrite(rp->pin, rp->value);
+			break;
+		case PWM:
+			this->pwmWrite(rp->pin, rp->value);
+			break;
+		default:
+			break;
+	}
+}
+
+template <class Proto, class Flash>
+inline
+void ERaApi<Proto, Flash>::sendPinConfigEvent(void* args) {
+	ERaReport::ReportData_t* rp = (ERaReport::ReportData_t*)args;
+	if (rp == nullptr) {
+		return;
+	}
+	ERaParam raw(rp->value);
+	ERaParam param(rp->value);
+	if (rp->scale.enable) {
+		raw = ERaMapNumberRange(rp->value, rp->scale.min, rp->scale.max,
+										rp->scale.rawMin, rp->scale.rawMax);
+	}
+	this->configIdWrite(rp->configId, rp->value);
+	this->callERaPinReadHandler(rp->pin, param, raw);
 }
 
 template <typename T>

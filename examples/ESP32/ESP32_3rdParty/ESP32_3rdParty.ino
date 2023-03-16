@@ -13,6 +13,11 @@
 // Enable debug console
 // Set CORE_DEBUG_LEVEL = 3 first
 // #define ERA_DEBUG
+// #define ERA_SERIAL Serial
+
+/* Select ERa host location (VN: Viet Nam, SG: Singapore) */
+#define ERA_LOCATION_VN
+// #define ERA_LOCATION_SG
 
 #include <Arduino.h>
 #include <ERa.hpp>
@@ -91,6 +96,8 @@ void setup() {
     pinMode(LED_PIN, OUTPUT);
     pinMode(BUTTON_PIN, INPUT);
 
+    /* Set board id */
+    // ERa.setBoardID("Board_1");
     /* Initializing the ERa library. */
     ERa.begin(auth, ssid, pass,
             host, port, user, password);

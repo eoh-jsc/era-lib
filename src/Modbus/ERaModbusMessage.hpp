@@ -1,8 +1,16 @@
 #ifndef INC_ERA_MODBUS_MESSAGE_HPP_
 #define INC_ERA_MODBUS_MESSAGE_HPP_
 
+#include <new>
 #include <stdint.h>
 #include <stddef.h>
+#include <ERa/ERaDetect.hpp>
+
+#if defined(ERA_UNUSED_STD_NOTHROW)
+    #define new_modbus  new
+#else
+    #define new_modbus  new(std::nothrow)
+#endif
 
 class ERaModbusMessage
 {
@@ -12,7 +20,7 @@ public:
         , length(_length)
         , index(0)
     {
-        this->buffer = new uint8_t[_length] {0};
+        this->buffer = new_modbus uint8_t[_length] {0};
     }
     virtual ~ERaModbusMessage()
     {

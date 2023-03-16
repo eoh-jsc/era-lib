@@ -1,10 +1,21 @@
 #ifndef INC_ERA_COMMAND_HANDLER_HPP_
 #define INC_ERA_COMMAND_HANDLER_HPP_
 
-#include <functional>
+#include <ERa/ERaDetect.hpp>
 #include <Utility/ERacJSON.hpp>
 
-typedef std::function<void(void)> HandlerSimple_t;
+#if defined(__has_include) &&       \
+    __has_include(<functional>) &&  \
+    !defined(ERA_IGNORE_STD_FUNCTIONAL_STRING)
+    #include <functional>
+    #define CMD_HAS_FUNCTIONAL_H
+#endif
+
+#if defined(CMD_HAS_FUNCTIONAL_H)
+    typedef std::function<void(void)> HandlerSimple_t;
+#else
+    typedef void (*HandlerSimple_t)(void);
+#endif
 
 class ERaCmdHandler
 {

@@ -17,4 +17,6 @@
     extern ERaEthernet< ERaMqttSecure<WiFiClientSecure, MQTTClient> > ERa;
 #endif
 
+#include <ERa/ERaStatic.hpp>
+
 #endif /* INC_ERA_SIMPLE_ESP32_SSL_ETHERNET_HPP_ */

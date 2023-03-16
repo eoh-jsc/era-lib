@@ -65,6 +65,19 @@ public:
 		this->valueobject = nullptr;
 	}
 
+	bool isNumber() const {
+		return this->getType(ERaParamTypeT::ERA_PARAM_TYPE_NUMBER);
+	}
+
+	bool isString() const {
+		return (this->getType(ERaParamTypeT::ERA_PARAM_TYPE_STRING) ||
+				this->getType(ERaParamTypeT::ERA_PARAM_TYPE_STATIC_STRING));
+	}
+
+	bool isObject() const {
+		return this->getType(ERaParamTypeT::ERA_PARAM_TYPE_OBJECT);
+	}
+
 	int getInt() const {
 		return this->valueint;
 	}
@@ -126,16 +139,37 @@ public:
 		return *this;
 	}
 
+	template <typename T>
+	bool operator == (T value) const {
+		return this->valueint == (int)value;
+	}
+
+	bool operator == (float value) const {
+		return ERaFloatCompare((float)this->valuedouble, value);
+	}
+
+	bool operator == (double value) const {
+		return ERaDoubleCompare(this->valuedouble, value);
+	}
+
+	bool operator == (char* value) const {
+		return ERaStrCmp(this->valuestring, value);
+	}
+
+	bool operator == (const char* value) const {
+		return ERaStrCmp(this->valuestring, value);
+	}
+
 	ERaDataJson::iterator operator [] (int index) const {
 		if (this->valueobject != nullptr) {
-			return (*this->valueobject)[index];
+			return this->valueobject->at(index);
 		}
 		return ERaDataJson::iterator::invalid();
 	}
 
 	ERaDataJson::iterator operator [] (const char* key) const {
 		if (this->valueobject != nullptr) {
-			return (*this->valueobject)[key];
+			return this->valueobject->at(key);
 		}
 		return ERaDataJson::iterator::invalid();
 	}
@@ -155,7 +189,7 @@ private:
 	template <typename T>
 	void addParam(T value) {
 		this->valueint = (int)value;
-		this->valuedouble = value;
+		this->valuedouble = (double)value;
 		this->setType(ERaParamTypeT::ERA_PARAM_TYPE_NUMBER, true);
 	}
 
@@ -215,7 +249,7 @@ private:
         }
     }
 
-    bool getType(uint8_t mask) {
+    bool getType(uint8_t mask) const {
         return (this->type & mask) == mask;
     }
 
@@ -228,10 +262,10 @@ private:
 
 inline
 void ERaDataJson::add(const char* name, ERaParam& value) {
-	if (value.getString() != nullptr) {
+	if (value.isString()) {
 		this->add(name, value.getString());
 	}
-	else {
+	else if (value.isNumber()) {
 		this->add(name, value.getDouble());
 	}
 }

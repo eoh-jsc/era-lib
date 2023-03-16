@@ -24,13 +24,17 @@
 #include <ERaOptionsArgs.hpp>
 
 static const char* auth;
+static const char* boardID;
 static const char* host;
 static uint16_t port;
+static const char* user;
+static const char* pass;
 
 ERaTimer timer;
 
 void setup() {
-    ERa.begin(auth, host, port, auth, auth);
+    ERa.setBoardID(boardID);
+    ERa.begin(auth, host, port, user, pass);
     timer.setInterval(1000L, []() {
         printf("Uptime: %d\r\n", ERaMillis() / 1000L);
     });
@@ -42,7 +46,8 @@ void loop() {
 }
 
 int main(int argc, char *argv[]) {
-    processArgs(argc, argv, auth, host, port);
+    processArgs(argc, argv, auth, boardID,
+                host, port, user, pass);
 
     setup();
     while (1) {

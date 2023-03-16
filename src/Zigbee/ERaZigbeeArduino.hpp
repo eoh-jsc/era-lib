@@ -1,10 +1,13 @@
-#ifndef INC_ERA_ZIGBEE_ARDUINO_HPP_
+#if !defined(INC_ERA_ZIGBEE_ARDUINO_HPP_) && \
+    defined(ERA_ZIGBEE)
 #define INC_ERA_ZIGBEE_ARDUINO_HPP_
 
 #include <Zigbee/ERaZigbee.hpp>
 
 #if defined(ARDUINO_ARCH_STM32)
     #define SerialZB SerialZigbee<HardwareSerial, uint32_t, uint32_t>::serial(PB11, PB10)
+#elif defined(ARDUINO_ARCH_RP2040)
+    #define SerialZB Serial2
 #else
     #define SerialZB Serial1
 #endif

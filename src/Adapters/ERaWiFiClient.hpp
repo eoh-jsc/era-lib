@@ -5,7 +5,11 @@
     #define ERA_PROTO_TYPE            "WiFi"
 #endif
 
-#include <TinyGsmClient.h>
+#if !defined(ERA_TINY_GSM)
+    #define ERA_TINY_GSM
+#endif
+
+#include <TinyGsmClient.hpp>
 #include <ERa/ERaProtocol.hpp>
 #include <MQTT/ERaMqtt.hpp>
 
@@ -16,7 +20,11 @@ typedef struct __ERaConfig_t {
     char pass[64];
 } ERA_ATTR_PACKED ERaConfig_t;
 
-static ERaConfig_t ERaConfig{0};
+#if !defined(NO_GLOBAL_INSTANCES) && !defined(NO_GLOBAL_ERA)
+    static ERaConfig_t ERaConfig {};
+#else
+    #define ERaConfig  StaticHelper<ERaConfig_t>::instance()
+#endif
 
 class ERaFlash;
 
@@ -46,7 +54,7 @@ public:
                 return false;
             }
         }
-        this->transp.setSSID(ssid);
+        this->getTransp().setSSID(ssid);
         return true;
     }
 
@@ -85,8 +93,8 @@ public:
         Base::begin(auth);
         this->modem = &gsm;
         this->client.init(modem);
-        this->transp.setClient(&this->client);
-        this->transp.config(host, port, username, password);
+        this->getTransp().setClient(&this->client);
+        this->getTransp().config(host, port, username, password);
     }
 
     void begin(const char* auth,
@@ -109,7 +117,7 @@ public:
                 const char* ssid,
                 const char* pass,
                 int rstPin = -1) {
-        this->begin(ERA_MQTT_CLIENT_ID, gsm, ssid, pass,
+        this->begin(ERA_AUTHENTICATION_TOKEN, gsm, ssid, pass,
                     rstPin, ERA_MQTT_HOST, ERA_MQTT_PORT,
                     ERA_MQTT_USERNAME, ERA_MQTT_PASSWORD);
     }
@@ -130,7 +138,7 @@ public:
             default:
                 if (this->modem->isNetworkConnected() ||
                     this->connectNetwork(ERaConfig.ssid, ERaConfig.pass)) {
-                    this->transp.setSignalQuality(this->modem->getSignalQuality());
+                    this->getTransp().setSignalQuality(this->modem->getSignalQuality());
                     ERaState::set(StateT::STATE_CONNECTING_CLOUD);
                 }
                 break;
@@ -180,29 +188,32 @@ private:
 };
 
 template <class Proto, class Flash>
+inline
 void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
     cJSON_AddStringToObject(root, INFO_BOARD, ERA_BOARD_TYPE);
     cJSON_AddStringToObject(root, INFO_MODEL, ERA_MODEL_TYPE);
-	cJSON_AddStringToObject(root, INFO_AUTH_TOKEN, this->thisProto().ERA_AUTH);
+	cJSON_AddStringToObject(root, INFO_BOARD_ID, this->thisProto().getBoardID());
+	cJSON_AddStringToObject(root, INFO_AUTH_TOKEN, this->thisProto().getAuth());
     cJSON_AddStringToObject(root, INFO_FIRMWARE_VERSION, ERA_FIRMWARE_VERSION);
-    cJSON_AddStringToObject(root, INFO_SSID, ((this->thisProto().transp.getSSID() == nullptr) ?
-                                            ERA_PROTO_TYPE : this->thisProto().transp.getSSID()));
+    cJSON_AddStringToObject(root, INFO_SSID, ((this->thisProto().getTransp().getSSID() == nullptr) ?
+                                            ERA_PROTO_TYPE : this->thisProto().getTransp().getSSID()));
     cJSON_AddStringToObject(root, INFO_BSSID, ERA_PROTO_TYPE);
-    cJSON_AddNumberToObject(root, INFO_RSSI, this->thisProto().transp.getSignalQuality());
+    cJSON_AddNumberToObject(root, INFO_RSSI, this->thisProto().getTransp().getSignalQuality());
     cJSON_AddStringToObject(root, INFO_MAC, ERA_PROTO_TYPE);
     cJSON_AddStringToObject(root, INFO_LOCAL_IP, ERA_PROTO_TYPE);
-    cJSON_AddNumberToObject(root, INFO_PING, this->thisProto().transp.getPing());
+    cJSON_AddNumberToObject(root, INFO_PING, this->thisProto().getTransp().getPing());
 }
 
 template <class Proto, class Flash>
+inline
 void ERaApi<Proto, Flash>::addModbusInfo(cJSON* root) {
 	cJSON_AddNumberToObject(root, INFO_MB_CHIP_TEMPERATURE, 5000);
 	cJSON_AddNumberToObject(root, INFO_MB_TEMPERATURE, 0);
 	cJSON_AddNumberToObject(root, INFO_MB_VOLTAGE, 999);
 	cJSON_AddNumberToObject(root, INFO_MB_IS_BATTERY, 0);
-	cJSON_AddNumberToObject(root, INFO_MB_RSSI, this->thisProto().transp.getSignalQuality());
-	cJSON_AddStringToObject(root, INFO_MB_WIFI_USING, ((this->thisProto().transp.getSSID() == nullptr) ?
-                                                    ERA_PROTO_TYPE : this->thisProto().transp.getSSID()));
+	cJSON_AddNumberToObject(root, INFO_MB_RSSI, this->thisProto().getTransp().getSignalQuality());
+	cJSON_AddStringToObject(root, INFO_MB_WIFI_USING, ((this->thisProto().getTransp().getSSID() == nullptr) ?
+                                                    ERA_PROTO_TYPE : this->thisProto().getTransp().getSSID()));
 }
 
 #endif /* INC_ERA_WIFI_CLIENT_HPP_ */

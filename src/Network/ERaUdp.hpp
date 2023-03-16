@@ -91,9 +91,12 @@ protected:
 private:
     void parseBuffer(const char* ptr);
     void runCommand(const char* cmd);
-    void runCommand(const char* cmd, ERaCmdHandler* handler);
-    void getWiFiName(char* ptr, size_t size, bool withPrefix = true);
-    void getImeiChip(char* ptr, size_t size);
+    void runCommand(const char* cmd, const ERaCmdHandler* handler);
+
+    template <int size>
+    void getWiFiName(char(&ptr)[size], bool withPrefix = true);
+    template <int size>
+    void getImeiChip(char(&ptr)[size]);
 
     void addHandler(ERaCmdHandler* handler) {
         if (this->lastHandler == nullptr) {
@@ -132,13 +135,15 @@ void ERaUdp<Udp>::parseBuffer(const char* ptr) {
     }
     item = cJSON_GetObjectItem(root, "data");
     if (cJSON_IsObject(item) && type != nullptr) {
-        for (cJSON* current = item->child; current != nullptr && current->string != nullptr; current = current->next) {
+        cJSON* current = nullptr;
+        for (current = item->child; current != nullptr && current->string != nullptr; current = current->next) {
             std::string cmd(type);
             cmd.append("/");
             cmd.append(current->string);
             this->dataObject = current;
             this->runCommand(cmd.c_str());
         }
+        current = nullptr;
     }
     cJSON_Delete(root);
     this->dataObject = nullptr;
@@ -160,7 +165,7 @@ void ERaUdp<Udp>::runCommand(const char* cmd) {
 }
 
 template <class Udp>
-void ERaUdp<Udp>::runCommand(const char* cmd, ERaCmdHandler* handler) {
+void ERaUdp<Udp>::runCommand(const char* cmd, const ERaCmdHandler* handler) {
     if (handler->cmd == nullptr || handler->fn == nullptr) {
         return;
     }
@@ -181,8 +186,8 @@ void ERaUdp<Udp>::sendBoardInfo() {
     if (item != nullptr) {
         char imei[64] {0};
         char ssidAP[64] {0};
-        this->getWiFiName(ssidAP, sizeof(ssidAP));
-        this->getImeiChip(imei, sizeof(imei));
+        this->getWiFiName(ssidAP);
+        this->getImeiChip(imei);
         cJSON_AddStringToObject(item, "board", ERA_BOARD_TYPE);
         cJSON_AddStringToObject(item, "model", ERA_MODEL_TYPE);
         cJSON_AddStringToObject(item, "imei", imei);

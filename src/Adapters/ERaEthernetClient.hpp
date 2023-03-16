@@ -14,6 +14,12 @@ template <class Transport>
 class ERaEthernet
     : public ERaProto<Transport, ERaFlash>
 {
+    enum EthernetModeT {
+        ETH_MODE_DHCP = 0,
+        ETH_MODE_STATIC_IP = 1,
+        ETH_MODE_STATIC = 2
+    };
+
     const char* TAG = "Ethernet";
     friend class ERaProto<Transport, ERaFlash>;
     typedef ERaProto<Transport, ERaFlash> Base;
@@ -22,25 +28,54 @@ public:
     ERaEthernet(Transport& _transp, ERaFlash& _flash)
         : Base(_transp, _flash)
         , authToken(nullptr)
+        , macUser(nullptr)
+        , mode(EthernetModeT::ETH_MODE_DHCP)
         , _connected(false)
     {}
     ~ERaEthernet()
     {}
 
-    bool connectNetwork(const char* auth) {
+    bool connectNetwork(const char* auth,
+                        const uint8_t mac[] = nullptr) {
         ERA_LOG(TAG, ERA_PSTR("Connecting network..."));
-        this->getMacAddress(auth);
-        if (!Ethernet.begin(this->macAddress)) {
+        if (!Ethernet.begin(this->getMacAddress(auth, mac))) {
             ERA_LOG(TAG, ERA_PSTR("Connect failed"));
             return false;
         }
+        this->getTransp().setSSID(ERA_PROTO_TYPE);
 
         ERaDelay(1000);
-        IPAddress localIP = Ethernet.localIP();
-        ERA_FORCE_UNUSED(localIP);
-        ERA_LOG(TAG, ERA_PSTR("Connected to network"));
-        ERA_LOG(TAG, ERA_PSTR("IP: %d.%d.%d.%d"), localIP[0], localIP[1],
-                                                localIP[2], localIP[3]);
+        this->getLocalIP();
+        this->_connected = true;
+        return true;
+    }
+
+    bool connectNetwork(const char* auth,
+                        IPAddress& localIP,
+                        const uint8_t mac[] = nullptr) {
+        ERA_LOG(TAG, ERA_PSTR("Connecting network static IP..."));
+        Ethernet.begin(this->getMacAddress(auth, mac), localIP);
+        this->getTransp().setSSID(ERA_PROTO_TYPE);
+
+        ERaDelay(1000);
+        this->getLocalIP();
+        this->_connected = true;
+        return true;
+    }
+
+    bool connectNetwork(const char* auth,
+                        IPAddress& localIP,
+                        IPAddress& dns,
+                        IPAddress& gateway,
+                        IPAddress& subnet,
+                        const uint8_t mac[] = nullptr) {
+        ERA_LOG(TAG, ERA_PSTR("Connecting network static IP..."));
+        Ethernet.begin(this->getMacAddress(auth, mac),
+                        localIP, dns, gateway, subnet);
+        this->getTransp().setSSID(ERA_PROTO_TYPE);
+
+        ERaDelay(1000);
+        this->getLocalIP();
         this->_connected = true;
         return true;
     }
@@ -52,21 +87,72 @@ public:
                 const char* password = ERA_MQTT_PASSWORD) {
         Base::begin(auth);
         this->authToken = auth;
-        this->transp.config(host, port, username, password);
+        this->getTransp().config(host, port, username, password);
     }
 
     void begin(const char* auth,
+                const uint8_t mac[] = nullptr,
                 const char* host = ERA_MQTT_HOST,
                 uint16_t port = ERA_MQTT_PORT,
                 const char* username = ERA_MQTT_USERNAME,
                 const char* password = ERA_MQTT_PASSWORD) {
         Base::init();
         this->config(auth, host, port, username, password);
-        this->connectNetwork(auth);
+        this->connectNetwork(auth, mac);
+        this->mode = EthernetModeT::ETH_MODE_DHCP;
     }
 
-    void begin() {
-        this->begin(ERA_MQTT_CLIENT_ID,
+    void begin(const uint8_t mac[] = nullptr) {
+        this->begin(ERA_AUTHENTICATION_TOKEN, mac,
+                    ERA_MQTT_HOST, ERA_MQTT_PORT,
+                    ERA_MQTT_USERNAME, ERA_MQTT_PASSWORD);
+    }
+
+    void begin(const char* auth,
+                IPAddress localIP,
+                const uint8_t mac[] = nullptr,
+                const char* host = ERA_MQTT_HOST,
+                uint16_t port = ERA_MQTT_PORT,
+                const char* username = ERA_MQTT_USERNAME,
+                const char* password = ERA_MQTT_PASSWORD) {
+        Base::init();
+        this->config(auth, host, port, username, password);
+        this->connectNetwork(auth, localIP, mac);
+        this->setStaticIP(localIP);
+        this->mode = EthernetModeT::ETH_MODE_STATIC_IP;
+    }
+
+    void begin(IPAddress localIP,
+                const uint8_t mac[] = nullptr) {
+        this->begin(ERA_AUTHENTICATION_TOKEN, localIP, mac,
+                    ERA_MQTT_HOST, ERA_MQTT_PORT,
+                    ERA_MQTT_USERNAME, ERA_MQTT_PASSWORD);
+    }
+
+    void begin(const char* auth,
+                IPAddress localIP,
+                IPAddress dns,
+                IPAddress gateway,
+                IPAddress subnet,
+                const uint8_t mac[] = nullptr,
+                const char* host = ERA_MQTT_HOST,
+                uint16_t port = ERA_MQTT_PORT,
+                const char* username = ERA_MQTT_USERNAME,
+                const char* password = ERA_MQTT_PASSWORD) {
+        Base::init();
+        this->config(auth, host, port, username, password);
+        this->connectNetwork(auth, localIP, dns, gateway, subnet, mac);
+        this->setStaticIP(localIP, dns, gateway, subnet);
+        this->mode = EthernetModeT::ETH_MODE_STATIC;
+    }
+
+    void begin(IPAddress localIP,
+                IPAddress dns,
+                IPAddress gateway,
+                IPAddress subnet,
+                const uint8_t mac[] = nullptr) {
+        this->begin(ERA_AUTHENTICATION_TOKEN, localIP,
+                    dns, gateway, subnet, mac,
                     ERA_MQTT_HOST, ERA_MQTT_PORT,
                     ERA_MQTT_USERNAME, ERA_MQTT_PASSWORD);
     }
@@ -86,7 +172,7 @@ public:
                 break;
             default:
                 if (this->connected() ||
-                    this->connectNetwork(this->authToken)) {
+                    this->reConnectNetwork()) {
                     ERaState::set(StateT::STATE_CONNECTING_CLOUD);
                 }
                 break;
@@ -99,7 +185,50 @@ private:
         return this->_connected;
     }
 
-    void getMacAddress(const char* auth) {
+    bool reConnectNetwork() {
+        bool status {false};
+        switch (this->mode) {
+            case EthernetModeT::ETH_MODE_DHCP:
+                status = this->connectNetwork(this->authToken, this->macUser);
+                break;
+            case EthernetModeT::ETH_MODE_STATIC_IP:
+                status = this->connectNetwork(this->authToken, this->ipUser, this->macUser);
+                break;
+            case EthernetModeT::ETH_MODE_STATIC:
+                status = this->connectNetwork(this->authToken, this->ipUser, this->dnsUser,
+                                            this->gatewayUser, this->subnetUser, this->macUser);
+                break;
+            default:
+                break;
+        }
+        return status;
+    }
+
+    void setStaticIP(IPAddress localIP,
+                    IPAddress dns = (uint32_t)0x00000000,
+                    IPAddress gateway = (uint32_t)0x00000000,
+                    IPAddress subnet = (uint32_t)0x00000000) {
+        this->ipUser = localIP;
+        this->dnsUser = dns;
+        this->gatewayUser = gateway;
+        this->subnetUser = subnet;
+    }
+
+    void getLocalIP() {
+        IPAddress localIP = Ethernet.localIP();
+        ERA_FORCE_UNUSED(localIP);
+        ERA_LOG(TAG, ERA_PSTR("Connected to network"));
+        ERA_LOG(TAG, ERA_PSTR("IP: %d.%d.%d.%d"), localIP[0], localIP[1],
+                                                localIP[2], localIP[3]);
+    }
+
+    uint8_t* getMacAddress(const char* auth,
+                        const uint8_t mac[]) {
+        if (mac != nullptr) {
+            macUser = (uint8_t*)mac;
+            return macUser;
+        }
+
         this->macAddress[0] = 0x27;
         this->macAddress[1] = 0x06;
         this->macAddress[2] = 0x19;
@@ -108,7 +237,7 @@ private:
         this->macAddress[5] = 0xED;
 
         if (auth == nullptr) {
-            return;
+            return this->macAddress;
         }
 
         size_t index {0};
@@ -124,14 +253,22 @@ private:
                 this->macAddress[0], this->macAddress[1],
                 this->macAddress[2], this->macAddress[3],
                 this->macAddress[4], this->macAddress[5]);
+        return this->macAddress;
     }
 
     const char* authToken;
     uint8_t macAddress[6];
+    IPAddress ipUser;
+    IPAddress dnsUser;
+    IPAddress gatewayUser;
+    IPAddress subnetUser;
+    uint8_t* macUser;
+    uint8_t mode;
     bool _connected;
 };
 
 template <class Proto, class Flash>
+inline
 void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
     char ip[20] {0};
     IPAddress localIP = Ethernet.localIP();
@@ -139,17 +276,19 @@ void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
                                     localIP[2], localIP[3]);
     cJSON_AddStringToObject(root, INFO_BOARD, ERA_BOARD_TYPE);
     cJSON_AddStringToObject(root, INFO_MODEL, ERA_MODEL_TYPE);
-	cJSON_AddStringToObject(root, INFO_AUTH_TOKEN, this->thisProto().ERA_AUTH);
+	cJSON_AddStringToObject(root, INFO_BOARD_ID, this->thisProto().getBoardID());
+	cJSON_AddStringToObject(root, INFO_AUTH_TOKEN, this->thisProto().getAuth());
     cJSON_AddStringToObject(root, INFO_FIRMWARE_VERSION, ERA_FIRMWARE_VERSION);
     cJSON_AddStringToObject(root, INFO_SSID, ERA_PROTO_TYPE);
     cJSON_AddStringToObject(root, INFO_BSSID, ERA_PROTO_TYPE);
     cJSON_AddNumberToObject(root, INFO_RSSI, 100);
     cJSON_AddStringToObject(root, INFO_MAC, ERA_PROTO_TYPE);
     cJSON_AddStringToObject(root, INFO_LOCAL_IP, ip);
-    cJSON_AddNumberToObject(root, INFO_PING, this->thisProto().transp.getPing());
+    cJSON_AddNumberToObject(root, INFO_PING, this->thisProto().getTransp().getPing());
 }
 
 template <class Proto, class Flash>
+inline
 void ERaApi<Proto, Flash>::addModbusInfo(cJSON* root) {
     cJSON_AddNumberToObject(root, INFO_MB_CHIP_TEMPERATURE, 5000);
 	cJSON_AddNumberToObject(root, INFO_MB_TEMPERATURE, 0);

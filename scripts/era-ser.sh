@@ -10,7 +10,9 @@ FROM_TYPE="SER" # SER, TCP
 TO_TYPE="SSL"   # TCP, SSL
 
 COMM_BAUD=115200
-SERV_ADDR=remarkable-accountant.cloudmqtt.com
+SERV_ADDR_VN=mqtt1.eoh.io
+SERV_ADDR_SG=remarkable-accountant.cloudmqtt.com
+SERV_ADDR=$SERV_ADDR_SG # Default SG
 SERV_PORT_SSL=8883
 SERV_PORT_TCP=1883
 LSTN_PORT=1883
@@ -30,7 +32,8 @@ usage="
       -c,--comm      single available port (on Linux, OSX)
                      COM1                  (on Windows)
       -b,--baud      115200
-      -s,--server    remarkable-accountant.cloudmqtt.com
+      -s,--server    mqtt1.eoh.io                         (VN)
+                     remarkable-accountant.cloudmqtt.com  (SG)
       -p,--port      1883
 
     If the specified serial port is not found, it will ask to enter another one.

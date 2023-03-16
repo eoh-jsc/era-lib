@@ -74,6 +74,7 @@ void ERaZigbee<Api>::startZigbee(bool& format, bool& invalid) {
             ToZigbee::CommandZigbee::setBDBChannelZstack(this->coordinator->channel, true);
             ToZigbee::CommandZigbee::setBDBChannelZstack(ZBChannelT::CHANNEL_NONE, false);
             if (ToZigbee::CommandZigbee::stateStartupAppZstack(10) != ResultT::RESULT_SUCCESSFUL) {
+                invalid = format;
                 ZigbeeState::set(ZigbeeStateT::STATE_ZB_INIT_FAIL);
                 return;
             }

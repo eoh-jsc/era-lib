@@ -1,10 +1,7 @@
 #ifndef INC_ERA_SIMPLE_RP2040_WIFI_HPP_
 #define INC_ERA_SIMPLE_RP2040_WIFI_HPP_
 
-#include <ERa/ERaDetect.hpp>
-#if !defined(TINY_GSM_RX_BUFFER)
-    #define TINY_GSM_RX_BUFFER ERA_MQTT_BUFFER_SIZE
-#endif
+#define ERA_NO_RTOS
 
 #include <ERa/ERaApiArduinoDef.hpp>
 #include <Adapters/ERaWiFiClient.hpp>
@@ -21,5 +18,7 @@
 #else
     extern ERaWiFi< ERaMqtt<TinyGsmClient, MQTTClient> > ERa;
 #endif
+
+#include <ERa/ERaStatic.hpp>
 
 #endif /* INC_ERA_SIMPLE_RP2040_WIFI_HPP_ */

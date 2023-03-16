@@ -1,6 +1,7 @@
 #ifndef INC_ERA_UTILITY_HPP_
 #define INC_ERA_UTILITY_HPP_
 
+#include <stdio.h>
 #include <stdint.h>
 #include <stdarg.h>
 #include <string.h>
@@ -26,6 +27,13 @@ void ERaGuardUnlock(ERaMutex_t& mutex);
 char* ERaStrdup(const char* str);
 MillisTime_t ERaRemainingTime(MillisTime_t startMillis, MillisTime_t timeout);
 
+uint8_t RSSIToPercentage(int16_t value);
+int16_t GSMToRSSI(uint8_t value);
+uint8_t GSMToPercentage(uint8_t value);
+
+long long ERaAtoll(const char* str);
+char* ERaDtostrf(double number, int decimal, char* str);
+
 template<typename T>
 inline
 const T& ERaMin(const T& a, const T& b) {
@@ -48,13 +56,21 @@ T ERaMapNumberRange(T value, T fromLow, T fromHigh, T toLow, T toHigh) {
     #include "driver/uart.h"
     #include <Utility/ERaOs.hpp>
 #elif defined(ARDUINO) &&           \
-    (defined(ARDUINO_ARCH_STM32) || \
+    !defined(__MBED__) &&			\
+    (defined(RTL8722DM) ||          \
+    defined(ARDUINO_AMEBA) ||       \
+    defined(ARDUINO_ARCH_STM32) ||  \
     defined(ARDUINO_ARCH_RP2040))
     #include <Utility/ERaOs.hpp>
 #endif
 
-#if defined(ARDUINO)
-    #include <Arduino.h>
+#if defined(ARDUINO) ||             \
+    defined(PARTICLE) || defined(SPARK)
+    #if defined(ARDUINO)
+        #include <Arduino.h>
+    #else
+        #include "application.h"
+    #endif
 
     template <typename T, int size>
     inline
@@ -87,6 +103,12 @@ void CopyToStruct(const uint8_t& src, T& dst, int size) {
     memcpy(&dst, &src, size);
 }
 
+template <int size>
+inline
+void CopyToString(const char* src, char(&dst)[size]) {
+    snprintf(dst, size, "%s", src);
+}
+
 template <typename T>
 inline
 void ClearStruct(T& arr, int size) {
@@ -117,6 +139,10 @@ void FormatString(char(&buf)[size], const char* format, ...) {
     va_end(args);
 }
 
+bool ERaFloatCompare(float a, float b);
+double ERaDoubleCompare(double a, double b);
+
+char* ERaFindStr(const char* str, const char* str2);
 bool ERaStrCmp(const char* str, const char* str2);
 
 template <int size>
@@ -125,10 +151,10 @@ bool ERaStrNCmp(const char* str, const char(&str2)[size]) {
     return !strncmp(str, str2, size - 1);
 }
 
-#if !_GLIBCXX_USE_C99_STDLIB
+#if defined(ESP32) && !_GLIBCXX_USE_C99_STDLIB
     #include <sstream>
 
-    template<typename T>
+    template <typename T>
     inline
     std::string to_string(const T& n)
     {

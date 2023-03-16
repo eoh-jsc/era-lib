@@ -13,4 +13,6 @@
     extern ERaEthernet< ERaMqtt<WiFiClient, MQTTClient> > ERa;
 #endif
 
+#include <ERa/ERaStatic.hpp>
+
 #endif /* INC_ERA_SIMPLE_ESP32_ETHERNET_HPP_ */

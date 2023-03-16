@@ -2,36 +2,42 @@
 #define INC_ERA_PARSE_HPP_
 
 #include <string.h>
+#include <ERa/ERaDebug.hpp>
+#include <ERa/ERaHelperDef.hpp>
 #include <Utility/ERaQueue.hpp>
 
-#ifndef MAXIMUM_MODBUS_DEVICES
-    #define MAXIMUM_MODBUS_DEVICES      20
+#ifndef MAX_DEVICE_MODBUS
+    #define MAX_DEVICE_MODBUS           20
 #endif
 
-#ifndef DEFAULT_BAUD_SPEED
-    #define DEFAULT_BAUD_SPEED          9600
-#endif
-
-#ifndef DEFAULT_REQUEST_INTERVAL
-    #define DEFAULT_REQUEST_INTERVAL    1000
+#ifndef DEFAULT_MODBUS_BAUD_SPEED
+    #define DEFAULT_MODBUS_BAUD_SPEED   9600
 #endif
 
 #ifndef DEFAULT_MODBUS_INTERVAL
     #define DEFAULT_MODBUS_INTERVAL 	1000
 #endif
 
-#ifndef DEFAULT_PUSH_INTERVAL
-    #define DEFAULT_PUSH_INTERVAL 	    60000
+#ifndef DEFAULT_PUB_MODBUS_INTERVAL
+    #define DEFAULT_PUB_MODBUS_INTERVAL 60000
 #endif
 
-#ifndef DEFAULT_MIN_INTERVAL
-    #define DEFAULT_MIN_INTERVAL		1000
+#ifndef DEFAULT_MIN_MODBUS_INTERVAL
+    #define DEFAULT_MIN_MODBUS_INTERVAL 1000
 #endif
 
 typedef struct __SensorDelay_t {
 	int delay;
 	int address;
 } SensorDelay_t;
+
+typedef struct __IPSlave_t {
+    union {
+        uint8_t bytes[4];
+        uint32_t dword;
+    } ip;
+    uint16_t port;
+} IPSlave_t;
 
 typedef struct __ModbusConfig_t {
 	int id;
@@ -45,7 +51,7 @@ typedef struct __ModbusConfig_t {
 	uint8_t type;
 	uint8_t button;
 	uint16_t delay;
-	char ipSlave[20];
+	IPSlave_t ipSlave;
 	uint8_t totalFail;
 	uint8_t sizeData;
 	uint32_t value;
@@ -89,29 +95,30 @@ class ERaApplication {
     };
 
     enum ParseIntervalT {
-        PARSE_BAUDRATE = 0,
-        PARSE_REQUEST_INTERVAL = 1,
-        PARSE_MODBUS_INTERVAL = 2,
-        PARSE_PUSH_INTERVAL = 3
+        PARSE_MODBUS_BAUDRATE = 0,
+        PARSE_MODBUS_INTERVAL = 1,
+        PARSE_PUB_MODBUS_INTERVAL = 2
     };
 
 public:
     ERaApplication()
-        : baudSpeed(DEFAULT_BAUD_SPEED)
-        , requestInterval {
-            .delay = DEFAULT_REQUEST_INTERVAL
-        }
+        : baudSpeed(DEFAULT_MODBUS_BAUD_SPEED)
         , modbusInterval {
-            .delay = DEFAULT_MODBUS_INTERVAL
+            .delay = DEFAULT_MODBUS_INTERVAL,
+            .prevMillis = 0
         }
-        , pushInterval {
-            .delay = DEFAULT_PUSH_INTERVAL
+        , pubInterval {
+            .delay = DEFAULT_PUB_MODBUS_INTERVAL,
+            .prevMillis = 0
         }
-    {}
+    {
+        memset(this->hashID, 0, sizeof(this->hashID));
+    }
     ~ERaApplication()
     {}
 
     void parseConfig(char* ptr);
+    bool updateHashID(const char* hash);
     void deleteAll();
 
     unsigned int id;
@@ -119,18 +126,18 @@ public:
     bool isWifi;
     char ssid[64];
     char password[64];
+    char hashID[37];
     bool isBluetooth;
 
     size_t sensorCount;
-    ERaList<SensorDelay_t> sensorDelay;
+    ERaList<SensorDelay_t*> sensorDelay;
     size_t readConfigCount;
-    ERaList<ModbusConfig_t> modbusConfigParam;
+    ERaList<ModbusConfig_t*> modbusConfigParam;
     size_t readConfigAliasCount;
-    ERaList<ModbusConfigAlias_t> modbusConfigAliasParam;
+    ERaList<ModbusConfigAlias_t*> modbusConfigAliasParam;
 
-    IntervalDelay_t requestInterval;
     IntervalDelay_t modbusInterval;
-    IntervalDelay_t pushInterval;
+    IntervalDelay_t pubInterval;
 
     static ERaApplication*& config() {
         static ERaApplication* _config = nullptr;
@@ -181,6 +188,26 @@ private:
     void actOneAction(int* ptr, size_t len, ModbusConfigAlias_t& config);
     void processParseIsEnableBluetooth(char* ptr, size_t len);
 
+    template <typename T>
+    T* create() {
+        T* ptr = (T*)ERA_MALLOC(sizeof(T));
+        memset(ptr, 0, sizeof(T));
+        return ptr;
+    }
+
+    template <typename T>
+    void clear(ERaList<T*>& value) {
+        const typename ERaList<T*>::iterator* e = value.end();
+        for (typename ERaList<T*>::iterator* it = value.begin(); it != e; it = it->getNext()) {
+            if (it->get() == nullptr) {
+                continue;
+            }
+            free(it->get());
+            it->get() = nullptr;
+        }
+        value.clear();
+    }
+
 };
 
 inline
@@ -209,10 +236,22 @@ void ERaApplication::parseConfig(char* ptr) {
 }
 
 inline
+bool ERaApplication::updateHashID(const char* hash) {
+    if (hash == nullptr) {
+        return false;
+    }
+    if (strcmp(this->hashID, hash)) {
+        snprintf(this->hashID, sizeof(this->hashID), hash);
+        return true;
+    }
+    return false;
+}
+
+inline
 void ERaApplication::deleteAll() {
-    this->sensorDelay.clear();
-    this->modbusConfigParam.clear();
-    this->modbusConfigAliasParam.clear();
+    this->clear(this->sensorDelay);
+    this->clear(this->modbusConfigParam);
+    this->clear(this->modbusConfigAliasParam);
     *this = {};
 }
 
@@ -262,48 +301,46 @@ void ERaApplication::processParseConfig(int part, char* ptr, size_t len) {
 
 inline
 void ERaApplication::processParseConfigId(char* ptr, size_t len) {
-    char buff[len + 1] {0};
-    memcpy(buff, ptr, len);
-    this->id = atoi(buff);
+    LOC_BUFFER_PARSE
+
+    memcpy(buf, ptr, len);
+    this->id = atoi(buf);
+
+    FREE_BUFFER_PARSE
 }
 
 inline
 void ERaApplication::processParseConfigBaudSpeed(char* ptr, size_t len) {
-    char buff[len + 1] {0};
-    memcpy(buff, ptr, len);
+    LOC_BUFFER_PARSE
 
-    this->baudSpeed = DEFAULT_BAUD_SPEED;
-    this->requestInterval.delay = DEFAULT_REQUEST_INTERVAL;
-    this->modbusInterval.delay = DEFAULT_MODBUS_INTERVAL;
-    this->pushInterval.delay = DEFAULT_PUSH_INTERVAL;
+    memcpy(buf, ptr, len);
 
-    if (!strchr(buff, ',')) {
-        this->baudSpeed = atoi(buff);
+    if (!strchr(buf, ',')) {
+        this->baudSpeed = atoi(buf);
+        FREE_BUFFER_PARSE
         return;
     }
 
     unsigned int step {0};
-    char* nextToken = nullptr;
-    char* token = strtok_r(buff, ",", &nextToken);
+    char* token = strtok(buf, ",");
     while (token != nullptr) {
         switch (step++) {
-			case ParseIntervalT::PARSE_BAUDRATE:
+			case ParseIntervalT::PARSE_MODBUS_BAUDRATE:
 				this->baudSpeed = atoi(token);
 				break;
-			case ParseIntervalT::PARSE_REQUEST_INTERVAL:
-				this->requestInterval.delay = (atoi(token) < DEFAULT_MIN_INTERVAL ? DEFAULT_MIN_INTERVAL : atoi(token));
-				break;
 			case ParseIntervalT::PARSE_MODBUS_INTERVAL:
-				this->modbusInterval.delay = (atoi(token) < DEFAULT_MIN_INTERVAL ? DEFAULT_MIN_INTERVAL : atoi(token));
+				this->modbusInterval.delay = (atoi(token) < DEFAULT_MIN_MODBUS_INTERVAL ? DEFAULT_MIN_MODBUS_INTERVAL : atoi(token));
 				break;
-			case ParseIntervalT::PARSE_PUSH_INTERVAL:
-				this->pushInterval.delay = (atoi(token) < DEFAULT_MIN_INTERVAL ? DEFAULT_MIN_INTERVAL : atoi(token));
+			case ParseIntervalT::PARSE_PUB_MODBUS_INTERVAL:
+				this->pubInterval.delay = (atoi(token) < DEFAULT_MIN_MODBUS_INTERVAL ? DEFAULT_MIN_MODBUS_INTERVAL : atoi(token));
 				break;
 			default:
 				break;
         }
-        token = strtok_r(nullptr, ",", &nextToken);
+        token = strtok(nullptr, ",");
     }
+
+    FREE_BUFFER_PARSE
 }
 
 inline
@@ -314,50 +351,61 @@ void ERaApplication::processParseConfigTotalRow(char* ptr, size_t len) {
 
 inline
 void ERaApplication::processParseConfigSensorDelay(char* ptr, size_t len) {
+    LOC_BUFFER_PARSE
+
     bool newSensor {true};
-    char buff[len + 1] {0};
-    size_t buffLen {0};
+    size_t bufLen {0};
 
-    this->sensorDelay.clear();
+    this->clear(this->sensorDelay);
 
-    SensorDelay_t sensor {};
+    SensorDelay_t* sensor = nullptr;
     for (size_t i = 0; i < len; ++i) { 
-        buff[buffLen++] = ptr[i];
+        buf[bufLen++] = ptr[i];
 
         if (ptr[i] == ',') {
-            buff[--buffLen] = '\0';
-            buffLen = 0;
+            buf[--bufLen] = '\0';
+            bufLen = 0;
 
             if (newSensor) {
                 newSensor = false;
-                sensor = SensorDelay_t();
-                sensor.address = atoi(buff);
+                sensor = this->create<SensorDelay_t>();
+                if (sensor != nullptr) {
+                    sensor->address = atoi(buf);
+                }
             }
             else {
                 newSensor = true;
-                sensor.delay = atoi(buff);
-                this->sensorDelay.put(sensor);
-                if (this->sensorCount++ > MAXIMUM_MODBUS_DEVICES) {
+                if (sensor != nullptr) {
+                    sensor->delay = atoi(buf);
+                    this->sensorDelay.put(sensor);
+                    this->sensorCount++;
+                }
+                if (this->sensorCount >= MAX_DEVICE_MODBUS) {
                     break;
                 }
             }
         }
     }
+
+    FREE_BUFFER_PARSE
 }
 
 inline
 void ERaApplication::processParseConfigSensorReadWrite(char* ptr, size_t len) {
     size_t position {0};
 
-    this->modbusConfigParam.clear();
+    this->clear(this->modbusConfigParam);
 
     for (size_t i = 0; i < len; ++i) {
         if (ptr[i] == '.') {
-            ModbusConfig_t config {};
-            this->parseOneConfigSensorReadWrite(ptr + position, i - position, config);
+            ModbusConfig_t* config = this->create<ModbusConfig_t>();
+            if (config == nullptr) {
+                continue;
+            }
+            this->parseOneConfigSensorReadWrite(ptr + position, i - position, *config);
             position = i + 1;
             this->modbusConfigParam.put(config);
-            if (this->readConfigCount++ > MAXIMUM_MODBUS_DEVICES) {
+            if (this->readConfigCount++ >= MAX_DEVICE_MODBUS) {
                 break;
             }
         }
@@ -366,16 +414,17 @@ void ERaApplication::processParseConfigSensorReadWrite(char* ptr, size_t len) {
 
 inline
 void ERaApplication::parseOneConfigSensorReadWrite(char* ptr, size_t len, ModbusConfig_t& config) {
-    char buff[len + 1] {0};
+    LOC_BUFFER_PARSE
+
     size_t position {0};
     size_t configIndex {0};
     int configParam[20] {0};
 
     for (size_t i = 0; i < len; ++i) {
-        buff[position++] = ptr[i];
+        buf[position++] = ptr[i];
         if (ptr[i] == ',') {
-            buff[--position] = '\0';
-            configParam[configIndex++] = atoi(buff);
+            buf[--position] = '\0';
+            configParam[configIndex++] = atoi(buf);
             position = 0;
             if (configIndex >= 20) {
                 break;
@@ -383,6 +432,8 @@ void ERaApplication::parseOneConfigSensorReadWrite(char* ptr, size_t len, Modbus
         }
     }
     this->actOneConfigSensorReadWrite(configParam, configIndex, config);
+
+    FREE_BUFFER_PARSE
 }
 
 inline
@@ -482,15 +533,18 @@ inline
 void ERaApplication::processParseConfigAliasData(char* ptr, size_t len) {
     size_t position {0};
 
-    this->modbusConfigAliasParam.clear();
+    this->clear(this->modbusConfigAliasParam);
     
     for (size_t i = 0; i < len; ++i) {
         if (ptr[i] == '.') {
-            ModbusConfigAlias_t config {};
-            this->processOneConfigAlias(ptr + position, i - position, config);
+            ModbusConfigAlias_t* config = this->create<ModbusConfigAlias_t>();
+            if (config == nullptr) {
+                continue;
+            }
+            this->processOneConfigAlias(ptr + position, i - position, *config);
             position = i + 1;
             this->modbusConfigAliasParam.put(config);
-            if (this->readConfigAliasCount++ > MAXIMUM_MODBUS_DEVICES) {
+            if (this->readConfigAliasCount++ >= MAX_DEVICE_MODBUS) {
                 break;
             }
         }
@@ -521,7 +575,8 @@ void ERaApplication::parseOneConfigAlias(char* ptr, size_t len, ModbusConfigAlia
         return;
     }
 
-    char buff[len + 1] {0};
+    LOC_BUFFER_PARSE
+
     size_t position {0};
     size_t configIndex {0};
     int configParam[20] {0};
@@ -529,14 +584,14 @@ void ERaApplication::parseOneConfigAlias(char* ptr, size_t len, ModbusConfigAlia
     char key[37] {0};
 
     for (size_t i = 0; i < len; ++i) {
-        buff[position++] = ptr[i];
+        buf[position++] = ptr[i];
         if (ptr[i] == ',') {
-            buff[--position] = '\0';
+            buf[--position] = '\0';
             if (isAlias) {
-                memcpy(key, buff, 36);
+                memcpy(key, buf, 36);
             }
             else {
-                configParam[configIndex++] = atoi(buff);
+                configParam[configIndex++] = atoi(buf);
             }
             position = 0;
             isAlias = true;
@@ -546,6 +601,8 @@ void ERaApplication::parseOneConfigAlias(char* ptr, size_t len, ModbusConfigAlia
         }
     }
     this->actOneConfigAlias(configParam, configIndex, config, key);
+
+    FREE_BUFFER_PARSE
 }
 
 inline
@@ -583,16 +640,17 @@ void ERaApplication::processParseAction(char* ptr, size_t len, ModbusConfigAlias
 
 inline
 void ERaApplication::parseOneAction(char* ptr, size_t len, ModbusConfigAlias_t& config) {
-    char buff[len + 1] {0};
+    LOC_BUFFER_PARSE
+
     size_t position {0};
     size_t configIndex {0};
     int configParam[20] {0};
 
     for (size_t i = 0; i < len; ++i) {
-        buff[position++] = ptr[i];
+        buf[position++] = ptr[i];
         if (ptr[i] == ',') {
-            buff[--position] = '\0';
-            configParam[configIndex++] = atoi(buff);
+            buf[--position] = '\0';
+            configParam[configIndex++] = atoi(buf);
             position = 0;
             if (configIndex >= 20) {
                 break;
@@ -600,6 +658,8 @@ void ERaApplication::parseOneAction(char* ptr, size_t len, ModbusConfigAlias_t& 
         }
     }
     this->actOneAction(configParam, configIndex, config);
+
+    FREE_BUFFER_PARSE
 }
 
 inline

@@ -4,30 +4,34 @@
 #include <Network/ERaUdp.hpp>
 
 template <class Udp>
-void ERaUdp<Udp>::getWiFiName(char* ptr, size_t size, bool withPrefix) {
+template <int size>
+void ERaUdp<Udp>::getWiFiName(char(&ptr)[size], bool withPrefix) {
 	String macAddr = WiFi.macAddress();
 	macAddr.replace(":", "");
 	macAddr.toLowerCase();
+    ClearArray(ptr);
     if (withPrefix) {
-        snprintf(ptr, size, "eoh.era.%s", macAddr.c_str());
+        FormatString(ptr, "eoh.era.%s", macAddr.c_str());
     } else {
-        snprintf(ptr, size, "era.%s", macAddr.c_str());
+        FormatString(ptr, "era.%s", macAddr.c_str());
     }
 }
 
 template <class Udp>
-void ERaUdp<Udp>::getImeiChip(char* ptr, size_t size) {
+template <int size>
+void ERaUdp<Udp>::getImeiChip(char(&ptr)[size]) {
 	String macAddr = WiFi.macAddress();
 	macAddr.replace(":", "");
 	macAddr.toLowerCase();
+    ClearArray(ptr);
 #ifdef ERA_AUTH_TOKEN
-    snprintf(ptr, size, ERA_AUTH_TOKEN);
+    FormatString(ptr, ERA_AUTH_TOKEN);
 #else
     if (this->authToken != nullptr) {
-        snprintf(ptr, size, this->authToken);
+        FormatString(ptr, this->authToken);
     }
     else {
-        snprintf(ptr, size, "ERA-%s", macAddr.c_str());
+        FormatString(ptr, "ERA-%s", macAddr.c_str());
     }
 #endif
 }

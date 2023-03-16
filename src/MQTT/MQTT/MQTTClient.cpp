@@ -1,6 +1,27 @@
 #include <string.h>
+#include <stddef.h>
+#include <stdlib.h>
 #include "MQTTClient.h"
 #include <ERa/ERaDefine.hpp>
+#include <Utility/ERaUtility.hpp>
+
+inline char* lwmqtt_strdup(const char* str) {
+  if (str == nullptr) {
+    return nullptr;
+  }
+
+  size_t length {0};
+  char* copy = nullptr;
+
+  length = strlen(str) + sizeof("");
+  copy = (char*)malloc(length);
+  if (copy == nullptr) {
+    return nullptr;
+  }
+  memcpy(copy, str, length);
+
+  return copy;
+}
 
 inline void lwmqtt_arduino_timer_set(void *ref, uint32_t timeout) {
   // cast timer reference
@@ -13,7 +34,7 @@ inline void lwmqtt_arduino_timer_set(void *ref, uint32_t timeout) {
   if (t->millis != nullptr) {
     t->start = t->millis();
   } else {
-    t->start = millis();
+    t->start = ERaMillis();
   }
 }
 
@@ -26,7 +47,7 @@ inline int32_t lwmqtt_arduino_timer_get(void *ref) {
   if (t->millis != nullptr) {
     now = t->millis();
   } else {
-    now = millis();
+    now = ERaMillis();
   }
 
   // get difference (account for roll-overs)
@@ -51,13 +72,13 @@ inline lwmqtt_err_t lwmqtt_arduino_network_read(void *ref, uint8_t *buffer, size
   auto n = (lwmqtt_arduino_network_t *)ref;
 
   // set timeout
-  uint32_t start = millis();
+  uint32_t start = ERaMillis();
 
   // reset counter
   *read = 0;
 
   // read until all bytes have been read or timeout has been reached
-  while (len > 0 && (millis() - start < timeout)) {
+  while (len > 0 && (ERaMillis() - start < timeout)) {
     // read from connection
     int r = n->client->read(buffer, len);
 
@@ -71,7 +92,7 @@ inline lwmqtt_err_t lwmqtt_arduino_network_read(void *ref, uint8_t *buffer, size
 
     // wait/unblock for some time (RTOS based boards may otherwise fail since
     // the wifi task cannot provide the data)
-    delay(1);
+    mqtt_yield_fix();
 
     // otherwise check status
     if (!n->client->connected()) {
@@ -140,7 +161,7 @@ static void MQTTClientHandler(lwmqtt_client_t * /*client*/, void *ref, lwmqtt_st
 #endif
 
   // create topic string
-  std::string str_topic(terminated_topic);
+  const char* str_topic = (const char *)terminated_topic;
 
   // create payload string
   const char* str_payload = (const char *)message.payload;
@@ -157,20 +178,8 @@ static void MQTTClientHandler(lwmqtt_client_t * /*client*/, void *ref, lwmqtt_st
 #endif
 }
 
-MQTTClient::MQTTClient(int bufSize) {
-  // allocate buffers
-  this->readBufSize = (size_t)bufSize;
-  this->writeBufSize = (size_t)bufSize;
-  this->readBuf = (uint8_t *)ERA_MALLOC((size_t)bufSize + 1);
-  this->writeBuf = (uint8_t *)ERA_MALLOC((size_t)bufSize);
-}
-
 MQTTClient::MQTTClient(int readBufSize, int writeBufSize) {
-  // allocate buffers
-  this->readBufSize = (size_t)readBufSize;
-  this->writeBufSize = (size_t)writeBufSize;
-  this->readBuf = (uint8_t *)ERA_MALLOC((size_t)readBufSize + 1);
-  this->writeBuf = (uint8_t *)ERA_MALLOC((size_t)writeBufSize);
+  this->init(readBufSize, writeBufSize);
 }
 
 MQTTClient::~MQTTClient() {
@@ -202,6 +211,18 @@ void MQTTClient::begin(Client &_client) {
 
   // set callback
   lwmqtt_set_callback(&this->client, (void *)&this->callback, MQTTClientHandler);
+}
+
+void MQTTClient::init(int readBufSize, int writeBufSize) {
+  // allocate buffers
+  if ((readBufSize != 0) && (this->readBuf == nullptr)) {
+    this->readBufSize = (size_t)readBufSize;
+    this->readBuf = (uint8_t *)ERA_MALLOC((size_t)readBufSize + 1);
+  }
+  if ((writeBufSize != 0) && (this->writeBuf == nullptr)) {
+    this->writeBufSize = (size_t)writeBufSize;
+    this->writeBuf = (uint8_t *)ERA_MALLOC((size_t)writeBufSize);
+  }
 }
 
 void MQTTClient::onMessage(MQTTClientCallbackSimple cb) {
@@ -251,6 +272,10 @@ void MQTTClient::setClockSource(MQTTClientClockSource cb) {
   this->timer2.millis = cb;
 }
 
+void MQTTClient::setSkipACK(bool skip) {
+  this->skipACK = skip;
+}
+
 void MQTTClient::setHost(IPAddress _address, int _port) {
   // set address and port
   this->address = _address;
@@ -264,7 +289,7 @@ void MQTTClient::setHost(const char _hostname[], int _port) {
   }
 
   // set hostname and port
-  this->hostname = strdup(_hostname);
+  this->hostname = lwmqtt_strdup(_hostname);
   this->port = _port;
 }
 
@@ -282,11 +307,11 @@ void MQTTClient::setWill(const char topic[], const char payload[], bool retained
   memset(this->will, 0, sizeof(lwmqtt_will_t));
 
   // set topic
-  this->will->topic = lwmqtt_string(strdup(topic));
+  this->will->topic = lwmqtt_string(lwmqtt_strdup(topic));
 
   // set payload if available
   if (payload != nullptr && strlen(payload) > 0) {
-    this->will->payload = lwmqtt_string(strdup(payload));
+    this->will->payload = lwmqtt_string(lwmqtt_strdup(payload));
   }
 
   // set flags
@@ -321,29 +346,9 @@ void MQTTClient::setCleanSession(bool _cleanSession) { this->cleanSession = _cle
 
 void MQTTClient::setTimeout(int _timeout) { this->timeout = _timeout; }
 
-bool MQTTClient::publish(const char topic[], const char payload[], int length, bool retained, int qos) {
-  // return immediately if not connected
-  if (!this->connected()) {
-    return false;
-  }
-
-  // prepare message
-  lwmqtt_message_t message = lwmqtt_default_message;
-  message.payload = (uint8_t *)payload;
-  message.payload_len = (size_t)length;
-  message.retained = retained;
-  message.qos = lwmqtt_qos_t(qos);
-
-  // publish message
-  this->_lastError = lwmqtt_publish(&this->client, lwmqtt_string(topic), message, this->timeout);
-  if (this->_lastError != LWMQTT_SUCCESS) {
-    // close connection
-    this->close();
-
-    return false;
-  }
-
-  return true;
+void MQTTClient::dropOverflow(bool enabled) {
+  // configure drop overflow
+  lwmqtt_drop_overflow(&this->client, enabled, &this->_droppedMessages);
 }
 
 bool MQTTClient::connect(const char clientID[], const char username[], const char password[], bool skip) {
@@ -370,7 +375,7 @@ bool MQTTClient::connect(const char clientID[], const char username[], const cha
   }
 
   // prepare options
-  lwmqtt_options_t options = lwmqtt_default_options;
+  lwmqtt_connect_options_t options = lwmqtt_default_connect_options;
   options.keep_alive = this->keepAlive;
   options.clean_session = this->cleanSession;
   options.client_id = lwmqtt_string(clientID);
@@ -378,14 +383,18 @@ bool MQTTClient::connect(const char clientID[], const char username[], const cha
   // set username and password if available
   if (username != nullptr) {
     options.username = lwmqtt_string(username);
-
-    if (password != nullptr) {
-      options.password = lwmqtt_string(password);
-    }
+  }
+  if (password != nullptr) {
+    options.password = lwmqtt_string(password);
   }
 
   // connect to broker
-  this->_lastError = lwmqtt_connect(&this->client, options, this->will, &this->_returnCode, this->timeout);
+  this->_lastError = lwmqtt_connect(&this->client, &options, this->will, this->timeout);
+
+  // copy return code
+  this->_returnCode = options.return_code;
+
+  // handle error
   if (this->_lastError != LWMQTT_SUCCESS) {
     // close connection
     this->close();
@@ -393,10 +402,57 @@ bool MQTTClient::connect(const char clientID[], const char username[], const cha
     return false;
   }
 
+  // copy session present flag
+  this->_sessionPresent = options.session_present;
+
   // set flag
   this->_connected = true;
 
   return true;
+}
+
+bool MQTTClient::publish(const char topic[], const char payload[], int length, bool retained, int qos) {
+  // return immediately if not connected
+  if (!this->connected()) {
+    return false;
+  }
+
+  // prepare message
+  lwmqtt_message_t message = lwmqtt_default_message;
+  message.payload = (uint8_t *)payload;
+  message.payload_len = (size_t)length;
+  message.retained = retained;
+  message.qos = lwmqtt_qos_t(qos);
+
+  // prepare options
+  lwmqtt_publish_options_t options = lwmqtt_default_publish_options;
+
+  // set duplicate packet id if available
+  if (this->nextDupPacketID > 0) {
+    options.dup_id = &this->nextDupPacketID;
+  }
+  options.skip_ack = this->skipACK;
+
+  // publish message
+  this->_lastError = lwmqtt_publish(&this->client, &options, lwmqtt_string(topic), message, this->timeout);
+  if (this->_lastError != LWMQTT_SUCCESS) {
+    // close connection
+    this->close();
+
+    return false;
+  }
+
+  return true;
+}
+
+uint16_t MQTTClient::lastPacketID() {
+  // get last packet id from client
+  return this->client.last_packet_id;
+}
+
+void MQTTClient::prepareDuplicate(uint16_t packetID) {
+  // set next duplicate packet id
+  this->nextDupPacketID = packetID;
 }
 
 bool MQTTClient::subscribe(const char topic[], int qos) {

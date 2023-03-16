@@ -13,6 +13,11 @@
 // Enable debug console
 // Set CORE_DEBUG_LEVEL = 3 first
 // #define ERA_DEBUG
+// #define ERA_SERIAL Serial
+
+/* Select ERa host location (VN: Viet Nam, SG: Singapore) */
+#define ERA_LOCATION_VN
+// #define ERA_LOCATION_SG
 
 // You should get Auth Token in the ERa App or ERa Dashboard
 #define ERA_AUTH_TOKEN "ERA2706"
@@ -23,10 +28,10 @@
 
 #define LED_PIN  2
 
-ERaTimer timer;
-
 const char ssid[] = "YOUR_SSID";
 const char pass[] = "YOUR_PASSWORD";
+
+ERaTimer timer;
 
 /* This function is called every time the Virtual Pin 0 state change */
 ERA_WRITE(V0) {
@@ -45,9 +50,12 @@ void setup() {
     /* Setup debug console */
     Serial.begin(115200);
 
-    /* Setup pin mode relay pin */
+    /* Setup pin mode led pin */
     pinMode(LED_PIN, OUTPUT);
 
+    /* Set board id */
+    // ERa.setBoardID("Board_1");
+    /* Initializing the ERa library. */
     ERa.begin(ssid, pass);
 
     /* Setup timer called function every second */

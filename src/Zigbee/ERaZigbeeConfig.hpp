@@ -8,6 +8,8 @@
 #ifndef ZIGBEE_RXD_Pin
     #if defined(ARDUINO_ESP32C3_DEV)
         #define ZIGBEE_RXD_Pin      6
+    #elif defined(ARDUINO_ESP32C6_DEV)
+        #define ZIGBEE_RXD_Pin      6
     #elif defined(ARDUINO_ESP32S2_DEV)
         #define ZIGBEE_RXD_Pin      21
     #elif defined(ARDUINO_ESP32S3_DEV)
@@ -23,6 +25,8 @@
 
 #ifndef ZIGBEE_TXD_Pin
     #if defined(ARDUINO_ESP32C3_DEV)
+        #define ZIGBEE_TXD_Pin      7
+    #elif defined(ARDUINO_ESP32C6_DEV)
         #define ZIGBEE_TXD_Pin      7
     #elif defined(ARDUINO_ESP32S2_DEV)
         #define ZIGBEE_TXD_Pin      17

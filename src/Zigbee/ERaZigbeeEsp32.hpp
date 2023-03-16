@@ -1,4 +1,5 @@
-#ifndef INC_ERA_ZIGBEE_ESP32_HPP_
+#if !defined(INC_ERA_ZIGBEE_ESP32_HPP_) && \
+    defined(ERA_ZIGBEE)
 #define INC_ERA_ZIGBEE_ESP32_HPP_
 
 #include <Zigbee/ERaZigbee.hpp>

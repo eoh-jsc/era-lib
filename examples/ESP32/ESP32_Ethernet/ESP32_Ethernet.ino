@@ -13,6 +13,11 @@
 // Enable debug console
 // Set CORE_DEBUG_LEVEL = 3 first
 // #define ERA_DEBUG
+// #define ERA_SERIAL Serial
+
+/* Select ERa host location (VN: Viet Nam, SG: Singapore) */
+#define ERA_LOCATION_VN
+// #define ERA_LOCATION_SG
 
 // You should get Auth Token in the ERa App or ERa Dashboard
 #define ERA_AUTH_TOKEN "ERA2706"
@@ -35,6 +40,9 @@ void setup() {
     /* Setup debug console */
     Serial.begin(115200);
 
+    /* Set board id */
+    // ERa.setBoardID("Board_1");
+    /* Initializing the ERa library. */
     ERa.begin(phyAddr, pwrPin);
 
     /* Setup timer called function every second */

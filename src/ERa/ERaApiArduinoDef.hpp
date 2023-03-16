@@ -5,12 +5,24 @@
     #define INPUT_PULLDOWN    INPUT_PULLDOWN_16
 #elif defined(ARDUINO_ARCH_STM32)
     #define ANALOG            INPUT_ANALOG
-#elif defined(__MBED__)
-    #define OUTPUT_OPEN_DRAIN OUTPUT_OPENDRAIN
-#elif defined(__AVR__)
+#elif defined(__AVR__) ||           \
+    defined(ARDUINO_ARCH_SAM) ||    \
+    defined(ARDUINO_ARCH_ARC32)
     #define INPUT_PULLDOWN    INPUT
-#elif defined(ARDUINO_ARCH_RP2040)
     #define OUTPUT_OPEN_DRAIN OUTPUT
+#elif defined(ARDUINO_ARCH_SAMD)
+    #define OUTPUT_OPEN_DRAIN OUTPUT
+#elif !defined(__MBED__) &&         \
+    defined(ARDUINO_ARCH_RP2040)
+    #define OUTPUT_OPEN_DRAIN OUTPUT
+#elif !defined(__MBED__) &&         \
+    defined(ARDUINO_ARCH_NRF5)
+    #define OUTPUT_OPEN_DRAIN OUTPUT
+#elif defined(RTL8722DM) ||         \
+    defined(ARDUINO_AMEBA)
+    #define OUTPUT_OPEN_DRAIN OUTPUT_OPENDRAIN
+#elif defined(__MBED__)
+    #define OUTPUT_OPEN_DRAIN (PinMode)OUTPUT_OPENDRAIN
 #endif
 
 #if !defined(ANALOG)

@@ -1,5 +1,5 @@
-#include <ERa/ERaTimer.hpp>
 #include <Utility/ERaUtility.hpp>
+#include <ERa/ERaTimer.hpp>
 
 using namespace std;
 
@@ -9,188 +9,194 @@ ERaTimer::ERaTimer()
 
 void ERaTimer::run() {
     unsigned long currentMillis = ERaMillis();
-    for (int i = 0; i < MAX_TIMERS; ++i) {
-        if (!this->isValidTimer(i)) {
+    const ERaList<Timer_t*>::iterator* e = this->timer.end();
+    for (ERaList<Timer_t*>::iterator* it = this->timer.begin(); it != e; it = it->getNext()) {
+        Timer_t* pTimer = it->get();
+        if (!this->isValidTimer(pTimer)) {
             continue;
         }
-        if (currentMillis - this->timer[i].prevMillis < this->timer[i].delay) {
+        if (currentMillis - pTimer->prevMillis < pTimer->delay) {
             continue;
         }
-        unsigned long skipTimes = (currentMillis - this->timer[i].prevMillis) / this->timer[i].delay;
+        unsigned long skipTimes = (currentMillis - pTimer->prevMillis) / pTimer->delay;
         // update time
-        this->timer[i].prevMillis += this->timer[i].delay * skipTimes;
+        pTimer->prevMillis += pTimer->delay * skipTimes;
         // call callback
-        if (!this->timer[i].enable) {
+        if (!pTimer->enable) {
             continue;
         }
-        this->timer[i].called = true;
+        this->setFlag(pTimer->called, TimerFlagT::TIMER_ON_CALLED, true);
     }
-    
-    for (int i = 0; i < MAX_TIMERS; ++i) {
-        if (!this->timer[i].called) {
+
+    ERaList<Timer_t*>::iterator* next = nullptr;
+    for (ERaList<Timer_t*>::iterator* it = this->timer.begin(); it != e; it = next) {
+        next = it->getNext();
+        Timer_t* pTimer = it->get();
+        if (!this->isValidTimer(pTimer)) {
             continue;
         }
-        if (this->timer[i].callback_p == nullptr) {
-            this->timer[i].callback();
+        if (!pTimer->called) {
+            continue;
         }
-        else {
-            this->timer[i].callback_p(this->timer[i].param);
-        }
-        this->timer[i].called = false;
-        if (this->timer[i].limit) {
-            if (++this->timer[i].count >= this->timer[i].limit) {
-                this->deleteTimer(i);
+        if (this->getFlag(pTimer->called, TimerFlagT::TIMER_ON_CALLED)) {
+            if (pTimer->callback_p == nullptr) {
+                pTimer->callback();
+            }
+            else {
+                pTimer->callback_p(pTimer->param);
+            }
+            if (pTimer->limit) {
+                if (++pTimer->count >= pTimer->limit) {
+                    this->deleteTimer(pTimer);
+                }
             }
         }
+        if (this->getFlag(pTimer->called, TimerFlagT::TIMER_ON_DELETE)) {
+            delete pTimer;
+            pTimer = nullptr;
+            it->get() = nullptr;
+            this->timer.remove(it);
+            this->numTimer--;
+            continue;
+        }
+        pTimer->called = 0;
     }
 }
 
-int ERaTimer::setupTimer(unsigned long interval, TimerCallback_t cb, unsigned int limit) {
-    int id = this->findTimerFree();
-    if (id < 0) {
-        return -1;
+ERaTimer::Timer_t* ERaTimer::setupTimer(unsigned long interval, TimerCallback_t cb, unsigned int limit) {
+    if (!this->isTimerFree()) {
+        return nullptr;
     }
     if (!interval) {
         interval = 1;
     }
 
-    this->timer[id].delay = interval;
-    this->timer[id].callback = cb;
-    this->timer[id].callback_p = nullptr;
-    this->timer[id].param = nullptr;
-    this->timer[id].limit = limit;
-    this->timer[id].count = 0;
-    this->timer[id].enable = true;
-    this->timer[id].called = false;
-    this->timer[id].prevMillis = ERaMillis();
+    Timer_t* pTimer = new Timer_t();
+    if (pTimer == nullptr) {
+        return nullptr;
+    }
+
+    pTimer->delay = interval;
+    pTimer->callback = cb;
+    pTimer->callback_p = nullptr;
+    pTimer->param = nullptr;
+    pTimer->limit = limit;
+    pTimer->count = 0;
+    pTimer->enable = true;
+    pTimer->called = 0;
+    pTimer->prevMillis = ERaMillis();
+    this->timer.put(pTimer);
     this->numTimer++;
-    return id;
+    return pTimer;
 }
 
-int ERaTimer::setupTimer(unsigned long interval, TimerCallback_p_t cb, void* arg, unsigned int limit) {
-    int id = this->findTimerFree();
-    if (id < 0) {
-        return -1;
+ERaTimer::Timer_t* ERaTimer::setupTimer(unsigned long interval, TimerCallback_p_t cb, void* arg, unsigned int limit) {
+    if (!this->isTimerFree()) {
+        return nullptr;
     }
     if (!interval) {
         interval = 1;
     }
 
-    this->timer[id].delay = interval;
-    this->timer[id].callback = nullptr;
-    this->timer[id].callback_p = cb;
-    this->timer[id].param = arg;
-    this->timer[id].limit = limit;
-    this->timer[id].count = 0;
-    this->timer[id].enable = true;
-    this->timer[id].called = false;
-    this->timer[id].prevMillis = ERaMillis();
+    Timer_t* pTimer = new Timer_t();
+    if (pTimer == nullptr) {
+        return nullptr;
+    }
+
+    pTimer->delay = interval;
+    pTimer->callback = nullptr;
+    pTimer->callback_p = cb;
+    pTimer->param = arg;
+    pTimer->limit = limit;
+    pTimer->count = 0;
+    pTimer->enable = true;
+    pTimer->called = 0;
+    pTimer->prevMillis = ERaMillis();
+    this->timer.put(pTimer);
     this->numTimer++;
-    return id;
+    return pTimer;
 }
 
-bool ERaTimer::changeInterval(unsigned int id, unsigned long interval) {
-    if (id >= MAX_TIMERS) {
+bool ERaTimer::changeInterval(Timer_t* pTimer, unsigned long interval) {
+    if (!this->isValidTimer(pTimer)) {
         return false;
     }
     if (!interval) {
         interval = 1;
     }
 
-    if (!this->isValidTimer(id)) {
-        return false;
-    }
-
-    this->timer[id].delay = interval;
-    this->timer[id].prevMillis = ERaMillis();
+    pTimer->delay = interval;
+    pTimer->prevMillis = ERaMillis();
     return true;
 }
 
-void ERaTimer::restartTimer(unsigned int id) {
-    if (id >= MAX_TIMERS) {
-        return;
+void ERaTimer::restartTimer(Timer_t* pTimer) {
+    if (this->isValidTimer(pTimer)) {
+        pTimer->prevMillis = ERaMillis();
     }
-
-    this->timer[id].prevMillis = ERaMillis();
 }
 
-void ERaTimer::executeNow(unsigned int id) {
-    if (id >= MAX_TIMERS) {
-        return;
+void ERaTimer::executeNow(Timer_t* pTimer) {
+    if (this->isValidTimer(pTimer)) {
+        pTimer->prevMillis = ERaMillis() - pTimer->delay;
     }
-
-    this->timer[id].prevMillis = ERaMillis() - this->timer[id].delay;
 }
 
-void ERaTimer::deleteTimer(unsigned int id) {
-    if (id >= MAX_TIMERS) {
-        return;
-    }
-    
+void ERaTimer::deleteTimer(Timer_t* pTimer) {
     if (!this->numTimer) {
         return;
     }
 
-    if (this->isValidTimer(id)) {
-        this->timer[id] = Timer_t();
-        this->timer[id].prevMillis = ERaMillis();
-        this->numTimer--;
+    if (this->isValidTimer(pTimer)) {
+        this->setFlag(pTimer->called, TimerFlagT::TIMER_ON_DELETE, true);
     }
 }
 
-bool ERaTimer::isEnable(unsigned int id) {
-    if (id >= MAX_TIMERS) {
+bool ERaTimer::isEnable(Timer_t* pTimer) {
+    if (this->isValidTimer(pTimer)) {
+        return pTimer->enable;
+    }
+    else {
+        return false;
+    }
+}
+
+void ERaTimer::enable(Timer_t* pTimer) {
+    if (this->isValidTimer(pTimer)) {
+        pTimer->enable = true;
+    }
+}
+
+void ERaTimer::disable(Timer_t* pTimer) {
+    if (this->isValidTimer(pTimer)) {
+        pTimer->enable = false;
+    }
+}
+
+void ERaTimer::enableAll() {
+    const ERaList<Timer_t*>::iterator* e = this->timer.end();
+    for (ERaList<Timer_t*>::iterator* it = this->timer.begin(); it != e; it = it->getNext()) {
+        Timer_t* pTimer = it->get();
+        if (this->isValidTimer(pTimer)) {
+            pTimer->enable = true;
+        }
+    }
+}
+
+void ERaTimer::disableAll() {
+    const ERaList<Timer_t*>::iterator* e = this->timer.end();
+    for (ERaList<Timer_t*>::iterator* it = this->timer.begin(); it != e; it = it->getNext()) {
+        Timer_t* pTimer = it->get();
+        if (this->isValidTimer(pTimer)) {
+            pTimer->enable = false;
+        }
+    }
+}
+
+bool ERaTimer::isTimerFree() {
+    if (this->numTimer >= MAX_TIMERS) {
         return false;
     }
 
-    return this->timer[id].enable;
-}
-
-void ERaTimer::enable(unsigned int id) {
-    if (id >= MAX_TIMERS) {
-        return;
-    }
-
-    this->timer[id].enable = true;
-}
-
-void ERaTimer::disable(unsigned int id) {
-    if (id >= MAX_TIMERS) {
-        return;
-    }
-
-    this->timer[id].enable = false;
-}
-
-void ERaTimer::enableAll()
-{
-    for (int i = 0; i < MAX_TIMERS; ++i) {
-        if (this->isValidTimer(i)) {
-            this->timer[i].enable = true;
-        }
-    }
-}
-
-void ERaTimer::disableAll()
-{
-    for (int i = 0; i < MAX_TIMERS; ++i) {
-        if (this->isValidTimer(i)) {
-            this->timer[i].enable = false;
-        }
-    }
-}
-
-int ERaTimer::findTimerFree()
-{
-    if (this->numTimer >= MAX_TIMERS) {
-        return -1;
-    }
-
-    for (int i = 0; i < MAX_TIMERS; ++i) {
-        if (!this->isValidTimer(i)) {
-            return i;
-        }
-    }
-
-    return -1;
+    return true;
 }

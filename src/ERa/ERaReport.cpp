@@ -1,5 +1,5 @@
-#include <ERa/ERaReport.hpp>
 #include <Utility/ERaUtility.hpp>
+#include <ERa/ERaReport.hpp>
 
 using namespace std;
 
@@ -9,322 +9,372 @@ ERaReport::ERaReport()
 
 void ERaReport::run() {
 	unsigned long currentMillis = ERaMillis();
-	for (int i = 0; i < MAX_REPORTS; ++i) {
-		if (!this->isValidReport(i)) {
+    const ERaList<Report_t*>::iterator* e = this->report.end();
+    for (ERaList<Report_t*>::iterator* it = this->report.begin(); it != e; it = it->getNext()) {
+		Report_t* pReport = it->get();
+		if (!this->isValidReport(pReport)) {
 			continue;
 		}
-		if (currentMillis - this->report[i].prevMillis < this->report[i].minInterval) {
+		if (currentMillis - pReport->prevMillis < pReport->minInterval) {
 			continue;
 		}
-		if (abs(this->report[i].data.value - this->report[i].data.prevValue) < this->report[i].reportableChange) {
-			if (currentMillis - this->report[i].prevMillis < this->report[i].maxInterval) {
+		if (ERaFloatCompare(pReport->data.value, pReport->data.prevValue) ||
+			abs(pReport->data.value - pReport->data.prevValue) < pReport->reportableChange) {
+			if ((currentMillis - pReport->prevMillis < pReport->maxInterval) ||
+				(pReport->maxInterval == REPORT_MAX_INTERVAL)) {
 				continue;
 			}
 		}
 		// update time
-		this->report[i].prevMillis = currentMillis;
+		pReport->prevMillis = currentMillis;
 		// update value
-		this->report[i].data.prevValue = this->report[i].data.value;
-        if (!this->report[i].updated) {
+		pReport->data.prevValue = pReport->data.value;
+        if (!pReport->updated) {
             continue;
         }
 		// call callback
-		if (!this->report[i].enable) {
+		if (!pReport->enable) {
 			continue;
 		}
-		this->report[i].called = true;
+        this->setFlag(pReport->called, ReportFlagT::REPORT_ON_CALLED, true);
 	}
 
-	for (int i = 0; i < MAX_REPORTS; ++i) {
-		if (!this->report[i].called) {
+    ERaList<Report_t*>::iterator* next = nullptr;
+    for (ERaList<Report_t*>::iterator* it = this->report.begin(); it != e; it = next) {
+        next = it->getNext();
+		Report_t* pReport = it->get();
+		if (!this->isValidReport(pReport)) {
 			continue;
 		}
-        if (this->report[i].callback_p == nullptr) {
-			this->report[i].callback();
+		if (!pReport->called) {
+			continue;
 		}
-		else {
-			this->report[i].callback_p(this->report[i].param);
+        if (this->getFlag(pReport->called, ReportFlagT::REPORT_ON_CALLED)) {
+			if (pReport->callback_p == nullptr) {
+				pReport->callback();
+			}
+			else {
+				pReport->callback_p(pReport->param);
+			}
 		}
-		this->report[i].called = false;
+        if (this->getFlag(pReport->called, ReportFlagT::REPORT_ON_DELETE)) {
+            delete pReport;
+            pReport = nullptr;
+            it->get() = nullptr;
+            this->report.remove(it);
+            this->numReport--;
+            continue;
+        }
+		pReport->called = 0;
 	}
 }
 
-int ERaReport::setupReport(unsigned long minInterval, unsigned long maxInterval, float minChange, ReportCallback_t cb) {
-	int id = this->findReportFree();
-	if (id < 0) {
-		return -1;
-	}
+ERaReport::Report_t* ERaReport::setupReport(unsigned long minInterval, unsigned long maxInterval,
+											float minChange, ReportCallback_t cb) {
+    if (!this->isReportFree()) {
+        return nullptr;
+    }
 	if (!minInterval) {
         minInterval = 1;
 	}
 	if (maxInterval < minInterval) {
-		return -1;
+		maxInterval = minInterval;
 	}
 
-	this->report[id].data.prevValue = 0;
-	this->report[id].data.value = 0;
-	this->report[id].reportableChange = minChange;
-	this->report[id].minInterval = minInterval;
-	this->report[id].maxInterval = maxInterval;
-	this->report[id].prevMillis = ERaMillis();
-	this->report[id].callback = cb;
-	this->report[id].callback_p = nullptr;
-	this->report[id].param = nullptr;
-    this->report[id].data.pin = 0;
-    this->report[id].data.pinMode = 0;
-    this->report[id].data.configId = 0;
-	this->report[id].enable = true;
-	this->report[id].updated = false;
-	this->report[id].called = false;
+    Report_t* pReport = new Report_t();
+    if (pReport == nullptr) {
+        return nullptr;
+    }
+
+	pReport->data.prevValue = 0;
+	pReport->data.value = 0;
+    pReport->data.pin = 0;
+    pReport->data.pinMode = 0;
+    pReport->data.configId = 0;
+	pReport->data.scale.enable = false;
+	pReport->data.scale.min = 0;
+	pReport->data.scale.max = 0;
+	pReport->data.scale.rawMin = 0;
+	pReport->data.scale.rawMax = 0;
+	pReport->reportableChange = minChange;
+	pReport->minInterval = minInterval;
+	pReport->maxInterval = maxInterval;
+	pReport->prevMillis = ERaMillis();
+	pReport->callback = cb;
+	pReport->callback_p = nullptr;
+	pReport->param = nullptr;
+	pReport->enable = true;
+	pReport->updated = false;
+	pReport->called = false;
+	this->report.put(pReport);
 	this->numReport++;
-	return id;
+	return pReport;
 }
 
-int ERaReport::setupReport(unsigned long minInterval, unsigned long maxInterval, float minChange, ReportCallback_p_t cb,
-							void* arg) {
-	int id = this->findReportFree();
-	if (id < 0) {
-		return -1;
-	}
+ERaReport::Report_t* ERaReport::setupReport(unsigned long minInterval, unsigned long maxInterval,
+											float minChange, ReportCallback_p_t cb,
+											void* arg) {
+    if (!this->isReportFree()) {
+        return nullptr;
+    }
 	if (!minInterval) {
         minInterval = 1;
 	}
 	if (maxInterval < minInterval) {
-		return -1;
+		maxInterval = minInterval;
 	}
 
-	this->report[id].data.prevValue = 0;
-	this->report[id].data.value = 0;
-	this->report[id].reportableChange = minChange;
-	this->report[id].minInterval = minInterval;
-	this->report[id].maxInterval = maxInterval;
-	this->report[id].prevMillis = ERaMillis();
-	this->report[id].callback = nullptr;
-	this->report[id].callback_p = cb;
-	this->report[id].param = arg;
-    this->report[id].data.pin = 0;
-    this->report[id].data.pinMode = 0;
-    this->report[id].data.configId = 0;
-	this->report[id].enable = true;
-	this->report[id].updated = false;
-	this->report[id].called = false;
+    Report_t* pReport = new Report_t();
+    if (pReport == nullptr) {
+        return nullptr;
+    }
+
+	pReport->data.prevValue = 0;
+	pReport->data.value = 0;
+    pReport->data.pin = 0;
+    pReport->data.pinMode = 0;
+    pReport->data.configId = 0;
+	pReport->data.scale.enable = false;
+	pReport->data.scale.min = 0;
+	pReport->data.scale.max = 0;
+	pReport->data.scale.rawMin = 0;
+	pReport->data.scale.rawMax = 0;
+	pReport->reportableChange = minChange;
+	pReport->minInterval = minInterval;
+	pReport->maxInterval = maxInterval;
+	pReport->prevMillis = ERaMillis();
+	pReport->callback = nullptr;
+	pReport->callback_p = cb;
+	pReport->param = arg;
+	pReport->enable = true;
+	pReport->updated = false;
+	pReport->called = false;
+	this->report.put(pReport);
 	this->numReport++;
-	return id;
+	return pReport;
 }
 
-int ERaReport::setupReport(unsigned long minInterval, unsigned long maxInterval, float minChange, ReportCallback_p_t cb,
-							uint8_t pin, uint8_t pinMode, unsigned int configId) {
-	int id = this->findReportFree();
-	if (id < 0) {
-		return -1;
-	}
+ERaReport::Report_t* ERaReport::setupReport(unsigned long minInterval, unsigned long maxInterval,
+											float minChange, ReportCallback_p_t cb,
+											uint8_t pin, uint8_t pinMode, unsigned int configId) {
+    if (!this->isReportFree()) {
+        return nullptr;
+    }
 	if (!minInterval) {
         minInterval = 1;
 	}
 	if (maxInterval < minInterval) {
-		return -1;
+		maxInterval = minInterval;
 	}
 
-	this->report[id].data.prevValue = 0;
-	this->report[id].data.value = 0;
-	this->report[id].reportableChange = minChange;
-	this->report[id].minInterval = minInterval;
-	this->report[id].maxInterval = maxInterval;
-	this->report[id].prevMillis = ERaMillis();
-	this->report[id].callback = nullptr;
-	this->report[id].callback_p = cb;
-	this->report[id].param = &this->report[id].data;
-    this->report[id].data.pin = pin;
-    this->report[id].data.pinMode = pinMode;
-    this->report[id].data.configId = configId;
-	this->report[id].enable = true;
-	this->report[id].updated = false;
-	this->report[id].called = false;
+    Report_t* pReport = new Report_t();
+    if (pReport == nullptr) {
+        return nullptr;
+    }
+
+	pReport->data.prevValue = 0;
+	pReport->data.value = 0;
+    pReport->data.pin = pin;
+    pReport->data.pinMode = pinMode;
+    pReport->data.configId = configId;
+	pReport->data.scale.enable = false;
+	pReport->data.scale.min = 0;
+	pReport->data.scale.max = 0;
+	pReport->data.scale.rawMin = 0;
+	pReport->data.scale.rawMax = 0;
+	pReport->reportableChange = minChange;
+	pReport->minInterval = minInterval;
+	pReport->maxInterval = maxInterval;
+	pReport->prevMillis = ERaMillis();
+	pReport->callback = nullptr;
+	pReport->callback_p = cb;
+	pReport->param = &pReport->data;
+	pReport->enable = true;
+	pReport->updated = false;
+	pReport->called = false;
+	this->report.put(pReport);
 	this->numReport++;
-	return id;
+	return pReport;
 }
 
-bool ERaReport::changeReportableChange(unsigned int id, unsigned long minInterval, unsigned long maxInterval, float minChange) {
-	if (id >= MAX_REPORTS) {
+bool ERaReport::changeReportableChange(Report_t* pReport, unsigned long minInterval,
+										unsigned long maxInterval, float minChange) {
+	if (!this->isValidReport(pReport)) {
 		return false;
 	}
 	if (!minInterval) {
         minInterval = 1;
 	}
 	if (maxInterval < minInterval) {
-		return false;
+		maxInterval = minInterval;
 	}
 
-	if (!this->isValidReport(id)) {
-		return false;
-	}
-
-	this->report[id].reportableChange = minChange;
-	this->report[id].minInterval = minInterval;
-	this->report[id].maxInterval = maxInterval;
+	pReport->reportableChange = minChange;
+	pReport->minInterval = minInterval;
+	pReport->maxInterval = maxInterval;
 	return true;
 }
 
-bool ERaReport::changeReportableChange(unsigned int id, unsigned long minInterval, unsigned long maxInterval, float minChange,
-										ReportCallback_p_t cb, uint8_t pin, uint8_t pinMode, unsigned int configId) {
-	if (id >= MAX_REPORTS) {
+bool ERaReport::changeReportableChange(Report_t* pReport, unsigned long minInterval,
+										unsigned long maxInterval, float minChange,
+										ReportCallback_p_t cb, uint8_t pin, uint8_t pinMode,
+										unsigned int configId) {
+	if (!this->isValidReport(pReport)) {
 		return false;
 	}
 	if (!minInterval) {
         minInterval = 1;
 	}
 	if (maxInterval < minInterval) {
-		return false;
+		maxInterval = minInterval;
 	}
 
-	if (!this->isValidReport(id)) {
-		return false;
-	}
-
-	this->report[id].reportableChange = minChange;
-	this->report[id].minInterval = minInterval;
-	this->report[id].maxInterval = maxInterval;
-	this->report[id].callback_p = cb;
-	this->report[id].param = &this->report[id].data;
-    this->report[id].data.pin = pin;
-    this->report[id].data.pinMode = pinMode;
-	this->report[id].data.configId = configId;
+	pReport->reportableChange = minChange;
+	pReport->minInterval = minInterval;
+	pReport->maxInterval = maxInterval;
+	pReport->callback_p = cb;
+	pReport->param = &pReport->data;
+    pReport->data.pin = pin;
+    pReport->data.pinMode = pinMode;
+	pReport->data.configId = configId;
     return true;
 }
 
-void ERaReport::updateReport(unsigned int id, float value, bool isRound) {
-	if (id >= MAX_REPORTS) {
+void ERaReport::updateReport(Report_t* pReport, float value, bool isRound, bool execute) {
+	if (!this->isValidReport(pReport)) {
 		return;
 	}
 
-	if (this->report[id].data.scale.enable) {
-		value = ERaMapNumberRange(value, this->report[id].data.scale.rawMin,
-									this->report[id].data.scale.rawMax,
-									this->report[id].data.scale.min,
-									this->report[id].data.scale.max);
+	if (pReport->data.scale.enable) {
+		value = ERaMapNumberRange(value, pReport->data.scale.rawMin,
+									pReport->data.scale.rawMax,
+									pReport->data.scale.min,
+									pReport->data.scale.max);
 		if (isRound) {
-			value = std::round(value);
+			value = round(value);
 		}
 	}
-	this->report[id].data.value = value;
-    if (!this->report[id].updated) {
-        this->report[id].data.prevValue = value;
-        /* this->report[id].prevMillis = ERaMillis() - this->report[id].minInterval; */
-        this->report[id].prevMillis = ERaMillis() - this->report[id].maxInterval;
+	pReport->data.value = value;
+    if (!pReport->updated) {
+        pReport->data.prevValue = value;
+        /* pReport->prevMillis = ERaMillis() - pReport->minInterval; */
+		if (execute && (pReport->maxInterval != REPORT_MAX_INTERVAL)) {
+        	pReport->prevMillis = ERaMillis() - pReport->maxInterval;
+		}
     }
-	this->report[id].updated = true;
+	pReport->updated = true;
 }
 
-void ERaReport::restartReport(unsigned int id) {
-	if (id >= MAX_REPORTS) {
+bool ERaReport::reportEvery(Report_t* pReport, unsigned long interval) {
+	if (!this->isValidReport(pReport)) {
+		return false;
+	}
+	if (interval < pReport->minInterval) {
+		interval = pReport->minInterval;
+	}
+
+	pReport->maxInterval = interval;
+	return true;
+}
+
+void ERaReport::restartReport(Report_t* pReport) {
+	if (!this->isValidReport(pReport)) {
 		return;
 	}
 
-    this->report[id].updated = false;
-    this->report[id].prevMillis = ERaMillis();
+    pReport->updated = false;
+    pReport->prevMillis = ERaMillis();
 }
 
-void ERaReport::executeNow(unsigned int id) {
-	if (id >= MAX_REPORTS) {
-		return;
+void ERaReport::executeNow(Report_t* pReport) {
+	if (this->isValidReport(pReport)) {
+		pReport->prevMillis = ERaMillis() - pReport->maxInterval;
 	}
-
-	this->report[id].prevMillis = ERaMillis() - this->report[id].maxInterval;
 }
 
-void ERaReport::deleteReport(unsigned int id) {
-	if (id >= MAX_REPORTS) {
-		return;
-	}
-
+void ERaReport::deleteReport(Report_t* pReport) {
 	if (!this->numReport) {
 		return;
 	}
 
-	if (this->isValidReport(id)) {
-		this->report[id] = Report_t();
-		this->report[id].prevMillis = ERaMillis();
-		this->numReport--;
+	if (this->isValidReport(pReport)) {
+        this->setFlag(pReport->called, ReportFlagT::REPORT_ON_DELETE, true);
 	}
 }
 
-bool ERaReport::isEnable(unsigned int id) {
-	if (id >= MAX_REPORTS) {
+bool ERaReport::isEnable(Report_t* pReport) {
+	if (this->isValidReport(pReport)) {
+		return pReport->enable;
+	}
+	else {
 		return false;
 	}
-
-	return this->report[id].enable;
 }
 
-void ERaReport::enable(unsigned int id) {
-	if (id >= MAX_REPORTS) {
-		return;
+void ERaReport::enable(Report_t* pReport) {
+	if (this->isValidReport(pReport)) {
+		pReport->enable = true;
 	}
-
-	this->report[id].enable = true;
 }
 
-void ERaReport::disable(unsigned int id) {
-	if (id >= MAX_REPORTS) {
-		return;
+void ERaReport::disable(Report_t* pReport) {
+	if (this->isValidReport(pReport)) {
+		pReport->enable = false;
 	}
-	
-	this->report[id].enable = false;
 }
 
-void ERaReport::setScale(unsigned int id, float min, float max, float rawMin, float rawMax) {
-	if (id >= MAX_REPORTS) {
+void ERaReport::setScale(Report_t* pReport, float min, float max, float rawMin, float rawMax) {
+	if (!this->isValidReport(pReport)) {
 		return;
 	}
 	if ((max == 0) || (rawMax == 0) ||
 		(max <= min) || (rawMax <= rawMin)) {
-		this->report[id].data.scale.enable = false;
+		pReport->data.scale.enable = false;
 		return;
 	}
 
-	this->report[id].data.scale.enable = true;
-	this->report[id].data.scale.min = min;
-	this->report[id].data.scale.max = max;
-	this->report[id].data.scale.rawMin = rawMin;
-	this->report[id].data.scale.rawMax = rawMax;
-	this->report[id].reportableChange = ERaMapNumberRange(this->report[id].reportableChange,
+	pReport->data.scale.enable = true;
+	pReport->data.scale.min = min;
+	pReport->data.scale.max = max;
+	pReport->data.scale.rawMin = rawMin;
+	pReport->data.scale.rawMax = rawMax;
+	pReport->reportableChange = ERaMapNumberRange(pReport->reportableChange,
 										0.0f, rawMax - rawMin, 0.0f, max - min);
 }
 
-ERaReport::ScaleData_t* ERaReport::getScale(unsigned int id) {
-	if (id >= MAX_REPORTS) {
+ERaReport::ScaleData_t* ERaReport::getScale(Report_t* pReport) {
+	if (this->isValidReport(pReport)) {
+		return &pReport->data.scale;
+	}
+	else {
 		return nullptr;
 	}
-
-	return &this->report[id].data.scale;
 }
 
 void ERaReport::enableAll() {
-	for (int i = 0; i < MAX_REPORTS; ++i) {
-		if (this->isValidReport(i)) {
-			this->report[i].enable = true;
+    const ERaList<Report_t*>::iterator* e = this->report.end();
+    for (ERaList<Report_t*>::iterator* it = this->report.begin(); it != e; it = it->getNext()) {
+		Report_t* pReport = it->get();
+		if (this->isValidReport(pReport)) {
+			pReport->enable = true;
 		}
 	}
 }
 
 void ERaReport::disableAll() {
-	for (int i = 0; i < MAX_REPORTS; ++i) {
-		if (this->isValidReport(i)) {
-			this->report[i].enable = false;
+    const ERaList<Report_t*>::iterator* e = this->report.end();
+    for (ERaList<Report_t*>::iterator* it = this->report.begin(); it != e; it = it->getNext()) {
+		Report_t* pReport = it->get();
+		if (this->isValidReport(pReport)) {
+			pReport->enable = false;
 		}
 	}
 }
 
-int ERaReport::findReportFree() {
+bool ERaReport::isReportFree() {
 	if (this->numReport >= MAX_REPORTS) {
-		return -1;
+		return false;
 	}
 
-	for (int i = 0; i < MAX_REPORTS; ++i) {
-		if (!this->isValidReport(i)) {
-			return i;
-		}
-	}
-    
-    return -1;
+	return true;
 }

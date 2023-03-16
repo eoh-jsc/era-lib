@@ -3,16 +3,17 @@
 
 #if defined(LINUX) && defined(RASPBERRY)
     #include <wiringPi.h>
+    #include <Utility/ERaPwmWiringPi.hpp>
     #include <ERaApiWiringPiDef.hpp>
 #elif defined(LINUX)
     #include <ERaApiLinuxDef.hpp>
 #endif
 
-#include <UtilityLinux/ERaSocketLinux.hpp>
-#include <UtilityLinux/ERaSerialLinux.hpp>
+#include <Utility/ERaSocketLinux.hpp>
+#include <Utility/ERaSerialLinux.hpp>
 #include <ERaLinuxClient.hpp>
-#include <ModbusLinux/ERaModbusLinux.hpp>
-#include <ZigbeeLinux/ERaZigbeeLinux.hpp>
+#include <Modbus/ERaModbusLinux.hpp>
+#include <Zigbee/ERaZigbeeLinux.hpp>
 
 #if defined(LINUX) && defined(RASPBERRY)
     #include <ERaApiWiringPi.hpp>
@@ -110,6 +111,10 @@ void ERaProto<Transp, Flash>::runERaTask() {
     static ERaFlashLinux flash;
     static ERaMqttLinux<MQTTLinuxClient> mqtt;
     ERaLinux< ERaMqttLinux<MQTTLinuxClient> > ERa(mqtt, flash);
+#else
+    extern ERaLinux< ERaMqttLinux<MQTTLinuxClient> > ERa;
 #endif
+
+#include <ERa/ERaStatic.hpp>
 
 #endif /* INC_ERA_SIMPLE_LINUX_HPP_ */

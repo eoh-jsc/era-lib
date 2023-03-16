@@ -2,13 +2,16 @@
 #define INC_ERA_DEFINE_HPP_
 
 #if !defined(ERA_MALLOC)
-    #define ERA_MALLOC          malloc
+    #define ERA_MALLOC          era_malloc
 #endif
 #if !defined(ERA_REALLOC)
-    #define ERA_REALLOC         realloc
+    #define ERA_REALLOC         era_realloc
 #endif
 #if !defined(ERA_CALLOC)
-    #define ERA_CALLOC          calloc
+    #define ERA_CALLOC          era_calloc
+#endif
+#if !defined(ERA_FREE)
+    #define ERA_FREE            era_free
 #endif
 
 #define ERA_NEWLINE             "\r\n"
@@ -44,5 +47,7 @@
 #else
     #include <stddef.h>
 #endif
+
+#include "../Utility/ERaLoc.hpp"
 
 #endif /* INC_ERA_DEFINE_HPP_ */

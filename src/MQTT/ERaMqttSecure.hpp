@@ -15,10 +15,12 @@ public:
     {
 #if defined(ESP32)
         _client.setHandshakeTimeout(30);
-#elif defined(ESP8266)
-        _client.setBufferSizes(ERA_MQTT_BUFFER_SIZE, ERA_MQTT_BUFFER_SIZE / 2);
-#endif
         _client.setInsecure();
+#elif defined(ESP8266)
+        _client.setBufferSizes(ERA_MQTT_RX_BUFFER_SIZE,
+                                ERA_MQTT_TX_BUFFER_SIZE);
+        _client.setInsecure();
+#endif
     }
 };
 

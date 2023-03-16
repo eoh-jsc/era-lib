@@ -26,7 +26,7 @@ protected:
 
 private:
     void parseDevice(const cJSON* const root);
-    void createDevice(cJSON* const root, const IdentDeviceAddr_t& deviceInfo);
+    cJSON* createDevice(const IdentDeviceAddr_t& deviceInfo);
     void checkDevice();
 
 	inline
@@ -78,41 +78,35 @@ void ERaDBZigbee<Zigbee>::parseDevice(const cJSON* const root) {
 template <class Zigbee>
 void ERaDBZigbee<Zigbee>::parseZigbeeDevice() {
     char* ptr = nullptr;
-    ptr = this->thisZigbee().readDataFromFlash(FILENAME_DEVICES);
-    if (ptr == nullptr) {
-        return;
-    }
-
-    cJSON* root = cJSON_Parse(ptr);
-    if (!cJSON_IsObject(root)) {
-        cJSON_Delete(root);
-        root = nullptr;
-        return;
-    }
-
-    cJSON* item = cJSON_GetObjectItem(root, "devices");
-    if (cJSON_IsArray(item)) {
-        int sizeItem = cJSON_GetArraySize(item);
-        for (int i = 0; i < sizeItem; ++i) {
-            cJSON* subItem = cJSON_GetArrayItem(item, i);
-            if (cJSON_IsObject(subItem)) {
-                this->parseDevice(subItem);
-            }
+    cJSON* item = nullptr;
+    // Begin read from flash
+    this->thisZigbee().beginReadFromFlash(FILENAME_DEVICES);
+    do {
+        // Read line from flash
+        ptr = this->thisZigbee().readLineFromFlash();
+        if (ptr == nullptr) {
+            break;
         }
-    }
+        item = cJSON_Parse(ptr);
+        if (cJSON_IsObject(item)) {
+            this->parseDevice(item);
+        }
+        free(ptr);
+        cJSON_Delete(item);
+    } while (ptr != nullptr);
 
+    // End read from flash
+    this->thisZigbee().endReadFromFlash();
     this->checkDevice();
-    cJSON_Delete(root);
-    free(ptr);
-    root = nullptr;
+    item = nullptr;
 	ptr = nullptr;
 }
 
 template <class Zigbee>
-void ERaDBZigbee<Zigbee>::createDevice(cJSON* const root, const IdentDeviceAddr_t& deviceInfo) {
+cJSON* ERaDBZigbee<Zigbee>::createDevice(const IdentDeviceAddr_t& deviceInfo) {
     cJSON* item = cJSON_CreateObject();
     if (item == nullptr) {
-        return;
+        return nullptr;
     }
 
     cJSON_AddNumberToObject(item, "type", deviceInfo.typeDevice);
@@ -123,37 +117,28 @@ void ERaDBZigbee<Zigbee>::createDevice(cJSON* const root, const IdentDeviceAddr_
     }
 	cJSON_AddStringToObject(item, "model", deviceInfo.modelName);
 
-    cJSON_AddItemToArray(root, item);
+    return item;
 }
 
 template <class Zigbee>
 void ERaDBZigbee<Zigbee>::storeZigbeeDevice() {
-    cJSON* root = cJSON_CreateObject();
-    if (root == nullptr) {
-        return;
-    }
-
-    cJSON* devicesItem = cJSON_CreateArray();
-    if (devicesItem == nullptr) {
-        cJSON_Delete(root);
-        root = nullptr;
-        return;
-    }
-
+    char* ptr = nullptr;
+    cJSON* item = nullptr;
+    // Begin write to flash
+    this->thisZigbee().beginWriteToFlash(FILENAME_DEVICES);
     for (size_t i = 0; i < this->coordinator->deviceCount; ++i) {
-        this->createDevice(devicesItem, this->coordinator->deviceIdent[i]);
+        item = this->createDevice(this->coordinator->deviceIdent[i]);
+        ptr = cJSON_PrintUnformatted(item);
+        cJSON_Delete(item);
+        if (ptr != nullptr) {
+            // Write line to flash
+            this->thisZigbee().writeLineToFlash(ptr);
+            free(ptr);
+        }
     }
-    cJSON_AddItemToObject(root, "devices", devicesItem);
-
-	char* ptr = cJSON_PrintUnformatted(root);
-    if (ptr != nullptr) {
-        //store
-        this->thisZigbee().writeDataToFlash(FILENAME_DEVICES, ptr);
-    }
-    cJSON_Delete(root);
-    free(ptr);
-    root = nullptr;
-    devicesItem = nullptr;
+    // End write to flash
+    this->thisZigbee().endWriteToFlash();
+    item = nullptr;
     ptr = nullptr;
 }
 

@@ -1,24 +1,37 @@
 #ifndef INC_ERA_PROTOCOL_HPP_
 #define INC_ERA_PROTOCOL_HPP_
 
-#if __has_include("ERaOptions.hpp")
+#if defined(__has_include) && 		\
+	__has_include("ERaOptions.hpp")
     #include "ERaOptions.hpp"
 #endif
 
-#include <vector>
-#include <string>
+#if defined(ARDUINO_ARCH_SAM)
+	#undef PWM
+#endif
+
 #include <Utility/ERaFlashDef.hpp>
 #include <ERa/ERaConfig.hpp>
 #include <ERa/ERaHandlers.hpp>
 #include <ERa/ERaApi.hpp>
 #include <ERa/ERaTask.hpp>
+#include <ERa/ERaTransp.hpp>
 #include <PnP/ERaState.hpp>
+#include <OTA/ERaOTA.hpp>
 
-using namespace std;
+#if defined(__has_include) &&       \
+    __has_include(<functional>) &&  \
+    !defined(ERA_IGNORE_STD_FUNCTIONAL_STRING)
+    #include <functional>
+    #define PROTO_HAS_FUNCTIONAL_H
+#endif
 
 template <class Transp, class Flash>
 class ERaProto
 	: public ERaApi< ERaProto<Transp, Flash>, Flash >
+#if defined(ERA_OTA)
+	, public ERaOTA< ERaProto<Transp, Flash>, Flash >
+#endif
 {
 	enum ERaChipCfgT {
 		CHIP_UPDATE_CONFIG = 0,
@@ -30,20 +43,30 @@ class ERaProto
 		CHIP_IO_PIN = 6
 	};
 	typedef void* ApiData_t;
-    typedef std::function<void(std::string&, const char*)> MessageCallback_t;
+#if defined(PROTO_HAS_FUNCTIONAL_H)
+    typedef std::function<void(const char*, const char*)> MessageCallback_t;
+#else
+	typedef void (*MessageCallback_t)(const char*, const char*);
+#endif
 
     char ERA_TOPIC[MAX_TOPIC_LENGTH];
 	const char* TAG = "Protocol";
-    const char* FILENAME_CONFIG = FILENAME_PIN_CONFIG;
     const char* BASE_TOPIC = "eoh/chip";
-    const char* ERA_AUTH;
     friend class ERaApi< ERaProto<Transp, Flash>, Flash >;
     typedef ERaApi< ERaProto<Transp, Flash>, Flash > Base;
+#if defined(ERA_OTA)
+    friend class ERaOTA< ERaProto<Transp, Flash>, Flash >;
+    typedef ERaOTA< ERaProto<Transp, Flash>, Flash > OTA;
+#endif
 
 public:
     ERaProto(Transp& _transp, Flash& _flash)
         : Base(_flash)
+#if defined(ERA_OTA)
+		, OTA(_flash)
+#endif
 		, transp(_transp)
+		, dTransp(nullptr)
 		, _connected(false)
     {
         memset(this->ERA_TOPIC, 0, sizeof(this->ERA_TOPIC));
@@ -52,12 +75,15 @@ public:
     {}
 
     void begin(const char* auth) {
-		this->ERA_AUTH = auth;
 		ClearArray(this->ERA_TOPIC);
         FormatString(this->ERA_TOPIC, "%s/%s", BASE_TOPIC, auth);
         this->transp.setAuth(auth);
 		this->transp.setTopic(this->ERA_TOPIC);
 		this->transp.onMessage(this->messageCb);
+		if (this->dTransp != nullptr) {
+			this->dTransp->setTopic(this->ERA_TOPIC);
+			this->dTransp->onMessage(this->messageCb);
+		}
     }
 
 	void run() {
@@ -68,15 +94,43 @@ public:
 		else {
 			this->_connected = true;
 		}
+		if (this->dTransp != nullptr) {
+			this->dTransp->run();
+		}
 		this->runERaTask();
 	}
 
 	void sendCommand(const char* auth, ERaRsp_t& rsp, ApiData_t data = nullptr);
 
+	void setERaTransp(ERaTransp& _transp) {
+		this->dTransp = &_transp;
+	}
+
+	ERaTransp* getERaTransp() const {
+		return this->dTransp;
+	}
+
+	void setBoardID(const char* boardID) {
+		this->transp.setClientID(boardID);
+	}
+
+	const char* getBoardID() const {
+		return this->transp.getClientID();
+	}
+
+	void setTimeout(uint32_t timeout) {
+		this->transp.setTimeout(timeout);
+	}
+
+	const char* getAuth() const {
+		return this->transp.getAuth();
+	}
+
 	void syncConfig() {
 		this->transp.syncConfig();
 	}
 
+	ERA_DEPRECATED
 	void askConfigWhenRestart(bool enable = true) {
 		this->transp.setAskConfig(enable);
 	}
@@ -84,7 +138,6 @@ public:
 protected:
 	void init() {
 		Base::begin();
-		this->initPinConfig();
 		this->initERaTask();
 	}
 
@@ -98,26 +151,28 @@ protected:
 		return true;
     }
 
-	Transp& transp;
+	Transp& getTransp() const {
+		return this->transp;
+	}
 
 private:
 	void initERaTask();
 	void runERaTask();
 	void printBanner();
-	void processPinRequest(const std::vector<std::string>& arrayTopic, const char* payload);
-	void processDownRequest(const std::vector<std::string>& arrayTopic, const char* payload);
-	void processDownAction(cJSON* root, cJSON* item);
-	void processActionChip(cJSON* root, uint8_t type);
-	void processDownCommand(cJSON* root, cJSON* item);
-	void processFinalize(cJSON* root);
-	void processConfiguration(cJSON* root);
+	void processPinRequest(const ERaDataBuff& arrayTopic, const char* payload);
+	void processDownRequest(const ERaDataBuff& arrayTopic, const char* payload);
+	void processDownAction(const char* payload, cJSON* root, cJSON* item);
+	void processActionChip(const char* payload, cJSON* root, uint8_t type);
+	void processDownCommand(const char* payload, cJSON* root, cJSON* item);
+	void processFinalize(const char* payload, cJSON* root);
+	void processConfiguration(const char* payload, const char* hash, cJSON* root);
 	void processDeviceConfig(cJSON* root, uint8_t type);
 	void processIOPin(cJSON* root);
 #if defined(ERA_ZIGBEE)
-	void processZigbeeRequest(const std::vector<std::string>& arrayTopic, const char* payload);
+	void processZigbeeRequest(const ERaDataBuff& arrayTopic, const char* payload);
 	void processDeviceZigbee(const char* payload);
 	void processActionDeviceZigbee(const cJSON* const root, uint8_t type);
-	void processActionZigbee(const std::string& ieeeAddr, const char* payload, uint8_t type);
+	void processActionZigbee(const char* ieeeAddr, const char* payload, uint8_t type);
 #endif
 	bool sendInfo();
 	bool sendData(ERaRsp_t& rsp);
@@ -126,16 +181,18 @@ private:
 	bool sendConfigIdMultiData(ERaRsp_t& rsp);
 	bool sendModbusData(ERaRsp_t& rsp);
 	bool sendZigbeeData(ERaRsp_t& rsp);
-	void sendCommandMulti(const char* auth, ERaRsp_t& rsp, ERaDataJson* data);
+	void sendCommandVirtualMulti(const char* auth, ERaRsp_t& rsp, ERaDataJson* data);
+	void sendCommandZigbee(const char* auth, ERaRsp_t& rsp);
 	void sendCommand(ERaRsp_t& rsp, ApiData_t data = nullptr);
 	void sendCommandVirtual(ERaRsp_t& rsp, ERaDataJson* data);
 	void sendCommandModbus(ERaRsp_t& rsp, ERaDataBuff* data);
-	void initPinConfig();
-	void parsePinConfig(const char* str);
-	void storePinConfig(const cJSON* const root);
-	void removePinConfig();
-	void processRequest(std::string& topic, const char* payload);
-	unsigned int splitString(const std::string& strInput, std::vector<std::string>& retList, char ch);
+
+	void processRequest(const char* topic, const char* payload);
+#if !defined(PROTO_HAS_FUNCTIONAL_H)
+	static void _processRequest(const char* topic, const char* payload);
+#endif
+
+	size_t splitString(char* strInput, const char* delims);
 
 	bool connected() const {
 		return this->_connected;
@@ -146,10 +203,18 @@ private:
 		this->_connected = false;
 	}
 
-	MessageCallback_t messageCb = [=](std::string& topic, const char* payload) {
+#if defined(PROTO_HAS_FUNCTIONAL_H)
+	MessageCallback_t messageCb = [=](const char* topic, const char* payload) {
 		this->processRequest(topic, payload);
 	};
+#else
+	MessageCallback_t messageCb = [](const char* topic, const char* payload) {
+		ERaProto::_processRequest(topic, payload);
+	};
+#endif
 
+	Transp& transp;
+	ERaTransp* dTransp;
 	bool _connected;
 };
 
@@ -169,20 +234,21 @@ void ERaProto<Transp, Flash>::printBanner() {
 }
 
 template <class Transp, class Flash>
-void ERaProto<Transp, Flash>::processRequest(std::string& topic, const char* payload) {
+void ERaProto<Transp, Flash>::processRequest(const char* topic, const char* payload) {
 	if (payload == nullptr) {
 		return;
 	}
 
-	ERA_LOG(this->transp.getTag(), ERA_PSTR("Message %s: %s"), topic.c_str(), payload);
+	ERA_LOG(this->transp.getTag(), ERA_PSTR("Message %s: %s"), topic, payload);
 
-	if (topic.find(this->ERA_TOPIC) != 0) {
+	if (ERaFindStr(topic, this->ERA_TOPIC) != topic) {
 		return;
 	}
 
-	topic.erase(0, strlen(this->ERA_TOPIC));
-	std::vector<std::string> arrayTopic;
-	this->splitString(topic, arrayTopic, '/');
+	char copy[MAX_TOPIC_LENGTH] {0};
+	CopyToString(ERaFindStr(topic, BASE_TOPIC) + strlen(BASE_TOPIC) + 1, copy);
+	ERaDataBuff arrayTopic(copy, strlen(copy) + 1, MAX_TOPIC_LENGTH);
+	this->splitString(copy, "/");
 
 	if (arrayTopic.size() < 2) {
 		return;
@@ -208,14 +274,14 @@ void ERaProto<Transp, Flash>::processRequest(std::string& topic, const char* pay
 }
 
 template <class Transp, class Flash>
-void ERaProto<Transp, Flash>::processPinRequest(const std::vector<std::string>& arrayTopic, const char* payload) {
+void ERaProto<Transp, Flash>::processPinRequest(const ERaDataBuff& arrayTopic, const char* payload) {
 	if (arrayTopic.at(2) == "down") {
 		Base::handlePinRequest(arrayTopic, payload);
 	}
 }
 
 template <class Transp, class Flash>
-void ERaProto<Transp, Flash>::processDownRequest(const std::vector<std::string>& arrayTopic, const char* payload) {
+void ERaProto<Transp, Flash>::processDownRequest(const ERaDataBuff& arrayTopic, const char* payload) {
 	cJSON* root = cJSON_Parse(payload);
 	if (!cJSON_IsObject(root)) {
 		cJSON_Delete(root);
@@ -225,13 +291,13 @@ void ERaProto<Transp, Flash>::processDownRequest(const std::vector<std::string>&
 	
 	cJSON* item = cJSON_GetObjectItem(root, "action");
 	if (cJSON_IsString(item)) {
-		this->processDownAction(root, item);
+		this->processDownAction(payload, root, item);
 	}
 	item = cJSON_GetObjectItem(root, "command");
 	if (cJSON_IsString(item)) {
-		this->processDownCommand(root, item);
+		this->processDownCommand(payload, root, item);
 	}
-	
+
 	cJSON_Delete(root);
 	root = nullptr;
 	item = nullptr;
@@ -239,55 +305,73 @@ void ERaProto<Transp, Flash>::processDownRequest(const std::vector<std::string>&
 }
 
 template <class Transp, class Flash>
-void ERaProto<Transp, Flash>::processDownAction(cJSON* root, cJSON* item) {
-	if (ERaStrCmp(item->valuestring, "update_configuration")) {
-		processActionChip(root, ERaChipCfgT::CHIP_UPDATE_CONFIG);
-	}
-	else if (ERaStrCmp(item->valuestring, "send_control")) {
-		processActionChip(root, ERaChipCfgT::CHIP_UPDATE_CONTROL);
-	}
-	else if (ERaStrCmp(item->valuestring, "send_command")) {
-		processActionChip(root, ERaChipCfgT::CHIP_CONTROL_ALIAS);
-	}
-	else if (ERaStrCmp(item->valuestring, "update_firmware")) {
+void ERaProto<Transp, Flash>::processDownAction(const char* payload, cJSON* root, cJSON* item) {
+	if (ERaStrCmp(item->valuestring, "update_firmware")) {
+#if defined(ERA_OTA)
+		OTA::begin();
+#endif
 		ERaState::set(StateT::STATE_OTA_UPGRADE);
 	}
 	else if (ERaStrCmp(item->valuestring, "reset_eeprom")) {
 #if defined(ERA_MODBUS)
 		Base::ERaModbus::removeConfigFromFlash();
 #endif
-		this->removePinConfig();
+		Base::removePinConfig();
+#if defined(ERA_BT)
+		Base::removeBluetoothConfig();
+#endif
 		ERaDelay(1000);
 		ERaState::set(StateT::STATE_RESET_CONFIG_REBOOT);
 	}
 	else if (ERaStrCmp(item->valuestring, "force_reset")) {
 		ERaRestart(false);
 	}
+#if defined(ERA_MODBUS)
+	else if (ERaStrCmp(item->valuestring, "update_configuration")) {
+		processActionChip(payload, root, ERaChipCfgT::CHIP_UPDATE_CONFIG);
+	}
+	else if (ERaStrCmp(item->valuestring, "send_control")) {
+		processActionChip(payload, root, ERaChipCfgT::CHIP_UPDATE_CONTROL);
+	}
+	else if (ERaStrCmp(item->valuestring, "send_command")) {
+		processActionChip(payload, root, ERaChipCfgT::CHIP_CONTROL_ALIAS);
+	}
+#endif
+#if defined(ERA_BT)
+	else if (ERaStrCmp(item->valuestring, "update_bluetooth")) {
+		processActionChip(payload, root, ERaChipCfgT::CHIP_UPDATE_BLUETOOTH);
+	}
+#endif
 }
 
 template <class Transp, class Flash>
-void ERaProto<Transp, Flash>::processActionChip(cJSON* root, uint8_t type) {
+void ERaProto<Transp, Flash>::processActionChip(const char* payload, cJSON* root, uint8_t type) {
 	cJSON* dataItem = cJSON_GetObjectItem(root, "data");
 	if (!cJSON_IsObject(dataItem)) {
 		return;
 	}
 	cJSON* item = nullptr;
+	const char* hash = nullptr;
 	switch (type) {
+#if defined(ERA_MODBUS)
 		case ERaChipCfgT::CHIP_UPDATE_CONFIG:
+			item = cJSON_GetObjectItem(dataItem, "hash_id");
+			if (cJSON_IsString(item)) {
+				hash = item->valuestring;
+			}
 			item = cJSON_GetObjectItem(dataItem, "configuration");
 			if (cJSON_IsString(item)) {
-#if defined(ERA_MODBUS)
-				Base::ERaModbus::parseModbusConfig(item->valuestring, false);
-				Base::ERaModbus::clearDataBuff();
-#endif
+				Base::ERaModbus::parseModbusConfig(item->valuestring, hash, payload, false);
 			}
 			break;
 		case ERaChipCfgT::CHIP_UPDATE_CONTROL:
+			item = cJSON_GetObjectItem(dataItem, "hash_id");
+			if (cJSON_IsString(item)) {
+				hash = item->valuestring;
+			}
 			item = cJSON_GetObjectItem(dataItem, "control");
 			if (cJSON_IsString(item)) {
-#if defined(ERA_MODBUS)
-				Base::ERaModbus::parseModbusConfig(item->valuestring, true);
-#endif
+				Base::ERaModbus::parseModbusConfig(item->valuestring, hash, payload, true);
 			}
 			break;
 		case ERaChipCfgT::CHIP_CONTROL_ALIAS:
@@ -298,40 +382,61 @@ void ERaProto<Transp, Flash>::processActionChip(cJSON* root, uint8_t type) {
 					keyItem = cJSON_GetArrayItem(item, i);
 					if(cJSON_IsString(keyItem)) {
 						// Handle command
-#if defined(ERA_MODBUS)
 						Base::ERaModbus::addModbusAction(keyItem->valuestring);
-#endif
 					}
 				}
 			}
 			break;
+#endif
+#if defined(ERA_BT)
+		case ERaChipCfgT::CHIP_UPDATE_BLUETOOTH:
+			item = cJSON_GetObjectItem(dataItem, "hash_id");
+			if (cJSON_IsString(item)) {
+				hash = item->valuestring;
+			}
+			item = cJSON_GetObjectItem(dataItem, "bluetooth");
+			if (cJSON_IsString(item)) {
+				Base::parseBluetoothConfig(item->valuestring, hash, payload);
+			}
+			break;
+#endif
 		default:
 			break;
 	}
+	ERA_FORCE_UNUSED(item);
+	ERA_FORCE_UNUSED(hash);
+	ERA_FORCE_UNUSED(dataItem);
 }
 
 template <class Transp, class Flash>
-void ERaProto<Transp, Flash>::processDownCommand(cJSON* root, cJSON* item) {
+void ERaProto<Transp, Flash>::processDownCommand(const char* payload, cJSON* root, cJSON* item) {
 	if (ERaStrCmp(item->valuestring, "finalize_configuration")) {
-		this->processFinalize(root);
+		this->processFinalize(payload, root);
 	}
 }
 
 template <class Transp, class Flash>
-void ERaProto<Transp, Flash>::processFinalize(cJSON* root) {
-	cJSON* item = cJSON_GetObjectItem(root, "configuration");
+void ERaProto<Transp, Flash>::processFinalize(const char* payload, cJSON* root) {
+	const char* hash = nullptr;
+	cJSON* item = cJSON_GetObjectItem(root, "hash_id");
+	if (cJSON_IsString(item)) {
+		hash = item->valuestring;
+	}
+	item = cJSON_GetObjectItem(root, "configuration");
 	if (cJSON_IsObject(item)) {
-		this->processConfiguration(item);
+		this->processConfiguration(payload, hash, item);
 	}
 }
 
 template <class Transp, class Flash>
-void ERaProto<Transp, Flash>::processConfiguration(cJSON* root) {
+void ERaProto<Transp, Flash>::processConfiguration(const char* payload, const char* hash, cJSON* root) {
 	cJSON* item = cJSON_GetObjectItem(root, "arduino_pin");
 	if (cJSON_IsObject(item)) {
-		Base::ERaPinRp.deleteAll();
+		Base::getPinRp().deleteAll();
 		this->processDeviceConfig(item, ERaChipCfgT::CHIP_IO_PIN);
-		this->storePinConfig(item);
+		if (Base::getPinRp().updateHashID(hash)) {
+			Base::storePinConfig(payload);
+		}
 	}
 }
 
@@ -376,7 +481,7 @@ void ERaProto<Transp, Flash>::processIOPin(cJSON* root) {
 
 #if defined(ERA_ZIGBEE)
 	template <class Transp, class Flash>
-	void ERaProto<Transp, Flash>::processZigbeeRequest(const std::vector<std::string>& arrayTopic, const char* payload) {
+	void ERaProto<Transp, Flash>::processZigbeeRequest(const ERaDataBuff& arrayTopic, const char* payload) {
 		if (arrayTopic.size() == 3) {
 			if ((arrayTopic.at(2) == "permit_to_join") ||
 				(arrayTopic.at(2) == "remove_device")) {
@@ -388,7 +493,7 @@ void ERaProto<Transp, Flash>::processIOPin(cJSON* root) {
 			return;
 		}
 		if (arrayTopic.at(3) == "down") {
-			this->processActionZigbee(arrayTopic.at(2), payload, ZigbeeActionT::ZIGBEE_ACTION_SET);
+			this->processActionZigbee(arrayTopic.at(2).getString(), payload, ZigbeeActionT::ZIGBEE_ACTION_SET);
 		}
 	}
 
@@ -472,7 +577,7 @@ void ERaProto<Transp, Flash>::processIOPin(cJSON* root) {
 	}
 
 	template <class Transp, class Flash>
-	void ERaProto<Transp, Flash>::processActionZigbee(const std::string& ieeeAddr, const char* payload, uint8_t type) {
+	void ERaProto<Transp, Flash>::processActionZigbee(const char* ieeeAddr, const char* payload, uint8_t type) {
 		cJSON* root = cJSON_Parse(payload);
 		if (!cJSON_IsObject(root)) {
 			cJSON_Delete(root);
@@ -480,7 +585,7 @@ void ERaProto<Transp, Flash>::processIOPin(cJSON* root) {
 			return;
 		}
 
-		if (!Base::Zigbee::addZigbeeAction(static_cast<ZigbeeActionT>(type), ieeeAddr.c_str(), root)) {
+		if (!Base::Zigbee::addZigbeeAction(static_cast<ZigbeeActionT>(type), ieeeAddr, root)) {
 			cJSON_Delete(root);
 		}
 		root = nullptr;
@@ -538,10 +643,10 @@ bool ERaProto<Transp, Flash>::sendData(ERaRsp_t& rsp) {
 template <class Transp, class Flash>
 bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
 	int configId = rsp.id;
-	int pMode = Base::ERaPinRp.findPinMode(rsp.id.getInt());
+	int pMode = Base::getPinRp().findPinMode(rsp.id.getInt());
 	switch (rsp.type) {
 		case ERaTypeWriteT::ERA_WRITE_VIRTUAL_PIN: {
-				configId = Base::ERaPinRp.findVPinConfigId(rsp.id.getInt());
+				configId = Base::getPinRp().findVPinConfigId(rsp.id.getInt());
 				if (configId == -1) {
 					break;
 				}
@@ -553,7 +658,7 @@ bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
 		case ERaTypeWriteT::ERA_WRITE_DIGITAL_PIN:
 			if ((pMode == OUTPUT) || (pMode == INPUT) ||
 				(pMode == INPUT_PULLUP) || (pMode == INPUT_PULLDOWN)) {
-				configId = Base::ERaPinRp.findConfigId(rsp.id.getInt());
+				configId = Base::getPinRp().findConfigId(rsp.id.getInt());
 				if (configId == -1) {
 					break;
 				}
@@ -564,7 +669,7 @@ bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
 			break;
 		case ERaTypeWriteT::ERA_WRITE_ANALOG_PIN:
 			if (pMode == ANALOG) {
-				configId = Base::ERaPinRp.findConfigId(rsp.id.getInt());
+				configId = Base::getPinRp().findConfigId(rsp.id.getInt());
 				if (configId == -1) {
 					break;
 				}
@@ -575,7 +680,7 @@ bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
 			break;
 		case ERaTypeWriteT::ERA_WRITE_PWM_PIN:
 			if (pMode == PWM) {
-				configId = Base::ERaPinRp.findConfigId(rsp.id.getInt());
+				configId = Base::getPinRp().findConfigId(rsp.id.getInt());
 				if (configId == -1) {
 					break;
 				}
@@ -616,11 +721,11 @@ bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
 		root = nullptr;
 		return false;
 	}
-	if (rsp.param.getString() != nullptr) {
-		cJSON_AddStringToObject(root, name, rsp.param);
+	if (rsp.param.isString()) {
+		cJSON_AddStringToObject(root, name, rsp.param.getString());
 	}
-	else {
-		cJSON_AddNumberWithDecimalToObject(root, name, rsp.param, 5);
+	else if (rsp.param.isNumber()) {
+		cJSON_AddNumberWithDecimalToObject(root, name, rsp.param.getDouble(), 5);
 	}
 	payload = cJSON_PrintUnformatted(root);
 	if (payload != nullptr) {
@@ -644,11 +749,11 @@ bool ERaProto<Transp, Flash>::sendConfigIdData(ERaRsp_t& rsp) {
 	if (root == nullptr) {
 		return false;
 	}
-	if (rsp.param.getString() != nullptr) {
-		cJSON_AddStringToObject(root, "v", rsp.param);
+	if (rsp.param.isString()) {
+		cJSON_AddStringToObject(root, "v", rsp.param.getString());
 	}
-	else {
-		cJSON_AddNumberWithDecimalToObject(root, "v", rsp.param, 5);
+	else if (rsp.param.isNumber()) {
+		cJSON_AddNumberWithDecimalToObject(root, "v", rsp.param.getDouble(), 5);
 	}
 	payload = cJSON_PrintUnformatted(root);
 	if (payload != nullptr) {
@@ -694,20 +799,20 @@ bool ERaProto<Transp, Flash>::sendModbusData(ERaRsp_t& rsp) {
 template <class Transp, class Flash>
 bool ERaProto<Transp, Flash>::sendZigbeeData(ERaRsp_t& rsp) {
 	bool status {false};
-	char* topic = rsp.id;
+	char* id = rsp.id;
 	char* payload = rsp.param;
-	if (topic == nullptr) {
+	if (id == nullptr) {
 		return false;
 	}
 	if (payload == nullptr) {
-		topic = nullptr;
+		id = nullptr;
 		return false;
 	}
 	char topicName[MAX_TOPIC_LENGTH] {0};
 	FormatString(topicName, this->ERA_TOPIC);
-	FormatString(topicName, topic);
+	FormatString(topicName, id);
 	status = this->transp.publishData(topicName, payload, rsp.retained);
-	topic = nullptr;
+	id = nullptr;
 	payload = nullptr;
 	return status;
 }
@@ -735,8 +840,11 @@ void ERaProto<Transp, Flash>::sendCommand(const char* auth, ERaRsp_t& rsp, ApiDa
 			break;
 		case ERaTypeWriteT::ERA_WRITE_VIRTUAL_PIN_MULTI: {
 			ERaDataJson* vrData = (ERaDataJson*)data;
-			this->sendCommandMulti(auth, rsp, vrData);
+			this->sendCommandVirtualMulti(auth, rsp, vrData);
 		}
+			return;
+		case ERaTypeWriteT::ERA_WRITE_ZIGBEE_DATA:
+			this->sendCommandZigbee(auth, rsp);
 			return;
 		default:
 			return;
@@ -746,11 +854,11 @@ void ERaProto<Transp, Flash>::sendCommand(const char* auth, ERaRsp_t& rsp, ApiDa
 	if (root == nullptr) {
 		return;
 	}
-	if (rsp.param.getString() != nullptr) {
-		cJSON_AddStringToObject(root, "value", rsp.param);
+	if (rsp.param.isString()) {
+		cJSON_AddStringToObject(root, "value", rsp.param.getString());
 	}
-	else {
-		cJSON_AddNumberWithDecimalToObject(root, "value", rsp.param, 5);
+	else if (rsp.param.isNumber()) {
+		cJSON_AddNumberWithDecimalToObject(root, "value", rsp.param.getDouble(), 5);
 	}
 	payload = cJSON_PrintUnformatted(root);
 	if (payload != nullptr) {
@@ -763,7 +871,7 @@ void ERaProto<Transp, Flash>::sendCommand(const char* auth, ERaRsp_t& rsp, ApiDa
 }
 
 template <class Transp, class Flash>
-void ERaProto<Transp, Flash>::sendCommandMulti(const char* auth, ERaRsp_t& rsp, ERaDataJson* data) {
+void ERaProto<Transp, Flash>::sendCommandVirtualMulti(const char* auth, ERaRsp_t& rsp, ERaDataJson* data) {
 	if (data == nullptr) {
 		return;
 	}
@@ -777,11 +885,33 @@ void ERaProto<Transp, Flash>::sendCommandMulti(const char* auth, ERaRsp_t& rsp, 
 		if (it.isString()) {
 			rsp.param = it.getString();
 		}
-		else {
+		else if (it.isBool() || it.isNumber()) {
 			rsp.param = it.getDouble();
 		}
 		this->sendCommand(auth, rsp);
 	}
+}
+
+template <class Transp, class Flash>
+void ERaProto<Transp, Flash>::sendCommandZigbee(const char* auth, ERaRsp_t& rsp) {
+	char* id = rsp.id;
+	char* payload = rsp.param;
+	if (auth == nullptr) {
+		return;
+	}
+	if (id == nullptr) {
+		return;
+	}
+	if (payload == nullptr) {
+		id = nullptr;
+		return;
+	}
+	char topicName[MAX_TOPIC_LENGTH] {0};
+    FormatString(topicName, "%s/%s", BASE_TOPIC, auth);
+	FormatString(topicName, "/zigbee/%s/down", id);
+	this->transp.publishData(topicName, payload, rsp.retained);
+	id = nullptr;
+	payload = nullptr;
 }
 
 template <class Transp, class Flash>
@@ -818,12 +948,12 @@ void ERaProto<Transp, Flash>::sendCommandVirtual(ERaRsp_t& rsp, ERaDataJson* dat
 		if (it.getName() == nullptr) {
 			continue;
 		}
-		int configId = Base::ERaPinRp.findVPinConfigId(atoi(it.getName()));
+		int configId = Base::getPinRp().findVPinConfigId(atoi(it.getName()));
 		if (configId == -1) {
 			if (it.isString()) {
 				Base::virtualWrite(atoi(it.getName()), it.getString());
 			}
-			else {
+			else if (it.isBool() || it.isNumber()) {
 				Base::virtualWrite(atoi(it.getName()), it.getDouble());
 			}
 			data->remove(it);
@@ -908,67 +1038,21 @@ void ERaProto<Transp, Flash>::sendCommandModbus(ERaRsp_t& rsp, ERaDataBuff* data
 }
 
 template <class Transp, class Flash>
-void ERaProto<Transp, Flash>::initPinConfig() {
-    char* ptr = nullptr;
-    ptr = Base::readFromFlash(FILENAME_CONFIG);
-    this->parsePinConfig(ptr);
-    free(ptr);
-	ptr = nullptr;
-}
-
-template <class Transp, class Flash>
-void ERaProto<Transp, Flash>::parsePinConfig(const char* str) {
-	if (str == nullptr) {
-		return;
-	}
-	cJSON* root = cJSON_Parse(str);
-	if (cJSON_IsObject(root)) {
-		this->processDeviceConfig(root, ERaChipCfgT::CHIP_IO_PIN);
-	}
-	cJSON_Delete(root);
-	root = nullptr;
-}
-
-template <class Transp, class Flash>
-void ERaProto<Transp, Flash>::storePinConfig(const cJSON* const root) {
-	if (root == nullptr) {
-		return;
-	}
-	char* ptr = cJSON_PrintUnformatted(root);
-	if (ptr != nullptr) {
-		Base::writeToFlash(FILENAME_CONFIG, ptr);
-	}
-	free(ptr);
-	ptr = nullptr;
-}
-
-template <class Transp, class Flash>
-void ERaProto<Transp, Flash>::removePinConfig() {
-	Base::ERaPinRp.deleteAll();
-	Base::removeFromFlash(FILENAME_CONFIG);
-}
-
-template <class Transp, class Flash>
-unsigned int ERaProto<Transp, Flash>::splitString(const std::string& strInput, std::vector<std::string>& retList, char ch) {
-	if (strInput.empty()) {
+size_t ERaProto<Transp, Flash>::splitString(char* strInput, const char* delims) {
+	if ((strInput == nullptr) ||
+		(delims == nullptr)) {
 		return -1;
 	}
-
-	unsigned int pos = strInput.find(ch);
-	unsigned int size = strInput.size();
-	unsigned int initPos = 0;
-	retList.clear();
-
-	while (pos != std::string::npos) {
-		std::string str_sub = strInput.substr(initPos, pos - initPos);// initPos+1);
-		retList.push_back(str_sub);
-		initPos = pos + 1;
-		pos = strInput.find(ch, initPos);
+	if (!strlen(strInput)) {
+		return -1;
 	}
-
-	std::string lastSub = strInput.substr(initPos, std::min(pos, size) - initPos + 1);
-	retList.push_back(lastSub);
-	return retList.size();
+	size_t size {0};
+    char* token = strtok(strInput, delims);
+	while (token != nullptr) {
+		++size;
+		token = strtok(nullptr, delims);
+	}
+	return size;
 }
 
 #endif /* INC_ERA_PROTOCOL_HPP_ */

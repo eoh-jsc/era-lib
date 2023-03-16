@@ -1,15 +1,32 @@
 #ifndef INC_ERA_TIMER_HPP_
 #define INC_ERA_TIMER_HPP_
 
-#include <functional>
 #include <ERa/ERaDefine.hpp>
+#include <ERa/ERaDetect.hpp>
+#include <Utility/ERaQueue.hpp>
+
+#if defined(__has_include) &&       \
+    __has_include(<functional>) &&  \
+    !defined(ERA_IGNORE_STD_FUNCTIONAL_STRING)
+    #include <functional>
+    #define TIMER_HAS_FUNCTIONAL_H
+#endif
 
 class ERaTimer
 {
+#if defined(TIMER_HAS_FUNCTIONAL_H)
     typedef std::function<void(void)> TimerCallback_t;
     typedef std::function<void(void*)> TimerCallback_p_t;
+#else
+    typedef void (*TimerCallback_t)(void);
+    typedef void (*TimerCallback_p_t)(void*);
+#endif
 
     const static int MAX_TIMERS = 16;
+    enum TimerFlagT {
+        TIMER_ON_CALLED = 0x01,
+        TIMER_ON_DELETE = 0x80
+    };
     typedef struct __Timer_t {
         unsigned long prevMillis;
         unsigned long delay;
@@ -19,7 +36,7 @@ class ERaTimer
         ERaTimer::TimerCallback_p_t callback_p;
         void* param;
         bool enable;
-        bool called;
+        uint8_t called;
     } Timer_t;
 
 public:
@@ -28,17 +45,17 @@ public:
     public:
         iterator()
             : tm(nullptr)
-            , id(-1)
+            , pTm(nullptr)
         {}
-        iterator(ERaTimer* _tm, int _id)
+        iterator(ERaTimer* _tm, Timer_t* _pTm)
             : tm(_tm)
-            , id(_id)
+            , pTm(_pTm)
         {}
         ~iterator()
         {}
 
-        operator int() const {
-            return this->id;
+        operator Timer_t*() const {
+            return this->pTm;
         }
 
         operator bool() const {
@@ -49,36 +66,36 @@ public:
             if (!this->isValid()) {
                 return;
             }
-            this->tm->executeNow(this->id);
-        }
-        
-        bool isValid() const {
-            return ((this->tm != nullptr) && (this->id >= 0));
+            this->tm->executeNow(this->pTm);
         }
 
-        int getId() const {
-            return this->id;
+        bool isValid() const {
+            return ((this->tm != nullptr) && (this->pTm != nullptr));
+        }
+
+        Timer_t* getId() const {
+            return this->pTm;
         }
 
         bool changeInterval(unsigned long interval) {
             if (!this->isValid()) {
                 return false;
             }
-            return this->tm->changeInterval(this->id, interval);
+            return this->tm->changeInterval(this->pTm, interval);
         }
 
         void restartTimer() {
             if (!this->isValid()) {
                 return;
             }
-            this->tm->restartTimer(this->id);
+            this->tm->restartTimer(this->pTm);
         }
 
         void deleteTimer() {
             if (!this->isValid()) {
                 return;
             }
-            this->tm->deleteTimer(this->id);
+            this->tm->deleteTimer(this->pTm);
             this->invalidate();
         }
 
@@ -86,18 +103,18 @@ public:
             if (!this->isValid()) {
                 return false;
             }
-            return this->tm->isEnable(this->id);
+            return this->tm->isEnable(this->pTm);
         }
 
         void enable() {
             if (this->isValid()) {
-                this->tm->enable(this->id);
+                this->tm->enable(this->pTm);
             }
         }
 
         void disable() {
             if (this->isValid()) {
-                this->tm->disable(this->id);
+                this->tm->disable(this->pTm);
             }
         }
 
@@ -105,11 +122,11 @@ public:
     private:
         void invalidate() {
             this->tm = nullptr;
-            this->id = -1;
+            this->pTm = nullptr;
         }
 
         ERaTimer* tm;
-        int id;
+        Timer_t* pTm;
     };
 
     ERaTimer();
@@ -142,27 +159,43 @@ public:
         return iterator(this, this->setupTimer(interval, cb, arg, limit));
     }
 
-    bool changeInterval(unsigned int id, unsigned long interval);
-    void restartTimer(unsigned int id);
-    void executeNow(unsigned int id);
-    void deleteTimer(unsigned int id);
-    bool isEnable(unsigned int id);
-    void enable(unsigned int id);
-    void disable(unsigned int id);
+    bool changeInterval(Timer_t* pTimer, unsigned long interval);
+    void restartTimer(Timer_t* pTimer);
+    void executeNow(Timer_t* pTimer);
+    void deleteTimer(Timer_t* pTimer);
+    bool isEnable(Timer_t* pTimer);
+    void enable(Timer_t* pTimer);
+    void disable(Timer_t* pTimer);
     void enableAll();
     void disableAll();
 
 protected:
 private:
-    int setupTimer(unsigned long interval, ERaTimer::TimerCallback_t cb, unsigned int limit);
-    int setupTimer(unsigned long interval, ERaTimer::TimerCallback_p_t cb, void* arg, unsigned int limit);
-    int findTimerFree();
+    Timer_t* setupTimer(unsigned long interval, ERaTimer::TimerCallback_t cb, unsigned int limit);
+    Timer_t* setupTimer(unsigned long interval, ERaTimer::TimerCallback_p_t cb, void* arg, unsigned int limit);
+    bool isTimerFree();
 
-    bool isValidTimer(unsigned int id) { 
-        return ((this->timer[id].callback != nullptr) || (this->timer[id].callback_p != nullptr));
+    bool isValidTimer(const Timer_t* pTimer) {
+        if (pTimer == nullptr) {
+            return false;
+        }
+        return ((pTimer->callback != nullptr) || (pTimer->callback_p != nullptr));
     }
 
-    Timer_t timer[MAX_TIMERS] {};
+    void setFlag(uint8_t& flags, uint8_t mask, bool value) {
+        if (value) {
+            flags |= mask;
+        }
+        else {
+            flags &= ~mask;
+        }
+    }
+
+    bool getFlag(uint8_t flags, uint8_t mask) {
+        return (flags & mask) == mask;
+    }
+
+    ERaList<Timer_t*> timer;
     unsigned int numTimer;
 };
 

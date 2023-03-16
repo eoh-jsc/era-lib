@@ -31,6 +31,41 @@ jobs:
     strategy:
       matrix:
         board:
+          - name: "Arduino-MKR1000"
+            fqbn: "arduino:samd:mkr1000"
+            platform-name: arduino:samd
+            sketch-paths: examples/Arduino/Arduino_WiFi_101
+            libraries: |
+              - source-path: ./
+              - name: WiFi101
+          - name: "Arduino-NANO-33-IoT"
+            fqbn: "arduino:samd:nano_33_iot"
+            platform-name: arduino:samd
+            sketch-paths: examples/Arduino/Arduino_WiFi_NINA
+            libraries: |
+              - source-path: ./
+              - name: WiFiNINA
+          - name: "Arduino-MKRGSM1400"
+            fqbn: "arduino:samd:mkrgsm1400"
+            platform-name: arduino:samd
+            sketch-paths: examples/Arduino/Arduino_Gsm
+            libraries: |
+              - source-path: ./
+              - name: MKRGSM
+          - name: "Arduino-MKRNB1500"
+            fqbn: "arduino:samd:mkrnb1500"
+            platform-name: arduino:samd
+            sketch-paths: examples/Arduino/Arduino_NB
+            libraries: |
+              - source-path: ./
+              - name: MKRNB
+          - name: "Arduino-NANO-RP2040-Connect"
+            fqbn: "arduino:mbed_nano:nanorp2040connect"
+            platform-name: arduino:mbed_nano
+            sketch-paths: examples/Arduino/Arduino_WiFi_NINA
+            libraries: |
+              - source-path: ./
+              - name: WiFiNINA
           - name: "Espressif32"
             fqbn: "esp32:esp32:esp32"
             platform-name: esp32:esp32
@@ -124,6 +159,16 @@ jobs:
 
         # Make board type-specific customizations to the matrix jobs
         include:
+          - board:
+              platform-name: arduino:samd
+            platforms: |
+              # Install SAMD platform via Boards Manager
+              - name: arduino:samd
+          - board:
+              platform-name: arduino:mbed_nano
+            platforms: |
+              # Install Mbed Nano platform via Boards Manager
+              - name: arduino:mbed_nano
           - board:
               platform-name: esp32:esp32
             platforms: |

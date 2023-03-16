@@ -11,6 +11,7 @@
  *************************************************************/
 
 // Enable debug console
+// Set CORE_DEBUG_LEVEL = 3 first
 // #define ERA_DEBUG
 // #define ERA_SERIAL Serial
 
@@ -27,6 +28,10 @@
 /* For override Modbus uart pin */
 // #define MODBUS_RXD_Pin 5
 // #define MODBUS_TXD_Pin 4
+
+/* Select ERa host location (VN: Viet Nam, SG: Singapore) */
+#define ERA_LOCATION_VN
+// #define ERA_LOCATION_SG
 
 // You should get Auth Token in the ERa App or ERa Dashboard
 #define ERA_AUTH_TOKEN "ERA2706"
@@ -84,6 +89,9 @@ void setup() {
     /* Set GSM module baud rate */
     SerialGsm.begin(115200, SERIAL_8N1, gsmRxPin, gsmTxPin);
 
+    /* Set board id */
+    // ERa.setBoardID("Board_1");
+    /* Initializing the ERa library. */
     ERa.begin(modem, apn, user, pass, pwrPin);
 
     /* Setup timer called function every second */

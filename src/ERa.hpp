@@ -13,31 +13,36 @@
     #else
         #include <ERaEsp8266.hpp>
     #endif
+#elif defined(ARDUINO) &&               \
+    (defined(RTL8722DM) || defined(ARDUINO_AMEBA))
+    #if defined(ERA_USE_SSL)
+        #include <ERaRealtekSSLWiFi.hpp>
+    #else
+        #include <ERaRealtekWiFi.hpp>
+    #endif
 #elif defined(ARDUINO) && defined(ARDUINO_ARCH_STM32)
-    #define ERA_NO_RTOS
-    #include <ERa/ERaDetect.hpp>
-    #define TINY_GSM_RX_BUFFER ERA_MQTT_BUFFER_SIZE
-    #include <TinyGsmClient.h>
+    #include <TinyGsmClient.hpp>
     #if defined(TINY_GSM_MODEM_HAS_WIFI)
         #include <ERaSimpleMBStm32WiFi.hpp>
     #else
         #include <ERaSimpleMBStm32Gsm.hpp>
     #endif
-#elif defined(ARDUINO) && defined(ARDUINO_ARCH_RP2040)
-    #define ERA_NO_RTOS
-    #include <ERa/ERaDetect.hpp>
-    #define TINY_GSM_RX_BUFFER ERA_MQTT_BUFFER_SIZE
-    #include <TinyGsmClient.h>
+#elif defined(ARDUINO) &&               \
+    !defined(__MBED__) && defined(ARDUINO_ARCH_RP2040)
+    #include <TinyGsmClient.hpp>
     #if defined(TINY_GSM_MODEM_HAS_WIFI)
         #include <ERaSimpleMBRp2040WiFi.hpp>
     #else
         #include <ERaSimpleMBRp2040Gsm.hpp>
     #endif
+#elif defined(PARTICLE) || defined(SPARK)
+    #if defined(ERA_USE_SSL)
+        #include <ERaSimpleMBParticleSSL.hpp>
+    #else
+        #include <ERaSimpleMBParticle.hpp>
+    #endif
 #elif defined(__MBED__)
-    #define ERA_NO_RTOS
-    #include <ERa/ERaDetect.hpp>
-    #define TINY_GSM_RX_BUFFER ERA_MQTT_BUFFER_SIZE
-    #include <TinyGsmClient.h>
+    #include <TinyGsmClient.hpp>
     #if defined(TINY_GSM_MODEM_HAS_WIFI)
         #include <ERaSimpleMBMbedWiFi.hpp>
     #else

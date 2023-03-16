@@ -5,9 +5,8 @@
     #define ERA_PROTO_TYPE            "Stream"
 #endif
 
-#include <ERa/ERaApiArduinoDef.hpp>
+#include <Client.h>
 #include <ERa/ERaProtocol.hpp>
-#include <ERa/ERaApiArduino.hpp>
 #include <MQTT/ERaMqtt.hpp>
 
 class ERaFlash;
@@ -28,11 +27,15 @@ public:
     }
 
     int connect(IPAddress ip, uint16_t port) override {
+        ERA_FORCE_UNUSED(ip);
+        ERA_FORCE_UNUSED(port);
         this->stream->flush();
         return this->_connected = true;
     }
 
     int connect(const char* host, uint16_t port) override {
+        ERA_FORCE_UNUSED(host);
+        ERA_FORCE_UNUSED(port);
         this->stream->flush();
         return this->_connected = true;
     }
@@ -90,7 +93,7 @@ public:
     }
 
     operator bool() override {
-        return this->connected();
+        return this->_connected;
     }
 
 protected:
@@ -124,8 +127,8 @@ public:
                 const char* password = ERA_MQTT_PASSWORD) {
         Base::begin(auth);
         this->client.begin(stream);
-        this->transp.setClient(&this->client);
-        this->transp.config(host, port, username, password);
+        this->getTransp().setClient(&this->client);
+        this->getTransp().config(host, port, username, password);
     }
 
     void begin(const char* auth,
@@ -136,11 +139,12 @@ public:
                 const char* password = ERA_MQTT_PASSWORD) {
         Base::init();
         this->config(stream, auth, host, port, username, password);
+        this->getTransp().setSSID(ERA_PROTO_TYPE);
         Base::connect();
     }
 
     void begin(Stream& stream) {
-        this->begin(ERA_MQTT_CLIENT_ID, stream,
+        this->begin(ERA_AUTHENTICATION_TOKEN, stream,
                     ERA_MQTT_HOST, ERA_MQTT_PORT,
                     ERA_MQTT_USERNAME, ERA_MQTT_PASSWORD);
     }
@@ -152,20 +156,23 @@ private:
 };
 
 template <class Proto, class Flash>
+inline
 void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
     cJSON_AddStringToObject(root, INFO_BOARD, ERA_BOARD_TYPE);
     cJSON_AddStringToObject(root, INFO_MODEL, ERA_MODEL_TYPE);
-	cJSON_AddStringToObject(root, INFO_AUTH_TOKEN, this->thisProto().ERA_AUTH);
+	cJSON_AddStringToObject(root, INFO_BOARD_ID, this->thisProto().getBoardID());
+	cJSON_AddStringToObject(root, INFO_AUTH_TOKEN, this->thisProto().getAuth());
     cJSON_AddStringToObject(root, INFO_FIRMWARE_VERSION, ERA_FIRMWARE_VERSION);
     cJSON_AddStringToObject(root, INFO_SSID, ERA_PROTO_TYPE);
     cJSON_AddStringToObject(root, INFO_BSSID, ERA_PROTO_TYPE);
     cJSON_AddNumberToObject(root, INFO_RSSI, 100);
     cJSON_AddStringToObject(root, INFO_MAC, ERA_PROTO_TYPE);
     cJSON_AddStringToObject(root, INFO_LOCAL_IP, ERA_PROTO_TYPE);
-    cJSON_AddNumberToObject(root, INFO_PING, this->thisProto().transp.getPing());
+    cJSON_AddNumberToObject(root, INFO_PING, this->thisProto().getTransp().getPing());
 }
 
 template <class Proto, class Flash>
+inline
 void ERaApi<Proto, Flash>::addModbusInfo(cJSON* root) {
 	cJSON_AddNumberToObject(root, INFO_MB_CHIP_TEMPERATURE, 5000);
 	cJSON_AddNumberToObject(root, INFO_MB_TEMPERATURE, 0);

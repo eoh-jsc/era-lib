@@ -33,32 +33,66 @@ public:
 			return this->ptr;
 		}
 
-		int getInt(int _base = 10) const {
+		int getInt() const {
+			if (!this->isValid()) {
+				return 0;
+			}
+			return atoi(ptr);
+		}
+
+		int getInt(int _base) const {
+			return (int)this->getLong(_base);
+		}
+
+		long getLong() const {
+			if (!this->isValid()) {
+				return 0;
+			}
+			return atol(ptr);
+		}
+
+		long getLong(int _base) const {
 			if (!this->isValid()) {
 				return 0;
 			}
 			return strtol(this->ptr, nullptr, _base);
 		}
 
-        unsigned int getUint(int _base = 10) const {
-            if (!this->isValid()) {
-                return 0;
-            }
-            return strtoul(this->ptr, nullptr, _base);
-        }
+#if defined(ERA_USE_ERA_ATOLL)
+		long long getLongLong() const {
+			if (!this->isValid()) {
+				return 0;
+			}
+			return ERaAtoll(ptr);
+		}
+#else
+		long long getLongLong() const {
+			if (!this->isValid()) {
+				return 0;
+			}
+			return atoll(ptr);
+		}
+
+		long long getLongLong(int _base) const {
+			if (!this->isValid()) {
+				return 0;
+			}
+			return strtoll(this->ptr, nullptr, _base);
+		}
+#endif
 
         float getFloat() const {
             if (!this->isValid()) {
                 return 0.0f;
             }
-            return strtof(this->ptr, nullptr);
+            return (float)atof(ptr);
         }
 
         double getDouble() const {
             if (!this->isValid()) {
                 return 0.0;
             }
-            return strtod(this->ptr, nullptr);
+            return atof(ptr);
         }
 
 		bool isValid() const {
@@ -103,15 +137,17 @@ public:
 		const char* limit;
 	};
 
-	ERaDataBuff(char* _buff, size_t _len)
+	ERaDataBuff(char* _buff, size_t _len, size_t _size)
 		: buff(_buff)
-		, len(0)
-		, buffSize(_len)
+		, len(_len)
+		, buffSize(_size)
+		, changed(false)
 	{}
-	ERaDataBuff(const char* _buff, size_t _len)
+	ERaDataBuff(const char* _buff, size_t _len, size_t _size)
 		: buff((char*)_buff)
-		, len(0)
-		, buffSize(_len)
+		, len(_len)
+		, buffSize(_size)
+		, changed(false)
 	{}
 	~ERaDataBuff()
 	{}
@@ -126,6 +162,12 @@ public:
 
 	bool isEmpty() const {
 		return *this->buff == '\0';
+	}
+
+	bool isChange() {
+		bool _changed = this->changed;
+		this->changed = false;
+		return _changed;
 	}
 
 	void clear() {
@@ -145,6 +187,7 @@ public:
 
 	void add_hex(uint8_t value);
 	void add_hex_array(const uint8_t* ptr, size_t size);
+	void add_zero_array(size_t size);
     void add(int value);
     void add(unsigned int value);
     void add(long value);
@@ -189,6 +232,11 @@ public:
 		return iterator(this->buff + this->len, this->buff + this->len);
 	}
 
+	iterator at(int index) const;
+	iterator at(const char* key) const;
+
+	size_t size() const;
+
 	operator char* () const;
 
 	void operator += (const char* ptr) {
@@ -203,9 +251,15 @@ public:
 	iterator operator [] (const char* key) const;
 
 protected:
+	void onChange(const void* ptr, size_t size);
+	void onChange(const char* value);
+	void onChangeHex(uint8_t value);
+	void onChangeHex(const uint8_t* ptr, size_t size);
+
 	char* buff;
 	size_t len;
 	size_t buffSize;
+	bool changed;
 };
 
 inline
@@ -226,6 +280,7 @@ void ERaDataBuff::add_hex(uint8_t value) {
 	if (this->len + 2 > this->buffSize) {
 		return;
 	}
+	this->onChangeHex(value);
 	this->len += snprintf(this->buff + this->len, this->buffSize - this->len, "%02x", value);
 	this->buff[this->len++] = '\0';
 }
@@ -238,6 +293,7 @@ void ERaDataBuff::add_hex_array(const uint8_t* ptr, size_t size) {
 	if (this->len + size * 2 > this->buffSize) {
 		return;
 	}
+	this->onChangeHex(ptr, size);
 	for (size_t i = 0; i < size; ++i) {
 		this->len += snprintf(this->buff + this->len, this->buffSize - this->len, "%02x", ptr[i]);
 	}
@@ -245,54 +301,153 @@ void ERaDataBuff::add_hex_array(const uint8_t* ptr, size_t size) {
 }
 
 inline
-void ERaDataBuff::add(int value) {
-    this->len += snprintf(this->buff + this->len, this->buffSize - this->len, "%i", value);
-    this->buff[this->len++] = '\0';
+void ERaDataBuff::add_zero_array(size_t size) {
+	if (!size) {
+		return;
+	}
+	if (this->len + size * 2 > this->buffSize) {
+		return;
+	}
+	for (size_t i = 0; i < size; ++i) {
+		this->len += snprintf(this->buff + this->len, this->buffSize - this->len, "%02x", 0);
+	}
+	this->buff[this->len++] = '\0';
 }
 
-inline
-void ERaDataBuff::add(unsigned int value) {
-    this->len += snprintf(this->buff + this->len, this->buffSize - this->len, "%u", value);
-    this->buff[this->len++] = '\0';
-}
+#if defined(__AVR__) || defined(ARDUINO_ARCH_ARC32)
 
-inline
-void ERaDataBuff::add(long value) {
-    this->len += snprintf(this->buff + this->len, this->buffSize - this->len, "%li", value);
-    this->buff[this->len++] = '\0';
-}
+	#include <stdlib.h>
 
-inline
-void ERaDataBuff::add(unsigned long value) {
-    this->len += snprintf(this->buff + this->len, this->buffSize - this->len, "%lu", value);
-    this->buff[this->len++] = '\0';
-}
+	inline
+	void ERaDataBuff::add(int value) {
+		char str[2 + 8 * sizeof(value)] {0};
+		itoa(value, str, 10);
+		add(str);
+	}
 
-inline
-void ERaDataBuff::add(long long value) {
-    this->len += snprintf(this->buff + this->len, this->buffSize - this->len, "%lli", value);
-    this->buff[this->len++] = '\0';
-}
+	inline
+	void ERaDataBuff::add(unsigned int value) {
+        char str[1 + 8 * sizeof(value)] {0};
+        utoa(value, str, 10);
+        add(str);
+	}
 
-inline
-void ERaDataBuff::add(unsigned long long value) {
-    this->len += snprintf(this->buff + this->len, this->buffSize - this->len, "%llu", value);
-    this->buff[this->len++] = '\0';
-}
+	inline
+	void ERaDataBuff::add(long value) {
+        char str[2 + 8 * sizeof(value)] {0};
+        ltoa(value, str, 10);
+        add(str);
+	}
 
-inline
-void ERaDataBuff::add(float value) {
-    this->len += snprintf(this->buff + this->len, this->buffSize - this->len, "%.2f", value);
-    this->buff[this->len++] = '\0';
-}
+	inline
+	void ERaDataBuff::add(unsigned long value) {
+        char str[1 + 8 * sizeof(value)] {0};
+        ultoa(value, str, 10);
+        add(str);
+	}
 
-inline
-void ERaDataBuff::add(double value) {
-    this->len += snprintf(this->buff + this->len, this->buffSize - this->len, "%.5f", value);
-    this->buff[this->len++] = '\0';
-}
+	inline
+	void ERaDataBuff::add(long long value) {
+        char str[2 + 8 * sizeof(value)] {0};
+        ltoa(value, str, 10);
+        add(str);
+	}
+
+	inline
+	void ERaDataBuff::add(unsigned long long value) {
+        char str[1 + 8 * sizeof(value)] {0};
+        ultoa(value, str, 10);
+        add(str);
+	}
+
+	inline
+	void ERaDataBuff::add(float value) {
+        char str[33] {0};
+        dtostrf(value, 5, 2, str);
+        add(str);
+	}
+
+	inline
+	void ERaDataBuff::add(double value) {
+        char str[33] {0};
+        dtostrf(value, 5, 5, str);
+        add(str);
+	}
+
+#else
+
+	inline
+	void ERaDataBuff::add(int value) {
+		this->len += snprintf(this->buff + this->len, this->buffSize - this->len, "%i", value);
+		this->buff[this->len++] = '\0';
+	}
+
+	inline
+	void ERaDataBuff::add(unsigned int value) {
+		this->len += snprintf(this->buff + this->len, this->buffSize - this->len, "%u", value);
+		this->buff[this->len++] = '\0';
+	}
+
+	inline
+	void ERaDataBuff::add(long value) {
+		this->len += snprintf(this->buff + this->len, this->buffSize - this->len, "%li", value);
+		this->buff[this->len++] = '\0';
+	}
+
+	inline
+	void ERaDataBuff::add(unsigned long value) {
+		this->len += snprintf(this->buff + this->len, this->buffSize - this->len, "%lu", value);
+		this->buff[this->len++] = '\0';
+	}
+
+	inline
+	void ERaDataBuff::add(long long value) {
+		this->len += snprintf(this->buff + this->len, this->buffSize - this->len, "%lli", value);
+		this->buff[this->len++] = '\0';
+	}
+
+	inline
+	void ERaDataBuff::add(unsigned long long value) {
+		this->len += snprintf(this->buff + this->len, this->buffSize - this->len, "%llu", value);
+		this->buff[this->len++] = '\0';
+	}
+
+#if defined(ERA_USE_ERA_DTOSTRF)
+
+	inline
+	void ERaDataBuff::add(float value) {
+        char str[33] {0};
+        ERaDtostrf(value, 2, str);
+        add(str);
+	}
+
+	inline
+	void ERaDataBuff::add(double value) {
+        char str[33] {0};
+        ERaDtostrf(value, 5, str);
+        add(str);
+	}
+
+#else
+
+	inline
+	void ERaDataBuff::add(float value) {
+		this->len += snprintf(this->buff + this->len, this->buffSize - this->len, "%.2f", value);
+		this->buff[this->len++] = '\0';
+	}
+
+	inline
+	void ERaDataBuff::add(double value) {
+		this->len += snprintf(this->buff + this->len, this->buffSize - this->len, "%.5f", value);
+		this->buff[this->len++] = '\0';
+	}
+
+#endif
+
+#endif
 
 #if defined(ERA_HAS_PROGMEM)
+
 	inline
 	void ERaDataBuff::add(const __FlashStringHelper* ptr) {
 		if (ptr == nullptr) {
@@ -307,6 +462,7 @@ void ERaDataBuff::add(double value) {
 		this->len += size;
     	this->buff[this->len++] = '\0';
 	}
+
 #endif
 
 inline
@@ -318,6 +474,55 @@ bool ERaDataBuff::next() {
 		return true;
 	}
 	return false;
+}
+
+inline
+void ERaDataBuff::onChange(const void* ptr, size_t size) {
+	if (ptr == nullptr) {
+		return;
+	}
+	if (this->buff[this->len] == '\0') {
+		this->changed = true;
+		return;
+	}
+	if (this->changed) {
+		return;
+	}
+	this->changed = memcmp(this->buff + this->len, ptr, size);
+}
+
+inline
+void ERaDataBuff::onChange(const char* value) {
+	if (value == nullptr) {
+		return;
+	}
+	onChange((void*)value, strlen(value));
+}
+
+inline
+void ERaDataBuff::onChangeHex(uint8_t value) {
+	char buf[3] {0};
+	snprintf(buf, sizeof(buf), "%02x", value);
+	onChange(buf);
+}
+
+inline
+void ERaDataBuff::onChangeHex(const uint8_t* ptr, size_t size) {
+	if (ptr == nullptr || !size) {
+		return;
+	}
+	size_t len = size * 2 + 1;
+	char* buf = (char*)malloc(len);
+	if (buf == nullptr) {
+		return;
+	}
+	for (size_t i = 0; i < size; ++i) {
+		size_t pos = i * 2;
+		snprintf(buf + pos, size - pos, "%02x", ptr[i]);
+	}
+	onChange(buf);
+	free(buf);
+	buf = nullptr;
 }
 
 inline
@@ -351,6 +556,38 @@ void ERaDataBuff::remove(const char* key) {
 }
 
 inline
+ERaDataBuff::iterator ERaDataBuff::at(int index) const {
+	const iterator e = this->end();
+	for (iterator it = this->begin(); it < e; ++it) {
+		if (!index--) {
+			return it;
+		}
+	}
+	return iterator::invalid();
+}
+
+inline
+ERaDataBuff::iterator ERaDataBuff::at(const char* key) const {
+	const iterator e = this->end();
+	for (iterator it = this->begin(); it < e; ++it) {
+		if (it == key) {
+			return ++it;
+		}
+	}
+	return iterator::invalid();
+}
+
+inline
+size_t ERaDataBuff::size() const {
+	size_t _size {0};
+	const iterator e = this->end();
+	for (iterator it = this->begin(); it < e; ++it) {
+		++_size;
+	}
+	return _size;
+}
+
+inline
 ERaDataBuff::operator char* () const {
 	char* ptr = reinterpret_cast<char*>(ERA_MALLOC(this->len));
 	if (ptr == nullptr) {
@@ -366,34 +603,22 @@ ERaDataBuff::operator char* () const {
 
 inline
 ERaDataBuff::iterator ERaDataBuff::operator [] (int index) const {
-	const iterator e = this->end();
-	for (iterator it = this->begin(); it < e; ++it) {
-		if (!index--) {
-			return it;
-		}
-	}
-	return iterator::invalid();
+	return this->at(index);
 }
 
 inline
 ERaDataBuff::iterator ERaDataBuff::operator [] (const char* key) const {
-	const iterator e = this->end();
-	for (iterator it = this->begin(); it < e; ++it) {
-		if (it == key) {
-			return ++it;
-		}
-	}
-	return iterator::invalid();
+	return this->at(key);
 }
 
 class ERaDataBuffDynamic : public ERaDataBuff
 {
 public:
 	ERaDataBuffDynamic()
-		: ERaDataBuff((char*)nullptr, 0)
+		: ERaDataBuff((char*)nullptr, 0, 0)
 	{}
 	ERaDataBuffDynamic(size_t size)
-		: ERaDataBuff((char*)ERA_MALLOC(size), size)
+		: ERaDataBuff((char*)ERA_MALLOC(size), 0, size)
 	{
 		memset(this->buff, 0, size);
 	}
@@ -443,6 +668,34 @@ public:
             return iterator(nullptr);
         }
 
+		bool isBool() const {
+			if (!this->isValid()) {
+				return false;
+			}
+			return cJSON_IsBool(this->item);
+		}
+
+		bool isNumber() const {
+			if (!this->isValid()) {
+				return false;
+			}
+			return cJSON_IsNumber(this->item);
+		}
+
+		bool isString() const {
+			if (!this->isValid()) {
+				return false;
+			}
+			return cJSON_IsString(this->item);
+		}
+
+		bool isObject() const {
+			if (!this->isValid()) {
+				return false;
+			}
+			return cJSON_IsObject(this->item);
+		}
+
 		const cJSON* getItem() const {
 			return this->item;
 		}
@@ -486,34 +739,6 @@ public:
 			return this->item;
 		}
 
-		bool isBool() const {
-			if (!this->isValid()) {
-				return false;
-			}
-			return cJSON_IsBool(this->item);
-		}
-
-		bool isNumber() const {
-			if (!this->isValid()) {
-				return false;
-			}
-			return cJSON_IsNumber(this->item);
-		}
-
-		bool isString() const {
-			if (!this->isValid()) {
-				return false;
-			}
-			return cJSON_IsString(this->item);
-		}
-
-		bool isObject() const {
-			if (!this->isValid()) {
-				return false;
-			}
-			return cJSON_IsObject(this->item);
-		}
-
 		bool rename(const char* name) const {
 			return cJSON_Rename(const_cast<cJSON*>(this->item), name);
 		}
@@ -524,6 +749,10 @@ public:
 
 		bool isEmpty() const {
 			return !this->isValid();
+		}
+
+		size_t size() const {
+			return (size_t)cJSON_GetArraySize(this->item);
 		}
 
 		operator const cJSON* () const {
@@ -614,6 +843,10 @@ public:
 		return this->root->child == nullptr;
 	}
 
+	size_t size() const {
+		return (size_t)cJSON_GetArraySize(this->root);
+	}
+
 	void clear() {
 		if (this->ptr != nullptr) {
 			free(this->ptr);
@@ -682,6 +915,9 @@ public:
 		return iterator(nullptr);
 	}
 
+	iterator at(int index) const;
+	iterator at(const char* key) const;
+
 	operator const char* () {
 		return this->getString();
 	}
@@ -718,7 +954,7 @@ void ERaDataJson::add(const char* name, bool value) {
 inline
 void ERaDataJson::add(const char* name, float value) {
 	this->create();
-	this->hooks.addDouble(this->root, name, value, 5);
+	this->hooks.addDouble(this->root, name, value, 2);
 }
 
 inline
@@ -751,6 +987,7 @@ void ERaDataJson::add(const char* name, ERaDataJson& value) {
 }
 
 #if defined(ERA_HAS_PROGMEM)
+
 	inline
 	void ERaDataJson::add(const char* name, const __FlashStringHelper* value) {
 		if (value == nullptr) {
@@ -762,6 +999,7 @@ void ERaDataJson::add(const char* name, ERaDataJson& value) {
 		memcpy_P(str, p, size);
 		this->add(name, str);
 	}
+
 #endif
 
 inline
@@ -791,7 +1029,7 @@ void ERaDataJson::remove(const ERaDataJson::iterator& it) {
 }
 
 inline
-ERaDataJson::iterator ERaDataJson::operator [] (int index) const {
+ERaDataJson::iterator ERaDataJson::at(int index) const {
 	const iterator e = this->end();
 	for (iterator it = this->begin(); it != e; ++it) {
 		if (!index--) {
@@ -802,7 +1040,7 @@ ERaDataJson::iterator ERaDataJson::operator [] (int index) const {
 }
 
 inline
-ERaDataJson::iterator ERaDataJson::operator [] (const char* key) const {
+ERaDataJson::iterator ERaDataJson::at(const char* key) const {
 	const iterator e = this->end();
 	for (iterator it = this->begin(); it != e; ++it) {
 		if (it == key) {
@@ -810,6 +1048,16 @@ ERaDataJson::iterator ERaDataJson::operator [] (const char* key) const {
 		}
 	}
 	return iterator::invalid();
+}
+
+inline
+ERaDataJson::iterator ERaDataJson::operator [] (int index) const {
+	return this->at(index);
+}
+
+inline
+ERaDataJson::iterator ERaDataJson::operator [] (const char* key) const {
+	return this->at(key);
 }
 
 #endif /* INC_ERA_DATA_HPP_ */

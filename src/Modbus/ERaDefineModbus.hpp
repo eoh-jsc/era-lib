@@ -24,6 +24,25 @@
 #define HI_WORD(a)                      (((a) >> 8) & 0xFF)
 #define LO_WORD(a)                      ((a) & 0xFF)
 
+#define LOC_BUFFER_MODBUS(len)                      \
+    uint8_t locData[32] {0};                        \
+    uint8_t* pData = locData;                       \
+    uint16_t pDataLen = request->getLength() * len; \
+    if (pDataLen > sizeof(locData)) {               \
+        pData = (uint8_t*)malloc(pDataLen);         \
+        if (pData == nullptr) {                     \
+            ERA_ASSERT(pData != nullptr);           \
+            return;                                 \
+        }                                           \
+        memset(pData, 0, pDataLen);                 \
+    }
+
+#define FREE_BUFFER_MODBUS                          \
+    if (pData != locData) {                         \
+        free(pData);                                \
+    }                                               \
+    pData = nullptr;
+
 enum ModbusFunctionT : uint8_t {
     READ_COIL_STATUS = 0x01,
     READ_INPUT_STATUS = 0x02,

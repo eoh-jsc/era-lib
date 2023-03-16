@@ -1,6 +1,7 @@
 #ifndef INC_ERA_TASK_MBED_HPP_
 #define INC_ERA_TASK_MBED_HPP_
 
+#include <mbed.h>
 #include <ERa/ERaProtocol.hpp>
 
 using namespace rtos;

@@ -177,7 +177,7 @@ static void * CJSON_CDECL internal_realloc(void *pointer, size_t size)
 }
 #else
 #define internal_malloc ERA_MALLOC
-#define internal_free free
+#define internal_free ERA_FREE
 #define internal_realloc ERA_REALLOC
 #endif
 
@@ -1190,7 +1190,7 @@ CJSON_PUBLIC(cJSON *) cJSON_ParseWithLength(const char *value, size_t buffer_len
 
 static unsigned char *print(const cJSON * const item, cJSON_bool format, const internal_hooks * const hooks)
 {
-    static const size_t default_buffer_size = 1024;
+    static const size_t default_buffer_size = CJSON_BUFFER_SIZE;
     printbuffer buffer[1];
     unsigned char *printed = NULL;
 

@@ -4,34 +4,67 @@
 // include functional API if possible. remove min and max macros for some
 // platforms as they will be defined again by Arduino later
 #if defined(ESP8266) || defined(ESP32)
-#include <string>
-#include <functional>
-#define MQTT_HAS_FUNCTIONAL 1
+  #include <string>
+  #include <functional>
+  #define MQTT_HAS_STRING       1
+  #define MQTT_HAS_FUNCTIONAL   1
+#elif defined(ARDUINO_ARCH_NRF5) ||   \
+  defined(RTL8722DM) || defined(ARDUINO_AMEBA)
+  #define MQTT_HAS_STRING       0
+  #define MQTT_HAS_FUNCTIONAL   0
 #elif defined(__has_include)
-#if __has_include(<functional>)
-#if defined(min)
-#undef min
-#endif
-#if defined(max)
-#undef max
-#endif
-#include <string>
-#include <functional>
-#define MQTT_HAS_FUNCTIONAL 1
+  #if __has_include(<string>)
+    #include <string>
+    #define MQTT_HAS_STRING     1
+  #else
+    #define MQTT_HAS_STRING     0
+  #endif
+  #if __has_include(<functional>)
+    #if defined(min)
+      #undef min
+    #endif
+    #if defined(max)
+      #undef max
+    #endif
+    #include <functional>
+    #define MQTT_HAS_FUNCTIONAL 1
+  #else
+    #define MQTT_HAS_FUNCTIONAL 0
+  #endif
 #else
-#define MQTT_HAS_FUNCTIONAL 0
-#endif
-#else
-#define MQTT_HAS_FUNCTIONAL 0
+  #define MQTT_HAS_STRING       0
+  #define MQTT_HAS_FUNCTIONAL   0
 #endif
 
-#include <Arduino.h>
-#include <Client.h>
-#include <Stream.h>
+#if defined(PARTICLE) || defined(SPARK)
+  #include "application.h"
+  #undef retained
+#else
+  #include <Arduino.h>
+  #include <Client.h>
+  #include <Stream.h>
+#endif
 
 extern "C" {
-#include "lwmqtt/lwmqtt.h"
+  #include "lwmqtt/lwmqtt.h"
 }
+
+#if defined(ESP8266) && defined(ARDUINO_ESP8266_MAJOR) &&           \
+    defined(ARDUINO_ESP8266_MINOR) && defined(ARDUINO_ESP8266_REVISION)
+  #define ESP8266_VERSION_NUMBER ((ARDUINO_ESP8266_MAJOR * 10000) + \
+                                  (ARDUINO_ESP8266_MINOR * 100) +   \
+                                  (ARDUINO_ESP8266_REVISION))
+  #if ESP8266_VERSION_NUMBER >= 30101
+    #include <coredecls.h>
+    #define mqtt_yield_fix() esp_yield()
+  #else
+    #define mqtt_yield_fix() delay(1)
+  #endif
+#elif defined (PARTICLE) || defined(SPARK)
+  #define mqtt_yield_fix()   Particle.process()
+#else
+  #define mqtt_yield_fix()   delay(1)
+#endif
 
 typedef uint32_t (*MQTTClientClockSource)();
 
@@ -47,10 +80,10 @@ typedef struct {
 
 class MQTTClient;
 
-typedef void (*MQTTClientCallbackSimple)(std::string &topic, const char* payload);
+typedef void (*MQTTClientCallbackSimple)(const char* topic, const char* payload);
 typedef void (*MQTTClientCallbackAdvanced)(MQTTClient *client, char topic[], char bytes[], int length);
 #if MQTT_HAS_FUNCTIONAL
-typedef std::function<void(std::string &topic, const char* payload)> MQTTClientCallbackSimpleFunction;
+typedef std::function<void(const char* topic, const char* payload)> MQTTClientCallbackSimpleFunction;
 typedef std::function<void(MQTTClient *client, char topic[], char bytes[], int length)>
     MQTTClientCallbackAdvancedFunction;
 #endif
@@ -72,9 +105,11 @@ class MQTTClient {
   uint8_t *readBuf = nullptr;
   uint8_t *writeBuf = nullptr;
 
-  uint16_t keepAlive = 10;
+  uint16_t keepAlive = 60;
   bool cleanSession = true;
   uint32_t timeout = 2000;
+  bool _sessionPresent = false;
+  bool skipACK = true;
 
   Client *netClient = nullptr;
   const char *hostname = nullptr;
@@ -89,13 +124,15 @@ class MQTTClient {
   lwmqtt_client_t client = lwmqtt_client_t();
 
   bool _connected = false;
+  uint16_t nextDupPacketID = 0;
   lwmqtt_return_code_t _returnCode = (lwmqtt_return_code_t)0;
   lwmqtt_err_t _lastError = (lwmqtt_err_t)0;
+  uint32_t _droppedMessages = 0;
 
  public:
   void *ref = nullptr;
 
-  explicit MQTTClient(int bufSize = 128);
+  explicit MQTTClient(int bufSize = 128) : MQTTClient(bufSize, bufSize) {}
   explicit MQTTClient(int readBufSize, int writeBufSize);
 
   ~MQTTClient();
@@ -112,6 +149,8 @@ class MQTTClient {
     this->setHost(_address, _port);
   }
 
+  void init(int readBufSize, int writeBufSize);
+
   void onMessage(MQTTClientCallbackSimple cb);
   void onMessageAdvanced(MQTTClientCallbackAdvanced cb);
 #if MQTT_HAS_FUNCTIONAL
@@ -119,7 +158,11 @@ class MQTTClient {
   void onMessageAdvanced(MQTTClientCallbackAdvancedFunction cb);
 #endif
 
+  void setClient(Client* _client) { this->netClient = _client; }
+
   void setClockSource(MQTTClientClockSource cb);
+
+  void setSkipACK(bool skip);
 
   void setHost(const char _hostname[]) { this->setHost(_hostname, 1883); }
   void setHost(const char hostname[], int port);
@@ -141,14 +184,17 @@ class MQTTClient {
     this->setTimeout(_timeout);
   }
 
+  void dropOverflow(bool enabled);
+  uint32_t droppedMessages() { return this->_droppedMessages; }
+
   bool connect(const char clientId[], bool skip = false) { return this->connect(clientId, nullptr, nullptr, skip); }
   bool connect(const char clientId[], const char username[], bool skip = false) {
     return this->connect(clientId, username, nullptr, skip);
   }
   bool connect(const char clientID[], const char username[], const char password[], bool skip = false);
 
+#if MQTT_HAS_STRING
   bool publish(const std::string &topic) { return this->publish(topic.c_str(), ""); }
-  bool publish(const char topic[]) { return this->publish(topic, ""); }
   bool publish(const std::string &topic, const std::string &payload) { return this->publish(topic.c_str(), payload.c_str()); }
   bool publish(const std::string &topic, const std::string &payload, bool retained, int qos) {
     return this->publish(topic.c_str(), payload.c_str(), retained, qos);
@@ -157,6 +203,8 @@ class MQTTClient {
   bool publish(const char topic[], const std::string &payload, bool retained, int qos) {
     return this->publish(topic, payload.c_str(), retained, qos);
   }
+#endif
+  bool publish(const char topic[]) { return this->publish(topic, ""); }
   bool publish(const char topic[], const char payload[]) {
     return this->publish(topic, (char *)payload, (int)strlen(payload));
   }
@@ -168,16 +216,24 @@ class MQTTClient {
   }
   bool publish(const char topic[], const char payload[], int length, bool retained, int qos);
 
+  uint16_t lastPacketID();
+  void prepareDuplicate(uint16_t packetID);
+
+#if MQTT_HAS_STRING
   bool subscribe(const std::string &topic) { return this->subscribe(topic.c_str()); }
   bool subscribe(const std::string &topic, int qos) { return this->subscribe(topic.c_str(), qos); }
+#endif
   bool subscribe(const char topic[]) { return this->subscribe(topic, 0); }
   bool subscribe(const char topic[], int qos);
 
+#if MQTT_HAS_STRING
   bool unsubscribe(const std::string &topic) { return this->unsubscribe(topic.c_str()); }
+#endif
   bool unsubscribe(const char topic[]);
 
   bool loop();
   bool connected();
+  bool sessionPresent() { return this->_sessionPresent; }
 
   lwmqtt_err_t lastError() { return this->_lastError; }
   lwmqtt_return_code_t returnCode() { return this->_returnCode; }
@@ -188,4 +244,4 @@ class MQTTClient {
   void close();
 };
 
-#endif
+#endif /* MQTT_CLIENT_H */

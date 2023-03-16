@@ -6,8 +6,8 @@
 #endif
 
 #include <ERa/ERaProtocol.hpp>
-#include <MQTTLinux/ERaMqttLinux.hpp>
-#include <UtilityLinux/ERaFlashLinux.hpp>
+#include <MQTT/ERaMqttLinux.hpp>
+#include <Utility/ERaFlashLinux.hpp>
 
 template <class Transport>
 class ERaLinux
@@ -29,7 +29,7 @@ public:
                 const char* username = ERA_MQTT_USERNAME,
                 const char* password = ERA_MQTT_PASSWORD) {
         Base::begin(auth);
-        this->transp.config(host, port, username, password);
+        this->getTransp().config(host, port, username, password);
     }
 
     void begin(const char* auth,
@@ -43,7 +43,7 @@ public:
     }
 
     void begin() {
-        this->begin(ERA_MQTT_CLIENT_ID,
+        this->begin(ERA_AUTHENTICATION_TOKEN,
                     ERA_MQTT_HOST, ERA_MQTT_PORT,
                     ERA_MQTT_USERNAME, ERA_MQTT_PASSWORD);
     }
@@ -53,29 +53,32 @@ private:
 };
 
 template <class Proto, class Flash>
+inline
 void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
     cJSON_AddStringToObject(root, INFO_BOARD, ERA_BOARD_TYPE);
     cJSON_AddStringToObject(root, INFO_MODEL, ERA_MODEL_TYPE);
-	cJSON_AddStringToObject(root, INFO_AUTH_TOKEN, this->thisProto().ERA_AUTH);
+	cJSON_AddStringToObject(root, INFO_BOARD_ID, this->thisProto().getBoardID());
+	cJSON_AddStringToObject(root, INFO_AUTH_TOKEN, this->thisProto().getAuth());
     cJSON_AddStringToObject(root, INFO_FIRMWARE_VERSION, ERA_FIRMWARE_VERSION);
-    cJSON_AddStringToObject(root, INFO_SSID, ((this->thisProto().transp.getSSID() == nullptr) ?
-                                            ERA_PROTO_TYPE : this->thisProto().transp.getSSID()));
+    cJSON_AddStringToObject(root, INFO_SSID, ((this->thisProto().getTransp().getSSID() == nullptr) ?
+                                            ERA_PROTO_TYPE : this->thisProto().getTransp().getSSID()));
     cJSON_AddStringToObject(root, INFO_BSSID, ERA_PROTO_TYPE);
     cJSON_AddNumberToObject(root, INFO_RSSI, 100);
     cJSON_AddStringToObject(root, INFO_MAC, ERA_PROTO_TYPE);
     cJSON_AddStringToObject(root, INFO_LOCAL_IP, ERA_PROTO_TYPE);
-    cJSON_AddNumberToObject(root, INFO_PING, this->thisProto().transp.getPing());
+    cJSON_AddNumberToObject(root, INFO_PING, this->thisProto().getTransp().getPing());
 }
 
 template <class Proto, class Flash>
+inline
 void ERaApi<Proto, Flash>::addModbusInfo(cJSON* root) {
 	cJSON_AddNumberToObject(root, INFO_MB_CHIP_TEMPERATURE, 5000);
 	cJSON_AddNumberToObject(root, INFO_MB_TEMPERATURE, 0);
 	cJSON_AddNumberToObject(root, INFO_MB_VOLTAGE, 999);
 	cJSON_AddNumberToObject(root, INFO_MB_IS_BATTERY, 0);
 	cJSON_AddNumberToObject(root, INFO_MB_RSSI, 100);
-	cJSON_AddStringToObject(root, INFO_MB_WIFI_USING, ((this->thisProto().transp.getSSID() == nullptr) ?
-                                            		ERA_PROTO_TYPE : this->thisProto().transp.getSSID()));
+	cJSON_AddStringToObject(root, INFO_MB_WIFI_USING, ((this->thisProto().getTransp().getSSID() == nullptr) ?
+                                            		ERA_PROTO_TYPE : this->thisProto().getTransp().getSSID()));
 }
 
 #endif /* INC_ERA_LINUX_CLIENT_HPP_ */

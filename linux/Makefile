@@ -4,11 +4,12 @@
 # 2. Run:
 #    make clean all target=raspberry
 #    sudo era --token=YourAuthToken
+#    sudo era --token=YourAuthToken --id=YourBoardID
 #
 
 CC ?= gcc
 CXX ?= g++
-CXXFLAGS += -I ../src/ -I ./ -DLINUX
+CXXFLAGS += -I ../src/ -I ./MbedTLS/ -I ./ -DLINUX
 LDFLAGS += -lrt -lpthread
 
 ifeq ($(build),debug)
@@ -58,8 +59,8 @@ ifeq ($(zigbee),true)
 	CXXFLAGS += -DERA_ZIGBEE
 endif
 
-ifeq ($(config),true)
-	CXXFLAGS += -DERA_ASK_CONFIG_WHEN_RESTART
+ifeq ($(config),false)
+	CXXFLAGS += -DERA_DISABLE_SYNC_CONFIG
 endif
 
 ifeq ($(debug),true)
@@ -70,20 +71,48 @@ ifeq ($(dump),true)
 	CXXFLAGS += -DERA_DEBUG_DUMP
 endif
 
+ifeq ($(ota),true)
+	CXXFLAGS += -DERA_OTA
+endif
+
+ifeq ($(location),VN)
+	CXXFLAGS += -DERA_LOCATION_VN
+endif
+
+ifdef qos
+	CXXFLAGS += -DDEFAULT_MQTT_PUBLISH_QOS=$(qos)
+	CXXFLAGS += -DDEFAULT_MQTT_SUBSCRIBE_QOS=$(qos)
+endif
+
 SOURCES=main.cpp \
 	../src/ERa/ERaTimer.cpp \
 	../src/ERa/ERaReport.cpp \
+	../src/ERa/ERaButton.cpp \
 	../src/ERa/ERaHandlers.cpp \
+	../src/Utility/ERaLoc.cpp \
 	../src/Utility/cJSON.cpp \
 	../src/Utility/ERacJSON.cpp \
 	../src/Utility/ERaUtility.cpp \
-	MQTTLinux/MQTT/unix/unix.cpp \
-	MQTTLinux/MQTT/MQTTLinux.cpp
+	MQTT/MQTT/unix/unix.cpp \
+	MQTT/MQTT/MQTTLinux.cpp
+
+ifeq ($(findstring true, $(ssl) $(tls)),true)
+	CXXFLAGS += -DERA_MQTT_SSL
+	SOURCES += MQTT/MQTT/unix/unix_tls.cpp
+endif
 
 SOURCES_C=../src/MQTT/MQTT/lwmqtt/client.c \
 	../src/MQTT/MQTT/lwmqtt/helpers.c \
 	../src/MQTT/MQTT/lwmqtt/packet.c \
 	../src/MQTT/MQTT/lwmqtt/string.c
+
+SOURCES_TLS=
+
+ifeq ($(findstring true, $(ssl) $(tls)),true)
+	SOURCES_TLS += MbedTLS/libmbedtls.a \
+		MbedTLS/libmbedx509.a \
+		MbedTLS/libmbedcrypto.a
+endif
 
 OBJECTS=$(SOURCES:.cpp=.o) $(SOURCES_C:.c=.o)
 EXECUTABLE=era
@@ -94,7 +123,7 @@ clean:
 	-rm $(OBJECTS) $(EXECUTABLE)
 
 $(EXECUTABLE): $(OBJECTS) 
-	$(CXX) $(OBJECTS) $(LDFLAGS) -o $@
+	$(CXX) $(OBJECTS) $(LDFLAGS) $(SOURCES_TLS) -o $@
 
 .cpp.o:
 	$(CXX) $(CXXFLAGS) $< -o $@

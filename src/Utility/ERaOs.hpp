@@ -2,7 +2,10 @@
 #define INC_ERA_OS_HPP_
 
 #if defined(ARDUINO) &&				\
+    !defined(__MBED__) &&			\
 	(defined(ESP32) || 				\
+	defined(RTL8722DM) ||			\
+	defined(ARDUINO_AMEBA) ||		\
 	defined(ARDUINO_ARCH_STM32) || 	\
 	defined(ARDUINO_ARCH_RP2040))
 
@@ -24,13 +27,17 @@
 	#include <queue.h>
 	#include <event_groups.h>
 
-	#define IRAM_ATTR
+	#ifndef IRAM_ATTR
+		#define IRAM_ATTR
+	#endif
 #endif
 
 #ifndef portEND_SWITCHING_ISR
 	#define portEND_SWITCHING_ISR(xSwitchRequired) if(xSwitchRequired != pdFALSE) portYIELD()
 #endif
-#define osPortYIELD_FROM_ISR(x) portEND_SWITCHING_ISR(x)
+#ifndef osPortYIELD_FROM_ISR
+	#define osPortYIELD_FROM_ISR(x) portEND_SWITCHING_ISR(x)
+#endif
 
 /// Timeout value.
 #define osWaitForever         0xFFFFFFFFU ///< Wait forever timeout value.
@@ -59,6 +66,8 @@ namespace ERaOs {
 
 	void osStartsScheduler();
 	void osDelay(uint32_t ticks);
+	bool osStarted();
+	uint32_t osFreeHeapSize();
 	TaskHandle_t osThreadNew(void (*task)(void *args), const char* name, uint32_t size,
 							void* args, unsigned int priority, unsigned int core = 0);
 	void osThreadDelete(TaskHandle_t thread_id);

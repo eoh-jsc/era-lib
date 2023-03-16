@@ -5,7 +5,9 @@ REM === Edit these lines to match your need ===
 
 set COMM_PORT=COM1
 set COMM_BAUD=115200
-set SERV_ADDR=remarkable-accountant.cloudmqtt.com
+set SERV_ADDR_VN=mqtt1.eoh.io
+set SERV_ADDR_SG=remarkable-accountant.cloudmqtt.com
+set SERV_ADDR=%SERV_ADDR_SG%
 set SERV_PORT=1883
 
 REM === Edit lines below only if absolutely sure what you're doing ===
@@ -70,7 +72,8 @@ goto:eof
     echo.           COM1               (on Windows)
     echo.           /dev/tty.usbserial (on OSX)
     echo.     -b    9600
-    echo.     -s    remarkable-accountant.cloudmqtt.com
+    echo.     -s    mqtt1.eoh.io                        (VN)
+    echo.           remarkable-accountant.cloudmqtt.com (SG)
     echo.     -p    1883
     echo.
     echo.   If the specified serial port is not found, it will ask to enter another one.

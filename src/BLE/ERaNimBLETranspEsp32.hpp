@@ -1,0 +1,6 @@
+#ifndef INC_ERA_NIM_BLE_TRANSP_ESP32_HPP_
+#define INC_ERA_NIM_BLE_TRANSP_ESP32_HPP_
+
+#include <BLE/ERaNimBLETransp.hpp>
+
+#endif /* INC_ERA_NIM_BLE_TRANSP_ESP32_HPP_ */

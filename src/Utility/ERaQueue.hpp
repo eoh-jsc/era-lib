@@ -4,6 +4,7 @@
 #include <new>
 #include <stdio.h>
 #include <stdint.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <ERa/ERaDefine.hpp>
 
@@ -23,14 +24,47 @@ public:
 		this->r = 0;
 	}
 
-	T put(const T& _e) {
+	T& put(const T& _e) {
 		int i = this->w;
 		int j = i;
 		i = this->inc(i);
 		while (i == this->r) {}
 		this->e[j] = _e;
 		this->w = i;
-		return _e;
+		return const_cast<T&>(_e);
+	}
+
+	int put(const T* p, int n, bool blocking = false) {
+		int c = n;
+		while (c) {
+			int f = 0;
+			while ((f = this->space()) == 0) {
+				if (!blocking) {
+					return n - c;
+				}
+			}
+			if (c < f) {
+				f = c;
+			}
+			int _w = this->w;
+			int m = N - _w;
+			if (f > m) {
+				f = m;
+			}
+			memcpy(this->e + _w, p, f);
+			this->w = this->inc(_w, f);
+			c -= f;
+			p += f;
+		}
+		return n - c;
+	}
+
+	int space() {
+		int s = this->r - this->w;
+		if (s <= 0) {
+			s += N;
+		}
+		return (s - 1);
 	}
 
 	T& get() {
@@ -39,6 +73,45 @@ public:
 		T& _e = this->e[_r];
 		this->r = inc(this->r);
 		return _e;
+	}
+
+	T& peek() {
+		int _r = this->r;
+		while (_r == this->w) {}
+		return this->e[_r];
+	}
+
+	int get(T* p, int n, bool blocking = false) {
+		int c = n;
+		while (c) {
+			int f = 0;
+			while ((f = this->size()) == 0) {
+				if (!blocking) {
+					return n - c;
+				}
+			}
+			if (c < f) {
+				f = c;
+			}
+			int _r = this->r;
+			int m = N - _r;
+			if (f > m) {
+				f = m;
+			}
+			memcpy(p, this->e + _r, f);
+			this->r = this->inc(_r, f);
+			c -= f;
+			p += f;
+		}
+		return n - c;
+	}
+
+	size_t size() {
+		int s = this->w - this->r;
+		if (s < 0) {
+			s += N;
+		}
+		return s;
 	}
 
 	bool writeable() {
@@ -59,26 +132,24 @@ public:
         return this->get();
     }
 
-	T operator=(const T& _e) {
-		return (this->writeable() ? this->put(_e) : T());
+	T& operator = (const T& _e) {
+		if (this->writeable()) {
+			this->put(_e);
+		}
+		return const_cast<T&>(_e);
 	}
 
-	T operator+=(const T& _e) {
-		return (this->writeable() ? this->put(_e) : T());
+	T& operator += (const T& _e) {
+		if (this->writeable()) {
+			this->put(_e);
+		}
+		return const_cast<T&>(_e);
 	}
 
 protected:
 private:
 	int inc(int i, int n = 1) {
 		return ((i + n) % N);
-	}
-
-	int space() {
-		int s = this->r - this->w;
-		if (s <= 0) {
-			s += N;
-		}
-		return (s - 1);
 	}
 
 	T e[N];
@@ -98,12 +169,12 @@ public:
 			, next(nullptr)
 			, data(0)
 		{}
-		iterator(const T _data)
+		iterator(const T& _data)
 			: prev(nullptr)
 			, next(nullptr)
 			, data(_data)
 		{}
-		iterator(iterator* _prev, const T _data)
+		iterator(iterator* _prev, const T& _data)
 			: prev(_prev)
 			, next(nullptr)
 			, data(_data)
@@ -115,7 +186,7 @@ public:
 		~iterator()
 		{}
 
-		iterator* getNext() {
+		iterator* getNext() const {
 			return this->next;
 		}
 
@@ -143,18 +214,18 @@ public:
 		, last(nullptr)
 	{}
 
-	void put(const T value) {
+	void put(const T& value) {
 		if (this->first == nullptr) {
-			void* ptr = ERA_MALLOC(sizeof(iterator));
-			this->first = new(ptr) iterator(value);
+			this->first = new iterator(value);
 			this->last = this->first;
 		}
 		else {
 			iterator* prev = this->last;
-			void* ptr = ERA_MALLOC(sizeof(iterator));
-			this->last = new(ptr) iterator(prev, value);
+			this->last = new iterator(prev, value);
 		}
-		this->first->prev = this->last;
+		if (this->first != nullptr) {
+			this->first->prev = this->last;
+		}
 	}
 
 	iterator* get(int index) {
@@ -182,33 +253,49 @@ public:
 		return item;
 	}
 
+	void remove(int index) {
+		iterator* item = this->detach(index);
+		if (item != nullptr) {
+			delete item;
+		}
+		item = nullptr;
+	}
+
+	void remove(iterator* item) {
+		this->detachItem(item);
+		if (item != nullptr) {
+			delete item;
+		}
+		item = nullptr;
+	}
+
 	void clear() {
 		iterator* next = nullptr;
 		while (this->first != nullptr) {
 			next = this->first->next;
-			free(this->first);
+			delete this->first;
 			this->first = next;
 		}
 		this->last = nullptr;
 	}
 
-	bool readable() {
+	bool readable() const {
 		return this->first != nullptr;
 	}
 
-	bool isEmpty() {
+	bool isEmpty() const {
 		return this->first == nullptr;
 	}
 
-	iterator* begin() {
+	iterator* begin() const {
 		return this->first;
 	}
 
-	iterator* end() {
-		return this->last;
+	iterator* end() const {
+		return nullptr;
 	}
 
-	void operator += (const T value) {
+	void operator += (const T& value) {
 		this->put(value);
 	}
 
@@ -221,6 +308,40 @@ public:
 	}
 
 private:
+	iterator* detach(int index) {
+		iterator* item = this->get(index);
+		return this->detachItem(item);
+	}
+
+	iterator* detachItem(iterator* const item) {
+		if ((item == nullptr) ||
+			(this->first == nullptr)) {
+			return nullptr;
+		}
+
+		if ((item != this->first) &&
+			(item->prev != nullptr)) {
+			item->prev->next = item->next;
+		}
+		if (item->next != nullptr) {
+			item->next->prev = item->prev;
+		}
+		if (item == this->first) {
+			this->first = item->next;
+		}
+		else if (item->next == nullptr) {
+			this->first->prev = item->prev;
+		}
+		if (item == this->last) {
+			this->last = item->prev;
+		}
+
+		item->prev = nullptr;
+		item->next = nullptr;
+
+		return item;
+	}
+
 	iterator* first;
 	iterator* last;
 };

@@ -107,34 +107,42 @@
     #define V99 99
 #endif
 
-#define ERA_CONNECTED()         void ERaOnConnected()
-#define ERA_DISCONNECTED()      void ERaOnDisconnected()
-#define ERA_WAITING()			void ERaOnWaiting()
-#define ERA_MODBUS_BAUDRATE()	void ERaModbusBaudrate(uint32_t ERA_UNUSED& baudrate)
+#define ERA_CONNECTED()         	void ERaOnConnected()
+#define ERA_DISCONNECTED()      	void ERaOnDisconnected()
+#define ERA_WAITING()				void ERaOnWaiting()
+#define ERA_OPTION_CONNECTED()		void ERaOptConnected(void ERA_UNUSED *arg)
+#define ERA_MODBUS_BAUDRATE()		void ERaModbusBaudrate(uint32_t ERA_UNUSED &baudrate)
 
-#define ERA_WRITE_2(Pin)        void ERaWidgetWrite ## Pin (uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param)
-#define ERA_WRITE(Pin)          ERA_WRITE_2(Pin)
+#define ERA_WRITE_2(Pin)        	void ERaWidgetWrite ## Pin (uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param)
+#define ERA_WRITE(Pin)          	ERA_WRITE_2(Pin)
 
-#define ERA_PIN_WRITE_2(Pin)    void ERaWidgetPinWrite ## Pin (uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param, const ERaParam ERA_UNUSED &raw)
-#define ERA_PIN_WRITE(Pin)      ERA_PIN_WRITE_2(Pin)
+#define ERA_PIN_WRITE_2(Pin)    	void ERaWidgetPinWrite ## Pin (uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param, const ERaParam ERA_UNUSED &raw)
+#define ERA_PIN_WRITE(Pin)      	ERA_PIN_WRITE_2(Pin)
 
-#define ERA_PIN_READ_2(Pin)     void ERaWidgetPinRead ## Pin (uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param, const ERaParam ERA_UNUSED &raw)
-#define ERA_PIN_READ(Pin)       ERA_PIN_READ_2(Pin)
+#define ERA_PIN_READ_2(Pin)     	void ERaWidgetPinRead ## Pin (uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param, const ERaParam ERA_UNUSED &raw)
+#define ERA_PIN_READ(Pin)       	ERA_PIN_READ_2(Pin)
 
-#define ERA_WRITE_DEFAULT()		ERA_WRITE_2(Default)
-#define ERA_PIN_WRITE_DEFAULT()	ERA_PIN_WRITE_2(Default)
-#define ERA_PIN_READ_DEFAULT()	ERA_PIN_READ_2(Default)
+#define ERA_WRITE_DEFAULT()			ERA_WRITE_2(Default)
+#define ERA_PIN_WRITE_DEFAULT()		ERA_PIN_WRITE_2(Default)
+#define ERA_PIN_READ_DEFAULT()		ERA_PIN_READ_2(Default)
+
+#define ERA_ON_CHANGE(Pin)			ERA_WRITE(Pin)
+#define ERA_ON_RECEIVE(Pin)			ERA_WRITE(Pin)
+#define ERA_ON_CHANGE_DEFAULT()		ERA_WRITE_DEFAULT()
+#define ERA_ON_RECEIVE_DEFAULT()	ERA_WRITE_DEFAULT()
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 void ERaNoHandler();
-void ERaNoModbusBaudrate(uint32_t ERA_UNUSED& baudrate);
+void ERaNoOptConnected(void ERA_UNUSED *arg);
+void ERaNoModbusBaudrate(uint32_t ERA_UNUSED &baudrate);
 
 ERA_CONNECTED();
 ERA_DISCONNECTED();
 ERA_WAITING();
+ERA_OPTION_CONNECTED();
 ERA_MODBUS_BAUDRATE();
 
 ERA_WRITE_DEFAULT();

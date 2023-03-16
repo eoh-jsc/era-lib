@@ -14,6 +14,10 @@
 // #define ERA_DEBUG
 // #define ERA_SERIAL Serial
 
+/* Select ERa host location (VN: Viet Nam, SG: Singapore) */
+#define ERA_LOCATION_VN
+// #define ERA_LOCATION_SG
+
 // You should get Auth Token in the ERa App or ERa Dashboard
 #define TINY_GSM_MODEM_ESP8266
 #define ERA_AUTH_TOKEN "ERA2706"
@@ -46,6 +50,9 @@ void setup() {
     /* Set GSM module baud rate */
     SerialWiFi.begin(115200);
 
+    /* Set board id */
+    // ERa.setBoardID("Board_1");
+    /* Initializing the ERa library. */
     ERa.begin(modem, ssid, pass, rstPin);
 
     /* Setup timer called function every second */

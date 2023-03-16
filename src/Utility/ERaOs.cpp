@@ -2,18 +2,21 @@
 #include <Utility/ERaOs.hpp>
 
 #if defined(ARDUINO) &&             \
+    !defined(__MBED__) &&			\
 	(defined(ESP32) ||              \
+	defined(RTL8722DM) ||			\
+    defined(ARDUINO_AMEBA) ||       \
     defined(ARDUINO_ARCH_STM32) ||  \
     defined(ARDUINO_ARCH_RP2040))
 
 #if defined(ARDUINO_ARCH_STM32)
-    static volatile bool osStarted {false};
+    static volatile bool _osStarted {false};
 #else
-    static volatile bool osStarted {true};
+    static volatile bool _osStarted {true};
 #endif
 
 void ERaOs::osStartsScheduler() {
-    osStarted = true;
+    _osStarted = true;
 #if defined(ARDUINO_ARCH_STM32)
     vTaskStartScheduler();
     while (1) { delay(1000); }
@@ -22,13 +25,21 @@ void ERaOs::osStartsScheduler() {
 
 void ERaOs::osDelay(uint32_t ticks) {
     if (ticks != 0U) {
-        if (osStarted) {
+        if (_osStarted) {
             vTaskDelay(ticks / portTICK_PERIOD_MS);
         }
         else {
             delay(ticks);
         }
     }
+}
+
+bool ERaOs::osStarted() {
+    return _osStarted;
+}
+
+uint32_t ERaOs::osFreeHeapSize() {
+    return xPortGetFreeHeapSize();
 }
 
 TaskHandle_t ERaOs::osThreadNew(void (*task)(void *args), const char* name, uint32_t size,
@@ -233,7 +244,7 @@ osStatus_t ERaOs::osMessageQueueReset(QueueHandle_t mq_id) {
 
 SemaphoreHandle_t ERaOs::osSemaphoreNew() {
 #if defined(ARDUINO_ARCH_STM32)
-    if (!osStarted) {
+    if (!_osStarted) {
         return NULL;
     }
 #endif
@@ -242,7 +253,7 @@ SemaphoreHandle_t ERaOs::osSemaphoreNew() {
 
 osStatus_t ERaOs::osSemaphoreRelease(SemaphoreHandle_t semaphore_id) {
 #if defined(ARDUINO_ARCH_STM32)
-    if (!osStarted) {
+    if (!_osStarted) {
         return osOK;
     }
 #endif
@@ -287,7 +298,7 @@ osStatus_t ERaOs::osSemaphoreReleaseIRQ(SemaphoreHandle_t semaphore_id) {
 
 osStatus_t ERaOs::osSemaphoreAcquire(SemaphoreHandle_t semaphore_id, uint32_t timeout) {
 #if defined(ARDUINO_ARCH_STM32)
-    if (!osStarted) {
+    if (!_osStarted) {
         return osOK;
     }
 #endif

@@ -1,10 +1,7 @@
 #ifndef INC_ERA_SIMPLE_STM32_GSM_HPP_
 #define INC_ERA_SIMPLE_STM32_GSM_HPP_
 
-#include <ERa/ERaDetect.hpp>
-#if !defined(TINY_GSM_RX_BUFFER)
-    #define TINY_GSM_RX_BUFFER ERA_MQTT_BUFFER_SIZE
-#endif
+#define ERA_NO_RTOS
 
 #include <ERa/ERaTask.hpp>
 #include <ERa/ERaApiStm32Def.hpp>
@@ -21,5 +18,7 @@
 #else
     extern ERaGsm< ERaMqtt<TinyGsmClient, MQTTClient> > ERa;
 #endif
+
+#include <ERa/ERaStatic.hpp>
 
 #endif /* INC_ERA_SIMPLE_STM32_GSM_HPP_ */

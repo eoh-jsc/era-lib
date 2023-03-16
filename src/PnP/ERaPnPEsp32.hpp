@@ -29,16 +29,6 @@
 #define WIFI_AP_IP                    IPAddress(192, 168, 27, 1)
 #define WIFI_AP_Subnet                IPAddress(255, 255, 255, 0)
 
-#if defined(ERA_CHIP_TEMP_DEPRECATED)
-    #ifdef __cplusplus
-    extern "C" {
-    #endif
-    uint8_t temprature_sens_read();
-    #ifdef __cplusplus
-    }
-    #endif
-#endif
-
 typedef struct __ERaConfig_t {
     uint32_t magic;
     uint8_t flags;
@@ -69,10 +59,17 @@ typedef struct __ERaConfig_t {
     }
 } ERA_ATTR_PACKED ERaConfig_t;
 
-static WebServer server(80);
-static DNSServer dnsServer;
+#if !defined(NO_GLOBAL_INSTANCES) && !defined(NO_GLOBAL_ERA)
+    static WebServer server(80);
+    static DNSServer dnsServer;
+    static ERaConfig_t ERaConfig {};
+#else
+    #define server      StaticHelper<WebServer, int>::instance(80)
+    #define dnsServer   StaticHelper<DNSServer>::instance()
+    #define ERaConfig   StaticHelper<ERaConfig_t>::instance()
+#endif
+
 static const uint16_t DNS_PORT = 53;
-static ERaConfig_t ERaConfig{};
 static const ERaConfig_t ERaDefault = {
     .magic = 0x27061995,
     .flags = 0x00,
@@ -96,8 +93,13 @@ enum ConfigFlagT {
 
 #include <Network/ERaUdpEsp32.hpp>
 
-static WiFiUDP Udp;
-static ERaUdp<WiFiUDP> eraUdp(Udp);
+#if !defined(NO_GLOBAL_INSTANCES) && !defined(NO_GLOBAL_ERA)
+    static WiFiUDP Udp;
+    static ERaUdp<WiFiUDP> eraUdp(Udp);
+#else
+    #define Udp     StaticHelper<WiFiUDP>::instance()
+    #define eraUdp  StaticRefHelper<ERaUdp<WiFiUDP>, WiFiUDP>::instance(Udp)
+#endif
 
 template <class Transport>
 class ERaPnP
@@ -124,7 +126,7 @@ public:
                 const char* username = ERA_MQTT_USERNAME,
                 const char* password = ERA_MQTT_PASSWORD) {
         Base::begin(auth);
-        this->transp.config(host, port, username, password);
+        this->getTransp().config(host, port, username, password);
     }
 
     void begin(const char* auth,
@@ -162,7 +164,7 @@ public:
 
     void begin(const char* ssid,
                 const char* pass) {
-        this->begin(ERA_MQTT_CLIENT_ID, ssid, pass,
+        this->begin(ERA_AUTHENTICATION_TOKEN, ssid, pass,
                     ERA_MQTT_HOST, ERA_MQTT_PORT,
                     ERA_MQTT_USERNAME, ERA_MQTT_PASSWORD);
     }
@@ -185,8 +187,11 @@ private:
     void switchToAP();
     void switchToSTA();
     void switchToAPSTA();
-    void getWiFiName(char* ptr, size_t size, bool withPrefix = true);
-    void getImeiChip(char* ptr, size_t size);
+
+    template <int size>
+    void getWiFiName(char(&ptr)[size], bool withPrefix = true);
+    template <int size>
+    void getImeiChip(char(&ptr)[size]);
 
     bool connected() const {
         return (WiFi.status() == WL_CONNECTED);
@@ -284,15 +289,15 @@ void ERaPnP<Transport>::configApi() {
 
     ERA_LOG(TAG, ERA_PSTR("Config api"));
 
-    char imei[64] {0};
-    char ssidAP[64] {0};
-    this->getWiFiName(ssidAP, sizeof(ssidAP));
-    this->getImeiChip(imei, sizeof(imei));
+    static char imei[64] {0};
+    static char ssidAP[64] {0};
+    this->getWiFiName(ssidAP);
+    this->getImeiChip(imei);
 
     dnsServer.setTTL(300);
     dnsServer.setErrorReplyCode(DNSReplyCode::ServerFailure);
 
-    server.on("/api/config", HTTP_POST, [imei]() {
+    server.on("/api/config", HTTP_POST, []() {
         ERA_LOG(ERA_PSTR("Config"), ERA_PSTR("Configuration..."));
         String ssid = server.arg("ssid");
         String pass = server.arg("pass");
@@ -302,7 +307,7 @@ void ERaPnP<Transport>::configApi() {
         String token = server.arg("token");
         String host = server.arg("host");
         String port = server.arg("port");
-        String user = server.arg("user");
+        String username = server.arg("username");
         String password = server.arg("password");
 
         String content;
@@ -332,8 +337,8 @@ void ERaPnP<Transport>::configApi() {
         if (port.length()) {
             ERaConfig.port = port.toInt();
         }
-        if (user.length()) {
-            CopyToArray(user, ERaConfig.username);
+        if (username.length()) {
+            CopyToArray(username, ERaConfig.username);
         }
         else {
             CopyToArray(imei, ERaConfig.username);
@@ -354,7 +359,7 @@ void ERaPnP<Transport>::configApi() {
         }
     });
 
-    server.on("/api/board_info.json", HTTP_POST, [imei, ssidAP]() {
+    server.on("/api/board_info.json", HTTP_POST, []() {
         ERA_LOG(ERA_PSTR("Info"), ERA_PSTR("Board info"));
         String content;
         cJSON* root = cJSON_CreateObject();
@@ -484,7 +489,9 @@ void ERaPnP<Transport>::configApi() {
     });
 
     server.on("/", []() {
-        String content = ERA_FPSTR(webIndex) + String(ERA_FPSTR(webStyle));
+        String content = ERA_FPSTR(webIndex);
+        content += ERA_FPSTR(webScript);
+        content += ERA_FPSTR(webStyle);
         webProcessor(content);
         server.send(200, "text/html", content);
     });
@@ -626,6 +633,12 @@ void ERaPnP<Transport>::configApi() {
         }
     });
 
+    server.on("/wifi/reset", []() {
+        server.sendHeader("Location", "/");
+        server.send(302, "text/plain", "");
+        ERaState::set(StateT::STATE_RESET_CONFIG);
+    });
+
     server.on("/network/status", HTTP_POST, [=]() {
         String content;
         if (this->connected()) {
@@ -678,7 +691,11 @@ void ERaPnP<Transport>::configApi() {
         server.send(200, "text/plane", content);
     });
 
-    eraUdp.on("connect/wifi", [imei]() {
+    server.onNotFound([]() {
+        server.send(404, "text/plain", "Not found");
+    });
+
+    eraUdp.on("connect/wifi", []() {
         ERA_LOG(ERA_PSTR("Config"), ERA_PSTR("Configuration..."));
         String ssid = eraUdp.arg("ssid").c_str();
         String pass = eraUdp.arg("pass").c_str();
@@ -688,7 +705,7 @@ void ERaPnP<Transport>::configApi() {
         String token = eraUdp.arg("token").c_str();
         String host = eraUdp.arg("host").c_str();
         String port = eraUdp.arg("port").c_str();
-        String user = eraUdp.arg("user").c_str();
+        String username = eraUdp.arg("username").c_str();
         String password = eraUdp.arg("password").c_str();
 
         String content;
@@ -718,8 +735,8 @@ void ERaPnP<Transport>::configApi() {
         if (port.length()) {
             ERaConfig.port = port.toInt();
         }
-        if (user.length()) {
-            CopyToArray(user, ERaConfig.username);
+        if (username.length()) {
+            CopyToArray(username, ERaConfig.username);
         }
         else {
             CopyToArray(imei, ERaConfig.username);
@@ -847,7 +864,7 @@ void ERaPnP<Transport>::configLoad() {
         return;
     }
     memset(&ERaConfig, 0, sizeof(ERaConfig));
-    Base::ERaApi::flash.readFlash("config", &ERaConfig, sizeof(ERaConfig));
+    Base::ERaApi::getFlash().readFlash("config", &ERaConfig, sizeof(ERaConfig));
     ERA_LOG(TAG, ERA_PSTR("Configuration loaded from flash"));
     if (ERaConfig.magic != ERaDefault.magic) {
         this->configLoadDefault();
@@ -858,7 +875,7 @@ template <class Transport>
 void ERaPnP<Transport>::configLoadDefault() {
     char imei[64] {0};
     ERaConfig = ERaDefault;
-    this->getImeiChip(imei, sizeof(imei));
+    this->getImeiChip(imei);
     CopyToArray(imei, ERaConfig.token);
     CopyToArray(imei, ERaConfig.username);
     CopyToArray(imei, ERaConfig.password);
@@ -871,7 +888,7 @@ void ERaPnP<Transport>::configSave() {
         return;
     }
     ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_STORE, false);
-    Base::ERaApi::flash.writeFlash("config", &ERaConfig, sizeof(ERaConfig));
+    Base::ERaApi::writeBytesToFlash("config", &ERaConfig, sizeof(ERaConfig));
     ERA_LOG(TAG, ERA_PSTR("Configuration stored to flash"));
 }
 
@@ -921,7 +938,7 @@ void ERaPnP<Transport>::configMode() {
 template <class Transport>
 void ERaPnP<Transport>::connectNetwork() {
     char ssidAP[64] {0};
-    this->getWiFiName(ssidAP, sizeof(ssidAP));
+    this->getWiFiName(ssidAP);
     WiFi.setHostname(ssidAP);
 
     this->connectWiFi(ERaConfig.ssid, ERaConfig.pass);
@@ -980,7 +997,7 @@ void ERaPnP<Transport>::connectWiFi(const char* ssid, const char* pass) {
             }
         }
     }
-    this->transp.setSSID(ssid);
+    this->getTransp().setSSID(ssid);
     ERA_LOG(TAG, ERA_PSTR("Connected to WiFi"));
 
     IPAddress localIP = WiFi.localIP();
@@ -993,7 +1010,7 @@ void ERaPnP<Transport>::switchToAP() {
     ERA_LOG(TAG, ERA_PSTR("Switching to AP..."));
 
     char ssidAP[64] {0};
-    this->getWiFiName(ssidAP, sizeof(ssidAP));
+    this->getWiFiName(ssidAP);
 
     WiFi.mode(WIFI_OFF);
     ERaDelay(100);
@@ -1034,34 +1051,38 @@ void ERaPnP<Transport>::switchToAPSTA() {
 }
 
 template <class Transport>
-void ERaPnP<Transport>::getWiFiName(char* ptr, size_t size, bool withPrefix) {
+template <int size>
+void ERaPnP<Transport>::getWiFiName(char(&ptr)[size], bool withPrefix) {
     const uint64_t chipId = ESP.getEfuseMac();
     uint64_t unique {0};
     for (int i = 0; i < 41; i = i + 8) {
         unique |= ((chipId >> (40 - i)) & 0xff) << i;
     }
+    ClearArray(ptr);
     if (withPrefix) {
-        snprintf(ptr, size, "eoh.era.%04x%08x", static_cast<uint16_t>(unique >> 32), static_cast<uint32_t>(unique));
+        FormatString(ptr, "eoh.era.%04x%08x", static_cast<uint16_t>(unique >> 32), static_cast<uint32_t>(unique));
     } else {
-        snprintf(ptr, size, "era.%04x%08x", static_cast<uint16_t>(unique >> 32), static_cast<uint32_t>(unique));
+        FormatString(ptr, "era.%04x%08x", static_cast<uint16_t>(unique >> 32), static_cast<uint32_t>(unique));
     }
 }
 
 template <class Transport>
-void ERaPnP<Transport>::getImeiChip(char* ptr, size_t size) {
+template <int size>
+void ERaPnP<Transport>::getImeiChip(char(&ptr)[size]) {
     const uint64_t chipId = ESP.getEfuseMac();
     uint64_t unique {0};
     for (int i = 0; i < 41; i = i + 8) {
         unique |= ((chipId >> (40 - i)) & 0xff) << i;
     }
+    ClearArray(ptr);
 #ifdef ERA_AUTH_TOKEN
-    snprintf(ptr, size, ERA_AUTH_TOKEN);
+    FormatString(ptr, ERA_AUTH_TOKEN);
 #else
     if (this->authToken != nullptr) {
-        snprintf(ptr, size, this->authToken);
+        FormatString(ptr, this->authToken);
     }
     else {
-        snprintf(ptr, size, "ERA-%04x%08x", static_cast<uint16_t>(unique >> 32), static_cast<uint32_t>(unique));
+        FormatString(ptr, "ERA-%04x%08x", static_cast<uint16_t>(unique >> 32), static_cast<uint32_t>(unique));
     }
 #endif
 }
@@ -1069,27 +1090,25 @@ void ERaPnP<Transport>::getImeiChip(char* ptr, size_t size) {
 #include <Network/ERaWiFiEsp32.hpp>
 
 template <class Proto, class Flash>
+inline
 void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
     cJSON_AddStringToObject(root, INFO_BOARD, ERA_BOARD_TYPE);
     cJSON_AddStringToObject(root, INFO_MODEL, ERA_MODEL_TYPE);
-	cJSON_AddStringToObject(root, INFO_AUTH_TOKEN, this->thisProto().ERA_AUTH);
+	cJSON_AddStringToObject(root, INFO_BOARD_ID, this->thisProto().getBoardID());
+	cJSON_AddStringToObject(root, INFO_AUTH_TOKEN, this->thisProto().getAuth());
     cJSON_AddStringToObject(root, INFO_FIRMWARE_VERSION, ERA_FIRMWARE_VERSION);
     cJSON_AddStringToObject(root, INFO_SSID, WiFi.SSID().c_str());
     cJSON_AddStringToObject(root, INFO_BSSID, WiFi.BSSIDstr().c_str());
     cJSON_AddNumberToObject(root, INFO_RSSI, WiFi.RSSI());
     cJSON_AddStringToObject(root, INFO_MAC, WiFi.macAddress().c_str());
     cJSON_AddStringToObject(root, INFO_LOCAL_IP, WiFi.localIP().toString().c_str());
-    cJSON_AddNumberToObject(root, INFO_PING, this->thisProto().transp.getPing());
+    cJSON_AddNumberToObject(root, INFO_PING, this->thisProto().getTransp().getPing());
 }
 
 template <class Proto, class Flash>
+inline
 void ERaApi<Proto, Flash>::addModbusInfo(cJSON* root) {
-#if defined(ERA_CHIP_TEMP)
-    /* Update soon */
-    cJSON_AddNumberToObject(root, INFO_MB_CHIP_TEMPERATURE, 5000);
-#elif defined(ERA_CHIP_TEMP_DEPRECATED)
-	cJSON_AddNumberToObject(root, INFO_MB_CHIP_TEMPERATURE, static_cast<uint16_t>((temprature_sens_read() - 32) * 100.0f / 1.8f));
-#endif
+    cJSON_AddNumberToObject(root, INFO_MB_CHIP_TEMPERATURE, static_cast<uint16_t>(temperatureRead() * 100.0f));
 	cJSON_AddNumberToObject(root, INFO_MB_TEMPERATURE, 0);
 	cJSON_AddNumberToObject(root, INFO_MB_VOLTAGE, 999);
 	cJSON_AddNumberToObject(root, INFO_MB_IS_BATTERY, 0);

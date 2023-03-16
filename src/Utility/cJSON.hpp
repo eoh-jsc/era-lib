@@ -137,6 +137,10 @@ typedef int cJSON_bool;
 #define CJSON_NESTING_LIMIT 1000
 #endif
 
+#ifndef CJSON_BUFFER_SIZE
+#define CJSON_BUFFER_SIZE   256
+#endif
+
 /* returns the version of cJSON as a string */
 CJSON_PUBLIC(const char*) cJSON_Version(void);
 

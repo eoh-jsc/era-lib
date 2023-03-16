@@ -57,7 +57,7 @@ lwmqtt_err_t lwmqtt_detect_remaining_length(uint8_t *buf, size_t buf_len, uint32
  * @param will - The last will and testament.
  * @return An error value.
  */
-lwmqtt_err_t lwmqtt_encode_connect(uint8_t *buf, size_t buf_len, size_t *len, lwmqtt_options_t options,
+lwmqtt_err_t lwmqtt_encode_connect(uint8_t *buf, size_t buf_len, size_t *len, lwmqtt_connect_options_t *options,
                                    lwmqtt_will_t *will);
 
 /**
@@ -78,7 +78,7 @@ lwmqtt_err_t lwmqtt_decode_connack(uint8_t *buf, size_t buf_len, bool *session_p
  * @param buf - The buffer into which the packet will be encoded.
  * @param buf_len - The length of the specified buffer.
  * @param len - The encoded length of the packet.
- * @param packet_type - The packets type.
+ * @param packet_type - The packet type.
  * @return An error value.
  */
 lwmqtt_err_t lwmqtt_encode_zero(uint8_t *buf, size_t buf_len, size_t *len, lwmqtt_packet_type_t packet_type);
@@ -89,11 +89,10 @@ lwmqtt_err_t lwmqtt_encode_zero(uint8_t *buf, size_t buf_len, size_t *len, lwmqt
  * @param buf - The raw buffer data.
  * @param buf_len - The length of the specified buffer.
  * @param packet_type - The packet type.
- * @param dup - The dup flag.
  * @param packet_id - The packet id.
  * @return An error value.
  */
-lwmqtt_err_t lwmqtt_decode_ack(uint8_t *buf, size_t buf_len, lwmqtt_packet_type_t packet_type, bool *dup,
+lwmqtt_err_t lwmqtt_decode_ack(uint8_t *buf, size_t buf_len, lwmqtt_packet_type_t packet_type,
                                uint16_t *packet_id);
 
 /**
@@ -103,11 +102,10 @@ lwmqtt_err_t lwmqtt_decode_ack(uint8_t *buf, size_t buf_len, lwmqtt_packet_type_
  * @param buf_len - The length of the specified buffer.
  * @param len - The encoded length of the packet.
  * @param packet_type - The packets type.
- * @param dup - The dup flag.
  * @param packet_id - The packet id.
  * @return An error value.
  */
-lwmqtt_err_t lwmqtt_encode_ack(uint8_t *buf, size_t buf_len, size_t *len, lwmqtt_packet_type_t packet_type, bool dup,
+lwmqtt_err_t lwmqtt_encode_ack(uint8_t *buf, size_t buf_len, size_t *len, lwmqtt_packet_type_t packet_type,
                                uint16_t packet_id);
 
 /**
@@ -126,6 +124,9 @@ lwmqtt_err_t lwmqtt_decode_publish(uint8_t *buf, size_t buf_len, bool *dup, uint
 
 /**
  * Encodes a publish packet into the supplied buffer.
+ *
+ * Note: The payload is not written to the buffer and the reported encoded
+ * length does not include the payload size.
  *
  * @param buf - The buffer into which the packet will be encoded.
  * @param buf_len - The length of the specified buffer.

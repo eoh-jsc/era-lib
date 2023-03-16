@@ -1,7 +1,7 @@
 #ifndef INC_ERA_MODBUS_TRANSPORT_HPP_
 #define INC_ERA_MODBUS_TRANSPORT_HPP_
 
-#include <cmath>
+#include <math.h>
 #include <Modbus/ERaParse.hpp>
 #include <Modbus/ERaDefineModbus.hpp>
 #include <Modbus/ERaModbusMessage.hpp>
@@ -246,7 +246,7 @@ public:
 
     uint8_t responseLength() {
         return ((this->isRTU() ? 5 : 9) +
-                std::ceil(static_cast<float>(this->len) / 8));
+                ::ceil(static_cast<float>(this->len) / 8));
     }
 };
 
@@ -287,7 +287,7 @@ public:
 
     uint8_t responseLength() {
         return ((this->isRTU() ? 5 : 9) +
-                std::ceil(static_cast<float>(this->len) / 8));
+                ::ceil(static_cast<float>(this->len) / 8));
     }
 };
 
@@ -463,13 +463,13 @@ public:
                     uint16_t _len,
                     const uint8_t* data)
         : ERaModbusRequest(_transp, (((_transp == ModbusTransportT::MODBUS_TRANSPORT_RTU) ? 9 : 13) +
-                                    std::ceil(static_cast<float>(_len) / 8)))
+                                    ::ceil(static_cast<float>(_len) / 8)))
     {
         this->slaveAddr = _slaveAddr;
         this->function = ModbusFunctionT::FORCE_MULTIPLE_COILS;
         this->addr = _addr;
         this->len = _len;
-        _len = std::ceil(static_cast<float>(_len) / 8);
+        _len = ::ceil(static_cast<float>(_len) / 8);
         if (!this->isRTU()) {
             this->add(HI_WORD(this->packetId));
             this->add(LO_WORD(this->packetId));
@@ -557,56 +557,58 @@ public:
     {}
 
     bool readCoilStatus(const uint8_t transp, const ModbusConfig_t& param) {
-        ERaModbusRequest* request = new ERaModbusRequest01(transp, param.addr,
+        ERaModbusRequest* request = new_modbus ERaModbusRequest01(transp, param.addr,
                                     BUILD_WORD(param.sa1, param.sa2), BUILD_WORD(param.len1, param.len2));
         return this->processRead(request);
     }
 
     bool readInputStatus(const uint8_t transp, const ModbusConfig_t& param) {
-        ERaModbusRequest* request = new ERaModbusRequest02(transp, param.addr,
+        ERaModbusRequest* request = new_modbus ERaModbusRequest02(transp, param.addr,
                                     BUILD_WORD(param.sa1, param.sa2), BUILD_WORD(param.len1, param.len2));
         return this->processRead(request);
     }
 
     bool readHoldingRegisters(const uint8_t transp, const ModbusConfig_t& param) {
-        ERaModbusRequest* request = new ERaModbusRequest03(transp, param.addr,
+        ERaModbusRequest* request = new_modbus ERaModbusRequest03(transp, param.addr,
                                     BUILD_WORD(param.sa1, param.sa2), BUILD_WORD(param.len1, param.len2));
         return this->processRead(request);
     }
 
     bool readInputRegisters(const uint8_t transp, const ModbusConfig_t& param) {
-        ERaModbusRequest* request = new ERaModbusRequest04(transp, param.addr,
+        ERaModbusRequest* request = new_modbus ERaModbusRequest04(transp, param.addr,
                                     BUILD_WORD(param.sa1, param.sa2), BUILD_WORD(param.len1, param.len2));
         return this->processRead(request);
     }
 
     bool forceSingleCoil(const uint8_t transp, const ModbusConfig_t& param) {
-        ERaModbusRequest* request = new ERaModbusRequest05(transp, param.addr,
+        ERaModbusRequest* request = new_modbus ERaModbusRequest05(transp, param.addr,
                                     BUILD_WORD(param.sa1, param.sa2), BUILD_WORD(param.len1, param.len2));
         return this->processWrite(request);
     }
 
     bool presetSingleRegister(const uint8_t transp, const ModbusConfig_t& param) {
-        ERaModbusRequest* request = new ERaModbusRequest06(transp, param.addr,
+        ERaModbusRequest* request = new_modbus ERaModbusRequest06(transp, param.addr,
                                     BUILD_WORD(param.sa1, param.sa2), BUILD_WORD(param.len1, param.len2));
         return this->processWrite(request);
     }
 
     bool forceMultipleCoils(const uint8_t transp, const ModbusConfig_t& param) {
-        ERaModbusRequest* request = new ERaModbusRequest0F(transp, param.addr,
+        ERaModbusRequest* request = new_modbus ERaModbusRequest0F(transp, param.addr,
                                     BUILD_WORD(param.sa1, param.sa2), BUILD_WORD(param.len1, param.len2), param.extra);
         return this->processWrite(request);
     }
 
     bool presetMultipleRegisters(const uint8_t transp, const ModbusConfig_t& param) {
-        ERaModbusRequest* request = new ERaModbusRequest10(transp, param.addr,
+        ERaModbusRequest* request = new_modbus ERaModbusRequest10(transp, param.addr,
                                     BUILD_WORD(param.sa1, param.sa2), BUILD_WORD(param.len1, param.len2), param.extra);
         return this->processWrite(request);
     }
 
     bool processRead(ERaModbusRequest* request) {
         bool status {false};
-        ERaModbusResponse* response = new ERaModbusResponse(request, request->responseLength());
+        ERA_ASSERT_NULL(request, false)
+        ERaModbusResponse* response = new_modbus ERaModbusResponse(request, request->responseLength());
+        ERA_ASSERT_NULL(response, false)
         this->thisModbus().sendCommand(request->getMessage(), request->getSize());
         status = this->thisModbus().waitResponse(response);
         if (status) {
@@ -622,7 +624,9 @@ public:
 
     bool processWrite(ERaModbusRequest* request) {
         bool status {false};
-        ERaModbusResponse* response = new ERaModbusResponse(request, request->responseLength());
+        ERA_ASSERT_NULL(request, false)
+        ERaModbusResponse* response = new_modbus ERaModbusResponse(request, request->responseLength());
+        ERA_ASSERT_NULL(response, false)
         for (size_t i = 0; i < 2; ++i) {
             this->thisModbus().sendCommand(request->getMessage(), request->getSize());
             if (this->thisModbus().waitResponse(response)) {

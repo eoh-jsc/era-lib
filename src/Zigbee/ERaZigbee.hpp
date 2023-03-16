@@ -2,6 +2,7 @@
 #define INC_ERA_ZIGBEE_HPP_
 
 #include <vector>
+#include <string>
 #include <cmath>
 #include <algorithm>
 #include <ERa/ERaParam.hpp>
@@ -13,6 +14,8 @@
 #include <Zigbee/ERaFromZigbee.hpp>
 #include <Zigbee/ERaDBZigbee.hpp>
 #include "utility/ERaUtilityZigbee.hpp"
+
+using namespace std;
 
 template <class Api>
 class ERaZigbee
@@ -45,8 +48,8 @@ class ERaZigbee
     const uint8_t DefaultNetworkKey[16] = {0xF4, 0x3C, 0x95, 0xC2, 0x88, 0x27, 0x06, 0x95, 0xC5, 0x51, 0x2B, 0xB1, 0xB6, 0x57, 0x1A, 0x24};
     const uint8_t DefaultExtPanId[8] = {0xDD, 0xDD, 0xDD, 0xDD, 0xDD, 0xDD, 0xDD, 0xDD};
     const uint8_t TcLinkKey[32] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-                            0x5a, 0x69, 0x67, 0x42, 0x65, 0x65, 0x41, 0x6c, 0x6c, 0x69, 0x61, 0x6e, 0x63, 0x65, 0x30, 0x39,
-                            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}; /* ZigBeeAlliance09 */
+                                0x5a, 0x69, 0x67, 0x42, 0x65, 0x65, 0x41, 0x6c, 0x6c, 0x69, 0x61, 0x6e, 0x63, 0x65, 0x30, 0x39,
+                                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}; /* ZigBeeAlliance09 */
 
     typedef void* TaskHandle_t;
     typedef void* QueueMessage_t;
@@ -237,6 +240,30 @@ private:
     bool actionZigbee(const ZigbeeActionT type, const char* ieeeAddr, const cJSON* const payload);
     void getZigbeeAction();
     void zigbeeTimerCallback(void* args);
+
+    void beginReadFromFlash(const char* filename, bool force = true) {
+        this->thisApi().beginReadFromFlash(filename, force);
+    }
+
+    char* readLineFromFlash(bool force = true) {
+        return this->thisApi().readLineFromFlash(force);
+    }
+
+    void endReadFromFlash(bool force = true) {
+        this->thisApi().endReadFromFlash(force);
+    }
+
+    void beginWriteToFlash(const char* filename, bool force = true) {
+        this->thisApi().beginWriteToFlash(filename, force);
+    }
+
+    void writeLineToFlash(const char* buf, bool force = true) {
+        this->thisApi().writeLineToFlash(buf, force);
+    }
+
+    void endWriteToFlash(bool force = true) {
+        this->thisApi().endWriteToFlash(force);
+    }
 
     void writeDataToFlash(const char* filename, const char* buf, bool force = true) {
         this->thisApi().writeToFlash(filename, buf, force);
@@ -512,9 +539,13 @@ bool ERaZigbee<Api>::addZigbeeAction(const ZigbeeActionT type, const char* ieeeA
 	if (!this->queue.writeable()) {
         return false;
     }
+    char* buf = (char*)ERA_MALLOC(strlen(ieeeAddr) + 1);
+    if (buf == nullptr) {
+        return false;
+    }
     ZigbeeAction_t req;
     req.type = type;
-    req.ieeeAddr = (char*)ERA_MALLOC(strlen(ieeeAddr) + 1);
+    req.ieeeAddr = buf;
     req.payload = payload;
     memset(req.ieeeAddr, 0, strlen(ieeeAddr) + 1);
     strcpy(req.ieeeAddr, ieeeAddr);

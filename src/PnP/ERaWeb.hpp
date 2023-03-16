@@ -80,7 +80,7 @@ static const char webIndex[] ERA_PROGMEM =
 "<td><span id='mac'>%LOADING%</span></td></tr>"
 "</table>"
 "<input type=submit formaction='/wifi' class=btn value=Wifi>"
-"<input type=submit formaction='/resetWifi' onclick=resetWifi(event) class=btn value='%RESET%'></form>"
+"<input type=submit formaction='/wifi/reset' onclick=resetWifi(event) class=btn value='%RESET%'></form>"
 "<script>"
 "function interval() {"
 "getNetStatus();"
