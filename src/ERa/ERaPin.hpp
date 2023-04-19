@@ -35,8 +35,6 @@ class ERaPin
 #endif
 
     const static int MAX_CHANNELS = 16;
-	const static int MAX_PINS = ERA_MAX_GPIO_PIN;
-	const static int MAX_VPINS = ERA_MAX_VIRTUAL_PIN;
     enum PinFlagT {
         PIN_ON_DELETE = 0x80
     };
@@ -757,7 +755,7 @@ void ERaPin<Report>::disableAll() {
 
 template <class Report>
 bool ERaPin<Report>::isPinFree() {
-	if (this->numPin >= MAX_PINS) {
+	if (this->numPin >= ERA_MAX_GPIO_PIN) {
 		return false;
 	}
     
@@ -766,7 +764,7 @@ bool ERaPin<Report>::isPinFree() {
 
 template <class Report>
 bool ERaPin<Report>::isVPinFree() {
-	if (this->numVPin >= MAX_VPINS) {
+	if (this->numVPin >= ERA_MAX_VIRTUAL_PIN) {
 		return false;
 	}
 
