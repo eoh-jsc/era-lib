@@ -15,7 +15,7 @@
 #include <Encrypt/ERaEncryptMbedTLS.hpp>
 
 #define SERVICE_UUID            "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
-#define CHARACTERISTIC_UUID_TKN "cf153564-bc0d-11ed-afa1-0242ac120002"
+#define CHARACTERISTIC_UUID_TKN "cf153c1f-bc0d-11ed-afa1-0242ac120002"
 #define CHARACTERISTIC_UUID_RSP "fba737c2-9f19-4779-9ef2-9446c29d0bf5"
 #define CHARACTERISTIC_UUID_CMD "b32f3620-2846-4d1c-88aa-5dd06c0ad15e"
 

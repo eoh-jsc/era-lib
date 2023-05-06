@@ -508,20 +508,26 @@ void ERaDataBuff::onChangeHex(uint8_t value) {
 
 inline
 void ERaDataBuff::onChangeHex(const uint8_t* ptr, size_t size) {
-	if (ptr == nullptr || !size) {
+	if ((ptr == nullptr) || !size) {
 		return;
 	}
 	size_t len = size * 2 + 1;
-	char* buf = (char*)malloc(len);
-	if (buf == nullptr) {
-		return;
+	char locBuf[32] {0};
+	char* buf = locBuf;
+	if (len > sizeof(locBuf)) {
+		buf = (char*)malloc(len);
+		if (buf == nullptr) {
+			return;
+		}
 	}
+	size_t pos {0};
 	for (size_t i = 0; i < size; ++i) {
-		size_t pos = i * 2;
-		snprintf(buf + pos, size - pos, "%02x", ptr[i]);
+		pos += snprintf(buf + pos, len - pos, "%02x", ptr[i]);
 	}
 	onChange(buf);
-	free(buf);
+	if (buf != locBuf) {
+		free(buf);
+	}
 	buf = nullptr;
 }
 

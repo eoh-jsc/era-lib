@@ -14,7 +14,7 @@ template <class S, typename... Args>
 class StaticRefHelper {
 public:
     static S& instance(Args&... tail) {
-        static S& _instance(tail...);
+        static S _instance(tail...);
         return _instance;
     }
 };

@@ -22,18 +22,24 @@
 #endif
 
 #if defined(analogInputToDigitalPin)
-	#define ERA_DECODE_PIN(pin)		analogInputToDigitalPin(pin)
+	#define ERA_DECODE_PIN(pin)			analogInputToDigitalPin(pin)
 #else
-	#define ERA_DECODE_PIN(pin)		pin
+	#define ERA_DECODE_PIN(pin)			pin
 #endif
 
-#define ERA_INVALID_PIN				0xFF
-#define ERA_CHECK_PIN(pin)			if (pin == ERA_INVALID_PIN) { continue; }
-#define ERA_CHECK_PIN_RETURN(pin)	if (pin == ERA_INVALID_PIN) { return; }
+#define ERA_INVALID_PIN					0xFF
 
-#define ERA_DECODE_PIN_NUMBER(pin)	pin
-#define ERA_DECODE_PIN_NAME(pin) 	(((pin[0] == 'a') || (pin[0] == 'A')) ? 	\
-									ERA_DECODE_PIN(atoi(pin + 1)) : ERA_DECODE_PIN_NUMBER(atoi(pin)))
+#if defined(digitalPinIsValid)
+	#define ERA_CHECK_PIN(pin)			if (!digitalPinIsValid(pin)) { continue; }
+	#define ERA_CHECK_PIN_RETURN(pin)	if (!digitalPinIsValid(pin)) { return; }
+#else
+	#define ERA_CHECK_PIN(pin)			if (pin == ERA_INVALID_PIN) { continue; }
+	#define ERA_CHECK_PIN_RETURN(pin)	if (pin == ERA_INVALID_PIN) { return; }
+#endif
+
+#define ERA_DECODE_PIN_NUMBER(pin)		pin
+#define ERA_DECODE_PIN_NAME(pin) 		(((pin[0] == 'a') || (pin[0] == 'A')) ? 	\
+										ERA_DECODE_PIN(atoi(pin + 1)) : ERA_DECODE_PIN_NUMBER(atoi(pin)))
 
 enum ERaTypeWriteT {
 	ERA_WRITE_VIRTUAL_PIN = 0,
