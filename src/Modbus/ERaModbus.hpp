@@ -125,7 +125,7 @@ protected:
         if (req.key == nullptr) {
             return;
         }
-        this->actionModbus(req.key);
+        this->actionModbus(req);
         if (this->isEmptyRequest()) {
             this->executeNow();
             ModbusState::set(ModbusStateT::STATE_MB_CONTROLLED);
