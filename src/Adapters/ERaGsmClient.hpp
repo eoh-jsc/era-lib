@@ -145,6 +145,9 @@ public:
                 if (Base::connect()) {
                     ERaState::set(StateT::STATE_CONNECTED);
                 }
+                else {
+                    ERaState::set(StateT::STATE_CONNECTING_NETWORK);
+                }
                 break;
             case StateT::STATE_CONNECTED:
                 ERaState::set(StateT::STATE_RUNNING);

@@ -163,6 +163,9 @@ public:
                 if (Base::connect()) {
                     ERaState::set(StateT::STATE_CONNECTED);
                 }
+                else {
+                    ERaState::set(StateT::STATE_CONNECTING_NETWORK);
+                }
                 break;
             case StateT::STATE_CONNECTED:
                 ERaState::set(StateT::STATE_RUNNING);
@@ -229,10 +232,10 @@ private:
             return macUser;
         }
 
-        this->macAddress[0] = 0x27;
-        this->macAddress[1] = 0x06;
-        this->macAddress[2] = 0x19;
-        this->macAddress[3] = 0x95;
+        this->macAddress[0] = 0xFE;
+        this->macAddress[1] = 0xED;
+        this->macAddress[2] = 0x27;
+        this->macAddress[3] = 0x06;
         this->macAddress[4] = 0xFE;
         this->macAddress[5] = 0xED;
 
@@ -240,7 +243,7 @@ private:
             return this->macAddress;
         }
 
-        size_t index {0};
+        size_t index {1};
         size_t len = strlen(auth);
         for (size_t i = 0; i < len; ++i) {
             this->macAddress[index++] ^= auth[i];

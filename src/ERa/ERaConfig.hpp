@@ -109,6 +109,10 @@
     #define ERA_PROTO_TYPE              "WiFi"
 #endif
 
+#if !defined(ERA_DEBUG_PREFIX)
+    #define ERA_DEBUG_PREFIX            "/debug"
+#endif
+
 #define LIMIT_CONNECT_BROKER_MQTT       10
 
 #define INFO_BOARD                      "board"

@@ -844,6 +844,9 @@ void ERaPnP<Transport>::configInit() {
     if (ERaConfig.getFlag(ConfigFlagT::CONFIG_FLAG_VALID)) {
         ERaState::set(StateT::STATE_CONNECTING_NETWORK);
     }
+    else if (this->connected()) {
+        ERaState::set(StateT::STATE_CONNECTING_CLOUD);
+    }
     else {
         ERaState::set(StateT::STATE_SWITCH_TO_AP);
         ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_API, true);
@@ -887,6 +890,7 @@ void ERaPnP<Transport>::configSave() {
 template <class Transport>
 void ERaPnP<Transport>::configReset() {
     this->configLoadDefault();
+    ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_API, true);
     ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_STORE, true);
     this->configSave();
     ERaState::set(StateT::STATE_SWITCH_TO_AP);
@@ -964,6 +968,10 @@ void ERaPnP<Transport>::connectCloud() {
 
 template <class Transport>
 void ERaPnP<Transport>::connectWiFi(const char* ssid, const char* pass) {
+    if (!strlen(ssid)) {
+        return;
+    }
+
     int status = WiFi.status();
 
     MillisTime_t started = ERaMillis();

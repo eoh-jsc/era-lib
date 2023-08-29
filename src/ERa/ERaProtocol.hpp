@@ -374,7 +374,19 @@ void ERaProto<Transp, Flash>::processActionChip(const char* payload, cJSON* root
 				Base::ERaModbus::parseModbusConfig(item->valuestring, hash, payload, true);
 			}
 			break;
-		case ERaChipCfgT::CHIP_CONTROL_ALIAS:
+		case ERaChipCfgT::CHIP_CONTROL_ALIAS: {
+			uint16_t paramAction {0};
+			uint8_t typeAction {ModbusActionTypeT::MODBUS_ACTION_DEFAULT};
+			item = cJSON_GetObjectItem(dataItem, "value");
+			if (cJSON_IsNumber(item)) {
+				paramAction = item->valueint;
+				typeAction = ModbusActionTypeT::MODBUS_ACTION_PARAMS;
+			}
+			else if (cJSON_IsBool(item)) {
+				paramAction = (item->valueint ? MODBUS_SINGLE_COIL_ON :
+												MODBUS_SINGLE_COIL_OFF);
+				typeAction = ModbusActionTypeT::MODBUS_ACTION_PARAMS;
+			}
 			item = cJSON_GetObjectItem(dataItem, "commands");
 			if (cJSON_IsArray(item)) {
 				cJSON* keyItem = nullptr;
@@ -382,10 +394,12 @@ void ERaProto<Transp, Flash>::processActionChip(const char* payload, cJSON* root
 					keyItem = cJSON_GetArrayItem(item, i);
 					if(cJSON_IsString(keyItem)) {
 						// Handle command
-						Base::ERaModbus::addModbusAction(keyItem->valuestring);
+						Base::ERaModbus::addModbusAction(keyItem->valuestring,
+														typeAction, paramAction);
 					}
 				}
 			}
+		}
 			break;
 #endif
 #if defined(ERA_BT)
@@ -698,7 +712,7 @@ bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
 	char* payload = nullptr;
 	char topicName[MAX_TOPIC_LENGTH] {0};
 	FormatString(topicName, this->ERA_TOPIC);
-	FormatString(topicName, "/pin/data");
+	FormatString(topicName, ERA_DEBUG_PREFIX "/pin/data");
 	cJSON* root = cJSON_CreateObject();
 	if (root == nullptr) {
 		return false;

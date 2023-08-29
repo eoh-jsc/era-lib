@@ -24,6 +24,9 @@
 #define HI_WORD(a)                      (((a) >> 8) & 0xFF)
 #define LO_WORD(a)                      ((a) & 0xFF)
 
+#define MODBUS_SINGLE_COIL_ON           (uint16_t)0xFFFF
+#define MODBUS_SINGLE_COIL_OFF          (uint16_t)0x0000
+
 #define LOC_BUFFER_MODBUS(len)                      \
     uint8_t locData[32] {0};                        \
     uint8_t* pData = locData;                       \
@@ -57,6 +60,12 @@ enum ModbusFunctionT : uint8_t {
 enum ModbusTransportT : uint8_t {
     MODBUS_TRANSPORT_RTU = 0x00,
     MODBUS_TRANSPORT_TCP = 0x01
+};
+
+enum ModbusActionTypeT
+    : uint8_t {
+    MODBUS_ACTION_DEFAULT = 0x00,
+    MODBUS_ACTION_PARAMS = 0x01
 };
 
 #endif /* INC_ERA_DEFINE_MODBUS_HPP_ */

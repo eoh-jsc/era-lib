@@ -18,6 +18,8 @@ class ERaModbus
 {
     typedef struct __ModbusAction_t {
         char* key;
+        uint8_t type;
+        uint16_t param;
     } ModbusAction_t;
     typedef struct __TCPIp_t {
         IPAddress ip;
@@ -170,6 +172,14 @@ protected:
     }
 
     bool addModbusAction(const char* ptr) {
+        return this->addModbusAction(ptr, ModbusActionTypeT::MODBUS_ACTION_DEFAULT, 0);
+    }
+
+    bool addModbusAction(const char* ptr, uint16_t param) {
+        return this->addModbusAction(ptr, ModbusActionTypeT::MODBUS_ACTION_PARAMS, param);
+    }
+
+    bool addModbusAction(const char* ptr, uint8_t type, uint16_t param) {
         if (strlen(ptr) != 36) {
             return false;
         }
@@ -182,6 +192,8 @@ protected:
         }
         ModbusAction_t req;
         req.key = buf;
+        req.type = type;
+        req.param = param;
         memset(req.key, 0, 37 * sizeof(char));
         strcpy(req.key, ptr);
         this->queue += req;
@@ -274,8 +286,8 @@ private:
     void delayModbus(const int address);
     ModbusConfigAlias_t* getModbusAlias(const char* key);
     ModbusConfig_t* getModbusConfig(int id);
-    bool actionModbus(const char* key);
-    bool eachActionModbus(Action_t& action, ModbusConfig_t*& config);
+    bool actionModbus(ModbusAction_t& request);
+    bool eachActionModbus(ModbusAction_t& request, Action_t& action, ModbusConfig_t*& config);
     void sendModbusRead(ModbusConfig_t& param);
     bool sendModbusWrite(ModbusConfig_t& param);
     void onData(ERaModbusRequest* request, ERaModbusResponse* response);
@@ -438,15 +450,15 @@ ModbusConfigAlias_t* ERaModbus<Api>::getModbusAlias(const char* key) {
 }
 
 template <class Api>
-bool ERaModbus<Api>::actionModbus(const char* key) {
-    if (key == nullptr) {
+bool ERaModbus<Api>::actionModbus(ModbusAction_t& request) {
+    if (request.key == nullptr) {
         return false;
     }
-    if (strlen(key) != 36) {
+    if (strlen(request.key) != 36) {
         return false;
     }
 
-    ModbusConfigAlias_t* alias = this->getModbusAlias(key);
+    ModbusConfigAlias_t* alias = this->getModbusAlias(request.key);
     if (alias == nullptr) {
         return false;
     }
@@ -454,7 +466,7 @@ bool ERaModbus<Api>::actionModbus(const char* key) {
     ModbusConfig_t* config = nullptr;
     for (int i = 0; i < alias->readActionCount; ++i) {
         ERaGuardLock(this->mutex);
-        eachActionModbus(alias->action[i], config);
+        this->eachActionModbus(request, alias->action[i], config);
         ERaGuardUnlock(this->mutex);
         if ((config != nullptr) &&
             (i != (alias->readActionCount - 1))) {
@@ -480,14 +492,24 @@ ModbusConfig_t* ERaModbus<Api>::getModbusConfig(int id) {
 }
 
 template <class Api>
-bool ERaModbus<Api>::eachActionModbus(Action_t& action, ModbusConfig_t*& config) {
+bool ERaModbus<Api>::eachActionModbus(ModbusAction_t& request, Action_t& action, ModbusConfig_t*& config) {
     config = this->getModbusConfig(action.id);
     if (config == nullptr) {
         return false;
     }
 
-    config->len1 = action.len1;
-    config->len2 = action.len2;
+    switch (request.type) {
+        case ModbusActionTypeT::MODBUS_ACTION_DEFAULT:
+            config->len1 = action.len1;
+            config->len2 = action.len2;
+            break;
+        case ModbusActionTypeT::MODBUS_ACTION_PARAMS:
+            config->len1 = HI_WORD(request.param);
+            config->len2 = LO_WORD(request.param);
+            break;
+        default:
+            break;
+    }
 
     memcpy(config->extra, action.extra, sizeof(config->extra));
 
