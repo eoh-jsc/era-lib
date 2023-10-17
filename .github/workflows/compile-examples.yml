@@ -38,6 +38,7 @@ jobs:
             libraries: |
               - source-path: ./
               - name: WiFi101
+              - name: FlashStorage
           - name: "Arduino-NANO-33-IoT"
             fqbn: "arduino:samd:nano_33_iot"
             platform-name: arduino:samd
