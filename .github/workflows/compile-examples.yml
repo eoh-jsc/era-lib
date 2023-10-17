@@ -46,6 +46,7 @@ jobs:
             libraries: |
               - source-path: ./
               - name: WiFiNINA
+              - name: FlashStorage
           - name: "Arduino-MKRGSM1400"
             fqbn: "arduino:samd:mkrgsm1400"
             platform-name: arduino:samd
@@ -53,6 +54,7 @@ jobs:
             libraries: |
               - source-path: ./
               - name: MKRGSM
+              - name: FlashStorage
           - name: "Arduino-MKRNB1500"
             fqbn: "arduino:samd:mkrnb1500"
             platform-name: arduino:samd
@@ -60,6 +62,7 @@ jobs:
             libraries: |
               - source-path: ./
               - name: MKRNB
+              - name: FlashStorage
           - name: "Arduino-NANO-RP2040-Connect"
             fqbn: "arduino:mbed_nano:nanorp2040connect"
             platform-name: arduino:mbed_nano
