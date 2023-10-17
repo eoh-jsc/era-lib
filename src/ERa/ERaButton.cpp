@@ -3,7 +3,7 @@
 
 ERaButton::ERaButton()
     : numButton(0)
-    , timeout(50L)
+    , timeout(50UL)
 {}
 
 void ERaButton::run() {
@@ -14,12 +14,12 @@ void ERaButton::run() {
         if (!this->isValidButton(pButton)) {
             continue;
         }
-        if (currentMillis - pButton->prevTimeout < this->timeout) {
+        if ((currentMillis - pButton->prevTimeout) < this->timeout) {
             continue;
         }
-        unsigned long skipTimes = (currentMillis - pButton->prevTimeout) / this->timeout;
+        unsigned long skipTimes = ((currentMillis - pButton->prevTimeout) / this->timeout);
         // update time
-        pButton->prevTimeout += this->timeout * skipTimes;
+        pButton->prevTimeout += (this->timeout * skipTimes);
         // call callback
         if (!pButton->enable) {
             continue;
@@ -35,12 +35,21 @@ void ERaButton::run() {
         }
         if (pButton->state != pButton->prevState) {
             pButton->prevState = pButton->state;
-            this->setFlag(pButton->called, ButtonFlagT::BUTTON_ON_CHANGE, true);
+            this->setFlag(pButton->called, ButtonEventT::BUTTON_ON_CHANGE, true);
             if (pButton->state) {
-                this->setFlag(pButton->called, ButtonFlagT::BUTTON_ON_RISING, true);
+                this->setFlag(pButton->called, ButtonEventT::BUTTON_ON_RISING, true);
             }
             else {
-                this->setFlag(pButton->called, ButtonFlagT::BUTTON_ON_FALLING, true);
+                this->setFlag(pButton->called, ButtonEventT::BUTTON_ON_FALLING, true);
+                if ((currentMillis - pButton->prevMulti) > pButton->delayMulti) {
+                    pButton->countMulti = 0;
+                    pButton->prevMulti = currentMillis;
+                }
+                if (++pButton->countMulti >= pButton->numberMulti) {
+                    pButton->countMulti = 0;
+                    pButton->prevMulti = currentMillis;
+                    this->setFlag(pButton->called, ButtonEventT::BUTTON_ON_MULTI, true);
+                }
             }
         }
         if (!pButton->state && !pButton->pressed) {
@@ -48,9 +57,9 @@ void ERaButton::run() {
             pButton->prevMillis = currentMillis;
         }
         else if (!pButton->state && pButton->pressed) {
-            if (currentMillis - pButton->prevMillis >= pButton->delay) {
+            if ((currentMillis - pButton->prevMillis) >= pButton->delay) {
                 pButton->prevMillis = currentMillis;
-                this->setFlag(pButton->called, ButtonFlagT::BUTTON_ON_HOLD, true);
+                this->setFlag(pButton->called, ButtonEventT::BUTTON_ON_HOLD, true);
             }
         }
         else if (pButton->state && pButton->pressed) {
@@ -68,47 +77,62 @@ void ERaButton::run() {
         if (!pButton->called) {
             continue;
         }
-        if (this->getFlag(pButton->called, ButtonFlagT::BUTTON_ON_CHANGE)) {
+        if (this->getFlag(pButton->called, ButtonEventT::BUTTON_ON_CHANGE) &&
+            this->getFlag(pButton->flag, ButtonEventT::BUTTON_ON_CHANGE)) {
             if (pButton->callback_p == nullptr) {
                 if (pButton->callback != nullptr) {
-                    pButton->callback();
+                    pButton->callback(ButtonEventT::BUTTON_ON_CHANGE);
                 }
             }
             else {
-                pButton->callback_p(pButton->param);
+                pButton->callback_p(ButtonEventT::BUTTON_ON_CHANGE, pButton->param);
             }
         }
-        if (this->getFlag(pButton->called, ButtonFlagT::BUTTON_ON_FALLING)) {
-            if (pButton->callback_falling_p == nullptr) {
-                if (pButton->callback_falling != nullptr) {
-                    pButton->callback_falling();
+        if (this->getFlag(pButton->called, ButtonEventT::BUTTON_ON_FALLING) &&
+            this->getFlag(pButton->flag, ButtonEventT::BUTTON_ON_FALLING)) {
+            if (pButton->callback_p == nullptr) {
+                if (pButton->callback != nullptr) {
+                    pButton->callback(ButtonEventT::BUTTON_ON_FALLING);
                 }
             }
             else {
-                pButton->callback_falling_p(pButton->param_falling);
+                pButton->callback_p(ButtonEventT::BUTTON_ON_FALLING, pButton->param);
             }
         }
-        if (this->getFlag(pButton->called, ButtonFlagT::BUTTON_ON_RISING)) {
-            if (pButton->callback_rising_p == nullptr) {
-                if (pButton->callback_rising != nullptr) {
-                    pButton->callback_rising();
+        if (this->getFlag(pButton->called, ButtonEventT::BUTTON_ON_RISING) &&
+            this->getFlag(pButton->flag, ButtonEventT::BUTTON_ON_RISING)) {
+            if (pButton->callback_p == nullptr) {
+                if (pButton->callback != nullptr) {
+                    pButton->callback(ButtonEventT::BUTTON_ON_RISING);
                 }
             }
             else {
-                pButton->callback_rising_p(pButton->param_rising);
+                pButton->callback_p(ButtonEventT::BUTTON_ON_RISING, pButton->param);
             }
         }
-        if (this->getFlag(pButton->called, ButtonFlagT::BUTTON_ON_HOLD)) {
-            if (pButton->callback_hold_p == nullptr) {
-                if (pButton->callback_hold != nullptr) {
-                    pButton->callback_hold();
+        if (this->getFlag(pButton->called, ButtonEventT::BUTTON_ON_HOLD) &&
+            this->getFlag(pButton->flag, ButtonEventT::BUTTON_ON_HOLD)) {
+            if (pButton->callback_p == nullptr) {
+                if (pButton->callback != nullptr) {
+                    pButton->callback(ButtonEventT::BUTTON_ON_HOLD);
                 }
             }
             else {
-                pButton->callback_hold_p(pButton->param_hold);
+                pButton->callback_p(ButtonEventT::BUTTON_ON_HOLD, pButton->param);
             }
         }
-        if (this->getFlag(pButton->called, ButtonFlagT::BUTTON_ON_DELETE)) {
+        if (this->getFlag(pButton->called, ButtonEventT::BUTTON_ON_MULTI) &&
+            this->getFlag(pButton->flag, ButtonEventT::BUTTON_ON_MULTI)) {
+            if (pButton->callback_p == nullptr) {
+                if (pButton->callback != nullptr) {
+                    pButton->callback(ButtonEventT::BUTTON_ON_MULTI);
+                }
+            }
+            else {
+                pButton->callback_p(ButtonEventT::BUTTON_ON_MULTI, pButton->param);
+            }
+        }
+        if (this->getFlag(pButton->called, ButtonEventT::BUTTON_ON_DELETE)) {
             delete pButton;
             pButton = nullptr;
             it->get() = nullptr;
@@ -120,7 +144,8 @@ void ERaButton::run() {
     }
 }
 
-ERaButton::Button_t* ERaButton::setupButton(uint8_t pin, ERaButton::ReadPinHandler_t readPin, bool invert) {
+ERaButton::Button_t* ERaButton::setupButton(uint8_t pin, ERaButton::ReadPinHandler_t readPin,
+                                            ERaButton::ButtonCallback_t cb, bool invert) {
     if (!this->isButtonFree()) {
         return nullptr;
     }
@@ -135,18 +160,9 @@ ERaButton::Button_t* ERaButton::setupButton(uint8_t pin, ERaButton::ReadPinHandl
 
     pButton->delay = 0;
     pButton->readPin = readPin;
-    pButton->callback = nullptr;
+    pButton->callback = cb;
     pButton->callback_p = nullptr;
-    pButton->callback_falling = nullptr;
-    pButton->callback_falling_p = nullptr;
-    pButton->callback_rising = nullptr;
-    pButton->callback_rising_p = nullptr;
-    pButton->callback_hold = nullptr;
-    pButton->callback_hold_p = nullptr;
     pButton->param = nullptr;
-    pButton->param_falling = nullptr;
-    pButton->param_rising = nullptr;
-    pButton->param_hold = nullptr;
     pButton->enable = true;
     pButton->called = 0;
     pButton->prevMillis = ERaMillis();
@@ -167,86 +183,90 @@ ERaButton::Button_t* ERaButton::setupButton(uint8_t pin, ERaButton::ReadPinHandl
     return pButton;
 }
 
-void ERaButton::onChange(Button_t* pButton, ERaButton::ButtonCallback_t cb) {
-    if (pButton == nullptr) {
-        return;
+ERaButton::Button_t* ERaButton::setupButton(uint8_t pin, ERaButton::ReadPinHandler_t readPin,
+                                            ERaButton::ButtonCallback_p_t cb, void* arg, bool invert) {
+    if (!this->isButtonFree()) {
+        return nullptr;
+    }
+    if (readPin == nullptr) {
+        return nullptr;
     }
 
-    pButton->callback = cb;
-    pButton->callback_p = nullptr;
-    pButton->param = nullptr;
-}
-
-void ERaButton::onChange(Button_t* pButton, ERaButton::ButtonCallback_p_t cb, void* arg) {
+    Button_t* pButton = new Button_t();
     if (pButton == nullptr) {
-        return;
+        return nullptr;
     }
 
+    pButton->delay = 0;
+    pButton->delayMulti = 0;
+    pButton->readPin = readPin;
     pButton->callback = nullptr;
     pButton->callback_p = cb;
     pButton->param = arg;
+    pButton->enable = true;
+    pButton->called = 0;
+    pButton->countMulti = 0;
+    pButton->numberMulti = 0;
+    pButton->prevMillis = ERaMillis();
+    pButton->prevTimeout = ERaMillis();
+    pButton->prevMulti = ERaMillis();
+    pButton->pin = pin;
+    pButton->invert = invert;
+    if (!invert) {
+        pButton->state = readPin(pin);
+        pButton->prevState = readPin(pin);
+    }
+    else {
+        pButton->state = !readPin(pin);
+        pButton->prevState = !readPin(pin);
+    }
+    pButton->pressed = false;
+    this->button.put(pButton);
+    this->numButton++;
+    return pButton;
 }
 
-void ERaButton::onFalling(Button_t* pButton, ERaButton::ButtonCallback_t cb) {
+void ERaButton::onChange(Button_t* pButton) {
     if (pButton == nullptr) {
         return;
     }
 
-    pButton->callback_falling = cb;
-    pButton->callback_falling_p = nullptr;
-    pButton->param_falling = nullptr;
+    this->setFlag(pButton->flag, ButtonEventT::BUTTON_ON_CHANGE, true);
 }
 
-void ERaButton::onFalling(Button_t* pButton, ERaButton::ButtonCallback_p_t cb, void* arg) {
+void ERaButton::onFalling(Button_t* pButton) {
     if (pButton == nullptr) {
         return;
     }
 
-    pButton->callback_falling = nullptr;
-    pButton->callback_falling_p = cb;
-    pButton->param_falling = arg;
+    this->setFlag(pButton->flag, ButtonEventT::BUTTON_ON_FALLING, true);
 }
 
-void ERaButton::onRising(Button_t* pButton, ERaButton::ButtonCallback_t cb) {
+void ERaButton::onRising(Button_t* pButton) {
     if (pButton == nullptr) {
         return;
     }
 
-    pButton->callback_rising = cb;
-    pButton->callback_rising_p = nullptr;
-    pButton->param_rising = nullptr;
+    this->setFlag(pButton->flag, ButtonEventT::BUTTON_ON_RISING, true);
 }
 
-void ERaButton::onRising(Button_t* pButton, ERaButton::ButtonCallback_p_t cb, void* arg) {
-    if (pButton == nullptr) {
-        return;
-    }
-
-    pButton->callback_rising = nullptr;
-    pButton->callback_rising_p = cb;
-    pButton->param_rising = arg;
-}
-
-void ERaButton::onHold(Button_t* pButton, unsigned long delay, ERaButton::ButtonCallback_t cb) {
-    if (pButton == nullptr) {
-        return;
-    }
-
-    pButton->delay = delay;
-    pButton->callback_hold = cb;
-    pButton->callback_hold_p = nullptr;
-    pButton->param_hold = nullptr;
-}
-
-void ERaButton::onHold(Button_t* pButton, unsigned long delay, ERaButton::ButtonCallback_p_t cb, void* arg) {
+void ERaButton::onHold(Button_t* pButton, unsigned long delay) {
     if (pButton == nullptr) {
         return;
     }
 
     pButton->delay = delay;
-    pButton->callback_hold = nullptr;
-    pButton->callback_hold_p = cb;
-    pButton->param_hold = arg;
+    this->setFlag(pButton->flag, ButtonEventT::BUTTON_ON_HOLD, true);
+}
+
+void ERaButton::onMulti(Button_t* pButton, uint8_t num, unsigned long delay) {
+    if (pButton == nullptr) {
+        return;
+    }
+
+    pButton->numberMulti = num;
+    pButton->delayMulti = delay;
+    this->setFlag(pButton->flag, ButtonEventT::BUTTON_ON_MULTI, true);
 }
 
 void ERaButton::deleteButton(Button_t* pButton) {
@@ -255,7 +275,7 @@ void ERaButton::deleteButton(Button_t* pButton) {
     }
 
     if (this->isValidButton(pButton)) {
-        this->setFlag(pButton->called, ButtonFlagT::BUTTON_ON_DELETE, true);
+        this->setFlag(pButton->called, ButtonEventT::BUTTON_ON_DELETE, true);
     }
 }
 

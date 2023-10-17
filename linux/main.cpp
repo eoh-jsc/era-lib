@@ -19,8 +19,6 @@
 
 // Enable Modbus and Zigbee
 #include <ERaLinux.hpp>
-
-#include <ERa/ERaTimer.hpp>
 #include <ERaOptionsArgs.hpp>
 
 static const char* auth;
@@ -30,22 +28,19 @@ static uint16_t port;
 static const char* user;
 static const char* pass;
 
-ERaTimer timer;
-
 void setup() {
     ERa.setBoardID(boardID);
     ERa.begin(auth, host, port, user, pass);
-    timer.setInterval(1000L, []() {
+    ERa.addInterval(1000L, []() {
         printf("Uptime: %d\r\n", ERaMillis() / 1000L);
     });
 }
 
 void loop() {
     ERa.run();
-    timer.run();
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
     processArgs(argc, argv, auth, boardID,
                 host, port, user, pass);
 

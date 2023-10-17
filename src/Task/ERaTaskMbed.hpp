@@ -2,7 +2,7 @@
 #define INC_ERA_TASK_MBED_HPP_
 
 #include <mbed.h>
-#include <ERa/ERaProtocol.hpp>
+#include <ERa/ERaApi.hpp>
 
 using namespace rtos;
 
@@ -28,7 +28,7 @@ using namespace rtos;
         if (modbus == NULL) {
             ((Thread*)modbus->_modbusTask)->terminate();
         }
-        modbus->run(true);
+        modbus->runRead();
         ((Thread*)modbus->_modbusTask)->terminate();
     #endif
         ERA_FORCE_UNUSED(args);
@@ -41,7 +41,7 @@ using namespace rtos;
         if (modbus == NULL) {
             ((Thread*)modbus->_writeModbusTask)->terminate();
         }
-        modbus->run(false);
+        modbus->runWrite();
         ((Thread*)modbus->_writeModbusTask)->terminate();
     #endif
         ERA_FORCE_UNUSED(args);
@@ -53,17 +53,17 @@ using namespace rtos;
     void ERaZigbee<Api>::initZigbeeTask() {
     #if !defined(ERA_NO_RTOS)
         if (this->_zigbeeTask == NULL) {
-            this->_zigbeeTask = new Thread(osPriority::osPriorityHigh, 12 * 1024);
+            this->_zigbeeTask = new Thread(osPriority::osPriorityHigh1, 12 * 1024);
         }
         ((Thread*)this->_zigbeeTask)->start(callback(this->zigbeeTask, this));
+        if (this->_responseZigbeeTask == NULL) {
+            this->_responseZigbeeTask = new Thread(osPriority::osPriorityHigh1, 12 * 1024);
+        }
+        ((Thread*)this->_responseZigbeeTask)->start(callback(this->responseZigbeeTask, this));
         if (this->_controlZigbeeTask == NULL) {
             this->_controlZigbeeTask = new Thread(osPriority::osPriorityHigh, 12 * 1024);
         }
         ((Thread*)this->_controlZigbeeTask)->start(callback(this->controlZigbeeTask, this));
-        if (this->_responseZigbeeTask == NULL) {
-            this->_responseZigbeeTask = new Thread(osPriority::osPriorityHigh, 12 * 1024);
-        }
-        ((Thread*)this->_responseZigbeeTask)->start(callback(this->responseZigbeeTask, this));
     #endif
     }
 
@@ -74,21 +74,8 @@ using namespace rtos;
         if (zigbee == NULL) {
             ((Thread*)zigbee->_zigbeeTask)->terminate();
         }
-        zigbee->run();
+        zigbee->runEvent();
         ((Thread*)zigbee->_zigbeeTask)->terminate();
-    #endif
-        ERA_FORCE_UNUSED(args);
-    }
-
-    template <class Api>
-    void ERaZigbee<Api>::controlZigbeeTask(void* args) {
-    #if !defined(ERA_NO_RTOS)
-        ERaZigbee* zigbee = (ERaZigbee*)args;
-        if (zigbee == NULL) {
-            ((Thread*)zigbee->_controlZigbeeTask)->terminate();
-        }
-        zigbee->runControl();
-        ((Thread*)zigbee->_controlZigbeeTask)->terminate();
     #endif
         ERA_FORCE_UNUSED(args);
     }
@@ -105,25 +92,42 @@ using namespace rtos;
     #endif
         ERA_FORCE_UNUSED(args);
     }
+
+    template <class Api>
+    void ERaZigbee<Api>::controlZigbeeTask(void* args) {
+    #if !defined(ERA_NO_RTOS)
+        ERaZigbee* zigbee = (ERaZigbee*)args;
+        if (zigbee == NULL) {
+            ((Thread*)zigbee->_controlZigbeeTask)->terminate();
+        }
+        zigbee->runControl();
+        ((Thread*)zigbee->_controlZigbeeTask)->terminate();
+    #endif
+        ERA_FORCE_UNUSED(args);
+    }
 #endif
 
-template <class Transp, class Flash>
-void ERaProto<Transp, Flash>::initERaTask() {
+template <class Proto, class Flash>
+inline
+void ERaApi<Proto, Flash>::initERaApiTask() {
 #if defined(ERA_MODBUS)
-	Base::Modbus::begin();
+	Modbus::begin();
 #endif
-#if defined(ERA_ZIGBEE) &&  \
-    !defined(ERA_NO_RTOS)
-	Base::Zigbee::begin();
+#if defined(ERA_ZIGBEE)
+	Zigbee::begin();
 #endif
 }
 
-template <class Transp, class Flash>
-void ERaProto<Transp, Flash>::runERaTask() {
+template <class Proto, class Flash>
+inline
+void ERaApi<Proto, Flash>::runERaApiTask() {
 #if defined(ERA_MODBUS) &&  \
     defined(ERA_NO_RTOS)
-	Base::Modbus::runRead();
-	Base::Modbus::runWrite();
+	Modbus::run();
+#endif
+#if defined(ERA_ZIGBEE) &&  \
+    defined(ERA_NO_RTOS)
+	Zigbee::run();
 #endif
 }
 

@@ -1,4 +1,4 @@
-# Raspberry Pi, Linux Guide
+# Raspberry Pi, Tinker Board, Linux Guide
 
 Step 1: Install Raspbian OS in your Raspberry Pi.
 

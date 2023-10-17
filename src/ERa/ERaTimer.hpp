@@ -199,4 +199,6 @@ private:
     unsigned int numTimer;
 };
 
+using TimerEntry = ERaTimer::iterator;
+
 #endif /* INC_ERA_TIMER_HPP_ */

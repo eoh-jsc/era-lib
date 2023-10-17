@@ -18,12 +18,13 @@
 #define ERA_LOCATION_VN
 // #define ERA_LOCATION_SG
 
-// You should get Auth Token in the ERa App or ERa Dashboard
-#define ERA_AUTH_TOKEN "ERA2706"
-
 #include <Arduino.h>
 #include <ERa.hpp>
-#include <ERa/ERaTimer.hpp>
+
+/* This function print uptime every second */
+void timerEvent() {
+    ERA_LOG("Timer", "Uptime: %d", ERaMillis() / 1000L);
+}
 
 void setup() {
     /* Setup debug console */
@@ -33,6 +34,9 @@ void setup() {
     // ERa.setBoardID("Board_1");
     /* Initializing the ERa library. */
     ERa.begin();
+
+    /* Setup timer called function every second */
+    ERa.addInterval(1000L, timerEvent);
 }
 
 void loop() {

@@ -1,7 +1,7 @@
 #ifndef INC_ERA_TASK_ARDUINO_HPP_
 #define INC_ERA_TASK_ARDUINO_HPP_
 
-#include <ERa/ERaProtocol.hpp>
+#include <ERa/ERaApi.hpp>
 
 #if defined(ERA_MODBUS)
     template <class Api>
@@ -19,18 +19,46 @@
     }
 #endif
 
-template <class Transp, class Flash>
-void ERaProto<Transp, Flash>::initERaTask() {
+#if defined(ERA_ZIGBEE)
+    template <class Api>
+    void ERaZigbee<Api>::initZigbeeTask() {
+    }
+
+    template <class Api>
+    void ERaZigbee<Api>::zigbeeTask(void* args) {
+        ERA_FORCE_UNUSED(args);
+    }
+
+    template <class Api>
+    void ERaZigbee<Api>::responseZigbeeTask(void* args) {
+        ERA_FORCE_UNUSED(args);
+    }
+
+    template <class Api>
+    void ERaZigbee<Api>::controlZigbeeTask(void* args) {
+        ERA_FORCE_UNUSED(args);
+    }
+#endif
+
+template <class Proto, class Flash>
+inline
+void ERaApi<Proto, Flash>::initERaApiTask() {
 #if defined(ERA_MODBUS)
-	Base::Modbus::begin();
+	Modbus::begin();
+#endif
+#if defined(ERA_ZIGBEE)
+	Zigbee::begin();
 #endif
 }
 
-template <class Transp, class Flash>
-void ERaProto<Transp, Flash>::runERaTask() {
+template <class Proto, class Flash>
+inline
+void ERaApi<Proto, Flash>::runERaApiTask() {
 #if defined(ERA_MODBUS)
-	Base::Modbus::runRead();
-	Base::Modbus::runWrite();
+	Modbus::run();
+#endif
+#if defined(ERA_ZIGBEE)
+	Zigbee::run();
 #endif
 }
 

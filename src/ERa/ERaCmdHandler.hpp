@@ -30,7 +30,7 @@ public:
         , next(nullptr)
     {}
 
-    ERaCmdHandler* getNext() {
+    ERaCmdHandler* getNext() const {
         return this->next;
     }
 

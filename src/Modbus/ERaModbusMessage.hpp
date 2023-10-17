@@ -12,6 +12,11 @@
     #define new_modbus  new(std::nothrow)
 #endif
 
+typedef struct __ModbusBuffer_t {
+    uint8_t length;
+    uint8_t data[];
+} ModbusBuffer_t;
+
 class ERaModbusMessage
 {
 public:

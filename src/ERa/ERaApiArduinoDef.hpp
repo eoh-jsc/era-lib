@@ -12,6 +12,8 @@
     #define OUTPUT_OPEN_DRAIN OUTPUT
 #elif defined(ARDUINO_ARCH_SAMD)
     #define OUTPUT_OPEN_DRAIN OUTPUT
+#elif defined(ARDUINO_ARCH_ARM)
+    #define OUTPUT_OPEN_DRAIN OUTPUT
 #elif !defined(__MBED__) &&         \
     defined(ARDUINO_ARCH_RP2040)
     #define OUTPUT_OPEN_DRAIN OUTPUT
@@ -20,6 +22,8 @@
     #define OUTPUT_OPEN_DRAIN OUTPUT
 #elif defined(RTL8722DM) ||         \
     defined(ARDUINO_AMEBA)
+    #define OUTPUT_OPEN_DRAIN OUTPUT_OPENDRAIN
+#elif defined(ARDUINO_ARCH_RENESAS)
     #define OUTPUT_OPEN_DRAIN OUTPUT_OPENDRAIN
 #elif defined(__MBED__)
     #define OUTPUT_OPEN_DRAIN (PinMode)OUTPUT_OPENDRAIN

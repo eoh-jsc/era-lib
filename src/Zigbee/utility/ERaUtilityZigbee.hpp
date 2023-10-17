@@ -59,6 +59,12 @@ void ClearMem(void* ptr, size_t size) {
     memset(ptr, 0, size);
 }
 
+template <typename T>
+inline
+void ClearMem(T& it) {
+    memset(&it, 0, sizeof(T));
+}
+
 template <typename T, int size>
 inline
 void ClearMem(T(&arr)[size]) {

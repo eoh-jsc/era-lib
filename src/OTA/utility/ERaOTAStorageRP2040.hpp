@@ -30,16 +30,22 @@ public:
             return false;
         }
 
+        ERaWatchdogFeed();
+
         int err = this->bd->init();
         if (err < 0) {
             return false;
         }
         this->bd->erase(XIP_BASE + 0xF00000, this->maxSketchSize);
 
+        ERaWatchdogFeed();
+
         err = this->fs.reformat(this->bd);
         if (err != 0) {
             return false;
         }
+
+        ERaWatchdogFeed();
 
         this->file = fopen("/ota/UPDATE.BIN.LZSS", "wb");
         if (this->file == nullptr) {

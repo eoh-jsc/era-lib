@@ -109,4 +109,21 @@ typedef struct __find_endpoint_t : std::unary_function<InfoEndpoint_t, bool> {
 	}
 } find_endpoint_t;
 
+typedef struct __find_devicePayloadWithTopic_t
+	: std::unary_function<IdentDeviceAddr_t, bool> {
+	const char* topic;
+	__find_devicePayloadWithTopic_t(const char* _topic)
+		: topic(_topic)
+	{}
+	bool operator () (IdentDeviceAddr_t const& e) const {
+		if (this->topic == nullptr) {
+			return false;
+		}
+		if (e.data.topic == nullptr) {
+			return false;
+		}
+		return !strcmp(e.data.topic, this->topic);
+	}
+} find_devicePayloadWithTopic_t;
+
 #endif /* INC_DEFINE_STRUCT_ZIGBEE_HPP_ */

@@ -35,25 +35,69 @@ public:
         return this->packetId;
     }
 
+    uint8_t getSlaveAddress() {
+        return this->slaveAddr;
+    }
+
     uint8_t getFunction() {
         return this->function;
+    }
+
+    uint16_t getAddress() {
+        return this->addr;
     }
 
     uint16_t getLength() {
         return this->len;
     }
 
+    /* Start: for ModbusInternal */
+    uint8_t getExtraBit(uint8_t byteIndex, uint8_t bitIndex) {
+        if (this->function != ModbusFunctionT::FORCE_MULTIPLE_COILS) {
+            return 0;
+        }
+        if (this->isRTU() &&
+            ((7 + byteIndex) >= this->length)) {
+            return 0;
+        }
+        else if (!this->isRTU() &&
+            ((13 + byteIndex) >= this->length)) {
+            return 0;
+        }
+
+        if (this->isRTU()) {
+            return ((this->buffer[7 + byteIndex] >> bitIndex) & 0b1);
+        }
+        else {
+            return ((this->buffer[13 + byteIndex] >> bitIndex) & 0b1);
+        }
+    }
+
+    uint16_t getExtraWord(uint8_t regIndex) {
+        if (this->function != ModbusFunctionT::PRESET_MULTIPLE_REGISTERS) {
+            return 0;
+        }
+        if (this->isRTU() &&
+            ((7 + regIndex + 1) >= this->length)) {
+            return 0;
+        }
+        else if (!this->isRTU() &&
+            ((13 + regIndex + 1) >= this->length)) {
+            return 0;
+        }
+
+        if (this->isRTU()) {
+            return BUILD_WORD(this->buffer[7 + regIndex], this->buffer[7 + regIndex + 1]);
+        }
+        else {
+            return BUILD_WORD(this->buffer[13 + regIndex], this->buffer[13 + regIndex + 1]);
+        }
+    }
+    /* End: for ModbusInternal */
+
 protected:
     bool isRTU() {
         return (this->transp == ModbusTransportT::MODBUS_TRANSPORT_RTU);
-    }
-
-    uint8_t getSlaveAddress() {
-        return this->slaveAddr;
-    }
-
-    uint16_t getAddress() {
-        return this->addr;
     }
 
     uint16_t modbusCRC(uint8_t* buf, size_t len) {
@@ -141,11 +185,101 @@ public:
         return this->buffer[8];
     }
 
+    void setBytes(uint8_t bytes) {
+        if (this->request->isRTU()) {
+            this->buffer[2] = bytes;
+        }
+        else {
+            this->buffer[8] = bytes;
+        }
+    }
+
+    void appendBytes(uint8_t bytes) {
+        if (this->request->isRTU()) {
+            this->buffer[2] += bytes;
+        }
+        else {
+            this->buffer[8] += bytes;
+        }
+    }
+
     uint8_t* getData() {
         if (this->request->isRTU()) {
             return (this->buffer + 3);
         }
         return (this->buffer + 9);
+    }
+
+    /* Start: for ModbusInternal */
+    void setDataIndex(uint8_t shift = 0) {
+        if (shift) {
+            this->index += shift;
+            return;
+        }
+        if (this->request->isRTU()) {
+            this->index = 3;
+            memcpy(this->buffer, this->request->getMessage(), 2);
+        }
+        else {
+            this->index = 9;
+            memcpy(this->buffer, this->request->getMessage(), 8);
+        }
+    }
+
+    void setDataBit(uint8_t byteIndex, uint8_t bitIndex, uint8_t bit) {
+        if (this->request->isRTU() &&
+            ((3 + byteIndex) >= this->length)) {
+            return;
+        }
+        else if (!this->request->isRTU() &&
+            ((9 + byteIndex) >= this->length)) {
+            return;
+        }
+
+        if (this->request->isRTU()) {
+            this->buffer[3 + byteIndex] |= ((bit ? 0b1 : 0b0) << bitIndex);
+        }
+        else {
+            this->buffer[9 + byteIndex] |= ((bit ? 0b1 : 0b0) << bitIndex);
+        }
+    }
+
+    void setDataByte(uint8_t byteIndex, const uint8_t* pData, uint8_t pDataLen) {
+        if (this->request->isRTU() &&
+            (((3 + byteIndex) + pDataLen) >= this->length)) {
+            return;
+        }
+        else if (!this->request->isRTU() &&
+            (((9 + byteIndex) + pDataLen) >= this->length)) {
+            return;
+        }
+
+        if (this->request->isRTU()) {
+            memcpy(((this->buffer + 3) + byteIndex), pData, pDataLen);
+        }
+        else {
+            memcpy(((this->buffer + 9) + byteIndex), pData, pDataLen);
+        }
+    }
+
+    void setData(const uint8_t* pData, uint8_t pDataLen) {
+        for (size_t i = 0; i < pDataLen; ++i) {
+            this->add(pData[i]);
+        }
+    }
+
+    void updateCRC() {
+        uint16_t crc = this->request->modbusCRC(this->buffer, this->length - 2);
+        this->buffer[this->length - 1] = HI_WORD(crc);
+        this->buffer[this->length - 2] = LO_WORD(crc);
+    }
+    /* End: for ModbusInternal */
+
+    ModbusBuffer_t* getDataBuffer() {
+        if (this->request->isRTU()) {
+            return reinterpret_cast<ModbusBuffer_t*>(&this->buffer[2]);
+        }
+        return reinterpret_cast<ModbusBuffer_t*>(&this->buffer[8]);
     }
 
     bool checkCRC() {
@@ -547,8 +681,11 @@ public:
     }
 };
 
+#include <Modbus/ERaModbusInternal.hpp>
+
 template <class Modbus>
 class ERaModbusTransp
+    : public ERaModbusInternal
 {
 public:
     ERaModbusTransp()
@@ -556,28 +693,28 @@ public:
     ~ERaModbusTransp()
     {}
 
-    bool readCoilStatus(const uint8_t transp, const ModbusConfig_t& param) {
+    bool readCoilStatus(const uint8_t transp, const ModbusConfig_t& param, bool skip = false) {
         ERaModbusRequest* request = new_modbus ERaModbusRequest01(transp, param.addr,
                                     BUILD_WORD(param.sa1, param.sa2), BUILD_WORD(param.len1, param.len2));
-        return this->processRead(request);
+        return this->processRead(request, skip);
     }
 
-    bool readInputStatus(const uint8_t transp, const ModbusConfig_t& param) {
+    bool readInputStatus(const uint8_t transp, const ModbusConfig_t& param, bool skip = false) {
         ERaModbusRequest* request = new_modbus ERaModbusRequest02(transp, param.addr,
                                     BUILD_WORD(param.sa1, param.sa2), BUILD_WORD(param.len1, param.len2));
-        return this->processRead(request);
+        return this->processRead(request, skip);
     }
 
-    bool readHoldingRegisters(const uint8_t transp, const ModbusConfig_t& param) {
+    bool readHoldingRegisters(const uint8_t transp, const ModbusConfig_t& param, bool skip = false) {
         ERaModbusRequest* request = new_modbus ERaModbusRequest03(transp, param.addr,
                                     BUILD_WORD(param.sa1, param.sa2), BUILD_WORD(param.len1, param.len2));
-        return this->processRead(request);
+        return this->processRead(request, skip);
     }
 
-    bool readInputRegisters(const uint8_t transp, const ModbusConfig_t& param) {
+    bool readInputRegisters(const uint8_t transp, const ModbusConfig_t& param, bool skip = false) {
         ERaModbusRequest* request = new_modbus ERaModbusRequest04(transp, param.addr,
                                     BUILD_WORD(param.sa1, param.sa2), BUILD_WORD(param.len1, param.len2));
-        return this->processRead(request);
+        return this->processRead(request, skip);
     }
 
     bool forceSingleCoil(const uint8_t transp, const ModbusConfig_t& param) {
@@ -604,18 +741,24 @@ public:
         return this->processWrite(request);
     }
 
-    bool processRead(ERaModbusRequest* request) {
+    bool processRead(ERaModbusRequest* request, bool skip = false) {
         bool status {false};
         ERA_ASSERT_NULL(request, false)
         ERaModbusResponse* response = new_modbus ERaModbusResponse(request, request->responseLength());
         ERA_ASSERT_NULL(response, false)
-        this->thisModbus().sendCommand(request->getMessage(), request->getSize());
-        status = this->thisModbus().waitResponse(response);
-        if (status) {
-            this->thisModbus().onData(request, response);
+        if (ERaModbusInternal::handlerRead(request, response, status)) {
+            this->thisModbus().updateTotalTransmit();
+            ERaLogHex("IB <<", response->getMessage(), response->getSize());
         }
         else {
-            this->thisModbus().onError(request);
+            this->thisModbus().sendCommand(request->getMessage(), request->getSize());
+            status = this->thisModbus().waitResponse(response);
+        }
+        if (status) {
+            this->thisModbus().onData(request, response, skip);
+        }
+        else {
+            this->thisModbus().onError(request, skip);
         }
         delete request;
         delete response;
@@ -627,11 +770,17 @@ public:
         ERA_ASSERT_NULL(request, false)
         ERaModbusResponse* response = new_modbus ERaModbusResponse(request, request->responseLength());
         ERA_ASSERT_NULL(response, false)
-        for (size_t i = 0; i < 2; ++i) {
-            this->thisModbus().sendCommand(request->getMessage(), request->getSize());
-            if (this->thisModbus().waitResponse(response)) {
-                status = true;
-                break;
+        if (ERaModbusInternal::handlerWrite(request, response, status)) {
+            this->thisModbus().updateTotalTransmit();
+            ERaLogHex("IB <<", request->getMessage(), request->getSize());
+        }
+        else {
+            for (size_t i = 0; i < 2; ++i) {
+                this->thisModbus().sendCommand(request->getMessage(), request->getSize());
+                if (this->thisModbus().waitResponse(response)) {
+                    status = true;
+                    break;
+                }
             }
         }
         delete request;

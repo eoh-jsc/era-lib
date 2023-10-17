@@ -28,9 +28,6 @@
 
 #include <Arduino.h>
 #include <ERaArduinoGsm.hpp>
-#include <ERa/ERaTimer.hpp>
-
-ERaTimer timer;
 
 #if defined(APN_VIETTEL)
     const char apn[] = "v-internet";
@@ -52,8 +49,6 @@ ERaTimer timer;
 
 const char pinSIM[] = "";
 
-ERA_ATTACH_RUN(timer)
-
 /* This function print uptime every second */
 void timerEvent() {
     ERA_LOG(ERA_PSTR("Timer"), ERA_PSTR("Uptime: %d"), ERaMillis() / 1000L);
@@ -69,10 +64,9 @@ void setup() {
     ERa.begin(apn, user, pass, pinSIM);
 
     /* Setup timer called function every second */
-    timer.setInterval(1000L, timerEvent);
+    ERa.addInterval(1000L, timerEvent);
 }
 
 void loop() {
     ERa.run();
-    timer.run();
 }

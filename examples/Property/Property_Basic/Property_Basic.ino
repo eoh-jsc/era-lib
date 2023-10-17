@@ -24,14 +24,12 @@
 
 #include <Arduino.h>
 #include <ERa.hpp>
-#include <ERa/ERaTimer.hpp>
 
 #define LED_PIN  2
 
 const char ssid[] = "YOUR_SSID";
 const char pass[] = "YOUR_PASSWORD";
 
-ERaTimer timer;
 bool state = false;
 unsigned long timeUp = 0;
 
@@ -61,10 +59,9 @@ void setup() {
     ERa.begin(ssid, pass);
 
     /* Setup timer called function every second */
-    timer.setInterval(1000L, timerEvent);
+    ERa.addInterval(1000L, timerEvent);
 }
 
 void loop() {
     ERa.run();
-    timer.run();
 }

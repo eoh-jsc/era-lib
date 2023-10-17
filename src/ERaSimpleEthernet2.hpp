@@ -7,7 +7,8 @@
 #include <Adapters/ERaEthernetClient.hpp>
 #include <ERa/ERaApiArduino.hpp>
 #include <Modbus/ERaModbusArduino.hpp>
-#include <Utility/ERaFlashConfig.hpp>
+#include <Zigbee/ERaZigbeeArduino.hpp>
+#include <Storage/ERaFlashConfig.hpp>
 #include <Task/ERaTaskConfig.hpp>
 
 #if !defined(NO_GLOBAL_INSTANCES) && !defined(NO_GLOBAL_ERA)

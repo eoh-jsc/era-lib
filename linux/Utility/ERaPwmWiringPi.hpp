@@ -6,8 +6,15 @@
 #include <wiringPi.h>
 #include <softPwm.h>
 
-#define PWM_RANGE           100
-#define NUMBER_HARD_PIN_PI  4
+#define PWM_RANGE               100
+
+#if defined(RASPBERRY)
+    #define NUMBER_HARD_PIN_PI  4
+#elif defined(TINKER_BOARD)
+    #define NUMBER_HARD_PIN_PI  2
+#else
+    #define NUMBER_HARD_PIN_PI  0
+#endif
 
 template <class S, typename... Args>
 class HardPin {
@@ -18,10 +25,15 @@ public:
     }
 };
 
-#define hardPin HardPin<int, int, int, int, int>::pin(12, 13, 18, 19)
+#if defined(RASPBERRY)
+    #define hardPin HardPin<int, int, int, int, int>::pin(12, 13, 18, 19)
+#elif defined(TINKER_BOARD)
+    #define hardPin HardPin<int, int, int>::pin(32, 33)
+#endif
 
 static inline
 bool isHardPin(int pin) {
+#if NUMBER_HARD_PIN_PI
     static int* _hardPin = hardPin;
     for (size_t i = 0; i < NUMBER_HARD_PIN_PI; ++i) {
         if (_hardPin[i] == pin) {
@@ -29,6 +41,9 @@ bool isHardPin(int pin) {
         }
     }
     return false;
+#else
+    (void)pin;
+#endif
 }
 
 static inline

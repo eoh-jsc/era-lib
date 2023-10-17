@@ -49,6 +49,10 @@
     #endif
 #endif
 
+#if !defined(MODBUS_STREAM_TIMEOUT)
+    #define MODBUS_STREAM_TIMEOUT       5000
+#endif
+
 #define MODBUS_BUFFER_SIZE              256
 
 #if !defined(DEFAULT_TIMEOUT_MODBUS)
@@ -61,7 +65,11 @@
 
 #if !defined(ERA_MODBUS_YIELD)
     #if !defined(ERA_MODBUS_YIELD_MS)
-        #define ERA_MODBUS_YIELD_MS     10
+        #if defined(ERA_NO_RTOS)
+            #define ERA_MODBUS_YIELD_MS 1
+        #else
+            #define ERA_MODBUS_YIELD_MS 10
+        #endif
     #endif
     #if !defined(ERA_NO_YIELD)
         #define ERA_MODBUS_YIELD()      { ERaDelay(ERA_MODBUS_YIELD_MS); }
@@ -71,7 +79,19 @@
 #endif
 
 #if !defined(ERA_MODBUS_EXECUTE_MS)
-    #define ERA_MODBUS_EXECUTE_MS       0
+    #define ERA_MODBUS_EXECUTE_MS       0UL
+#endif
+
+#if !defined(ERA_MODBUS_DELAYS_MS)
+    #define ERA_MODBUS_DELAYS_MS        10UL
+#endif
+
+#if !defined(ERA_MODBUS_MUTEX_MS)
+    #define ERA_MODBUS_MUTEX_MS         100UL
+#endif
+
+#if !defined(ERA_DISABLE_PNP_MODBUS)
+    #define ERA_PNP_MODBUS
 #endif
 
 #endif /* INC_ERA_MODBUS_CONFIG_HPP_ */

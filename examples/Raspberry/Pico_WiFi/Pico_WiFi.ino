@@ -31,14 +31,11 @@
 
 #include <Arduino.h>
 #include <ERa.hpp>
-#include <ERa/ERaTimer.hpp>
 #include <SoftwareSerial.h>
 
 /* You should increase Serial fifo buffer size */
 SoftwareSerial SerialWiFi(17, 16);
 TinyGsm modem(SerialWiFi);
-
-ERaTimer timer;
 
 const char ssid[] = "YOUR_SSID";
 const char pass[] = "YOUR_PASSWORD";
@@ -63,10 +60,9 @@ void setup() {
     ERa.begin(modem, ssid, pass, rstPin);
 
     /* Setup timer called function every second */
-    timer.setInterval(1000L, timerEvent);
+    ERa.addInterval(1000L, timerEvent);
 }
 
 void loop() {
     ERa.run();
-    timer.run();
 }

@@ -574,10 +574,10 @@ void ERaFromZigbee<Zigbee>::createDeviceEvent(const DeviceEventT event, const AF
 
 	cJSON_AddItemToObject(root, "data", dataItem);
 
-    this->thisZigbee().publishZigbeeData(TOPIC_ZIGBEE_BRIDGE_EVENT, root, false);
+    this->thisZigbee().publishZigbeeData(TOPIC_ZIGBEE_BRIDGE_EVENT, root, true, false);
     if ((event == DeviceEventT::DEVICE_EVENT_INTERVIEW_SUCCESSFUL) ||
         (event == DeviceEventT::DEVICE_EVENT_INTERVIEW_BASIC_INFO)) {
-        this->thisZigbee().publishZigbeeData(TOPIC_ZIGBEE_DEVICE_EVENT, root, false);
+        this->thisZigbee().publishZigbeeData(TOPIC_ZIGBEE_DEVICE_EVENT, root, true, false);
     }
 
     cJSON_Delete(root);

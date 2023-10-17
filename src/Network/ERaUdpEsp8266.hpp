@@ -11,7 +11,8 @@ void ERaUdp<Udp>::getWiFiName(char(&ptr)[size], bool withPrefix) {
 	macAddr.toLowerCase();
     ClearArray(ptr);
     if (withPrefix) {
-        FormatString(ptr, "eoh.era.%s", macAddr.c_str());
+        FormatString(ptr, "eoh.%s.%s", ((this->pModel != nullptr) ? this->pModel : ERA_MODEL_NAME),
+                                        macAddr.c_str());
     } else {
         FormatString(ptr, "era.%s", macAddr.c_str());
     }
@@ -27,7 +28,7 @@ void ERaUdp<Udp>::getImeiChip(char(&ptr)[size]) {
 #ifdef ERA_AUTH_TOKEN
     FormatString(ptr, ERA_AUTH_TOKEN);
 #else
-    if (this->authToken != nullptr) {
+    if ((this->authToken != nullptr) && strlen(this->authToken)) {
         FormatString(ptr, this->authToken);
     }
     else {

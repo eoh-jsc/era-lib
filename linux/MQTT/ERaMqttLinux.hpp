@@ -7,6 +7,7 @@
 #include <ERa/ERaConfig.hpp>
 #include <ERa/ERaApi.hpp>
 #include "MQTT/MQTT.hpp"
+#include "ERaMqttHelper.hpp"
 
 #if defined(__has_include) &&       \
     __has_include(<functional>) &&  \
@@ -15,36 +16,33 @@
     #define MQTT_HAS_FUNCTIONAL_H
 #endif
 
-#define ERA_MQTT_PUB_LOG(status, errorCode)                                                     \
-    if (status) {                                                                               \
-        ERA_LOG(TAG, ERA_PSTR("Publish (ok) %s: %s"), topic, payload);                          \
-    }                                                                                           \
-    else {                                                                                      \
-        ERA_LOG(TAG, ERA_PSTR("Publish (error %d) %s: %s"), errorCode, topic, payload);         \
+#define ERA_MQTT_PUB_LOG(status, errorCode)                                                             \
+    if (status) {                                                                                       \
+        ERA_LOG(TAG, ERA_PSTR("Publish (ok) %s: %s"), topic, payload);                                  \
+    }                                                                                                   \
+    else {                                                                                              \
+        ERA_LOG_ERROR(TAG, ERA_PSTR("Publish (error %d) %s: %s"), errorCode, topic, payload);           \
     }
 
-#define ERR_MQTT_SUB_LOG(status, errorCode)                                                     \
-    if (status) {                                                                               \
-        ERA_LOG(TAG, ERA_PSTR("Subscribe (ok): %s, QoS: %d"), topicName, qos);                  \
-    }                                                                                           \
-    else {                                                                                      \
-        ERA_LOG(TAG, ERA_PSTR("Subscribe (error %d): %s, QoS: %d"), errorCode, topicName, qos); \
+#define ERR_MQTT_SUB_LOG(status, errorCode)                                                             \
+    if (status) {                                                                                       \
+        ERA_LOG(TAG, ERA_PSTR("Subscribe (ok): %s, QoS: %d"), topicName, qos);                          \
+    }                                                                                                   \
+    else {                                                                                              \
+        ERA_LOG_ERROR(TAG, ERA_PSTR("Subscribe (error %d): %s, QoS: %d"), errorCode, topicName, qos);   \
     }
 
 using namespace std;
 
 template <class MQTT>
 class ERaMqttLinux
+    : public ERaMqttHelper
 {
-    enum QoST {
-        QOS0 = 0x00,
-        QOS1 = 0x01,
-        QOS2 = 0x02,
-        SUBFAIL = 0x80
-    };
 #if defined(MQTT_HAS_FUNCTIONAL_H)
+    typedef std::function<void(void)> StateCallback_t;
     typedef std::function<void(const char*, const char*)> MessageCallback_t;
 #else
+    typedef void (*StateCallback_t)(void);
     typedef void (*MessageCallback_t)(const char*, const char*);
 #endif
 
@@ -65,13 +63,18 @@ public:
         , clientID(ERA_MQTT_CLIENT_ID)
         , username(ERA_MQTT_USERNAME)
         , password(ERA_MQTT_PASSWORD)
+        , ERaTopic(ERA_MQTT_BASE_TOPIC)
+        , ERaAuth(ERA_AUTHENTICATION_TOKEN)
         , ssid(NULL)
         , ping(0L)
         , signalQuality(0)
         , askConfig(false)
         , _connected(false)
         , mutex(NULL)
+        , connectedCb(NULL)
+        , disconnectedCb(NULL)
     {
+        this->mqtt.setKeepAlive(ERA_MQTT_KEEP_ALIVE);
         memset(this->willTopic, 0, sizeof(this->willTopic));
     }
     ~ERaMqttLinux()
@@ -93,13 +96,23 @@ public:
     void disconnect();
     bool connected();
     bool run();
+    bool subscribeTopic(const char* baseTopic, const char* topic,
+                        QoST qos = (QoST)ERA_MQTT_SUBSCRIBE_QOS) override;
     bool publishData(const char* topic, const char* payload,
                     bool retained = ERA_MQTT_PUBLISH_RETAINED,
-                    QoST qos = (QoST)ERA_MQTT_PUBLISH_QOS);
+                    QoST qos = (QoST)ERA_MQTT_PUBLISH_QOS) override;
     bool syncConfig();
 
     void setTimeout(uint32_t timeout) {
         this->mqtt.setTimeout(timeout);
+    }
+
+    void setSkipACK(bool skip = true) {
+        this->mqtt.setSkipACK(skip);
+    }
+
+    void setKeepAlive(uint16_t keepAlive) {
+        this->mqtt.setKeepAlive(keepAlive);
     }
 
     void setClientID(const char* id) {
@@ -158,11 +171,19 @@ public:
         this->mqtt.onMessage(cb);
     }
 
+    void onStateChange(StateCallback_t onCb,
+                       StateCallback_t offCb) {
+        this->connectedCb = onCb;
+        this->disconnectedCb = offCb;
+    }
+
 protected:
 private:
-    bool subscribeTopic(const char* baseTopic, const char* topic,
-                        QoST qos = (QoST)ERA_MQTT_SUBSCRIBE_QOS);
     bool publishLWT(bool sync = false);
+    void onConnected();
+    void onDisconnected();
+    void lockMQTT();
+    void unlockMQTT();
 
     MQTT mqtt;
     const char* host;
@@ -179,6 +200,8 @@ private:
     bool _connected;
     char willTopic[MAX_TOPIC_LENGTH];
     ERaMutex_t mutex;
+    StateCallback_t connectedCb;
+    StateCallback_t disconnectedCb;
 };
 
 template <class MQTT>
@@ -194,7 +217,6 @@ void ERaMqttLinux<MQTT>::config(const char* _host, uint16_t _port,
     FormatString(this->willTopic, LWT_TOPIC);
     this->mqtt.init(ERA_MQTT_RX_BUFFER_SIZE,
                     ERA_MQTT_TX_BUFFER_SIZE);
-    this->mqtt.setKeepAlive(ERA_MQTT_KEEP_ALIVE);
     this->mqtt.setWill(this->willTopic, OFFLINE_MESSAGE, LWT_RETAINED, LWT_QOS);
     this->mqtt.begin(this->host, this->port);
 }
@@ -204,23 +226,28 @@ inline
 bool ERaMqttLinux<MQTT>::connect() {
     size_t count {0};
     char _clientID[74] {0};
-    this->_connected = false;
-    if (this->clientID != nullptr && strlen(this->clientID)) {
+    if (this->clientID != nullptr) {
         FormatString(_clientID, this->ERaAuth);
-        if (!ERaStrCmp(this->clientID, this->ERaAuth)) {
+        if (!ERaStrCmp(this->clientID, this->ERaAuth) &&
+            strlen(this->clientID)) {
             FormatString(_clientID, "_%s", this->clientID);
         }
     }
+
     this->mqtt.disconnect();
+    this->_connected = false;
+
     while (this->mqtt.connect(_clientID, this->username, this->password) == false) {
-        ERA_LOG(TAG, ERA_PSTR("MQTT: connect failed (%d), retrying in 5 seconds"), this->mqtt.lastError());
+        ERA_LOG_ERROR(TAG, ERA_PSTR("MQTT(%d): Connect failed (%d), retrying in 5 seconds"), ++count, this->mqtt.lastError());
         ERaDelay(5000);
-        if (++count >= LIMIT_CONNECT_BROKER_MQTT) {
+        if (count >= LIMIT_CONNECT_BROKER_MQTT) {
             return false;
         }
     }
 
-#if defined(ERA_ZIGBEE)
+#if defined(ERA_ZIGBEE) ||  \
+    defined(ERA_SPECIFIC)
+    subscribeTopic(this->ERaTopic, "/zigbee/+/get");
     subscribeTopic(this->ERaTopic, "/zigbee/+/down");
     subscribeTopic(this->ERaTopic, "/zigbee/permit_to_join");
     subscribeTopic(this->ERaTopic, "/zigbee/remove_device");
@@ -241,8 +268,7 @@ bool ERaMqttLinux<MQTT>::connect() {
     }
 #endif
 
-    this->_connected = true;
-    ERaOnConnected();
+    this->onConnected();
     return true;
 }
 
@@ -261,8 +287,12 @@ bool ERaMqttLinux<MQTT>::connected() {
 template <class MQTT>
 inline
 bool ERaMqttLinux<MQTT>::run() {
+    if (!this->_connected) {
+        return false;
+    }
+
     if (!this->mqtt.loop()) {
-        ERaOnDisconnected();
+        this->onDisconnected();
         return this->connect();
     }
     return true;
@@ -277,12 +307,12 @@ bool ERaMqttLinux<MQTT>::subscribeTopic(const char* baseTopic, const char* topic
 	FormatString(topicName, baseTopic);
 	FormatString(topicName, topic);
 
-    ERaGuardLock(this->mutex);
+    this->lockMQTT();
     if (this->connected()) {
         status = this->mqtt.subscribe(topicName, qos);
         ERR_MQTT_SUB_LOG(status, this->mqtt.lastError())
     }
-    ERaGuardUnlock(this->mutex);
+    this->unlockMQTT();
 
     return status;
 }
@@ -297,12 +327,12 @@ bool ERaMqttLinux<MQTT>::publishData(const char* topic, const char* payload,
 
     bool status {false};
 
-    ERaGuardLock(this->mutex);
+    this->lockMQTT();
     if (this->connected()) {
         status = this->mqtt.publish(topic, payload, retained, qos);
         ERA_MQTT_PUB_LOG(status, this->mqtt.lastError())
     }
-    ERaGuardUnlock(this->mutex);
+    this->unlockMQTT();
 
     return status;
 }
@@ -327,16 +357,64 @@ bool ERaMqttLinux<MQTT>::publishLWT(bool sync) {
 
     FormatString(payload, ONLINE_MESSAGE, wifiInfo, sync ? ASK_CONFIG_INFO : "");
 
-    ERaGuardLock(this->mutex);
+    this->lockMQTT();
     if (this->connected()) {
         this->ping = ERaMillis();
         status = this->mqtt.publish(topic, payload, LWT_RETAINED, LWT_QOS);
-        this->ping = ERaMillis() - this->ping;
+        this->ping = (ERaMillis() - this->ping);
         ERA_MQTT_PUB_LOG(status, this->mqtt.lastError())
     }
-    ERaGuardUnlock(this->mutex);
+    this->unlockMQTT();
 
     return status;
 }
+
+template <class MQTT>
+inline
+void ERaMqttLinux<MQTT>::onConnected() {
+    if (this->_connected) {
+        return;
+    }
+    if (this->connectedCb == NULL) {
+        return;
+    }
+
+    this->_connected = true;
+    this->connectedCb();
+}
+
+template <class MQTT>
+inline
+void ERaMqttLinux<MQTT>::onDisconnected() {
+    if (!this->_connected) {
+        return;
+    }
+    if (this->disconnectedCb == NULL) {
+        return;
+    }
+
+    this->_connected = false;
+    this->disconnectedCb();
+}
+
+template <class MQTT>
+inline
+void ERaMqttLinux<MQTT>::lockMQTT() {
+    if (!this->mqtt.getSkipACK()) {
+        return;
+    }
+    ERaGuardLock(this->mutex);
+}
+
+template <class MQTT>
+inline
+void ERaMqttLinux<MQTT>::unlockMQTT() {
+    if (!this->mqtt.getSkipACK()) {
+        return;
+    }
+    ERaGuardUnlock(this->mutex);
+}
+
+#define ERaMqtt ERaMqttLinux
 
 #endif /* INC_ERA_MQTT_LINUX_HPP_ */

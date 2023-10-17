@@ -4,7 +4,23 @@
 
 #include <Modbus/ERaModbus.hpp>
 
-#define SerialMB SerialModBus<ERaSerialLinux>::serial()
+#if !defined(ERA_DEV_MODBUS)
+    #if defined(RASPBERRY)
+        #define ERA_DEV_MODBUS      ttyAMA0
+    #elif defined(TINKER_BOARD)
+        #define ERA_DEV_MODBUS      ttyS1
+    #elif defined(ORANGE_PI)
+        #define ERA_DEV_MODBUS     ttyAMA0
+    #else
+        #define ERA_DEV_MODBUS      ttyAMA0
+    #endif
+#endif
+#define ERA_SERIAL_MODBUS_2(dev)    "/dev/" # dev
+#define ERA_SERIAL_MODBUS(dev)      ERA_SERIAL_MODBUS_2(dev)
+
+#if !defined(SerialMB)
+    #define SerialMB                SerialModBus<ERaSerialLinux>::serial()
+#endif
 
 template <class Api>
 void ERaModbus<Api>::configModbus() {
@@ -13,7 +29,7 @@ void ERaModbus<Api>::configModbus() {
     }
 
     this->streamRTU = &SerialMB;
-    SerialMB.begin("/dev/ttyAMA0", MODBUS_BAUDRATE);
+    SerialMB.begin(ERA_SERIAL_MODBUS(ERA_DEV_MODBUS), MODBUS_BAUDRATE);
     this->_streamDefault = true;
 }
 
@@ -24,7 +40,7 @@ void ERaModbus<Api>::setBaudRate(uint32_t baudrate) {
         return;
     }
 
-    SerialMB.begin("/dev/ttyAMA0", baudrate);
+    SerialMB.begin(ERA_SERIAL_MODBUS(ERA_DEV_MODBUS), baudrate);
 }
 
 template <class Api>
@@ -36,19 +52,17 @@ bool ERaModbus<Api>::waitResponse(ERaModbusResponse* response) {
         return false;
     }
 
-    if (this->total++ > 99) {
-        this->total = 1;
-        this->failRead = 0;
-        this->failWrite = 0;
-    }
+    this->updateTotalTransmit();
 
     MillisTime_t startMillis = ERaMillis();
 
     do {
         if (!this->stream->available()) {
 #if defined(ERA_NO_RTOS)
-            ERaOnWaiting();
-            this->thisApi().run();
+            if (this->runApiResponse) {
+                this->thisApi().run();
+                this->thisApi().runZigbee();
+            }
 #endif
             if (ModbusState::is(ModbusStateT::STATE_MB_PARSE)) {
                 break;
@@ -58,7 +72,11 @@ bool ERaModbus<Api>::waitResponse(ERaModbusResponse* response) {
         }
 
         do {
-            response->add(this->stream->read());
+            int c = this->stream->read();
+            if (c < 0) {
+                continue;
+            }
+            response->add((uint8_t)c);
         } while (this->stream->available());
 
         if (response->isComplete()) {

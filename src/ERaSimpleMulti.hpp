@@ -1,14 +1,17 @@
 #ifndef INC_ERA_SIMPLE_MULTI_HPP_
 #define INC_ERA_SIMPLE_MULTI_HPP_
 
-#define ERA_NO_RTOS
+#if !defined(ERA_ZIGBEE)
+    #define ERA_NO_RTOS
+#endif
 
-#include <Client.h>
+#include <Client.hpp>
 #include <ERa/ERaApiArduinoDef.hpp>
 #include <Adapters/ERaMultiClient.hpp>
 #include <ERa/ERaApiArduino.hpp>
 #include <Modbus/ERaModbusArduino.hpp>
-#include <Utility/ERaFlashConfig.hpp>
+#include <Zigbee/ERaZigbeeArduino.hpp>
+#include <Storage/ERaFlashConfig.hpp>
 #include <Task/ERaTaskConfig.hpp>
 
 #if !defined(NO_GLOBAL_INSTANCES) && !defined(NO_GLOBAL_ERA)

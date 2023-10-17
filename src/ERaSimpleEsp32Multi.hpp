@@ -1,12 +1,12 @@
 #ifndef INC_ERA_SIMPLE_ESP32_MULTI_HPP_
 #define INC_ERA_SIMPLE_ESP32_MULTI_HPP_
 
-#include <Client.h>
+#include <Client.hpp>
 #include <Adapters/ERaMultiClient.hpp>
 #include <ERa/ERaApiEsp32.hpp>
 #include <Modbus/ERaModbusEsp32.hpp>
 #include <Zigbee/ERaZigbeeEsp32.hpp>
-#include <Utility/ERaFlashEsp32.hpp>
+#include <Storage/ERaFlashEsp32.hpp>
 #include <Task/ERaTaskEsp32.hpp>
 
 #if !defined(NO_GLOBAL_INSTANCES) && !defined(NO_GLOBAL_ERA)

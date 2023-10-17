@@ -43,15 +43,11 @@
 /* GPIO, Virtual Pin and Modbus */
 // #include <ERaSimpleMBEsp32Gsm.hpp>
 
-#include <ERa/ERaTimer.hpp>
-
 /* GPIO and Virtual Pin */
 HardwareSerial SerialGsm(1);
 /* GPIO, Virtual Pin and Modbus */
 // HardwareSerial SerialGsm(2);
 TinyGsm modem(SerialGsm);
-
-ERaTimer timer;
 
 #if defined(APN_VIETTEL)
     const char apn[] = "v-internet";
@@ -75,8 +71,6 @@ const int gsmRxPin = 18;
 const int gsmTxPin = 17;
 const int pwrPin = 1;
 
-ERA_ATTACH_RUN(timer)
-
 /* This function print uptime every second */
 void timerEvent() {
     ERA_LOG("Timer", "Uptime: %d", ERaMillis() / 1000L);
@@ -95,10 +89,9 @@ void setup() {
     ERa.begin(modem, apn, user, pass, pwrPin);
 
     /* Setup timer called function every second */
-    timer.setInterval(1000L, timerEvent);
+    ERa.addInterval(1000L, timerEvent);
 }
 
 void loop() {
     ERa.run();
-    timer.run();
 }

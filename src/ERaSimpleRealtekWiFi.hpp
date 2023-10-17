@@ -7,7 +7,7 @@
 #include <Adapters/ERaArduinoWiFiClient.hpp>
 #include <ERa/ERaApiArduino.hpp>
 #include <Modbus/ERaModbusArduino.hpp>
-#include <Utility/ERaFlashArduino.hpp>
+#include <Storage/ERaFlashRealtek.hpp>
 #include <Task/ERaTaskBase.hpp>
 
 #if !defined(NO_GLOBAL_INSTANCES) && !defined(NO_GLOBAL_ERA)

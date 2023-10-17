@@ -37,14 +37,11 @@
 
 #include <Arduino.h>
 #include <ERa.hpp>
-#include <ERa/ERaTimer.hpp>
 #include <SoftwareSerial.h>
 
 /* You should increase Serial fifo buffer size */
 SoftwareSerial SerialGsm(17, 16);
 TinyGsm modem(SerialGsm);
-
-ERaTimer timer;
 
 #if defined(APN_VIETTEL)
     const char apn[] = "v-internet";
@@ -84,10 +81,9 @@ void setup() {
     ERa.begin(modem, apn, user, pass, pwrPin);
 
     /* Setup timer called function every second */
-    timer.setInterval(1000L, timerEvent);
+    ERa.addInterval(1000L, timerEvent);
 }
 
 void loop() {
     ERa.run();
-    timer.run();
 }

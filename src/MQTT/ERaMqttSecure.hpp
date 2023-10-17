@@ -20,6 +20,8 @@ public:
         _client.setBufferSizes(ERA_MQTT_RX_BUFFER_SIZE,
                                 ERA_MQTT_TX_BUFFER_SIZE);
         _client.setInsecure();
+#elif defined(ARDUINO_ARCH_ARM)
+        _client.setInsecure();
 #endif
     }
 };

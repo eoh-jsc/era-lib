@@ -2,27 +2,31 @@
 #define INC_ERA_CONFIG_HPP_
 
 #if !defined(ERA_MODEL_TYPE)
-    #define ERA_MODEL_TYPE              "ERa"
+    #if defined(BOARD_MODEL_NAME)
+        #define ERA_MODEL_TYPE          BOARD_MODEL_NAME
+    #else
+        #define ERA_MODEL_TYPE          "ERa"
+    #endif
 #endif
 
 #include <ERa/ERaVersion.hpp>
 
-#define MAX_TOPIC_LENGTH                100
-#define BASE_TOPIC_MQTT                 "eoh/chip"
+#define ERA_DEFAULT_PORT                80
+#define ERA_DEFAULT_DOMAIN              "nossl-backend.eoh.io"
+#define ERA_DEFAULT_PORT_SSL            443
+#define ERA_DEFAULT_DOMAIN_SSL          "backend.eoh.io"
 
-#define ERA_SSL_PORT                    443
-#define ERA_SSL_DOMAIN                  "backend.eoh.io"
-#define ERA_NOSSL_PORT                  80
-#define ERA_NOSSL_DOMAIN                "nossl-backend.eoh.io"
-
-#define ERA_MQTT_PORT_SSL               8883
-#define ERA_MQTT_PORT_NOSSL             1883
+#define ERA_DEFAULT_MQTT_PORT           1883
+#define ERA_DEFAULT_MQTT_PORT_SSL       8883
 
 #if defined(ERA_AUTH_TOKEN)
     #define ERA_AUTHENTICATION_TOKEN    ERA_AUTH_TOKEN
 #else
     #define ERA_AUTHENTICATION_TOKEN    ""
 #endif
+
+#define MAX_TOPIC_LENGTH                100
+#define ERA_MQTT_BASE_TOPIC             "eoh/chip"
 
 #if defined(DEFAULT_MQTT_CLIENT_ID)
     #define ERA_MQTT_CLIENT_ID          DEFAULT_MQTT_CLIENT_ID
@@ -39,8 +43,11 @@
 #else
     #if defined(ERA_LOCATION_VN)
         #define ERA_MQTT_HOST           "mqtt1.eoh.io"
-    #else
+    #elif defined(ERA_LOCATION_SG)
         #define ERA_MQTT_HOST           "remarkable-accountant.cloudmqtt.com"
+    #else
+        #pragma message "Default VN MQTT server"
+        #define ERA_MQTT_HOST           "mqtt1.eoh.io"
     #endif
 #endif
 
@@ -49,9 +56,9 @@
 #else
     #if defined(ERA_MQTT_SSL)
         #define ERA_OTA_SSL
-        #define ERA_MQTT_PORT           ERA_MQTT_PORT_SSL
+        #define ERA_MQTT_PORT           ERA_DEFAULT_MQTT_PORT_SSL
     #else
-        #define ERA_MQTT_PORT           ERA_MQTT_PORT_NOSSL
+        #define ERA_MQTT_PORT           ERA_DEFAULT_MQTT_PORT
     #endif
 #endif
 
@@ -105,6 +112,10 @@
     #define ERA_ASK_CONFIG_WHEN_RESTART
 #endif
 
+#if !defined(ERA_MODEL_NAME)
+    #define ERA_MODEL_NAME              "era"
+#endif
+
 #if !defined(ERA_PROTO_TYPE)
     #define ERA_PROTO_TYPE              "WiFi"
 #endif
@@ -113,20 +124,37 @@
     #define ERA_DEBUG_PREFIX            "/debug"
 #endif
 
-#define LIMIT_CONNECT_BROKER_MQTT       10
+#if defined(ERA_LIMIT_CONNECT)
+    #define LIMIT_CONNECT_BROKER_MQTT   ERA_LIMIT_CONNECT
+#else
+    #define LIMIT_CONNECT_BROKER_MQTT   5
+#endif
 
 #define INFO_BOARD                      "board"
 #define INFO_MODEL                      "model"
 #define INFO_BOARD_ID                   "board_id"
+#define INFO_IMEI                       "imei"
 #define INFO_AUTH_TOKEN                 "auth_token"
+#define INFO_BUILD_DATE                 "build"
+#define INFO_VERSION                    "version"
+#define INFO_MCU_VERSION                "mcu_version"
 #define INFO_FIRMWARE_VERSION           "firmware_version"
 #define INFO_SSID                       "ssid"
+#define INFO_PASS                       "pass"
 #define INFO_BSSID                      "bssid"
 #define INFO_RSSI                       "rssi"
 #define INFO_MAC                        "mac"
 #define INFO_LOCAL_IP                   "ip"
 #define INFO_PING                       "ping"
+#define INFO_RESET_REASON               "reset_reason"
+#define BUILD_DATE_TIME                 __DATE__ " " __TIME__
 
+#define INFO_MB_DATA                    "data"
+#define INFO_MB_ACK                     "ack"
+#define INFO_MB_SCAN                    "scan"
+#define INFO_MB_READ_FAIL               "modbus_fail"
+#define INFO_MB_WRITE_FAIL              "modbus_write_fail"
+#define INFO_MB_TOTAL                   "modbus_total"
 #define INFO_MB_CHIP_TEMPERATURE        "chip_temperature"
 #define INFO_MB_TEMPERATURE             "temperature"
 #define INFO_MB_VOLTAGE                 "voltage"

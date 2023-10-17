@@ -157,6 +157,8 @@
         #define ERA_NO_YIELD
     #endif
 
+    #define ERA_OTA
+
     #if !defined(ERA_BOARD_TYPE)
         #if defined(STM32F0xx)
             #define ERA_BOARD_TYPE      "STM32F0"
@@ -195,6 +197,15 @@
         #define ERA_NO_YIELD
     #endif
 
+    #if !defined(ERA_WATCHDOG_TIMEOUT)
+        #define ERA_WATCHDOG_TIMEOUT    32760
+    #endif
+
+    #if defined(STM32F4xx) ||   \
+        defined(STM32F7xx)
+        #define ERA_OTA
+    #endif
+
     #if !defined(ERA_BOARD_TYPE)
         #if defined(STM32F4xx)
             #define ERA_BOARD_TYPE      "STM32F4"
@@ -225,6 +236,10 @@
 
     #if defined(ERA_NO_RTOS)
         #define ERA_NO_YIELD
+    #endif
+
+    #if !defined(ERA_WATCHDOG_TIMEOUT)
+        #define ERA_WATCHDOG_TIMEOUT    32760
     #endif
 
     #if !defined(ERA_BOARD_TYPE)
@@ -270,6 +285,14 @@
     #endif
 
     #define ERA_100_PINS
+
+    #if !defined(__MBED__)
+        #define ERA_OTA
+    #endif
+
+    #if !defined(ERA_WATCHDOG_TIMEOUT)
+        #define ERA_WATCHDOG_TIMEOUT    8389
+    #endif
 
     #if !defined(ERA_BOARD_TYPE)
         #if defined(ARDUINO_NANO_RP2040_CONNECT)
@@ -357,6 +380,12 @@
         #define ERA_IGNORE_INPUT_PULLDOWN
     #endif
 
+    #if defined(ARDUINO_ARCH_SAMD)
+        #if !defined(ERA_WATCHDOG_TIMEOUT)
+            #define ERA_WATCHDOG_TIMEOUT    16000
+        #endif
+    #endif
+
     #if !defined(ERA_BOARD_TYPE)
         #if defined(ARDUINO_SAMD_ZERO)
             #define ERA_BOARD_TYPE      "Arduino Zero"
@@ -411,6 +440,10 @@
 
     #define ERA_USE_ERA_ATOLL
     #define ERA_IGNORE_INPUT_PULLDOWN
+
+    #if !defined(ERA_WATCHDOG_TIMEOUT)
+        #define ERA_WATCHDOG_TIMEOUT    8000
+    #endif
 
     #if !defined(ERA_BOARD_TYPE)
         #if defined(ARDUINO_AVR_NANO)
@@ -481,6 +514,9 @@
 
     #define ERA_100_PINS
 
+    #define ERA_BT
+    #define ERA_OTA
+
     #define ERA_IGNORE_INPUT_PULLDOWN
     #define ERA_IGNORE_STD_FUNCTIONAL_STRING
 
@@ -506,6 +542,119 @@
         #endif
     #endif
 
+#elif defined(ARDUINO) && defined(ARDUINO_ARCH_RENESAS)
+
+    #if !defined(ERA_MQTT_BUFFER_SIZE)
+        #define ERA_MQTT_BUFFER_SIZE    2048
+    #endif
+
+    #if !defined(ERA_BUFFER_SIZE)
+        #define ERA_BUFFER_SIZE         1024
+    #endif
+
+    #if !defined(ERA_MAX_GPIO_PIN)
+        #define ERA_MAX_GPIO_PIN        100
+    #endif
+
+    #if !defined(ERA_MAX_VIRTUAL_PIN)
+        #define ERA_MAX_VIRTUAL_PIN     100
+    #endif
+
+    #if defined(ARDUINO_PORTENTA_C33)
+        #define ERA_USE_ERA_DTOSTRF
+    #endif
+
+    #define ERA_100_PINS
+
+    #if !defined(ERA_WATCHDOG_TIMEOUT)
+        #define ERA_WATCHDOG_TIMEOUT    32760
+    #endif
+
+    #if !defined(ERA_BOARD_TYPE)
+        #if defined(ARDUINO_MINIMA)
+            #define ERA_BOARD_TYPE      "Renasas Minima"
+        #elif defined(ARDUINO_UNOWIFIR4)
+            #define ERA_BOARD_TYPE      "Renasas UnoWiFiR4"
+        #elif defined(ARDUINO_MUXTO)
+            #define ERA_BOARD_TYPE      "Renasas MuxTo"
+        #elif defined(ARDUINO_PORTENTA_C33)
+            #define ERA_BOARD_TYPE      "Renasas Portenta C33"
+        #else
+            #define ERA_BOARD_TYPE      "Renasas"
+        #endif
+    #endif
+
+#elif defined(ARDUINO) && defined(ARDUINO_ARCH_ARM)
+
+    #if !defined(ERA_MQTT_BUFFER_SIZE)
+        #define ERA_MQTT_BUFFER_SIZE    2048
+    #endif
+
+    #if !defined(ERA_BUFFER_SIZE)
+        #define ERA_BUFFER_SIZE         1024
+    #endif
+
+    #if !defined(ERA_MAX_GPIO_PIN)
+        #define ERA_MAX_GPIO_PIN        100
+    #endif
+
+    #if !defined(ERA_MAX_VIRTUAL_PIN)
+        #define ERA_MAX_VIRTUAL_PIN     100
+    #endif
+
+    #define ERA_100_PINS
+    #define ERA_UNUSED_STD_NOTHROW
+
+    #define ERA_OTA
+
+    #define ERA_IGNORE_STD_FUNCTIONAL_STRING
+
+    #if !defined(ERA_BOARD_TYPE)
+        #if defined(ARDUINO_QUECTEL_EC200U)
+            #define ERA_BOARD_TYPE      "Quectel EC200U"
+        #elif defined(ARDUINO_QUECTEL_EC600U)
+            #define ERA_BOARD_TYPE      "Quectel EC600U"
+        #elif defined(ARDUINO_EG915U)
+            #define ERA_BOARD_TYPE      "Quectel EG915"
+        #elif defined(ARDUINO_QUECTEL_M66TEA)
+            #define ERA_BOARD_TYPE      "Quectel M66"
+        #elif defined(ARDUINO_QUECTEL_MC20TEA)
+            #define ERA_BOARD_TYPE      "Quectel MC20"
+        #elif defined(ARDUINO_QUECTEL_MC60TEA)
+            #define ERA_BOARD_TYPE      "Quectel MC60"
+        #elif defined(ARDUINO_SIWI_S20GSM)
+            #define ERA_BOARD_TYPE      "Quectel MC20UCB"
+        #elif defined(ARDUINO_QUECTEL_M56TEA)
+            #define ERA_BOARD_TYPE      "Quectel M56"
+        #elif defined(ARDUINO_EC100N)
+            #define ERA_BOARD_TYPE      "Quectel EC100N"
+        #elif defined(ARDUINO_EC100Y)
+            #define ERA_BOARD_TYPE      "Quectel EC100Y"
+        #elif defined(ARDUINO_EC200N)
+            #define ERA_BOARD_TYPE      "Quectel EC200N"
+        #elif defined(ARDUINO_EC200S)
+            #define ERA_BOARD_TYPE      "Quectel EC200S"
+        #elif defined(ARDUINO_EC600N)
+            #define ERA_BOARD_TYPE      "Quectel EC600N"
+        #elif defined(ARDUINO_EC600S)
+            #define ERA_BOARD_TYPE      "Quectel EC600S"
+        #elif defined(ARDUINO_EG912Y)
+            #define ERA_BOARD_TYPE      "Quectel EG912Y"
+        #elif defined(ARDUINO_EG915N)
+            #define ERA_BOARD_TYPE      "Quectel EG915N"
+        #elif defined(ARDUINO_NEOWAY_N716)
+            #define ERA_BOARD_TYPE      "Neoway N716"
+        #elif defined(ARDUINO_NEOWAY_N58)
+            #define ERA_BOARD_TYPE      "Neoway N58"
+        #elif defined(ARDUINO_SIMCOM_SIM868)
+            #define ERA_BOARD_TYPE      "Simcom SIM868"
+        #elif defined(ARDUINO_A7670C)
+            #define ERA_BOARD_TYPE      "Simcom SIMA7670C"
+        #else
+            #define ERA_BOARD_TYPE      "Logicrom"
+        #endif
+    #endif
+
 #elif defined(ARDUINO) && defined(__MBED__)
 
     #if !defined(ERA_MQTT_BUFFER_SIZE)
@@ -524,6 +673,8 @@
         #if defined(ARDUINO_PORTENTA_H7_M4) ||  \
             defined(ARDUINO_PORTENTA_H7_M7) ||  \
             defined(ARDUINO_NICLA_VISION) ||    \
+            defined(ARDUINO_OPTA) ||            \
+            defined(ARDUINO_GIGA) ||            \
             defined(ARDUINO_ARCH_RP2040)
             #define ERA_MAX_VIRTUAL_PIN 100
         #else
@@ -538,8 +689,34 @@
     #if defined(ARDUINO_PORTENTA_H7_M4) ||      \
         defined(ARDUINO_PORTENTA_H7_M7) ||      \
         defined(ARDUINO_NICLA_VISION) ||        \
+        defined(ARDUINO_OPTA) ||                \
+        defined(ARDUINO_GIGA) ||                \
         defined(ARDUINO_ARCH_RP2040)
         #define ERA_100_PINS
+    #endif
+
+    #if defined(ARDUINO_NICLA_VISION) ||        \
+        defined(ARDUINO_OPTA)
+        /* Arduino Nicla and OPTA not support analogWrite */
+        #define ERA_IGNORE_ANALOG_WRITE
+    #endif
+
+    #if defined(ARDUINO_PORTENTA_H7_M4) ||      \
+        defined(ARDUINO_PORTENTA_H7_M7) ||      \
+        defined(ARDUINO_NICLA_VISION) ||        \
+        defined(ARDUINO_OPTA) ||                \
+        defined(ARDUINO_GIGA)
+        #define ARDUINO_MBED_HAS_WIFI
+        #if !defined(ERA_WATCHDOG_TIMEOUT)
+            #define ERA_WATCHDOG_TIMEOUT    32760
+        #endif
+    #elif defined(ARDUINO_NANO_RP2040_CONNECT) ||   \
+        defined(ARDUINO_RASPBERRY_PI_PICO) ||       \
+        defined(ARDUINO_RASPBERRY_PI_PICO_W) ||     \
+        defined(ARDUINO_ARCH_RP2040)
+        #if !defined(ERA_WATCHDOG_TIMEOUT)
+            #define ERA_WATCHDOG_TIMEOUT    8389
+        #endif
     #endif
 
     #if !defined(ERA_BOARD_TYPE)
@@ -689,6 +866,10 @@
     #if !defined(ERA_BOARD_TYPE)
         #if defined(RASPBERRY)
             #define ERA_BOARD_TYPE      "Raspberry"
+        #elif defined(TINKER_BOARD)
+            #define ERA_BOARD_TYPE      "Tinker Board"
+        #elif defined(ORANGE_PI)
+            #define ERA_BOARD_TYPE      "Orange Pi"
         #else
             #define ERA_BOARD_TYPE      "Linux"
         #endif
@@ -744,6 +925,10 @@
 
 #if !defined(ERA_OTA_BUFFER_SIZE)
     #define ERA_OTA_BUFFER_SIZE         256
+#endif
+
+#if !defined(ERA_WATCHDOG_TIMEOUT)
+    #define ERA_WATCHDOG_TIMEOUT        60000UL
 #endif
 
 #endif /* INC_ERA_DETECT_HPP_ */

@@ -2,7 +2,6 @@
 #define INC_ERA_WIFI_HPP_
 
 #define ERA_MODBUS
-#define ERA_ZIGBEE
 
 #include <ERaSimpleWiFi.hpp>
 

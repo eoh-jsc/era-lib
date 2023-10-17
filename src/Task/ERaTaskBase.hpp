@@ -1,7 +1,7 @@
 #ifndef INC_ERA_TASK_BASE_HPP_
 #define INC_ERA_TASK_BASE_HPP_
 
-#include <ERa/ERaProtocol.hpp>
+#include <ERa/ERaApi.hpp>
 
 #if defined(ERA_MODBUS)
     template <class Api>
@@ -21,7 +21,7 @@
             ERaOs::osThreadDelete(NULL);
         }
         ERaModbus* modbus = (ERaModbus*)args;
-        modbus->run(true);
+        modbus->runRead();
         ERaOs::osThreadDelete(NULL);
     #endif
         ERA_FORCE_UNUSED(args);
@@ -34,7 +34,7 @@
             ERaOs::osThreadDelete(NULL);
         }
         ERaModbus* modbus = (ERaModbus*)args;
-        modbus->run(false);
+        modbus->runWrite();
         ERaOs::osThreadDelete(NULL);
     #endif
         ERA_FORCE_UNUSED(args);
@@ -47,9 +47,9 @@
     #if !defined(ERA_NO_RTOS)
         this->_zigbeeTask = ERaOs::osThreadNew(this->zigbeeTask, "zigbeeTask",
                                             1024 * 12, this, configMAX_PRIORITIES - 1);
-        this->_controlZigbeeTask = ERaOs::osThreadNew(this->controlZigbeeTask, "controlZigbeeTask",
-                                            1024 * 12, this, configMAX_PRIORITIES - 1);
         this->_responseZigbeeTask = ERaOs::osThreadNew(this->responseZigbeeTask, "responseZigbeeTask",
+                                            1024 * 12, this, configMAX_PRIORITIES - 1);
+        this->_controlZigbeeTask = ERaOs::osThreadNew(this->controlZigbeeTask, "controlZigbeeTask",
                                             1024 * 12, this, configMAX_PRIORITIES - 2);
     #endif
     }
@@ -61,20 +61,7 @@
             ERaOs::osThreadDelete(NULL);
         }
         ERaZigbee* zigbee = (ERaZigbee*)args;
-        zigbee->run();
-        ERaOs::osThreadDelete(NULL);
-    #endif
-        ERA_FORCE_UNUSED(args);
-    }
-
-    template <class Api>
-    void ERaZigbee<Api>::controlZigbeeTask(void* args) {
-    #if !defined(ERA_NO_RTOS)
-        if (args == NULL) {
-            ERaOs::osThreadDelete(NULL);
-        }
-        ERaZigbee* zigbee = (ERaZigbee*)args;
-        zigbee->runControl();
+        zigbee->runEvent();
         ERaOs::osThreadDelete(NULL);
     #endif
         ERA_FORCE_UNUSED(args);
@@ -92,25 +79,42 @@
     #endif
         ERA_FORCE_UNUSED(args);
     }
+
+    template <class Api>
+    void ERaZigbee<Api>::controlZigbeeTask(void* args) {
+    #if !defined(ERA_NO_RTOS)
+        if (args == NULL) {
+            ERaOs::osThreadDelete(NULL);
+        }
+        ERaZigbee* zigbee = (ERaZigbee*)args;
+        zigbee->runControl();
+        ERaOs::osThreadDelete(NULL);
+    #endif
+        ERA_FORCE_UNUSED(args);
+    }
 #endif
 
-template <class Transp, class Flash>
-void ERaProto<Transp, Flash>::initERaTask() {
+template <class Proto, class Flash>
+inline
+void ERaApi<Proto, Flash>::initERaApiTask() {
 #if defined(ERA_MODBUS)
-	Base::Modbus::begin();
+	Modbus::begin();
 #endif
-#if defined(ERA_ZIGBEE) &&  \
-    !defined(ERA_NO_RTOS)
-	Base::Zigbee::begin();
+#if defined(ERA_ZIGBEE)
+	Zigbee::begin();
 #endif
 }
 
-template <class Transp, class Flash>
-void ERaProto<Transp, Flash>::runERaTask() {
+template <class Proto, class Flash>
+inline
+void ERaApi<Proto, Flash>::runERaApiTask() {
 #if defined(ERA_MODBUS) &&  \
     defined(ERA_NO_RTOS)
-	Base::Modbus::runRead();
-	Base::Modbus::runWrite();
+	Modbus::run();
+#endif
+#if defined(ERA_ZIGBEE) &&  \
+    defined(ERA_NO_RTOS)
+	Zigbee::run();
 #endif
 }
 

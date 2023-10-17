@@ -15,12 +15,12 @@ void ERaReport::run() {
 		if (!this->isValidReport(pReport)) {
 			continue;
 		}
-		if (currentMillis - pReport->prevMillis < pReport->minInterval) {
+		if ((currentMillis - pReport->prevMillis) < pReport->minInterval) {
 			continue;
 		}
 		if (ERaFloatCompare(pReport->data.value, pReport->data.prevValue) ||
 			abs(pReport->data.value - pReport->data.prevValue) < pReport->reportableChange) {
-			if ((currentMillis - pReport->prevMillis < pReport->maxInterval) ||
+			if (((currentMillis - pReport->prevMillis) < pReport->maxInterval) ||
 				(pReport->maxInterval == REPORT_MAX_INTERVAL)) {
 				continue;
 			}
@@ -105,7 +105,7 @@ ERaReport::Report_t* ERaReport::setupReport(unsigned long minInterval, unsigned 
 	pReport->param = nullptr;
 	pReport->enable = true;
 	pReport->updated = false;
-	pReport->called = false;
+	pReport->called = 0;
 	this->report.put(pReport);
 	this->numReport++;
 	return pReport;
@@ -148,7 +148,7 @@ ERaReport::Report_t* ERaReport::setupReport(unsigned long minInterval, unsigned 
 	pReport->param = arg;
 	pReport->enable = true;
 	pReport->updated = false;
-	pReport->called = false;
+	pReport->called = 0;
 	this->report.put(pReport);
 	this->numReport++;
 	return pReport;
@@ -191,7 +191,7 @@ ERaReport::Report_t* ERaReport::setupReport(unsigned long minInterval, unsigned 
 	pReport->param = &pReport->data;
 	pReport->enable = true;
 	pReport->updated = false;
-	pReport->called = false;
+	pReport->called = 0;
 	this->report.put(pReport);
 	this->numReport++;
 	return pReport;
@@ -275,6 +275,19 @@ bool ERaReport::reportEvery(Report_t* pReport, unsigned long interval) {
 
 	pReport->maxInterval = interval;
 	return true;
+}
+
+void ERaReport::skipReport(Report_t* pReport) {
+	if (!this->isValidReport(pReport)) {
+		return;
+	}
+
+	// update time
+	pReport->prevMillis = ERaMillis();
+	// update value
+	pReport->data.prevValue = pReport->data.value;
+	// clear flag called
+	this->setFlag(pReport->called, ReportFlagT::REPORT_ON_CALLED, false);
 }
 
 void ERaReport::restartReport(Report_t* pReport) {

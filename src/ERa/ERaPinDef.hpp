@@ -19,9 +19,9 @@ typedef struct __PinConfig_t {
     } pwm;
     struct __ReportConfig_t {
         __ReportConfig_t()
-            : interval(100)
-            , minInterval(100)
-            , maxInterval(60000)
+            : interval(100UL)
+            , minInterval(100UL)
+            , maxInterval(60000UL)
             , reportableChange(1.0f)
         {}
         __ReportConfig_t(unsigned long _interval, unsigned long _minInterval,

@@ -19,10 +19,36 @@ void ERaDelay(MillisTime_t ms);
 MillisTime_t ERaMillis();
 uint32_t ERaRandomNumber(uint32_t min, uint32_t max);
 size_t ERaFreeRam();
-void ERaRestart(bool async);
+void ERaRestart(bool async) ERA_NORETURN;
 
-void ERaGuardLock(ERaMutex_t& mutex);
-void ERaGuardUnlock(ERaMutex_t& mutex);
+#if !defined(ERA_NO_RTOS)
+    #define ERaGuardAuto(mutex)     const ERaGuard ERA_CONCAT(guard, __LINE__)(mutex)
+    #define ERaGuardLock(mutex)     ERaGuardLockFn(mutex)
+    #define ERaGuardUnlock(mutex)   ERaGuardUnlockFn(mutex)
+#else
+    #define ERaGuardAuto(mutex)
+    #define ERaGuardLock(mutex)
+    #define ERaGuardUnlock(mutex)
+#endif
+
+void ERaGuardLockFn(ERaMutex_t& mutex);
+void ERaGuardUnlockFn(ERaMutex_t& mutex);
+
+#if !defined(ERA_NO_RTOS)
+    #include <Utility/ERaGuard.hpp>
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void ERaWatchdogEnable(unsigned long timeout);
+void ERaWatchdogDisable();
+void ERaWatchdogFeed();
+
+#ifdef __cplusplus
+}
+#endif
 
 char* ERaStrdup(const char* str);
 MillisTime_t ERaRemainingTime(MillisTime_t startMillis, MillisTime_t timeout);
@@ -34,37 +60,46 @@ uint8_t GSMToPercentage(uint8_t value);
 long long ERaAtoll(const char* str);
 char* ERaDtostrf(double number, int decimal, char* str);
 
-template<typename T>
+template <typename T>
 inline
 const T& ERaMin(const T& a, const T& b) {
     return (b < a) ? b : a;
 }
 
-template<typename T>
+template <typename T>
 inline
 const T& ERaMax(const T& a, const T& b) {
     return (b < a) ? a : b;
 }
 
-template<typename T>
+template <class T, class T2>
+inline
+T ERaMathClamp(T val, T2 low, T2 high) {
+    return (val < low) ? low : ((val > high) ? high : val);
+}
+
+template <typename T>
 inline
 T ERaMapNumberRange(T value, T fromLow, T fromHigh, T toLow, T toHigh) {
 	return (toLow + (ERaMin(value, fromHigh) - ERaMin(value, fromLow)) * (toHigh - toLow) / (fromHigh - fromLow));
 }
 
 #if defined(ARDUINO) && defined(ESP32)
+    #include "esp_random.h"
     #include "driver/uart.h"
+    #include "driver/gpio.h"
     #include <Utility/ERaOs.hpp>
-#elif defined(ARDUINO) &&           \
-    !defined(__MBED__) &&			\
-    (defined(RTL8722DM) ||          \
-    defined(ARDUINO_AMEBA) ||       \
-    defined(ARDUINO_ARCH_STM32) ||  \
+#elif defined(ARDUINO) &&               \
+    !defined(__MBED__) &&			    \
+    (defined(RTL8722DM) ||              \
+    defined(ARDUINO_AMEBA) ||           \
+    defined(ARDUINO_ARCH_STM32) ||      \
+	defined(ARDUINO_ARCH_RENESAS) ||    \
     defined(ARDUINO_ARCH_RP2040))
     #include <Utility/ERaOs.hpp>
 #endif
 
-#if defined(ARDUINO) ||             \
+#if defined(ARDUINO) ||                 \
     defined(PARTICLE) || defined(SPARK)
     #if defined(ARDUINO)
         #include <Arduino.h>
@@ -111,8 +146,8 @@ void CopyToString(const char* src, char(&dst)[size]) {
 
 template <typename T>
 inline
-void ClearStruct(T& arr, int size) {
-    memset(&arr, 0, size);
+void ClearStruct(T& arr) {
+    memset(&arr, 0, sizeof(T));
 }
 
 template <typename T, int size>
@@ -144,6 +179,7 @@ double ERaDoubleCompare(double a, double b);
 
 char* ERaFindStr(const char* str, const char* str2);
 bool ERaStrCmp(const char* str, const char* str2);
+void ERaStrConcat(char* str, const char* str2);
 
 template <int size>
 inline

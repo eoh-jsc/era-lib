@@ -23,7 +23,6 @@
 
 #include <Particle.h>
 #include <ERa.hpp>
-#include <ERa/ERaTimer.hpp>
 
 /* Set network credentials */
 /* Viettel */
@@ -34,10 +33,6 @@
 // STARTUP(cellular_credentials_set("m-wap", "mms", "mms", NULL));
 /* Other */
 // STARTUP(cellular_credentials_set("internet", "", "", NULL));
-
-ERaTimer timer;
-
-ERA_ATTACH_RUN(timer)
 
 /* This function print uptime every second */
 void timerEvent() {
@@ -54,10 +49,9 @@ void setup() {
     ERa.begin();
 
     /* Setup timer called function every second */
-    timer.setInterval(1000L, timerEvent);
+    ERa.addInterval(1000L, timerEvent);
 }
 
 void loop() {
     ERa.run();
-    timer.run();
 }

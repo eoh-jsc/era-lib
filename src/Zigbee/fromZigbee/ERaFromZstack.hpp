@@ -322,7 +322,7 @@ void ERaFromZigbee<Zigbee>::processReadOsalNVItems(vector<uint8_t>& data, void* 
             break;
         case NvItemsIdsT::NIB:
             if (length == 0x6E) {
-                ClearStruct(this->coordinator->nIB, sizeof(this->coordinator->nIB));
+                ClearMem(this->coordinator->nIB);
                 CopyToStruct(data.at(2), this->coordinator->nIB, 15);
 				this->coordinator->nIB.transactionPersistenceTime = BUILD_UINT16(data.at(17));
 				this->coordinator->nIB.nwkProtocolVersion = data.at(19);
@@ -362,7 +362,7 @@ void ERaFromZigbee<Zigbee>::processReadOsalNVItems(vector<uint8_t>& data, void* 
 				this->coordinator->nIB.nwkUpdateId = data.at(111);
             }
             else if (length == 0x74) {
-                ClearStruct(this->coordinator->nIB, sizeof(this->coordinator->nIB));
+                ClearMem(this->coordinator->nIB);
                 CopyToStruct(data.at(2), this->coordinator->nIB, length);
             }
             break;

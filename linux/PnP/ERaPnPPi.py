@@ -1,9 +1,12 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse, parse_qsl
 from contextlib import suppress
+import socket, errno
 import sys, time
 import nmcli
 import json
+
+WIFI_SCAN_MAX = 15
 
 WIFI_AP_PASS = "Eoh@2021"
 ERA_MQTT_HOST_VN = "mqtt1.eoh.io"
@@ -72,13 +75,36 @@ class WiFi:
 
         return results
 
+    def scanCompact(self):
+        results = {}
+        wifi_infos = []
+        nets = 0
+        for net in nmcli.device.wifi():
+            signal = max(30, min(net.signal, 100))
+            rssi_max = -20
+            rssi_min = -90
+            rssi = int(-((((rssi_max - rssi_min) * (signal - 100)) / -70) - rssi_max))
+            wifi_infos.append({
+                "ssid":         net.ssid,
+                "rssi":         rssi
+            })
+            nets += 1
+            if nets >= WIFI_SCAN_MAX:
+                break
+        results["type"] = "data_wifi"
+        results["wifi"] = wifi_infos
+        return results
+
     def restart(self):
         nmcli.radio.wifi_off()
         nmcli.radio.wifi_on()
 
     def connect(self, ssid, password):
-        self._cleanup(ssid)
-        nmcli.device.wifi_connect(ssid, password)
+        try:
+            self._cleanup(ssid)
+            nmcli.device.wifi_connect(ssid, password)
+        except Exception as e:
+            era_log("Connect WiFi error: ", e)
 
 class HTTPHandler(BaseHTTPRequestHandler):
     def _reply_json(self, data):
@@ -131,41 +157,158 @@ class HTTPHandler(BaseHTTPRequestHandler):
         else:
             self.send_error(404)
 
-def provision(location, board, model, fw_ver, org = "EoH", prefix = "ERa"):
+class UDPHandle:
+    def __init__(self, host, port):
+        self.server = self
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+        except AttributeError:
+            pass
+        try:
+            self.sock.bind((host, port))
+        except socket.error as e:
+            if e.errno == errno.EADDRINUSE:
+                era_log("Port is already in use")
+
+    def _reply_json(self, data):
+        if self.address:
+            self.sock.sendto(json.dumps(data).encode(), self.address)
+
+    def _parse_config(self, data):
+        self._type_parse(data)
+        # Update later
+
+    def _type_parse(self, data):
+        obj = json.loads(data)
+        if not "type" or not "data" in obj:
+            return
+        if obj["type"] == "connect":
+            self._connect_parse(obj["data"])
+        elif obj["type"] == "scan":
+            self._scan_parse(obj["data"])
+        d = list(obj["data"])
+        # Update later
+
+    def _connect_parse(self, obj):
+        if not "wifi" in obj:
+            return
+        q = obj["wifi"]
+        if "token" in obj:
+            q["auth"] = obj["token"]
+        if "host" in obj:
+            q["host"] = obj["host"]
+        if "port" in obj:
+            q["port"] = obj["port"]
+        if "token" in q:
+            q["auth"] = q.pop("token")
+        if not "auth" in q:
+            return
+        if not "host" in q:
+            q["host"] = self.server.era_host
+        if not "port" in q:
+            q["port"] = ERA_MQTT_PORT
+        if not "username" in q:
+            q["username"] = q["auth"]
+        if not "password" in q:
+            q["password"] = q["auth"]
+        self._reply_json({"status":"ok","message":"Connecting wifi..."})
+        time.sleep(1)
+        self.server.era_info["token"] = q["auth"]
+        self._reply_json(self.server.era_info)
+        self.server.era_config = q
+
+    def _scan_parse(self, obj):
+        if not "wifi" in obj:
+            return
+        self._reply_json(self.server.wifi_networks)
+
+    def do_RECV(self):
+        data, self.address = self.sock.recvfrom(1024)
+        return data.decode()
+
+    def handle_request(self):
+        buf = self.do_RECV()
+        self._parse_config(buf)
+
+    def __enter__(self):
+        return self.server
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        self.sock.close()
+
+def provision(location, board, model, ver, fw_ver, org = "EoH", prefix = "ERa", mode = "TCP"):
     wifi = WiFi()
 
-    wifi_networks = wifi.scan()
+    wifi_networks = {}
+    if mode == "TCP":
+        wifi_networks = wifi.scan()
+    else:
+        wifi_networks = wifi.scanCompact()
 
     suffix = wifi.mac_address().replace(":", "")
     my_ssid = org + "." + prefix + "." + suffix
     my_ssid = my_ssid.lower()
+    my_imei = prefix.upper() + "-" + suffix.lower()
 
     config = None
-    try:
-        wifi.create_ap(my_ssid, WIFI_AP_PASS)
-        with HTTPServer(("0.0.0.0", 11080), HTTPHandler) as httpd:
-            httpd.era_info = {
-                "board":            board,
-                "model":            model,
-                "firmware_version": fw_ver,
-                "ssid":             my_ssid,
-                "pass":             WIFI_AP_PASS,
-                "bssid":            wifi.mac_address(),
-                "ip":               "192.168.27.1"
-            }
-            httpd.wifi_networks = wifi_networks
-            httpd.era_config = None
-            if location == "VN":
-                httpd.era_host = ERA_MQTT_HOST_VN
-            else:
-                httpd.era_host = ERA_MQTT_HOST_SG
 
-            era_log("Waiting for ERa App connection...")
-            while httpd.era_config is None:
-                httpd.handle_request()
-            config = httpd.era_config
-    finally:
-        wifi.remove_ap()
+    if mode == "TCP":
+        try:
+            wifi.create_ap(my_ssid, WIFI_AP_PASS)
+            with HTTPServer(("0.0.0.0", 11080), HTTPHandler) as httpd:
+                httpd.era_info = {
+                    "board":            board,
+                    "model":            model,
+                    "imei":             my_imei,
+                    "version":          ver,
+                    "firmware_version": fw_ver,
+                    "ssid":             my_ssid,
+                    "pass":             WIFI_AP_PASS,
+                    "bssid":            wifi.mac_address(),
+                    "ip":               "192.168.27.1"
+                }
+                httpd.wifi_networks = wifi_networks
+                httpd.era_config = None
+                if location == "SG":
+                    httpd.era_host = ERA_MQTT_HOST_SG
+                else:
+                    httpd.era_host = ERA_MQTT_HOST_VN
+
+                era_log("Waiting for ERa App connection...")
+                while httpd.era_config is None:
+                    httpd.handle_request()
+                config = httpd.era_config
+        finally:
+            wifi.remove_ap()
+    else:
+        try:
+            wifi.create_ap(my_ssid, WIFI_AP_PASS)
+            with UDPHandle("0.0.0.0", 54321) as udp:
+                udp.era_info = {
+                    "board":            board,
+                    "model":            model,
+                    "imei":             my_imei,
+                    "firmware_version": fw_ver,
+                    "ssid":             my_ssid,
+                    "pass":             WIFI_AP_PASS,
+                    "bssid":            wifi.mac_address(),
+                    "ip":               "192.168.27.1"
+                }
+                udp.wifi_networks = wifi_networks
+                udp.era_config = None
+                if location == "SG":
+                    udp.era_host = ERA_MQTT_HOST_SG
+                else:
+                    udp.era_host = ERA_MQTT_HOST_VN
+
+                era_log("Waiting for ERa App connection...")
+                while udp.era_config is None:
+                    udp.handle_request()
+                config = udp.era_config
+        finally:
+            wifi.remove_ap()
 
     if config is not None:
         wifi.set_hostname(my_ssid.replace(".", "-"))

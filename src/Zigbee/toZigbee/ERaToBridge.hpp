@@ -50,7 +50,7 @@ void ERaToZigbee<Zigbee>::createBridgeDataZigbee(const char* subTopic, ResultT s
     cJSON_AddItemToObject(root, "data", cJSON_Duplicate(item, true));
     cJSON_AddStringToObject(root, "status", ((status == ResultT::RESULT_SUCCESSFUL) ? "ok" : "error"));
 
-    this->thisZigbee().publishZigbeeData(topic, root, false);
+    this->thisZigbee().publishZigbeeData(topic, root, true, false);
 
     cJSON_Delete(root);
     root = nullptr;

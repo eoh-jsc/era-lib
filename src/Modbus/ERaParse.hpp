@@ -73,12 +73,20 @@ typedef struct __ModbusConfigAlias_t {
 	uint16_t timer;
 } ModbusConfigAlias_t;
 
+typedef struct __ModbusWriteOption_t {
+    bool enable;
+    uint8_t len1;
+    uint8_t len2;
+	uint8_t extra[10];
+} ModbusWriteOption_t;
+
 typedef struct __IntervalDelay_t {
 	uint32_t delay;
 	unsigned long prevMillis;
 } IntervalDelay_t;
 
-class ERaApplication {
+class ERaModbusEntry
+{
     enum ParseConfigT {
         PARSE_CONFIG_ID = 1,
         PARSE_BAUD_SPEED = 2,
@@ -91,7 +99,8 @@ class ERaApplication {
         PARSE_CONFIG_WIFI = 9,
         PARSE_CONFIG_ALIAS_TOTAL_ROW = 10,
         PARSE_CONFIG_ALIAS_DATA = 11,
-        PARSE_IS_BLUETOOTH = 12
+        PARSE_IS_BLUETOOTH = 12,
+        PARSE_AUTO_CLOSING = 13
     };
 
     enum ParseIntervalT {
@@ -101,8 +110,16 @@ class ERaApplication {
     };
 
 public:
-    ERaApplication()
+    ERaModbusEntry()
         : baudSpeed(DEFAULT_MODBUS_BAUD_SPEED)
+        , isBluetooth(false)
+        , autoClosing(false)
+        , isUpdated(false)
+        , writeOption {
+            .enable = false,
+            .len1 = 0,
+            .len2 = 0
+        }
         , modbusInterval {
             .delay = DEFAULT_MODBUS_INTERVAL,
             .prevMillis = 0
@@ -114,20 +131,31 @@ public:
     {
         memset(this->hashID, 0, sizeof(this->hashID));
     }
-    ~ERaApplication()
+    ~ERaModbusEntry()
     {}
 
-    void parseConfig(char* ptr);
-    bool updateHashID(const char* hash);
+    void parseConfig(const char* ptr);
+    bool updateHashID(const char* hash, bool skip = false);
+    bool equals(const char* hash);
+    bool updated() {
+        bool _updated = this->isUpdated;
+        this->isUpdated = false;
+        return _updated;
+    }
     void deleteAll();
+
+    bool operator == (const char* hash);
+    bool operator != (const char* hash);
 
     unsigned int id;
     unsigned int baudSpeed;
     bool isWifi;
     char ssid[64];
-    char password[64];
+    char pass[64];
     char hashID[37];
     bool isBluetooth;
+    bool autoClosing;
+    bool isUpdated;
 
     size_t sensorCount;
     ERaList<SensorDelay_t*> sensorDelay;
@@ -136,57 +164,60 @@ public:
     size_t readConfigAliasCount;
     ERaList<ModbusConfigAlias_t*> modbusConfigAliasParam;
 
+    ModbusWriteOption_t writeOption;
+
     IntervalDelay_t modbusInterval;
     IntervalDelay_t pubInterval;
 
-    static ERaApplication*& config() {
-        static ERaApplication* _config = nullptr;
+    static ERaModbusEntry*& config() {
+        static ERaModbusEntry* _config = nullptr;
         return _config;
     }
 
-    static ERaApplication*& control() {
-        static ERaApplication* _control = nullptr;
+    static ERaModbusEntry*& control() {
+        static ERaModbusEntry* _control = nullptr;
         return _control;
     }
 
-    static ERaApplication* getConfig() {
-        if (ERaApplication::config() == nullptr) {
-            ERaApplication::config() = new ERaApplication();
+    static ERaModbusEntry* getConfig() {
+        if (ERaModbusEntry::config() == nullptr) {
+            ERaModbusEntry::config() = new ERaModbusEntry();
         }
-        return ERaApplication::config();
+        return ERaModbusEntry::config();
     }
 
-    static ERaApplication* getControl() {
-        if (ERaApplication::control() == nullptr) {
-            ERaApplication::control() = new ERaApplication();
+    static ERaModbusEntry* getControl() {
+        if (ERaModbusEntry::control() == nullptr) {
+            ERaModbusEntry::control() = new ERaModbusEntry();
         }
-        return ERaApplication::control();
+        return ERaModbusEntry::control();
     }
 
 private:
-    void processParseConfig(int part, char* ptr, size_t len);
-    void processParseConfigId(char* ptr, size_t len);
-    void processParseConfigBaudSpeed(char* ptr, size_t len);
-    void processParseConfigTotalRow(char* ptr, size_t len);
-    void processParseConfigSensorDelay(char* ptr, size_t len);
-    void processParseConfigSensorReadWrite(char* ptr, size_t len);
-    void parseOneConfigSensorReadWrite(char* ptr, size_t len, ModbusConfig_t& config);
-    void actOneConfigSensorReadWrite(int* ptr, size_t len, ModbusConfig_t& config);
-    void processParseConfigLocalAlarm(char* ptr, size_t len);
-    void parseOneConfigLocalAlarm(char* ptr, size_t len);
-    void processParseStationContactPhone(char* ptr, size_t len);
-    void parseOneConfigPhoneNumber(char* ptr, size_t len);
-    void processParseIsWifi(char* ptr, size_t len);
-    void processParseConfigWifi(char* ptr, size_t len);
-    void processParseConfigAliasTotalRow(char* ptr, size_t len);
-    void processParseConfigAliasData(char* ptr, size_t len);
-    void processOneConfigAlias(char* ptr, size_t len, ModbusConfigAlias_t& config);
-    void parseOneConfigAlias(char* ptr, size_t len, ModbusConfigAlias_t& config);
-    void actOneConfigAlias(int* ptr, size_t len, ModbusConfigAlias_t& config, const char* key);
-    void processParseAction(char* ptr, size_t len, ModbusConfigAlias_t& config);
-    void parseOneAction(char* ptr, size_t len, ModbusConfigAlias_t& config);
-    void actOneAction(int* ptr, size_t len, ModbusConfigAlias_t& config);
-    void processParseIsEnableBluetooth(char* ptr, size_t len);
+    void processParseConfig(int part, const char* ptr, size_t len);
+    void processParseConfigId(const char* ptr, size_t len);
+    void processParseConfigBaudSpeed(const char* ptr, size_t len);
+    void processParseConfigTotalRow(const char* ptr, size_t len);
+    void processParseConfigSensorDelay(const char* ptr, size_t len);
+    void processParseConfigSensorReadWrite(const char* ptr, size_t len);
+    void parseOneConfigSensorReadWrite(const char* ptr, size_t len, ModbusConfig_t& config);
+    void actOneConfigSensorReadWrite(const int* ptr, size_t len, ModbusConfig_t& config);
+    void processParseConfigLocalAlarm(const char* ptr, size_t len);
+    void parseOneConfigLocalAlarm(const char* ptr, size_t len);
+    void processParseStationContactPhone(const char* ptr, size_t len);
+    void parseOneConfigPhoneNumber(const char* ptr, size_t len);
+    void processParseIsWifi(const char* ptr, size_t len);
+    void processParseConfigWifi(const char* ptr, size_t len);
+    void processParseConfigAliasTotalRow(const char* ptr, size_t len);
+    void processParseConfigAliasData(const char* ptr, size_t len);
+    void processOneConfigAlias(const char* ptr, size_t len, ModbusConfigAlias_t& config);
+    void parseOneConfigAlias(const char* ptr, size_t len, ModbusConfigAlias_t& config);
+    void actOneConfigAlias(const int* ptr, size_t len, ModbusConfigAlias_t& config, const char* key);
+    void processParseAction(const char* ptr, size_t len, ModbusConfigAlias_t& config);
+    void parseOneAction(const char* ptr, size_t len, ModbusConfigAlias_t& config);
+    void actOneAction(const int* ptr, size_t len, ModbusConfigAlias_t& config);
+    void processParseIsEnableBluetooth(const char* ptr, size_t len);
+    void processParseEnableAutoClosing(const char* ptr, size_t len);
 
     template <typename T>
     T* create() {
@@ -211,7 +242,7 @@ private:
 };
 
 inline
-void ERaApplication::parseConfig(char* ptr) {
+void ERaModbusEntry::parseConfig(const char* ptr) {
     if (ptr == nullptr) {
         return;
     }
@@ -236,11 +267,14 @@ void ERaApplication::parseConfig(char* ptr) {
 }
 
 inline
-bool ERaApplication::updateHashID(const char* hash) {
+bool ERaModbusEntry::updateHashID(const char* hash, bool skip) {
     if (hash == nullptr) {
         return false;
     }
     if (strcmp(this->hashID, hash)) {
+        if (!skip) {
+            this->isUpdated = true;
+        }
         snprintf(this->hashID, sizeof(this->hashID), hash);
         return true;
     }
@@ -248,7 +282,15 @@ bool ERaApplication::updateHashID(const char* hash) {
 }
 
 inline
-void ERaApplication::deleteAll() {
+bool ERaModbusEntry::equals(const char* hash) {
+    if (hash == nullptr) {
+        return false;
+    }
+    return !strcmp(this->hashID, hash);
+}
+
+inline
+void ERaModbusEntry::deleteAll() {
     this->clear(this->sensorDelay);
     this->clear(this->modbusConfigParam);
     this->clear(this->modbusConfigAliasParam);
@@ -256,7 +298,23 @@ void ERaApplication::deleteAll() {
 }
 
 inline
-void ERaApplication::processParseConfig(int part, char* ptr, size_t len) {
+bool ERaModbusEntry::operator == (const char* hash) {
+    if (hash == nullptr) {
+        return false;
+    }
+    return !strcmp(this->hashID, hash);
+}
+
+inline
+bool ERaModbusEntry::operator != (const char* hash) {
+    if (hash == nullptr) {
+        return false;
+    }
+    return strcmp(this->hashID, hash);
+}
+
+inline
+void ERaModbusEntry::processParseConfig(int part, const char* ptr, size_t len) {
 	switch(part) {
 		case ParseConfigT::PARSE_CONFIG_ID:
 			this->processParseConfigId(ptr, len);
@@ -294,13 +352,16 @@ void ERaApplication::processParseConfig(int part, char* ptr, size_t len) {
 		case ParseConfigT::PARSE_IS_BLUETOOTH:
 			this->processParseIsEnableBluetooth(ptr, len);
 			break;
+        case ParseConfigT::PARSE_AUTO_CLOSING:
+            this->processParseEnableAutoClosing(ptr, len);
+            break;
 		default:
 			break;
 	}
 }
 
 inline
-void ERaApplication::processParseConfigId(char* ptr, size_t len) {
+void ERaModbusEntry::processParseConfigId(const char* ptr, size_t len) {
     LOC_BUFFER_PARSE
 
     memcpy(buf, ptr, len);
@@ -310,7 +371,7 @@ void ERaApplication::processParseConfigId(char* ptr, size_t len) {
 }
 
 inline
-void ERaApplication::processParseConfigBaudSpeed(char* ptr, size_t len) {
+void ERaModbusEntry::processParseConfigBaudSpeed(const char* ptr, size_t len) {
     LOC_BUFFER_PARSE
 
     memcpy(buf, ptr, len);
@@ -344,13 +405,13 @@ void ERaApplication::processParseConfigBaudSpeed(char* ptr, size_t len) {
 }
 
 inline
-void ERaApplication::processParseConfigTotalRow(char* ptr, size_t len) {
+void ERaModbusEntry::processParseConfigTotalRow(const char* ptr, size_t len) {
     ERA_FORCE_UNUSED(ptr);
     ERA_FORCE_UNUSED(len);
 }
 
 inline
-void ERaApplication::processParseConfigSensorDelay(char* ptr, size_t len) {
+void ERaModbusEntry::processParseConfigSensorDelay(const char* ptr, size_t len) {
     LOC_BUFFER_PARSE
 
     bool newSensor {true};
@@ -391,7 +452,7 @@ void ERaApplication::processParseConfigSensorDelay(char* ptr, size_t len) {
 }
 
 inline
-void ERaApplication::processParseConfigSensorReadWrite(char* ptr, size_t len) {
+void ERaModbusEntry::processParseConfigSensorReadWrite(const char* ptr, size_t len) {
     size_t position {0};
 
     this->clear(this->modbusConfigParam);
@@ -413,7 +474,7 @@ void ERaApplication::processParseConfigSensorReadWrite(char* ptr, size_t len) {
 }
 
 inline
-void ERaApplication::parseOneConfigSensorReadWrite(char* ptr, size_t len, ModbusConfig_t& config) {
+void ERaModbusEntry::parseOneConfigSensorReadWrite(const char* ptr, size_t len, ModbusConfig_t& config) {
     LOC_BUFFER_PARSE
 
     size_t position {0};
@@ -437,7 +498,7 @@ void ERaApplication::parseOneConfigSensorReadWrite(char* ptr, size_t len, Modbus
 }
 
 inline
-void ERaApplication::actOneConfigSensorReadWrite(int* ptr, size_t len, ModbusConfig_t& config) {
+void ERaModbusEntry::actOneConfigSensorReadWrite(const int* ptr, size_t len, ModbusConfig_t& config) {
     if (ptr == nullptr) {
         return;
     }
@@ -453,13 +514,14 @@ void ERaApplication::actOneConfigSensorReadWrite(int* ptr, size_t len, ModbusCon
     config.len1 = ptr[5];
     config.len2 = ptr[6];
 
-    for (size_t i = 0; i < len - 7; ++i) {
+    for (size_t i = 0; (i < len - 7) &&
+        (i < sizeof(config.extra)); ++i) {
         config.extra[i] = ptr[i + 7];
     }
 }
 
 inline
-void ERaApplication::processParseConfigLocalAlarm(char* ptr, size_t len) {
+void ERaModbusEntry::processParseConfigLocalAlarm(const char* ptr, size_t len) {
     size_t position = 0;
 
     for (size_t i = 0; i < len; ++i) {
@@ -471,13 +533,13 @@ void ERaApplication::processParseConfigLocalAlarm(char* ptr, size_t len) {
 }
 
 inline
-void ERaApplication::parseOneConfigLocalAlarm(char* ptr, size_t len) {
+void ERaModbusEntry::parseOneConfigLocalAlarm(const char* ptr, size_t len) {
     ERA_FORCE_UNUSED(ptr);
     ERA_FORCE_UNUSED(len);
 }
 
 inline
-void ERaApplication::processParseStationContactPhone(char* ptr, size_t len) {
+void ERaModbusEntry::processParseStationContactPhone(const char* ptr, size_t len) {
     size_t position = 0;
 
     for (size_t i = 0; i < len; ++i) {
@@ -489,25 +551,25 @@ void ERaApplication::processParseStationContactPhone(char* ptr, size_t len) {
 }
 
 inline
-void ERaApplication::parseOneConfigPhoneNumber(char* ptr, size_t len) {
+void ERaModbusEntry::parseOneConfigPhoneNumber(const char* ptr, size_t len) {
     ERA_FORCE_UNUSED(ptr);
     ERA_FORCE_UNUSED(len);
 }
 
 inline
-void ERaApplication::processParseIsWifi(char* ptr, size_t len) {
+void ERaModbusEntry::processParseIsWifi(const char* ptr, size_t len) {
     if (!len) {
         return;
     }
-    this->isWifi = (ptr[0] == '1') ? true : false;
+    this->isWifi = ((ptr[0] == '1') ? true : false);
 }
 
 inline
-void ERaApplication::processParseConfigWifi(char* ptr, size_t len) {
+void ERaModbusEntry::processParseConfigWifi(const char* ptr, size_t len) {
     bool isSsid {true};
 
     memset(this->ssid, 0, sizeof(this->ssid));
-    memset(this->password, 0, sizeof(this->password));
+    memset(this->pass, 0, sizeof(this->pass));
 
     for (size_t i = 0; i < len; ++i) {
         if (ptr[i] == ',') {
@@ -515,22 +577,26 @@ void ERaApplication::processParseConfigWifi(char* ptr, size_t len) {
             continue;
         }
         if (isSsid) {
-            sprintf(&this->ssid[strlen(this->ssid)], "%c", ptr[i]);
+            snprintf(&this->ssid[strlen(this->ssid)],
+                    (sizeof(this->ssid) - strlen(this->ssid)),
+                    "%c", ptr[i]);
         }
         else {
-            sprintf(&this->password[strlen(this->password)], "%c", ptr[i]);
+            snprintf(&this->pass[strlen(this->pass)],
+                    (sizeof(this->pass) - strlen(this->pass)),
+                    "%c", ptr[i]);
         }
     }
 }
 
 inline
-void ERaApplication::processParseConfigAliasTotalRow(char* ptr, size_t len) {
+void ERaModbusEntry::processParseConfigAliasTotalRow(const char* ptr, size_t len) {
     ERA_FORCE_UNUSED(ptr);
     ERA_FORCE_UNUSED(len);
 }
 
 inline
-void ERaApplication::processParseConfigAliasData(char* ptr, size_t len) {
+void ERaModbusEntry::processParseConfigAliasData(const char* ptr, size_t len) {
     size_t position {0};
 
     this->clear(this->modbusConfigAliasParam);
@@ -552,7 +618,7 @@ void ERaApplication::processParseConfigAliasData(char* ptr, size_t len) {
 }
 
 inline
-void ERaApplication::processOneConfigAlias(char* ptr, size_t len, ModbusConfigAlias_t& config) {
+void ERaModbusEntry::processOneConfigAlias(const char* ptr, size_t len, ModbusConfigAlias_t& config) {
     if (len < 2) {
         return;
     }
@@ -570,7 +636,7 @@ void ERaApplication::processOneConfigAlias(char* ptr, size_t len, ModbusConfigAl
 }
 
 inline
-void ERaApplication::parseOneConfigAlias(char* ptr, size_t len, ModbusConfigAlias_t& config) {
+void ERaModbusEntry::parseOneConfigAlias(const char* ptr, size_t len, ModbusConfigAlias_t& config) {
     if (len < 36) {
         return;
     }
@@ -606,7 +672,7 @@ void ERaApplication::parseOneConfigAlias(char* ptr, size_t len, ModbusConfigAlia
 }
 
 inline
-void ERaApplication::actOneConfigAlias(int* ptr, size_t len, ModbusConfigAlias_t& config, const char* key) {
+void ERaModbusEntry::actOneConfigAlias(const int* ptr, size_t len, ModbusConfigAlias_t& config, const char* key) {
     if (!len) {
         return;
     }
@@ -618,7 +684,7 @@ void ERaApplication::actOneConfigAlias(int* ptr, size_t len, ModbusConfigAlias_t
 }
 
 inline
-void ERaApplication::processParseAction(char* ptr, size_t len, ModbusConfigAlias_t& config) {
+void ERaModbusEntry::processParseAction(const char* ptr, size_t len, ModbusConfigAlias_t& config) {
     size_t position {0};
     size_t numHyphen {0};
 
@@ -639,7 +705,7 @@ void ERaApplication::processParseAction(char* ptr, size_t len, ModbusConfigAlias
 }
 
 inline
-void ERaApplication::parseOneAction(char* ptr, size_t len, ModbusConfigAlias_t& config) {
+void ERaModbusEntry::parseOneAction(const char* ptr, size_t len, ModbusConfigAlias_t& config) {
     LOC_BUFFER_PARSE
 
     size_t position {0};
@@ -663,7 +729,7 @@ void ERaApplication::parseOneAction(char* ptr, size_t len, ModbusConfigAlias_t& 
 }
 
 inline
-void ERaApplication::actOneAction(int* ptr, size_t len, ModbusConfigAlias_t& config) {
+void ERaModbusEntry::actOneAction(const int* ptr, size_t len, ModbusConfigAlias_t& config) {
     Action_t& action = config.action[config.readActionCount];
 
     action.id = ptr[0];
@@ -675,11 +741,136 @@ void ERaApplication::actOneAction(int* ptr, size_t len, ModbusConfigAlias_t& con
 }
 
 inline
-void ERaApplication::processParseIsEnableBluetooth(char* ptr, size_t len) {
+void ERaModbusEntry::processParseIsEnableBluetooth(const char* ptr, size_t len) {
     if (!len) {
         return;
     }
-    this->isBluetooth = (ptr[0] == '1') ? true : false;
+    this->isBluetooth = ((ptr[0] == '1') ? true : false);
+}
+
+inline
+void ERaModbusEntry::processParseEnableAutoClosing(const char* ptr, size_t len) {
+    if (!len) {
+        return;
+    }
+    this->autoClosing = ((ptr[0] == '1') ? true : false);
+}
+
+class ERaScanEntry
+{
+    enum ParseConfigT {
+        PARSE_CONFIG_RANGE = 1,
+        PARSE_CONFIG_NUMBER_SCAN = 2
+    };
+
+public:
+    ERaScanEntry()
+    {}
+    ~ERaScanEntry()
+    {}
+
+    uint8_t start;
+    uint8_t end;
+    uint8_t numberScan;
+    uint8_t numberDevice;
+    uint8_t addr[MAX_DEVICE_MODBUS];
+
+    void parseConfig(const char* ptr);
+
+    static ERaScanEntry*& instance() {
+        static ERaScanEntry* _instance = nullptr;
+        return _instance;
+    }
+
+    static ERaScanEntry* getInstance() {
+        if (ERaScanEntry::instance() == nullptr) {
+            ERaScanEntry::instance() = new ERaScanEntry();
+        }
+        return ERaScanEntry::instance();
+    }
+
+protected:
+private:
+    void processParseConfig(int part, const char* ptr, size_t len);
+    void processParseConfigRange(const char* ptr, size_t len);
+    void processParseConfigNumberScan(const char* ptr, size_t len);
+};
+
+inline
+void ERaScanEntry::parseConfig(const char* ptr) {
+    if (ptr == nullptr) {
+        return;
+    }
+    if (!strlen(ptr)) {
+        return;
+    }
+
+    this->numberDevice = 0;
+
+    size_t len = strlen(ptr);
+    int part = 0;
+    size_t position = 0;
+    for (size_t i = 0; i < len; ++i) {
+        if (ptr[i] == ';') {
+            part++;
+            this->processParseConfig(part, ptr + position, i - position);
+            position = i + 1;
+        }
+    }
+}
+
+inline
+void ERaScanEntry::processParseConfig(int part, const char* ptr, size_t len) {
+	switch(part) {
+		case ParseConfigT::PARSE_CONFIG_RANGE:
+			this->processParseConfigRange(ptr, len);
+			break;
+		case ParseConfigT::PARSE_CONFIG_NUMBER_SCAN:
+			this->processParseConfigNumberScan(ptr, len);
+			break;
+		default:
+			break;
+	}
+}
+
+inline
+void ERaScanEntry::processParseConfigRange(const char* ptr, size_t len) {
+    size_t pos {0};
+    bool getEnd {false};
+    char startRange[10] {0};
+    char endRange[10] {0};
+
+    for (size_t i = 0; (i < len) && (pos < 10); ++i) {
+        if (ptr[i] == ',') {
+            startRange[pos] = 0;
+            pos = 0;
+            getEnd = true;
+            continue;
+        }
+        if (!getEnd) {
+            startRange[pos++] = ptr[i];
+        }
+        else {
+            endRange[pos++] = ptr[i];
+        }
+    }
+    endRange[pos] = 0;
+
+    this->start = atoi(startRange);
+    this->end = atoi(endRange);
+}
+
+inline
+void ERaScanEntry::processParseConfigNumberScan(const char* ptr, size_t len) {
+    size_t pos {0};
+    char buf[10] {0};
+
+    for (size_t i = 0; (i < len) && (pos < 10); ++i) {
+        buf[pos++] = ptr[i];
+    }
+    buf[pos] = 0;
+
+    this->numberScan = atoi(buf);
 }
 
 #endif /* INC_ERA_PARSE_HPP_ */

@@ -21,7 +21,6 @@
 
 #include <Arduino.h>
 #include <ERa.hpp>
-#include <ERa/ERaTimer.hpp>
 
 #define RELAY_PIN      25
 #define LED_PIN        33
@@ -33,10 +32,9 @@ const char ssid[] = "WIFI_SSID";
 const char pass[] = "WIFI_PASS";
 const char host[] = "MQTT_HOST";
 const uint16_t port = 1883;
-const char user[] = "MQTT_USER";
+const char username[] = "MQTT_USER";
 const char password[] = "MQTT_PASS";
 
-ERaTimer timer;
 ERaReport report;
 ERaReport::iterator reportIt;
 
@@ -100,10 +98,10 @@ void setup() {
     // ERa.setBoardID("Board_1");
     /* Initializing the ERa library. */
     ERa.begin(auth, ssid, pass,
-            host, port, user, password);
+            host, port, username, password);
 
     /* Setting the timer to call the timerEvent function every second. */
-    timer.setInterval(1000L, timerEvent);
+    ERa.addInterval(1000L, timerEvent);
 
     /* Setting up a report */
     reportIt = report.setReporting(1000L, 60000L, 1.0f, reportEvent);
@@ -111,6 +109,5 @@ void setup() {
 
 void loop() {
     ERa.run();
-    timer.run();
     report.run();
 }

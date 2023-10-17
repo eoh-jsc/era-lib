@@ -51,7 +51,10 @@ void ERaApi<Proto, Flash>::handleReadPin(cJSON* root) {
 		}
 		item = cJSON_GetObjectItem(current, "value_type");
 		if (cJSON_IsString(item)) {
-			if (ERaStrCmp(item->valuestring, "boolean")) {
+			if (this->skipPinReport) {
+				this->ERaPinRp.setPinRaw(pin.pin, pin.configId);
+			}
+			else if (ERaStrCmp(item->valuestring, "boolean")) {
 				this->getPinConfig(current, pin);
 				pinMode(pin.pin, (PinMode)pin.pinMode);
 				this->ERaPinRp.setPinReport(pin.pin, pin.pinMode, digitalReadParticle,
@@ -114,7 +117,10 @@ void ERaApi<Proto, Flash>::handleWritePin(cJSON* root) {
 		}
 		item = cJSON_GetObjectItem(current, "value_type");
 		if (cJSON_IsString(item)) {
-			if (ERaStrCmp(item->valuestring, "boolean")) {
+			if (this->skipPinReport) {
+				this->ERaPinRp.setPinRaw(pin.pin, pin.configId);
+			}
+			else if (ERaStrCmp(item->valuestring, "boolean")) {
 				this->getPinConfig(current, pin);
 				pinMode(pin.pin, (PinMode)pin.pinMode);
 				this->ERaPinRp.setPinReport(pin.pin, pin.pinMode, digitalReadParticle,
@@ -180,6 +186,8 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const ERaDataBuff& arrayTopi
 				if (rp != nullptr) {
 					rp->updateReport(value, true);
 				}
+				break;
+			case RAW_PIN:
 				break;
 			case VIRTUAL:
 			case ERA_VIRTUAL:

@@ -16,22 +16,30 @@ class ERaBLETransp
 	const char* TAG = "BLETransp";
 
 public:
-    ERaBLETransp(Stream& _stream)
+    ERaBLETransp(ERaCallbacksHelper& helper,
+                Stream& _stream)
         : stream(_stream)
         , transpProp(ERaBluetooth::instance())
+        , api(NULL)
         , timeout(1000L)
         , _connected(false)
         , initialized(false)
-        , topic(NULL)
-        , callback(NULL)
 #if defined(ERA_RTOS)
         , _bleTask(NULL)
 #endif
     {
-        ERa.setERaTransp(*this);
+        helper.setERaTransp(this);
     }
     ~ERaBLETransp()
     {}
+
+    void setAPI(ERaApiHandler* api) {
+        this->api = api;
+    }
+
+    void setAPI(ERaApiHandler& api) {
+        this->api = &api;
+    }
 
     void setTranspProperty(void* args) {
         if (args == NULL) {
@@ -58,10 +66,13 @@ public:
         }
 #if defined(ERA_RTOS) && !defined(ERA_NO_RTOS)
         #if !defined(ERA_MCU_CORE)
-            #define ERA_MCU_CORE    0
+            #define ERA_MCU_CORE            0
+        #endif
+        #if !defined(ERA_BLE_TASK_PRIORITY)
+            #define ERA_BLE_TASK_PRIORITY   (configMAX_PRIORITIES - 4)
         #endif
         this->_bleTask = ERaOs::osThreadNew(this->bleTask, "bleTask", 1024 * 5, this,
-                                            configMAX_PRIORITIES - 10, ERA_MCU_CORE);
+                                            ERA_BLE_TASK_PRIORITY, ERA_MCU_CORE);
 #endif
         this->_connected = true;
         this->initialized = true;
@@ -75,14 +86,6 @@ public:
 #if !defined(ERA_RTOS) || defined(ERA_NO_RTOS)
         this->progressData();
 #endif
-    }
-
-    void setTopic(const char* _topic) override {
-        this->topic = _topic;
-    }
-
-    void onMessage(MessageCallback_t cb) override {
-        this->callback = cb;
     }
 
     int connect(IPAddress ip, uint16_t port) override {
@@ -127,7 +130,7 @@ public:
         uint8_t* begin = buf;
         uint8_t* end = buf + size;
         MillisTime_t startMillis = ERaMillis();
-        while ((begin < end) && (ERaMillis() - startMillis < this->timeout)) {
+        while ((begin < end) && ((ERaMillis() - startMillis) < this->timeout)) {
             int c = this->stream.read();
             if (c < 0) {
                 continue;
@@ -139,32 +142,30 @@ public:
 
     int timedRead() {
         uint8_t c {0};
-        this->read(&c, 1);
+        if (this->read(&c, 1) <= 0) {
+            return -1;
+        }
         return (int)c;
     }
 
-    bool readBytesUntil(uint8_t* buf, size_t size, char terminator) {
+    size_t readBytesUntil(uint8_t* buf, size_t size, char terminator) {
         if (buf == nullptr) {
-            return false;
+            return 0;
         }
         if (!size) {
-            return false;
+            return 0;
         }
         size_t index {0};
-        bool found {false};
         while (index < size) {
             int c = this->timedRead();
-            if (c < 0) {
-                break;
-            }
-            if (c == terminator) {
-                found = true;
+            if ((c < 0) || (c == terminator)) {
+                buf[index] = 0;
                 break;
             }
             *buf++ = (uint8_t)c;
             index++;
         }
-        return found;
+        return index;
     }
 
     int peek() override {
@@ -185,6 +186,10 @@ public:
 
     operator bool() override {
         return this->_connected;
+    }
+
+    static ERaBLETransp& getInstance() {
+        return ERaBLETransp::instance;
     }
 
 protected:
@@ -242,7 +247,7 @@ protected:
             do {
                 ERaDelay(1);
                 len = this->available();
-            } while(!len && (ERaMillis() - startMillis < ERA_BLE_YIELD_MS));
+            } while(!len && ((ERaMillis() - startMillis) < ERA_BLE_YIELD_MS));
         } while (len);
 
         this->progress((char*)buf);
@@ -329,12 +334,18 @@ private:
             return false;
         }
 
+        unsigned int userID {0};
+
         cJSON* item = cJSON_GetObjectItem(root, "type");
         if (!cJSON_IsString(item)) {
             return false;
         }
         if (!ERaStrCmp(item->valuestring, "command")) {
             return false;
+        }
+        item = cJSON_GetObjectItem(root, "user");
+        if (cJSON_IsNumber(item)) {
+            userID = item->valueint;
         }
         item = cJSON_GetObjectItem(root, "alias");
         if (!cJSON_IsString(item)) {
@@ -372,6 +383,13 @@ private:
 
         cJSON_AddItemToArray(array, cJSON_CreateString(item->valuestring));
         cJSON_AddItemToObject(subObject, "commands", array);
+
+        cJSON* paramItem = cJSON_GetObjectItem(root, "value");
+        if (paramItem != nullptr) {
+            cJSON_AddItemToObject(subObject, "value",
+                    cJSON_Duplicate(paramItem, true));
+        }
+
         payload = cJSON_PrintUnformatted(object);
 
         if (payload != nullptr) {
@@ -380,19 +398,39 @@ private:
             free(payload);
         }
 
+        /* Publish action log */
+        this->publishActionLog(userID, item->valuestring);
+
         cJSON_Delete(object);
         payload = nullptr;
         object = nullptr;
         return status;
     }
 
+    void publishActionLog(unsigned int userID, const char* alias) {
+        if (!userID) {
+            return;
+        }
+        if (alias == nullptr) {
+            return;
+        }
+        if (this->api == nullptr) {
+            return;
+        }
+
+        char message[256] {0};
+        FormatString(message, MESSAGE_BLE_ACTION_LOG, userID, alias);
+#if defined(ERA_SPECIFIC)
+        this->api->specificDataWrite(TOPIC_BLE_ACTION_LOG, message, true, false);
+#endif
+    }
+
     Stream& stream;
     ERaBluetooth*& transpProp;
+    ERaApiHandler* api;
     unsigned long timeout;
     bool _connected;
     bool initialized;
-    const char* topic;
-    MessageCallback_t callback;
 #if defined(ERA_RTOS)
     TaskHandle_t _bleTask;
 #endif

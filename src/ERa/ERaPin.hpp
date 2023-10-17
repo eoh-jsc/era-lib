@@ -18,6 +18,9 @@
 #if !defined(PWM)
     #define PWM                 0x27
 #endif
+#if !defined(RAW_PIN)
+    #define RAW_PIN             0xFE
+#endif
 #if !defined(VIRTUAL)
     #define VIRTUAL             0xFF
 #endif
@@ -35,6 +38,8 @@ class ERaPin
 #endif
 
     const static int MAX_CHANNELS = 16;
+	const static int MAX_PINS = ERA_MAX_GPIO_PIN;
+	const static int MAX_VPINS = ERA_MAX_VIRTUAL_PIN;
     enum PinFlagT {
         PIN_ON_DELETE = 0x80
     };
@@ -55,6 +60,13 @@ class ERaPin
         uint8_t pin;
 		unsigned int configId;
     } VPin_t;
+
+public:
+#if defined(PIN_HAS_FUNCTIONAL_H)
+    typedef std::function<void(uint8_t, uint32_t)> WritePinHandler_t;
+#else
+    typedef void (*WritePinHandler_t)(uint8_t, uint32_t);
+#endif
 
 public:
     class iterator
@@ -188,6 +200,10 @@ public:
         return iterator(this, this->setupPinReport(p, pMode, readPin, interval, minInterval, maxInterval, minChange, cb, configId));
     }
 
+    iterator setPinRaw(uint8_t p, unsigned int configId) {
+        return iterator(this, this->setupPinRaw(p, configId));
+    }
+
     VPin_t* setPinVirtual(uint8_t p, unsigned int configId) {
         return this->setupPinVirtual(p, configId);
     }
@@ -215,6 +231,8 @@ public:
 	void deletePin(Pin_t* pPin);
     void deleteWithPin(uint8_t p);
     void deleteAll();
+    void writeAllPin(ERaPin::WritePinHandler_t writePin,
+                    uint32_t value, uint8_t pMode, bool pwm = false);
 	bool isEnable(Pin_t* pPin);
 	void enable(Pin_t* pPin);
 	void disable(Pin_t* pPin);
@@ -240,6 +258,7 @@ private:
                         unsigned long interval, unsigned long minInterval,
                         unsigned long maxInterval, float minChange,
                         ERaPin::ReportPinCallback_t cb, unsigned int configId);
+    Pin_t* setupPinRaw(uint8_t p, unsigned int configId);
     VPin_t* setupPinVirtual(uint8_t p, unsigned int configId);
     Pin_t* setupPWMPinReport(uint8_t p, uint8_t pMode, uint8_t channel,
                             ERaPin::ReadPinHandler_t readPin, unsigned long interval,
@@ -262,6 +281,7 @@ private:
         }
 		return ((pPin->readPin != nullptr) ||
                 (pPin->pinMode == PWM) ||
+                (pPin->pinMode == RAW_PIN) ||
                 (pPin->pinMode == VIRTUAL));
 	}
 
@@ -295,15 +315,16 @@ void ERaPin<Report>::run() {
         if (!this->isValidPin(pPin)) {
 			continue;
 		}
-        if (pPin->pinMode == VIRTUAL) {
+        if ((pPin->pinMode == RAW_PIN) ||
+            (pPin->pinMode == VIRTUAL)) {
             continue;
         }
-		if (currentMillis - pPin->prevMillis < pPin->delay) {
+		if ((currentMillis - pPin->prevMillis) < pPin->delay) {
 			continue;
 		}
-        unsigned long skipTimes = (currentMillis - pPin->prevMillis) / pPin->delay;
+        unsigned long skipTimes = ((currentMillis - pPin->prevMillis) / pPin->delay);
         // update time
-        pPin->prevMillis += pPin->delay * skipTimes;
+        pPin->prevMillis += (pPin->delay * skipTimes);
         // call update data
         if (!pPin->enable) {
             continue;
@@ -315,7 +336,12 @@ void ERaPin<Report>::run() {
             pPin->report.updateReport(pPin->readPin(pPin->pin));
         }
         else {
+#if defined(ESP32) &&   \
+    (ESP_IDF_VERSION_MAJOR > 4)
+            pPin->report.updateReport(pPin->readPin(pPin->pin), true);
+#else
             pPin->report.updateReport(pPin->readPin(pPin->channel), true);
+#endif
         }
     }
 
@@ -399,6 +425,7 @@ typename ERaPin<Report>::Pin_t* ERaPin<Report>::setupPinReport(uint8_t p, uint8_
     pPin->pinMode = pMode;
     pPin->channel = 0;
     pPin->enable = true;
+    pPin->called = 0;
 	return pPin;
 }
 
@@ -429,7 +456,7 @@ typename ERaPin<Report>::Pin_t* ERaPin<Report>::setupPinReport(uint8_t p, uint8_
         this->pin.put(pPin);
         this->numPin++;
     }
-    
+
     pPin->prevMillis = ERaMillis();
     pPin->delay = interval;
     pPin->readPin = readPin;
@@ -445,7 +472,36 @@ typename ERaPin<Report>::Pin_t* ERaPin<Report>::setupPinReport(uint8_t p, uint8_
     pPin->pinMode = pMode;
     pPin->channel = 0;
     pPin->enable = true;
+    pPin->called = 0;
 	return pPin;
+}
+
+template <class Report>
+typename ERaPin<Report>::Pin_t* ERaPin<Report>::setupPinRaw(uint8_t p, unsigned int configId) {
+    Pin_t* pPin = this->findPinExist(p);
+    if (pPin == nullptr) {
+        if (!this->isPinFree()) {
+            return nullptr;
+        }
+        pPin = new Pin_t();
+        if (pPin == nullptr) {
+            return nullptr;
+        }
+        this->pin.put(pPin);
+        this->numPin++;
+    }
+
+    pPin->prevMillis = ERaMillis();
+    pPin->delay = 0;
+    pPin->readPin = nullptr;
+    pPin->report = typename Report::iterator();
+    pPin->configId = configId;
+    pPin->pin = p;
+    pPin->pinMode = RAW_PIN;
+    pPin->channel = 0;
+    pPin->enable = true;
+    pPin->called = 0;
+    return pPin;
 }
 
 template <class Report>
@@ -511,6 +567,7 @@ typename ERaPin<Report>::Pin_t* ERaPin<Report>::setupPWMPinReport(uint8_t p, uin
     pPin->pinMode = pMode;
     pPin->channel = channel;
     pPin->enable = true;
+    pPin->called = 0;
 	return pPin;
 }
 
@@ -558,6 +615,7 @@ typename ERaPin<Report>::Pin_t* ERaPin<Report>::setupPWMPinReport(uint8_t p, uin
     pPin->pinMode = pMode;
     pPin->channel = channel;
     pPin->enable = true;
+    pPin->called = 0;
 	return pPin;
 }
 
@@ -654,6 +712,27 @@ void ERaPin<Report>::deleteAll() {
     }
     this->vPin.clear();
     this->numVPin = 0;
+}
+
+template <class Report>
+void ERaPin<Report>::writeAllPin(ERaPin::WritePinHandler_t writePin,
+                                uint32_t value, uint8_t pMode, bool pwm) {
+    const typename ERaList<Pin_t*>::iterator* e = this->pin.end();
+    for (typename ERaList<Pin_t*>::iterator* it = this->pin.begin(); it != e; it = it->getNext()) {
+        Pin_t* pPin = it->get();
+        if (this->isValidPin(pPin)) {
+            if ((writePin != nullptr) &&
+                (pPin->pinMode == pMode)) {
+#if defined(ESP32) &&   \
+    (ESP_IDF_VERSION_MAJOR > 4)
+                writePin(pPin->pin, value);
+                ERA_FORCE_UNUSED(pwm);
+#else
+                writePin((pwm ? pPin->channel : pPin->pin), value);
+#endif
+            }
+        }
+    }
 }
 
 template <class Report>
@@ -755,7 +834,7 @@ void ERaPin<Report>::disableAll() {
 
 template <class Report>
 bool ERaPin<Report>::isPinFree() {
-	if (this->numPin >= ERA_MAX_GPIO_PIN) {
+	if (this->numPin >= MAX_PINS) {
 		return false;
 	}
     
@@ -764,7 +843,7 @@ bool ERaPin<Report>::isPinFree() {
 
 template <class Report>
 bool ERaPin<Report>::isVPinFree() {
-	if (this->numVPin >= ERA_MAX_VIRTUAL_PIN) {
+	if (this->numVPin >= MAX_VPINS) {
 		return false;
 	}
 
@@ -890,5 +969,7 @@ typename ERaPin<Report>::Pin_t* ERaPin<Report>::findPinOfChannel(uint8_t channel
     
     return nullptr;
 }
+
+using PinEntry = ERaPin<ERaReport>::iterator;
 
 #endif /* INC_ERA_PIN_HPP_ */

@@ -5,6 +5,8 @@
 
 #if defined(ARDUINO_ARCH_STM32)
 
+	#include <string>
+
 	#undef ERA_DECODE_PIN_NUMBER
 	#if defined(NUM_DIGITAL_PINS)
 		#define ERA_DECODE_PIN_NUMBER(pin)	((pin < NUM_DIGITAL_PINS) ?					\
@@ -150,7 +152,10 @@ void ERaApi<Proto, Flash>::handleReadPin(cJSON* root) {
 		}
 		item = cJSON_GetObjectItem(current, "value_type");
 		if (cJSON_IsString(item)) {
-			if (ERaStrCmp(item->valuestring, "boolean")) {
+			if (this->skipPinReport) {
+				this->ERaPinRp.setPinRaw(pin.pin, pin.configId);
+			}
+			else if (ERaStrCmp(item->valuestring, "boolean")) {
 				this->getPinConfig(current, pin);
 				pinMode(pin.pin, pin.pinMode);
 				this->ERaPinRp.setPinReport(pin.pin, pin.pinMode, digitalReadArduino,
@@ -221,7 +226,10 @@ void ERaApi<Proto, Flash>::handleWritePin(cJSON* root) {
 		}
 		item = cJSON_GetObjectItem(current, "value_type");
 		if (cJSON_IsString(item)) {
-			if (ERaStrCmp(item->valuestring, "boolean")) {
+			if (this->skipPinReport) {
+				this->ERaPinRp.setPinRaw(pin.pin, pin.configId);
+			}
+			else if (ERaStrCmp(item->valuestring, "boolean")) {
 				this->getPinConfig(current, pin);
 				pinMode(pin.pin, pin.pinMode);
 				this->ERaPinRp.setPinReport(pin.pin, pin.pinMode, digitalReadArduino,
@@ -283,10 +291,14 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const ERaDataBuff& arrayTopi
 		switch (pMode) {
 			case PWM:
 			case ANALOG:
+#if !defined(ERA_IGNORE_ANALOG_WRITE)
                 ::analogWrite(pin, value);
+#endif
 				if (rp != nullptr) {
 					rp->updateReport(value, true);
 				}
+				break;
+			case RAW_PIN:
 				break;
 			case VIRTUAL:
 			case ERA_VIRTUAL:
@@ -420,7 +432,9 @@ void ERaApi<Proto, Flash>::handlePinRequest(const ERaDataBuff& arrayTopic, const
         }
 		if (this->getGPIOPin(current, "pwm_pin", pin.pin)) {
 			ERA_CHECK_PIN(pin.pin);
+#if !defined(ERA_IGNORE_ANALOG_WRITE)
             ::analogWrite(pin.pin, current->valueint);
+#endif
 			continue;
 		}
 	}

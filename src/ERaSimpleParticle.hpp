@@ -7,7 +7,7 @@
 #include <Adapters/ERaParticleClient.hpp>
 #include <ERa/ERaApiParticle.hpp>
 #include <Modbus/ERaModbusArduino.hpp>
-#include <Utility/ERaFlashArduino.hpp>
+#include <Storage/ERaFlashArduino.hpp>
 #include <Task/ERaTaskParticle.hpp>
 
 #if !defined(NO_GLOBAL_INSTANCES) && !defined(NO_GLOBAL_ERA)

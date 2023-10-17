@@ -8,54 +8,85 @@
 #endif
 
 #include <Utility/ERaUtility.hpp>
+#include <OTA/ERaOTAHelper.hpp>
+#include <OTA/ERaOTAHandler.hpp>
 
-#ifndef ERA_OTA_BUFFER_SIZE
-    #define ERA_OTA_BUFFER_SIZE 256
+#if !defined(ERA_OTA_BUFFER_SIZE)
+    #define ERA_OTA_BUFFER_SIZE     256
 #endif
 
-#define OTA_RESPONSE_TIMEOUT    10000
+#if !defined(OTA_DOWNLOAD_TIMEOUT)
+    #define OTA_DOWNLOAD_TIMEOUT    (5 * 60000)
+#endif
+
+#define OTA_RESPONSE_TIMEOUT        10000UL
 
 template <class Proto, class Flash>
 class ERaOTA
+    : public ERaOTAHelper
 {
     const char* TAG = "OTA";
 
 public:
     ERaOTA(Flash& _flash)
         : flash(_flash)
+        , pHandler(nullptr)
     {}
     ~ERaOTA()
     {}
 
-    void begin(const char* url = nullptr) {
+    void setOTAHandler(ERaOTAHandler* handler) {
+        this->pHandler = handler;
+    }
+
+    void setOTAHandler(ERaOTAHandler& handler) {
+        this->pHandler = &handler;
+    }
+
+protected:
+    void begin(const char* url = nullptr,
+                const char* hash = nullptr,
+                const char* type = nullptr,
+                size_t downSize = ERA_OTA_BUFFER_SIZE,
+                cJSON* root = nullptr) {
         if (url == nullptr) {
-            url = this->createUrl();
+            url = ERaOTAHelper::createUrl(this->thisProto().getAuth());
         }
+
+        ERaWatchdogFeed();
 
         this->thisProto().getTransp().disconnect();
         ERA_LOG(TAG, ERA_PSTR("Firmware update URL: %s"), url);
 
         int contentLength {0};
-        String md5;
+        String md5Hash;
         Client* client = this->thisProto().getTransp().getClient();
         if (client == nullptr) {
             return;
         }
 
         client->connect(this->getDomain(url).c_str(), this->getPort(url));
-        client->printf("GET %s HTTP/1.1\r\n"
-                    "Host: %s\r\n"
-                    "Connection: keep-alive\r\n\r\n",
-                    url, this->getDomain(url).c_str());
 
-        unsigned long timeout = ERaMillis();
+        ERaWatchdogFeed();
+
+        client->print("GET ");
+        this->printURL(client, url);
+        client->print(" HTTP/1.1\r\n");
+        client->print("Host: ");
+        client->print(this->getDomain(url).c_str());
+        client->print("\r\n");
+        client->print("Connection: keep-alive\r\n\r\n");
+
+        MillisTime_t timeout = ERaMillis();
         while (client->connected() && !client->available()) {
             ERaDelay(10);
             if (!ERaRemainingTime(timeout, OTA_RESPONSE_TIMEOUT)) {
-                ERA_LOG(TAG, ERA_PSTR("Response timeout"));
+                ERA_LOG_ERROR(TAG, ERA_PSTR("Response timeout"));
                 return;
             }
         }
+
+        ERaWatchdogFeed();
 
         while (client->available()) {
             String line = client->readStringUntil('\n');
@@ -65,7 +96,7 @@ public:
                 contentLength = line.substring(line.lastIndexOf(':') + 1).toInt();
             }
             else if (line.startsWith("x-md5:")) {
-                md5 = line.substring(line.lastIndexOf(':') + 1);
+                md5Hash = line.substring(line.lastIndexOf(':') + 1);
             }
             else if (!line.length()) {
                 break;
@@ -74,19 +105,36 @@ public:
         }
 
         if (contentLength <= 0) {
-            ERA_LOG(TAG, ERA_PSTR("Content-Length not defined"));
+            ERA_LOG_ERROR(TAG, ERA_PSTR("Content-Length not defined"));
             return;
         }
+
+        ERaWatchdogFeed();
+
+        if ((this->pHandler != nullptr) &&
+            this->pHandler->begin(client, contentLength, hash, type, downSize)) {
+            return client->stop();
+        }
+
+        ERaWatchdogFeed();
 
         if (!Update.begin(contentLength)) {
-            ERA_LOG(TAG, ERA_PSTR("Not enough space to begin OTA"));
+            ERA_LOG_ERROR(TAG, ERA_PSTR("Not enough space to begin OTA"));
             return;
         }
 
-        if (md5.length() == 32) {
-            md5.toLowerCase();
-            ERA_LOG(TAG, ERA_PSTR("Expected MD5: %s"), md5.c_str());
-            Update.setMD5(md5.c_str());
+        ERaWatchdogFeed();
+
+        if (md5Hash.length() == 32) {
+            md5Hash.toLowerCase();
+            ERA_LOG(TAG, ERA_PSTR("Expected MD5: %s"), md5Hash.c_str());
+            Update.setMD5(md5Hash.c_str());
+        }
+        else if (hash != nullptr) {
+            md5Hash = hash;
+            md5Hash.toLowerCase();
+            ERA_LOG(TAG, ERA_PSTR("Expected MD5: %s"), md5Hash.c_str());
+            Update.setMD5(md5Hash.c_str());
         }
 
         this->flash.end();
@@ -94,23 +142,32 @@ public:
         int written {0};
         int prevPercentage {0};
         uint8_t buf[ERA_OTA_BUFFER_SIZE] {0};
-        while (client->connected() && written < contentLength) {
+        MillisTime_t startMillis = ERaMillis();
+        downSize = ERaMin(downSize, (size_t)ERA_OTA_BUFFER_SIZE);
+        while (client->connected() && (written < contentLength)) {
             ERaDelay(10);
             timeout = ERaMillis();
             while (client->connected() && !client->available()) {
                 ERaDelay(1);
                 if (!ERaRemainingTime(timeout, OTA_RESPONSE_TIMEOUT)) {
-                    ERA_LOG(TAG, ERA_PSTR("Response timeout"));
+                    ERA_LOG_ERROR(TAG, ERA_PSTR("Response timeout"));
+                    break;
                 }
             }
+            if (!ERaRemainingTime(startMillis, OTA_DOWNLOAD_TIMEOUT)) {
+                ERA_LOG_ERROR(TAG, ERA_PSTR("Download timeout"));
+                break;
+            }
 
-            int len = client->read(buf, sizeof(buf));
+            int len = client->read(buf, downSize);
             if (len <= 0) {
                 continue;
             }
 
             Update.write(buf, len);
             written += len;
+
+            ERaWatchdogFeed();
 
             const int percentage = (written * 100) / contentLength;
             if ((percentage == 100) ||
@@ -122,46 +179,47 @@ public:
 
         client->stop();
 
+        ERaWatchdogFeed();
+
         if (written != contentLength) {
             Update.end();
             this->flash.begin();
-            ERA_LOG(TAG, ERA_PSTR("OTA written %d/%d bytes"), written, contentLength);
+            ERA_LOG_ERROR(TAG, ERA_PSTR("OTA written %d/%d bytes"), written, contentLength);
             return;
         }
 
         if (!Update.end()) {
             this->flash.begin();
-            ERA_LOG(TAG, ERA_PSTR("Error #%d"), Update.getError());
+            ERA_LOG_ERROR(TAG, ERA_PSTR("Error #%d"), Update.getError());
             return;
         }
 
         if (!Update.isFinished()) {
             this->flash.begin();
-            ERA_LOG(TAG, ERA_PSTR("Update failed"));
+            ERA_LOG_ERROR(TAG, ERA_PSTR("Update failed"));
             return;
         }
 
         ERA_LOG(TAG, ERA_PSTR("Update successfully. Rebooting!"));
         ERaDelay(1000);
         ERaRestart(true);
+        ERA_FORCE_UNUSED(root);
     }
 
-protected:
 private:
-    const char* createUrl() {
-        static char url[128] {0};
-        if (!strlen(url)) {
-#if defined(ERA_OTA_SSL)
-            FormatString(url, "https://" ERA_SSL_DOMAIN);
-#else
-            FormatString(url, "http://" ERA_NOSSL_DOMAIN);
-#endif
-            FormatString(url, "/api/chip_manager");
-            FormatString(url, "/firmware?code=%s", this->thisProto().getAuth());
-            FormatString(url, "&firm_version=%d.%d", ERA_FIRMWARE_MAJOR, ERA_FIRMWARE_MINOR);
-            FormatString(url, "&board=%s", ERA_MODEL_TYPE);
+    void printURL(Client* client, const char* url) {
+        size_t sent {0};
+        size_t toSend {0};
+        size_t sendSize = strlen(url);
+        char buf[257] {0};
+        while (sendSize) {
+            toSend = ((sendSize > 256) ? 256 : sendSize);
+            strncpy(buf, url + sent, toSend);
+            buf[toSend] = 0;
+            client->print(buf);
+            sendSize -= toSend;
+            sent += toSend;
         }
-        return url;
     }
 
     String getDomain(String url) {
@@ -175,10 +233,14 @@ private:
     }
 
     uint16_t getPort(String url) {
-        if (url.indexOf("https") < 0) {
-            return ERA_NOSSL_PORT;
+#if defined(ERA_OTA_SSL)
+        if (url.indexOf("https") >= 0) {
+            return ERA_DEFAULT_PORT_SSL;
         }
-        return ERA_SSL_PORT;
+#else
+        ERA_FORCE_UNUSED(url);
+#endif
+        return ERA_DEFAULT_PORT;
     }
 
 	inline
@@ -192,6 +254,7 @@ private:
 	}
 
     Flash& flash;
+    ERaOTAHandler* pHandler;
 };
 
 #endif /* INC_ERA_OTA_ESP8266_HPP_ */

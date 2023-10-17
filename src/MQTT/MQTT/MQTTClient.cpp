@@ -161,10 +161,10 @@ static void MQTTClientHandler(lwmqtt_client_t * /*client*/, void *ref, lwmqtt_st
 #endif
 
   // create topic string
-  const char* str_topic = (const char *)terminated_topic;
+  const char *str_topic = (const char *)terminated_topic;
 
   // create payload string
-  const char* str_payload = (const char *)message.payload;
+  const char *str_payload = (const char *)message.payload;
 
   // call simple callback
 #if MQTT_HAS_FUNCTIONAL
@@ -526,7 +526,7 @@ bool MQTTClient::loop() {
 bool MQTTClient::connected() {
   // a client is connected if the network is connected, a client is available and
   // the connection has been properly initiated
-  return this->netClient != nullptr && this->netClient->connected() == 1 && this->_connected;
+  return this->_connected && (this->netClient != nullptr) && (this->netClient->connected() == 1);
 }
 
 bool MQTTClient::disconnect() {

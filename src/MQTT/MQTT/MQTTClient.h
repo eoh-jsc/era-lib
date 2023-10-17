@@ -39,6 +39,9 @@
 #if defined(PARTICLE) || defined(SPARK)
   #include "application.h"
   #undef retained
+#elif defined(ARDUINO) && \
+  defined(ARDUINO_ARCH_ARM)
+  #include <Arduino.h>
 #else
   #include <Arduino.h>
   #include <Client.h>
@@ -54,7 +57,7 @@ extern "C" {
   #define ESP8266_VERSION_NUMBER ((ARDUINO_ESP8266_MAJOR * 10000) + \
                                   (ARDUINO_ESP8266_MINOR * 100) +   \
                                   (ARDUINO_ESP8266_REVISION))
-  #if ESP8266_VERSION_NUMBER >= 30101
+  #if (ESP8266_VERSION_NUMBER >= 30101)
     #include <coredecls.h>
     #define mqtt_yield_fix() esp_yield()
   #else
@@ -80,10 +83,10 @@ typedef struct {
 
 class MQTTClient;
 
-typedef void (*MQTTClientCallbackSimple)(const char* topic, const char* payload);
+typedef void (*MQTTClientCallbackSimple)(const char *topic, const char *payload);
 typedef void (*MQTTClientCallbackAdvanced)(MQTTClient *client, char topic[], char bytes[], int length);
 #if MQTT_HAS_FUNCTIONAL
-typedef std::function<void(const char* topic, const char* payload)> MQTTClientCallbackSimpleFunction;
+typedef std::function<void(const char *topic, const char *payload)> MQTTClientCallbackSimpleFunction;
 typedef std::function<void(MQTTClient *client, char topic[], char bytes[], int length)>
     MQTTClientCallbackAdvancedFunction;
 #endif
@@ -163,6 +166,9 @@ class MQTTClient {
   void setClockSource(MQTTClientClockSource cb);
 
   void setSkipACK(bool skip);
+  bool getSkipACK() const {
+    return this->skipACK;
+  }
 
   void setHost(const char _hostname[]) { this->setHost(_hostname, 1883); }
   void setHost(const char hostname[], int port);

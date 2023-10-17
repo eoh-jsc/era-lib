@@ -2,6 +2,7 @@
 
 import os, time, sys
 import json
+import hashlib
 import argparse
 import requests
 import RPi.GPIO as GPIO
@@ -12,32 +13,52 @@ from PnP import ERaPnPPi as PnP
 ERA_BOARD_ID = ""
 ERA_BOARD_TYPE = "Raspberry"
 ERA_MODEL_TYPE = "ERa"
+ERA_PNP_ORG = "EoH"
+ERA_PNP_PREFIX = "ERa"
+ERA_PNP_MODE = "UDP"
 
-ERA_FIRMWARE_MAJOR = 0
-ERA_FIRMWARE_MINOR = 9
-ERA_FIRMWARE_REVISION = 0
+ERA_MAJOR = 0
+ERA_MINOR = 9
+ERA_REVISION = 0
+ERA_VERSION = "0.9.0"
 ERA_FIRMWARE_VERSION = "0.9.0"
 
 BUTTON_GPIO = 16
 
 parser = argparse.ArgumentParser(description="ERa Options.")
-parser.add_argument("-l", "--loc", dest="location", default="SG",
-                    help="Location host (default: SG)")
+parser.add_argument("-l", "--loc", dest="location", default="VN",
+                    help="Location host (default: VN)")
+parser.add_argument("-t", "--token", dest="token", default="",
+                    help="Your auth token")
+parser.add_argument("-a", "--host", dest="host", default="",
+                    help="Server name")
+parser.add_argument("-b", "--button", dest="button", default=BUTTON_GPIO,
+                    type=int, help="Button pin")
 
 args = parser.parse_args()
+config = dict()
 
 try:
     with open("config.json") as json_file:
         config = json.load(json_file)
     to_save = False
 except:
-    config = PnP.provision(args.location, ERA_BOARD_TYPE,
-                            ERA_MODEL_TYPE, ERA_FIRMWARE_VERSION)
-    to_save = True
+    if args.token:
+        config["auth"] = args.token
+        if args.host:
+            config["host"] = args.host
+        elif args.location == "SG":
+            config["host"] = PnP.ERA_MQTT_HOST_SG
+        else:
+            config["host"] = PnP.ERA_MQTT_HOST_VN
+        to_save = False
+    else:
+        config = PnP.provision(args.location, ERA_BOARD_TYPE,
+                            ERA_MODEL_TYPE, ERA_VERSION, ERA_FIRMWARE_VERSION,
+                            ERA_PNP_ORG, ERA_PNP_PREFIX, ERA_PNP_MODE)
+        to_save = True
 
 def reset_config():
-    if os.path.exists("./era"):
-        os.remove("./era")
     if os.path.exists("config.json"):
         print("Resetting configuration")
         os.remove("config.json")
@@ -68,7 +89,6 @@ def on_connect(client, userdata, flags, rc):
         print("Verify connect OK!")
     else:
         print("Verify connect FAIL, code =", rc)
-        
 
 def verify_connect():
     if not to_save:
@@ -92,19 +112,27 @@ def verify_connect():
         os.execv(sys.executable, ['python3'] + sys.argv)
         sys.exit(0)
 
+def md5_calculate(filename):
+    hash_md5 = hashlib.md5()
+    with open(filename, "rb") as file:
+        for chunk in iter(lambda: file.read(2 ** 20), b""):
+            hash_md5.update(chunk)
+    return hash_md5.hexdigest()
+
 def update_ota():
-    url = ("https://backend.eoh.io/api/chip_manager"
-           "/firmware?code={0}&firm_version={1}.{2}&board={3}").format(
-            config["auth"],
-            ERA_FIRMWARE_MAJOR,
-            ERA_FIRMWARE_MINOR,
-            ERA_MODEL_TYPE
-        )
-    print("Firmware update URL: {0}".format(url))
-    response = requests.get(url)
+    ota_config = dict()
+    try:
+        with open("./ota.txt") as json_file:
+            ota_config = json.load(json_file)
+    except:
+        return
+    if not "url" in ota_config:
+        return
+    print("Firmware update URL: {0}".format(ota_config["url"]))
+    response = requests.get(ota_config["url"])
     if (response.status_code != 200):
         return
-    descriptor = os.open(path = "./era",
+    descriptor = os.open(path = "./era.bin",
                          flags = (
                             os.O_WRONLY |
                             os.O_CREAT |
@@ -113,13 +141,22 @@ def update_ota():
                         mode = 0o755)
     with open(descriptor, "wb") as file:
         file.write(response.content)
+    if "hash" in ota_config:
+        md5_hash = md5_calculate("./era.bin");
+        if ota_config["hash"] == md5_hash:
+            print("Verify match: {0}".format(ota_config["hash"]))
+        else:
+            print("No MD5 match: Local = {0}, Target = {1}".format(md5_hash, ota_config["hash"]))
+            return
+    if os.path.exists("./era"):
+        os.remove("./era")
+    os.rename("./era.bin", "./era")
     print("Update successfully!")
 
-
 GPIO.setmode(GPIO.BCM)
-GPIO.setup(BUTTON_GPIO, GPIO.IN, pull_up_down = GPIO.PUD_UP)
+GPIO.setup(args.button, GPIO.IN, pull_up_down = GPIO.PUD_UP)
 
-GPIO.add_event_detect(BUTTON_GPIO, GPIO.BOTH,
+GPIO.add_event_detect(args.button, GPIO.BOTH,
                     callback = button_callback,
                     bouncetime = 50)
 

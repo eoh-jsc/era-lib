@@ -61,10 +61,10 @@ static void MQTTLinuxClientHandler(lwmqtt_client_t * /*client*/, void *ref, lwmq
 #endif
 
   // create topic string
-  const char* str_topic = (const char *)terminated_topic;
+  const char *str_topic = (const char *)terminated_topic;
 
   // create payload string
-  const char* str_payload = (const char *)message.payload;
+  const char *str_payload = (const char *)message.payload;
 
   // call simple callback
 #if MQTT_HAS_FUNCTIONAL
@@ -199,10 +199,10 @@ void MQTTLinuxClient::setTLS(bool _isTLS) {
 
 void MQTTLinuxClient::setTLSWithPort(int _port) {
 #if defined(ERA_MQTT_SSL)
-  if (_port == ERA_MQTT_PORT_SSL) {
+  if (_port == ERA_DEFAULT_MQTT_PORT_SSL) {
     this->isTLS = true;
   }
-  else if (_port == ERA_MQTT_PORT_NOSSL) {
+  else if (_port == ERA_DEFAULT_MQTT_PORT) {
     this->isTLS = false;
   }
 #else
@@ -581,13 +581,13 @@ bool MQTTLinuxClient::connected() {
   // the connection has been properly initiated
 #if defined(ERA_MQTT_SSL)
   if (this->isTLS) {
-    return this->networkTLS.socket.fd >= 0 && this->_connected;
+    return this->_connected && (this->networkTLS.socket.fd >= 0);
   }
   else {
-    return this->network.socket >= 0 && this->_connected;
+    return this->_connected && (this->network.socket >= 0);
   }
 #else
-  return this->network.socket >= 0 && this->_connected;
+  return this->_connected && (this->network.socket >= 0);
 #endif
 }
 

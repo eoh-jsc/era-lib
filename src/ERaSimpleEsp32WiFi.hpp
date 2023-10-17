@@ -7,7 +7,7 @@
 #include <ERa/ERaApiEsp32.hpp>
 #include <Modbus/ERaModbusEsp32.hpp>
 #include <Zigbee/ERaZigbeeEsp32.hpp>
-#include <Utility/ERaFlashEsp32.hpp>
+#include <Storage/ERaFlashEsp32.hpp>
 #include <Task/ERaTaskEsp32.hpp>
 
 #if !defined(NO_GLOBAL_INSTANCES) && !defined(NO_GLOBAL_ERA)

@@ -4,11 +4,11 @@
 #include <string.h>
 #include <mbedtls/platform.h>
 #include <mbedtls/aes.h>
-#include <mbedtls/base64.h>
 #include <mbedtls/cipher.h>
 #include <ERa/ERaEncrypt.hpp>
 #include <ERa/ERaDefine.hpp>
 #include <Utility/ERaLoc.hpp>
+#include <Utility/Base64.hpp>
 
 #define CF_CHECK_EQ(expr, res)              \
     if ((expr) != (res)) {                  \
@@ -46,13 +46,22 @@ public:
     ~ERaEncryptMbedTLS()
     {}
 
-    void begin(const uint8_t* key) override {
+    void begin(const uint8_t* key,
+        EncryptModeT modeEnc = EncryptModeT::ENCRYPT_MODE_CBC) override {
+        this->mode = modeEnc;
         this->setSecretKey(key);
         mbedtls_platform_set_calloc_free(ERA_CALLOC, ERA_FREE);
     }
 
     void setSecretKey(const uint8_t* key) override {
         memcpy(this->secretKey, key, sizeof(this->secretKey));
+    }
+
+    void setInitializationVector(const uint8_t* nonce,
+                                size_t nonceLen) override {
+        this->ivLen = nonceLen;
+        memset(this->iv, 0, sizeof(this->iv));
+        memcpy(this->iv, nonce, nonceLen);
     }
 
     size_t encrypt(const uint8_t* input, size_t inputLen,
@@ -72,7 +81,6 @@ private:
     size_t progress(const uint8_t* input, size_t inputLen,
                     uint8_t*& output, size_t& outputLen,
                     mbedtls_operation_t operation) {
-        uint8_t tag[16] {0};
         size_t oLen {0};
         size_t oSize {0};
         outputLen = 0;
@@ -80,13 +88,21 @@ private:
 
         mbedtls_cipher_init(&this->ctx);
 
-        CF_CHECK_NE(cipher_info = mbedtls_cipher_info_from_type(mbedtls_cipher_type_t::MBEDTLS_CIPHER_AES_128_CBC), nullptr)
+        switch (this->mode) {
+            case EncryptModeT::ENCRYPT_MODE_CCM:
+                CF_CHECK_NE(cipher_info = mbedtls_cipher_info_from_type(mbedtls_cipher_type_t::MBEDTLS_CIPHER_AES_128_CCM), nullptr)
+                break;
+            case EncryptModeT::ENCRYPT_MODE_CBC:
+            default:
+                CF_CHECK_NE(cipher_info = mbedtls_cipher_info_from_type(mbedtls_cipher_type_t::MBEDTLS_CIPHER_AES_128_CBC), nullptr)
+                break;
+        }
 
         CF_CHECK_EQ(mbedtls_cipher_setup(&this->ctx, cipher_info), 0)
 
         CF_CHECK_EQ(mbedtls_cipher_setkey(&this->ctx, this->secretKey, 128, operation), 0)
 
-        CF_CHECK_EQ(mbedtls_cipher_set_iv(&this->ctx, this->iv, sizeof(this->iv)), 0)
+        CF_CHECK_EQ(mbedtls_cipher_set_iv(&this->ctx, this->iv, this->ivLen), 0)
 
         CF_CHECK_EQ(mbedtls_cipher_reset(&this->ctx), 0)
 
@@ -123,32 +139,38 @@ private:
             return 0;
         }
 
-        size_t alignUp = ((inputLen - 1) / CF_INPUT_SIZE) + 1;
-        for (size_t i = 0; i < alignUp; ++i) {
-            size_t alignDown = inputLen - (i * CF_INPUT_SIZE);
-            if (!(alignDown / CF_INPUT_SIZE)) {
-                alignDown %= CF_INPUT_SIZE;
-            }
-            else {
-                alignDown = CF_INPUT_SIZE;
-            }
-            if ((outputLen + alignDown) > oSize) {
-                if (locInput != input) {
-                    free(locInput);
-                    locInput = nullptr;
+        switch (this->mode) {
+            case EncryptModeT::ENCRYPT_MODE_CCM: {
+                if (operation == mbedtls_operation_t::MBEDTLS_ENCRYPT) {
+                    CF_CHECK_EQB(mbedtls_cipher_auth_encrypt_ext(&this->ctx, this->iv, this->ivLen, nullptr, 0,
+                                                                locInput, inputLen, output, oSize,
+                                                                &outputLen, 16), 0)
                 }
-                free(output);
-                output = nullptr;
-                mbedtls_cipher_free(&this->ctx);
-                return 0;
+                else {
+                    CF_CHECK_EQB(mbedtls_cipher_auth_decrypt_ext(&this->ctx, this->iv, this->ivLen, nullptr, 0,
+                                                                locInput, inputLen, output, oSize,
+                                                                &outputLen, 16), 0)
+                }
             }
-            CF_CHECK_EQB(mbedtls_cipher_update(&this->ctx, locInput + (i * CF_INPUT_SIZE),
-                                            alignDown, output + outputLen, &oLen), 0)
-            outputLen += oLen;
+                break;
+            case EncryptModeT::ENCRYPT_MODE_CBC:
+            default: {
+                size_t toEncrypt {0};
+                size_t encryptSize = inputLen;
+                while (encryptSize) {
+                    toEncrypt = ((encryptSize > CF_INPUT_SIZE) ? CF_INPUT_SIZE : encryptSize);
+                    CF_CHECK_EQB(mbedtls_cipher_update(&this->ctx, locInput + (inputLen - encryptSize),
+                                                        toEncrypt, output + outputLen, &oLen), 0)
+                    encryptSize -= toEncrypt;
+                    outputLen += oLen;
+                }
+
+                CF_CHECK_EQB(mbedtls_cipher_finish(&this->ctx, output + outputLen, &oLen), 0)
+                outputLen += oLen;
+            }
+                break;
         }
 
-        CF_CHECK_EQB(mbedtls_cipher_finish(&this->ctx, output + outputLen, &oLen), 0)
-        outputLen += oLen;
         output[outputLen] = 0;
 
         uint8_t* locOutput = output;
@@ -176,11 +198,11 @@ private:
         size_t expected = ERaEncrypt::base64EncodeExpectedLen(inputLen);
         output = (uint8_t*)ERA_MALLOC(expected + 1);
         if (output == nullptr) {
-            return MBEDTLS_ERR_BASE64_BUFFER_TOO_SMALL;
+            return -1;
         }
-        int ret = mbedtls_base64_encode(output, expected, &outputLen, input, inputLen);
+        outputLen = base64_encode((char*)output, (char*)input, inputLen);
         output[outputLen] = 0;
-        return ret;
+        return 0;
     }
 
     int decode(const uint8_t* input, size_t inputLen,
@@ -191,15 +213,16 @@ private:
         size_t expected = ERaEncrypt::base64DecodeExpectedLen(inputLen);
         output = (uint8_t*)ERA_MALLOC(expected + 1);
         if (output == nullptr) {
-            return MBEDTLS_ERR_BASE64_BUFFER_TOO_SMALL;
+            return -1;
         }
-        int ret = mbedtls_base64_decode(output, expected, &outputLen, input, inputLen);
+        outputLen = base64_decode((char*)output, (char*)input, inputLen);
         output[outputLen] = 0;
-        return ret;
+        return 0;
     }
 
     uint8_t secretKey[16] {0};
-    const uint8_t iv[16] {'E', 'R', 'a', 'B', 'l', 'u', 'e', 't', 'o', 'o', 't', 'h', '2', '0', '2', '3'};
+    uint8_t iv[16] {'E', 'R', 'a', 'B', 'l', 'u', 'e', 't', 'o', 'o', 't', 'h', '2', '0', '2', '3'};
+    uint8_t ivLen {16};
     mbedtls_cipher_context_t ctx;
 };
 

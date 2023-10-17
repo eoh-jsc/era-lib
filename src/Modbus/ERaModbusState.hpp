@@ -5,6 +5,7 @@ enum ModbusStateT {
     STATE_MB_RUNNING = 0x00,
     STATE_MB_CONTROLLED = 0x01,
     STATE_MB_PARSE = 0x02,
+    STATE_MB_SCAN = 0x03,
     STATE_MB_INIT = 0xFF
 };
 

@@ -12,7 +12,8 @@
 #include <Adapters/ERaEthernetClient.hpp>
 #include <ERa/ERaApiStm32.hpp>
 #include <Modbus/ERaModbusStm32.hpp>
-#include <Utility/ERaFlashStm32.hpp>
+#include <Zigbee/ERaZigbeeStm32.hpp>
+#include <Storage/ERaFlashStm32.hpp>
 #include <Task/ERaTaskStm32.hpp>
 
 #if !defined(NO_GLOBAL_INSTANCES) && !defined(NO_GLOBAL_ERA)

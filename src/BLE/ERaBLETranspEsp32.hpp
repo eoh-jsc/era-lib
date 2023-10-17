@@ -5,6 +5,7 @@
 #include <BLEServer.h>
 #include <BLEUtils.h>
 #include <BLE2902.h>
+#include <BLE/ERaBLEConfig.hpp>
 #include <BLE/ERaParse.hpp>
 #include <ERa/ERaOTP.hpp>
 #include <ERa/ERaTransp.hpp>
@@ -29,19 +30,38 @@ class ERaBLETransp
 	const char* TAG = "BLETransp";
 
 public:
-    ERaBLETransp(bool _base64 = false)
+    ERaBLETransp(ERaCallbacksHelper& helper,
+                bool _base64 = false,
+                bool _encrypt = true)
         : ERaEncryptMbedTLS(_base64)
         , transpProp(ERaBluetooth::instance())
+        , api(NULL)
         , timeout(1000L)
         , _connected(false)
         , initialized(false)
-        , topic(NULL)
-        , callback(NULL)
+        , useEncrypt(_encrypt)
+        , pServer(NULL)
+        , pService(NULL)
+        , pCharacteristicTKN(NULL)
+        , pCharacteristicRSP(NULL)
+        , pCharacteristicCMD(NULL)
     {
-        ERa.setERaTransp(*this);
+        helper.setERaTransp(this);
     }
     ~ERaBLETransp()
     {}
+
+    void setAPI(ERaApiHandler* api) {
+        this->api = api;
+    }
+
+    void setAPI(ERaApiHandler& api) {
+        this->api = &api;
+    }
+
+    void setEncrypt(bool _encrypt = true) {
+        this->useEncrypt = _encrypt;
+    }
 
     void setTranspProperty(void* args) {
         if (args == NULL) {
@@ -73,41 +93,41 @@ public:
         }
         BLEDevice::init(this->transpProp->address);
 
-        pServer = BLEDevice::createServer();
-        pServer->setCallbacks(this);
+        this->pServer = BLEDevice::createServer();
+        this->pServer->setCallbacks(this);
 
-        pService = pServer->createService(SERVICE_UUID);
+        this->pService = this->pServer->createService(SERVICE_UUID);
 
-        pCharacteristicTKN = pService->createCharacteristic(
+        this->pCharacteristicTKN = this->pService->createCharacteristic(
                                 CHARACTERISTIC_UUID_TKN,
                                 BLECharacteristic::PROPERTY_READ
                             );
 
-        pCharacteristicTKN->setCallbacks(this);
+        this->pCharacteristicTKN->setCallbacks(this);
 
-        pCharacteristicRSP = pService->createCharacteristic(
+        this->pCharacteristicRSP = this->pService->createCharacteristic(
                                 CHARACTERISTIC_UUID_RSP,
                                 BLECharacteristic::PROPERTY_NOTIFY
                             );
 
-        pCharacteristicRSP->addDescriptor(new BLE2902());
+        this->pCharacteristicRSP->addDescriptor(new BLE2902());
 
-        pCharacteristicCMD = pService->createCharacteristic(
+        this->pCharacteristicCMD = this->pService->createCharacteristic(
                                 CHARACTERISTIC_UUID_CMD,
                                 BLECharacteristic::PROPERTY_WRITE
                             );
 
-        pCharacteristicCMD->setCallbacks(this);
+        this->pCharacteristicCMD->setCallbacks(this);
 
         static BLESecurity* pSecurity = new BLESecurity();
         pSecurity->setAuthenticationMode(ESP_LE_AUTH_BOND);
 
-        pService->start();
+        this->pService->start();
 
-        pServer->getAdvertising()->addServiceUUID(pService->getUUID());
-        pServer->getAdvertising()->setAppearance(0x00);
-        pServer->getAdvertising()->setScanResponse(true);
-        pServer->getAdvertising()->start();
+        this->pServer->getAdvertising()->addServiceUUID(this->pService->getUUID());
+        this->pServer->getAdvertising()->setAppearance(0x00);
+        this->pServer->getAdvertising()->setScanResponse(true);
+        this->pServer->getAdvertising()->start();
 
         this->initialized = true;
     }
@@ -116,14 +136,6 @@ public:
         if (!this->connected()) {
             return;
         }
-    }
-
-    void setTopic(const char* _topic) override {
-        this->topic = _topic;
-    }
-
-    void onMessage(MessageCallback_t cb) override {
-        this->callback = cb;
     }
 
     int connect(IPAddress ip, uint16_t port) override {
@@ -151,8 +163,11 @@ public:
     }
 
     size_t write(const uint8_t* buf, size_t size) override {
-        pCharacteristicRSP->setValue((uint8_t*)buf, size);
-        pCharacteristicRSP->notify();
+        if (this->pCharacteristicRSP == NULL) {
+            return 0;
+        }
+        this->pCharacteristicRSP->setValue((uint8_t*)buf, size);
+        this->pCharacteristicRSP->notify();
         return size;
     }
 
@@ -174,7 +189,7 @@ public:
     int read(uint8_t* buf, size_t size) override {
         MillisTime_t startMillis = ERaMillis();
         while (ERaMillis() - startMillis < this->timeout) {
-            if (this->available() < size) {
+            if (this->available() < (int)size) {
                 ERaDelay(1);
             }
             else {
@@ -205,6 +220,10 @@ public:
 
     operator bool() override {
         return this->_connected;
+    }
+
+    static ERaBLETransp& getInstance() {
+        return ERaBLETransp::instance;
     }
 
 protected:
@@ -243,11 +262,19 @@ private:
         if (size) {
             size_t dataLen {0};
             uint8_t* data = nullptr;
-            ERaEncryptMbedTLS::decrypt(rxValue, size, data, dataLen);
+            if (this->useEncrypt) {
+                ERaEncryptMbedTLS::decrypt(rxValue, size, data, dataLen);
+            }
+            else {
+                data = (uint8_t*)rxValue;
+                dataLen = size;
+            }
             if (dataLen && (data != nullptr)) {
                 this->progress((char*)data);
                 ERA_LOG(TAG, ERA_PSTR("BLE data (%d): %s"), dataLen, data);
-                free(data);
+                if (data != rxValue) {
+                    free(data);
+                }
                 data = nullptr;
             }
             else {
@@ -272,7 +299,8 @@ private:
         if (cJSON_IsNumber(item)) {
             otp = item->valueint;
         }
-        if (ERaOTP::run(otp)) {
+        if (ERaOTP::run(otp) ||
+            !this->useEncrypt) {
             status = this->onCallback(root);
         }
 
@@ -297,6 +325,8 @@ private:
             return false;
         }
 
+        unsigned int userID {0};
+
         cJSON* item = cJSON_GetObjectItem(root, "type");
         if (!cJSON_IsString(item)) {
             return false;
@@ -311,8 +341,15 @@ private:
         if (!ERaStrCmp(item->valuestring, this->transpProp->password)) {
             return false;
         }
+        item = cJSON_GetObjectItem(root, "user");
+        if (cJSON_IsNumber(item)) {
+            userID = item->valueint;
+        }
         item = cJSON_GetObjectItem(root, "command");
         if (!cJSON_IsString(item)) {
+            return false;
+        }
+        if (strlen(item->valuestring) != 36) {
             return false;
         }
 
@@ -344,6 +381,13 @@ private:
 
         cJSON_AddItemToArray(array, cJSON_CreateString(item->valuestring));
         cJSON_AddItemToObject(subObject, "commands", array);
+
+        cJSON* paramItem = cJSON_GetObjectItem(root, "value");
+        if (paramItem != nullptr) {
+            cJSON_AddItemToObject(subObject, "value",
+                    cJSON_Duplicate(paramItem, true));
+        }
+
         payload = cJSON_PrintUnformatted(object);
 
         if (payload != nullptr) {
@@ -352,18 +396,39 @@ private:
             free(payload);
         }
 
+        /* Publish action log */
+        this->publishActionLog(userID, item->valuestring);
+
         cJSON_Delete(object);
         payload = nullptr;
         object = nullptr;
         return status;
     }
 
+    void publishActionLog(unsigned int userID, const char* alias) {
+        if (!userID) {
+            return;
+        }
+        if (alias == nullptr) {
+            return;
+        }
+        if (this->api == nullptr) {
+            return;
+        }
+
+        char message[256] {0};
+        FormatString(message, MESSAGE_BLE_ACTION_LOG, userID, alias);
+#if defined(ERA_SPECIFIC)
+        this->api->specificDataWrite(TOPIC_BLE_ACTION_LOG, message, true, false);
+#endif
+    }
+
     ERaBluetooth*& transpProp;
+    ERaApiHandler* api;
     unsigned long timeout;
     bool _connected;
     bool initialized;
-    const char* topic;
-    MessageCallback_t callback;
+    bool useEncrypt;
     ERaQueue<uint8_t, ERA_MAX_READ_BYTES> rxBuffer;
 
     BLEServer* pServer;

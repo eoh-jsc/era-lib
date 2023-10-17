@@ -1,13 +1,15 @@
 #ifndef INC_ERA_SIMPLE_ESP32_GSM_HPP_
 #define INC_ERA_SIMPLE_ESP32_GSM_HPP_
 
-#define ERA_NO_RTOS
+#if !defined(ERA_ZIGBEE)
+    #define ERA_NO_RTOS
+#endif
 
-#include <Adapters/ERaGsmClient.hpp>
+#include <Adapters/ERaTinyGsmClient.hpp>
 #include <ERa/ERaApiEsp32.hpp>
 #include <Modbus/ERaModbusEsp32.hpp>
 #include <Zigbee/ERaZigbeeEsp32.hpp>
-#include <Utility/ERaFlashEsp32.hpp>
+#include <Storage/ERaFlashEsp32.hpp>
 #include <Task/ERaTaskEsp32.hpp>
 
 #if !defined(NO_GLOBAL_INSTANCES) && !defined(NO_GLOBAL_ERA)

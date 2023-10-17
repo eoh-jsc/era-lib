@@ -6,6 +6,18 @@
 #if !defined(PROTO_HAS_FUNCTIONAL_H)
     template <class Transp, class Flash>
     inline
+    void ERaProto<Transp, Flash>::_onConnected() {
+        ERa.ERaProto::onConnected();
+    }
+
+    template <class Transp, class Flash>
+    inline
+    void ERaProto<Transp, Flash>::_onDisconnected() {
+        ERa.ERaProto::onDisconnected();
+    }
+
+    template <class Transp, class Flash>
+    inline
     void ERaProto<Transp, Flash>::_processRequest(const char* topic, const char* payload) {
         ERa.ERaProto::processRequest(topic, payload);
     }

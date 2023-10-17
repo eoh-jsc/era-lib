@@ -13,7 +13,8 @@ void ERaUdp<Udp>::getWiFiName(char(&ptr)[size], bool withPrefix) {
     }
     ClearArray(ptr);
     if (withPrefix) {
-        FormatString(ptr, "eoh.era.%04x%08x", static_cast<uint16_t>(unique >> 32), static_cast<uint32_t>(unique));
+        FormatString(ptr, "eoh.%s.%04x%08x", ((this->pModel != nullptr) ? this->pModel : ERA_MODEL_NAME),
+                                            static_cast<uint16_t>(unique >> 32), static_cast<uint32_t>(unique));
     } else {
         FormatString(ptr, "era.%04x%08x", static_cast<uint16_t>(unique >> 32), static_cast<uint32_t>(unique));
     }
@@ -31,7 +32,7 @@ void ERaUdp<Udp>::getImeiChip(char(&ptr)[size]) {
 #ifdef ERA_AUTH_TOKEN
     FormatString(ptr, ERA_AUTH_TOKEN);
 #else
-    if (this->authToken != nullptr) {
+    if ((this->authToken != nullptr) && strlen(this->authToken)) {
         FormatString(ptr, this->authToken);
     }
     else {

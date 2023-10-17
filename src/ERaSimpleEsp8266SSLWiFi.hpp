@@ -10,7 +10,7 @@
 #include <Adapters/ERaArduinoWiFiClient.hpp>
 #include <ERa/ERaApiArduino.hpp>
 #include <Modbus/ERaModbusArduino.hpp>
-#include <Utility/ERaFlashEsp8266.hpp>
+#include <Storage/ERaFlashEsp8266.hpp>
 #include <MQTT/ERaMqttSecure.hpp>
 #include <Task/ERaTaskEsp8266.hpp>
 

@@ -6,6 +6,8 @@
 #include <ERa/ERaHelperDef.hpp>
 #include <Utility/ERaQueue.hpp>
 
+#define LENGTH_SECRET_KEY   16
+
 class ERaBluetooth
 {
     enum ParseConfigT {
@@ -21,14 +23,18 @@ public:
     ~ERaBluetooth()
     {}
 
-    void parseConfig(char* ptr);
+    void parseConfig(const char* ptr);
     bool updateHashID(const char* hash);
+    bool equals(const char* hash);
+
+    bool operator == (const char* hash);
+    bool operator != (const char* hash);
 
     unsigned int id;
     char hashID[37];
     char address[17];
     char password[17];
-    uint8_t secretKey[16];
+    uint8_t secretKey[LENGTH_SECRET_KEY];
 
     static ERaBluetooth*& instance() {
         static ERaBluetooth* _instance = nullptr;
@@ -44,16 +50,18 @@ public:
 
 protected:
 private:
-    void processParseConfig(int part, char* ptr, size_t len);
-    void processParseConfigId(char* ptr, size_t len);
-    void processParseConfigAddress(char* ptr, size_t len);
-    void processParseConfigPassword(char* ptr, size_t len);
-    void processParseConfigSecretKey(char* ptr, size_t len);
-
+    void processParseConfig(int part, const char* ptr, size_t len);
+    void processParseConfigId(const char* ptr, size_t len);
+    void processParseConfigAddress(const char* ptr, size_t len);
+    void processParseConfigPassword(const char* ptr, size_t len);
+    void processParseConfigSecretKey(const char* ptr, size_t len);
+    void copyPasswordToSecretKey() {
+        CopyToArray(this->password, this->secretKey);
+    }
 };
 
 inline
-void ERaBluetooth::parseConfig(char* ptr) {
+void ERaBluetooth::parseConfig(const char* ptr) {
     if (ptr == nullptr) {
         return;
     }
@@ -71,6 +79,8 @@ void ERaBluetooth::parseConfig(char* ptr) {
             position = i + 1;
         }
     }
+
+    this->copyPasswordToSecretKey();
 }
 
 inline
@@ -86,7 +96,31 @@ bool ERaBluetooth::updateHashID(const char* hash) {
 }
 
 inline
-void ERaBluetooth::processParseConfig(int part, char* ptr, size_t len) {
+bool ERaBluetooth::equals(const char* hash) {
+    if (hash == nullptr) {
+        return false;
+    }
+    return !strcmp(this->hashID, hash);
+}
+
+inline
+bool ERaBluetooth::operator == (const char* hash) {
+    if (hash == nullptr) {
+        return false;
+    }
+    return !strcmp(this->hashID, hash);
+}
+
+inline
+bool ERaBluetooth::operator != (const char* hash) {
+    if (hash == nullptr) {
+        return false;
+    }
+    return strcmp(this->hashID, hash);
+}
+
+inline
+void ERaBluetooth::processParseConfig(int part, const char* ptr, size_t len) {
 	switch(part) {
 		case ParseConfigT::PARSE_CONFIG_ID:
 			this->processParseConfigId(ptr, len);
@@ -106,7 +140,7 @@ void ERaBluetooth::processParseConfig(int part, char* ptr, size_t len) {
 }
 
 inline
-void ERaBluetooth::processParseConfigId(char* ptr, size_t len) {
+void ERaBluetooth::processParseConfigId(const char* ptr, size_t len) {
     LOC_BUFFER_PARSE
 
     memcpy(buf, ptr, len);
@@ -116,7 +150,7 @@ void ERaBluetooth::processParseConfigId(char* ptr, size_t len) {
 }
 
 inline
-void ERaBluetooth::processParseConfigAddress(char* ptr, size_t len) {
+void ERaBluetooth::processParseConfigAddress(const char* ptr, size_t len) {
     if (len != 16) {
         return;
     }
@@ -128,7 +162,7 @@ void ERaBluetooth::processParseConfigAddress(char* ptr, size_t len) {
 }
 
 inline
-void ERaBluetooth::processParseConfigPassword(char* ptr, size_t len) {
+void ERaBluetooth::processParseConfigPassword(const char* ptr, size_t len) {
     if (len != 16) {
         return;
     }
@@ -140,7 +174,7 @@ void ERaBluetooth::processParseConfigPassword(char* ptr, size_t len) {
 }
 
 inline
-void ERaBluetooth::processParseConfigSecretKey(char* ptr, size_t len) {
+void ERaBluetooth::processParseConfigSecretKey(const char* ptr, size_t len) {
     if (len != 16) {
         return;
     }

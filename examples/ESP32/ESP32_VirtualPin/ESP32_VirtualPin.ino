@@ -24,14 +24,11 @@
 
 #include <Arduino.h>
 #include <ERa.hpp>
-#include <ERa/ERaTimer.hpp>
 
 #define LED_PIN  2
 
 const char ssid[] = "YOUR_SSID";
 const char pass[] = "YOUR_PASSWORD";
-
-ERaTimer timer;
 
 /* This function is called every time the Virtual Pin 0 state change */
 ERA_WRITE(V0) {
@@ -43,7 +40,8 @@ ERA_WRITE(V0) {
 
 /* This function send uptime every second to Virtual Pin 1 */
 void timerEvent() {
-    ERa.virtualWrite(V1, millis() / 1000L);
+    ERa.virtualWrite(V1, ERaMillis() / 1000L);
+    ERA_LOG("Timer", "Uptime: %d", ERaMillis() / 1000L);
 }
 
 void setup() {
@@ -59,10 +57,9 @@ void setup() {
     ERa.begin(ssid, pass);
 
     /* Setup timer called function every second */
-    timer.setInterval(1000L, timerEvent);
+    ERa.addInterval(1000L, timerEvent);
 }
 
 void loop() {
     ERa.run();
-    timer.run();
 }

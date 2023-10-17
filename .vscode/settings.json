@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "tuple": "cpp",
+        "string_view": "cpp",
+        "string": "cpp"
+    }
+}

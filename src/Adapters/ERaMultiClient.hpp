@@ -2,10 +2,16 @@
 #define INC_ERA_MULTI_CLIENT_HPP_
 
 #if !defined(ERA_PROTO_TYPE)
-    #define ERA_PROTO_TYPE            "Multi"
+    #define ERA_PROTO_TYPE          "Multi"
 #endif
 
-#define ERA_MAX_CLIENT  3
+#if !defined(ERA_AUTH_TOKEN)
+    #error "Please specify your ERA_AUTH_TOKEN"
+#endif
+
+#if !defined(ERA_MAX_CLIENT)
+    #define ERA_MAX_CLIENT          3
+#endif
 
 #include <ERa/ERaProtocol.hpp>
 #include <MQTT/ERaMqtt.hpp>
@@ -24,9 +30,9 @@ class ERaMulti
     : public ERaProto<Transport, ERaFlash>
 {
 #if defined(TIMER_HAS_FUNCTIONAL_H)
-    typedef std::function<int16_t(void)> GetSignalCallback_t;
+    typedef std::function<int16_t(void)> ClientConnectCallback_t;
 #else
-    typedef int16_t (*GetSignalCallback_t)(void);
+    typedef int16_t (*ClientConnectCallback_t)(void);
 #endif
 
     const char* TAG = "Multi";
@@ -36,7 +42,7 @@ class ERaMulti
     typedef struct __EntryClient_t {
         String name;
         Client* client;
-        GetSignalCallback_t cb;
+        ClientConnectCallback_t cb;
     } EntryClient_t;
 
 public:
@@ -48,16 +54,21 @@ public:
     ~ERaMulti()
     {}
 
-    bool addClient(const String& name, Client& client,
-                    GetSignalCallback_t cb = nullptr) {
+    bool addClient(const String& name, Client* client,
+                    ClientConnectCallback_t cb = nullptr) {
         if (this->numClient >= ERA_MAX_CLIENT) {
             return false;
         }
         EntryClient_t& e = this->eClient[this->numClient++];
         e.name = name;
-        e.client = &client;
+        e.client = client;
         e.cb = cb;
         return true;
+    }
+
+    bool addClient(const String& name, Client& client,
+                    ClientConnectCallback_t cb = nullptr) {
+        return this->addClient(name, &client, cb);
     }
 
     void config(const char* auth,
@@ -70,12 +81,19 @@ public:
     }
 
     void begin(const char* auth,
-                const char* host = ERA_MQTT_HOST,
-                uint16_t port = ERA_MQTT_PORT,
-                const char* username = ERA_MQTT_USERNAME,
-                const char* password = ERA_MQTT_PASSWORD) {
+                const char* host,
+                uint16_t port,
+                const char* username,
+                const char* password) {
         Base::init();
         this->config(auth, host, port, username, password);
+    }
+
+    void begin(const char* auth,
+                const char* host = ERA_MQTT_HOST,
+                uint16_t port = ERA_MQTT_PORT) {
+        this->begin(auth, host, port,
+                    auth, auth);
     }
 
     void begin() {
@@ -107,19 +125,35 @@ private:
             return false;
         }
         for (int i = 0; i < this->numClient; ++i) {
+            ERaWatchdogFeed();
+
             if (this->eClient[i].cb != nullptr) {
-                this->getTransp().setSignalQuality(this->eClient[i].cb());
+                int16_t signal = this->eClient[i].cb();
+                if (!signal) {
+                    ERA_LOG_ERROR(TAG, ERA_PSTR("%s connect network failed"), this->eClient[i].name.c_str());
+                    continue;
+                }
+                this->getTransp().setSignalQuality(signal);
             }
             else {
                 this->getTransp().setSignalQuality(100);
             }
+
+            ERaWatchdogFeed();
+
             this->getTransp().setClient(this->eClient[i].client);
             this->getTransp().setSSID(this->eClient[i].name.c_str());
             if (!Base::connect()) {
-                ERA_LOG(TAG, ERA_PSTR("Switch to %s client failed"), this->eClient[i].name.c_str());
+                ERA_LOG_ERROR(TAG, ERA_PSTR("Switch to %s client failed"), this->eClient[i].name.c_str());
                 continue;
             }
+
+            ERaWatchdogFeed();
+
             ERaOptConnected(this);
+
+            ERaWatchdogFeed();
+
             ERA_LOG(TAG, ERA_PSTR("Switch to %s client OK"), this->eClient[i].name.c_str());
             return true;
         }
@@ -138,6 +172,8 @@ void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
     cJSON_AddStringToObject(root, INFO_MODEL, ERA_MODEL_TYPE);
 	cJSON_AddStringToObject(root, INFO_BOARD_ID, this->thisProto().getBoardID());
 	cJSON_AddStringToObject(root, INFO_AUTH_TOKEN, this->thisProto().getAuth());
+    cJSON_AddStringToObject(root, INFO_BUILD_DATE, BUILD_DATE_TIME);
+    cJSON_AddStringToObject(root, INFO_VERSION, ERA_VERSION);
     cJSON_AddStringToObject(root, INFO_FIRMWARE_VERSION, ERA_FIRMWARE_VERSION);
     cJSON_AddStringToObject(root, INFO_SSID, ((this->thisProto().getTransp().getSSID() == nullptr) ?
                                             ERA_PROTO_TYPE : this->thisProto().getTransp().getSSID()));
@@ -146,6 +182,9 @@ void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
     cJSON_AddStringToObject(root, INFO_MAC, ERA_PROTO_TYPE);
     cJSON_AddStringToObject(root, INFO_LOCAL_IP, ERA_PROTO_TYPE);
     cJSON_AddNumberToObject(root, INFO_PING, this->thisProto().getTransp().getPing());
+
+    /* Override info */
+    ERaInfo(root);
 }
 
 template <class Proto, class Flash>
@@ -162,6 +201,9 @@ void ERaApi<Proto, Flash>::addModbusInfo(cJSON* root) {
 	cJSON_AddNumberToObject(root, INFO_MB_RSSI, this->thisProto().getTransp().getSignalQuality());
 	cJSON_AddStringToObject(root, INFO_MB_WIFI_USING, ((this->thisProto().getTransp().getSSID() == nullptr) ?
                                                     ERA_PROTO_TYPE : this->thisProto().getTransp().getSSID()));
+
+    /* Override modbus info */
+    ERaModbusInfo(root);
 }
 
 #endif /* INC_ERA_MULTI_CLIENT_HPP_ */

@@ -25,12 +25,9 @@
 
 #include <Arduino.h>
 #include <ERa.hpp>
-#include <ERa/ERaTimer.hpp>
 
 const char ssid[] = "YOUR_SSID";
 const char pass[] = "YOUR_PASSWORD";
-
-ERaTimer timer;
 
 /* This function print uptime every second */
 void timerEvent() {
@@ -47,10 +44,9 @@ void setup() {
     ERa.begin(ssid, pass);
 
     /* Setup timer called function every second */
-    timer.setInterval(1000L, timerEvent);
+    ERa.addInterval(1000L, timerEvent);
 }
 
 void loop() {
     ERa.run();
-    timer.run();
 }

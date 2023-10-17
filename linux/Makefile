@@ -6,6 +6,13 @@
 #    sudo era --token=YourAuthToken
 #    sudo era --token=YourAuthToken --id=YourBoardID
 #
+# To build on TinkerBoard:
+# 1. Install WiringPi: https://github.com/TinkerBoard/gpio_lib_c/
+# 2. Run:
+#    make clean all target=tinker
+#    sudo era --token=YourAuthToken
+#    sudo era --token=YourAuthToken --id=YourBoardID
+#
 
 CC ?= gcc
 CXX ?= g++
@@ -51,6 +58,16 @@ ifeq ($(target),raspberry)
 	LDFLAGS += -lwiringPi
 endif
 
+ifeq ($(target),tinker)
+	CXXFLAGS += -DTINKER_BOARD
+	LDFLAGS += -lwiringPi
+endif
+
+ifeq ($(target),orangepi)
+	CXXFLAGS += -DORANGE_PI
+	LDFLAGS += -lwiringPi
+endif
+
 ifeq ($(modbus),true)
 	CXXFLAGS += -DERA_MODBUS
 endif
@@ -75,8 +92,24 @@ ifeq ($(ota),true)
 	CXXFLAGS += -DERA_OTA
 endif
 
+ifeq ($(nortos),true)
+	CXXFLAGS += -DERA_NO_RTOS
+endif
+
 ifeq ($(location),VN)
 	CXXFLAGS += -DERA_LOCATION_VN
+endif
+
+ifdef dev_modbus
+	CXXFLAGS += -DERA_DEV_MODBUS=$(dev_modbus)
+endif
+
+ifdef dev_zigbee
+	CXXFLAGS += -DERA_DEV_ZIGBEE=$(dev_zigbee)
+endif
+
+ifdef event
+	CXXFLAGS += -DERA_MAX_EVENTS=$(event)
 endif
 
 ifdef qos
@@ -93,6 +126,9 @@ SOURCES=main.cpp \
 	../src/Utility/cJSON.cpp \
 	../src/Utility/ERacJSON.cpp \
 	../src/Utility/ERaUtility.cpp \
+	../src/Utility/Base64.cpp \
+	../src/Utility/CRC32.cpp \
+	../src/Utility/MD5.cpp \
 	MQTT/MQTT/unix/unix.cpp \
 	MQTT/MQTT/MQTTLinux.cpp
 

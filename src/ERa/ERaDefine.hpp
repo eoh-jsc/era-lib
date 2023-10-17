@@ -36,7 +36,11 @@
 #define ERA_FORCE_UNUSED(x)     ((void)(x))
 
 #if defined(ARDUINO) && defined(ESP32)
-    #define SEND_UART(huart, command, length)   while(uart_write_bytes(huart, reinterpret_cast<char*>(command), length) < 0)
+#if (ESP_IDF_VERSION_MAJOR < 4)
+    #define SEND_UART(huart, command, length)   while(uart_write_bytes(huart, reinterpret_cast<const char*>(command), length) < 0)
+#else
+    #define SEND_UART(huart, command, length)   while(uart_write_bytes(huart, reinterpret_cast<const void*>(command), length) < 0)
+#endif
     #define WAIT_SEND_UART_DONE(huart)          uart_wait_tx_done(huart, 5000)
     #define FLUSH_UART(huart)                   uart_flush(huart)
 

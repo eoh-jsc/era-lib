@@ -1,6 +1,7 @@
 #ifndef INC_WRAPPER_STRING_HPP_
 #define INC_WRAPPER_STRING_HPP_
 
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -112,6 +113,18 @@ public:
             }
 		}
 		va_end(arg);
+    }
+
+    void print(const char* _value) {
+        this->printf(_value);
+    }
+
+    void println() {
+        this->print("\r\n");
+    }
+
+    void println(const char* _value) {
+        this->printf("%s\r\n", _value);
     }
 
     void concat(const char* _value) {
@@ -255,6 +268,42 @@ public:
 #endif
 
 #endif
+
+    size_t size() const {
+        if (this->value == nullptr) {
+            return 0;
+        }
+        return strlen(this->value);
+    }
+
+    size_t length() const {
+        if (this->value == nullptr) {
+            return 0;
+        }
+        return strlen(this->value);
+    }
+
+    char& at(size_t index) {
+        return this->value[index];
+    }
+
+    void toLowerCase() {
+        size_t len = this->length();
+        for (size_t i = 0; i < len; ++i) {
+            this->value[i] = ::tolower(this->value[i]);
+        }
+    }
+
+    void toUpperCase() {
+        size_t len = this->length();
+        for (size_t i = 0; i < len; ++i) {
+            this->value[i] = ::toupper(this->value[i]);
+        }
+    }
+
+    char& operator [] (int index) {
+        return this->value[index];
+    }
 
     WrapperString& operator = (const WrapperString& _value) {
         if (this == &_value) {

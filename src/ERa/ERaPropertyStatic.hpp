@@ -4,7 +4,7 @@
 #include <ERa/ERaProperty.hpp>
 
 #if !defined(PROPERTY_HAS_FUNCTIONAL_H)
-    template<class Api>
+    template <class Api>
     inline
     void ERaProperty<Api>::_onCallback(void* args) {
         ERa.ERaProperty::onCallback(args);

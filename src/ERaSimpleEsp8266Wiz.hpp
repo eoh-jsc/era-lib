@@ -9,7 +9,7 @@
 #include <Adapters/ERaEthernetClient.hpp>
 #include <ERa/ERaApiArduino.hpp>
 #include <Modbus/ERaModbusArduino.hpp>
-#include <Utility/ERaFlashEsp8266.hpp>
+#include <Storage/ERaFlashEsp8266.hpp>
 #include <Task/ERaTaskEsp8266.hpp>
 
 #if !defined(NO_GLOBAL_INSTANCES) && !defined(NO_GLOBAL_ERA)

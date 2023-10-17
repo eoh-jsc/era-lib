@@ -5,6 +5,10 @@
     #define ERA_PROTO_TYPE            "WiFi"
 #endif
 
+#if !defined(ERA_AUTH_TOKEN)
+    #error "Please specify your ERA_AUTH_TOKEN"
+#endif
+
 #include <ERa/ERaProtocol.hpp>
 #include <MQTT/ERaMqtt.hpp>
 
@@ -101,31 +105,50 @@ public:
     {}
 
     bool connectWiFi(const char* ssid, const char* pass) {
+        if (!strlen(ssid)) {
+            return false;
+        }
+
+        ERaWatchdogFeed();
+
         int status = WiFi.status();
 
         if (status == WL_NO_SHIELD) {
-            ERA_LOG(TAG, ERA_PSTR("WiFi module not found"));
+            ERA_LOG_ERROR(TAG, ERA_PSTR("WiFi module not found"));
         }
 
         while (status != WL_CONNECTED) {
+            ERaWatchdogFeed();
+
             ERA_LOG(TAG, ERA_PSTR("Connecting to %s..."), ssid);
             if (pass && strlen(pass)) {
                 status = WiFi.begin((char*)ssid, (char*)pass);
             } else {
+#if defined(ARDUINO_MBED_HAS_WIFI)
+                status = WiFi.begin((char*)ssid, (char*)"");
+#else
                 status = WiFi.begin((char*)ssid);
+#endif
             }
+
+            ERaWatchdogFeed();
 
             MillisTime_t startMillis = ERaMillis();
             while (status != WL_CONNECTED) {
                 ERaDelay(500);
+                ERaWatchdogFeed();
                 status = WiFi.status();
                 if (!ERaRemainingTime(startMillis, WIFI_NET_CONNECT_TIMEOUT)) {
                     WiFi.disconnect();
+                    ERA_LOG_ERROR(TAG, ERA_PSTR("Connect %s timeout"), ssid);
                     break;
                 }
             }
         }
         this->getTransp().setSSID(ssid);
+
+        ERaWatchdogFeed();
+
         ERA_LOG(TAG, ERA_PSTR("Connected to WiFi"));
         ERA_LOG(TAG, ERA_PSTR("IP: %s"), ::getLocalIP().c_str());
         return true;
@@ -143,14 +166,24 @@ public:
     void begin(const char* auth,
                 const char* ssid,
                 const char* pass,
-                const char* host = ERA_MQTT_HOST,
-                uint16_t port = ERA_MQTT_PORT,
-                const char* username = ERA_MQTT_USERNAME,
-                const char* password = ERA_MQTT_PASSWORD) {
+                const char* host,
+                uint16_t port,
+                const char* username,
+                const char* password) {
         Base::init();
         this->config(auth, host, port, username, password);
         this->connectWiFi(ssid, pass);
         this->setWiFi(ssid, pass);
+    }
+
+    void begin(const char* auth,
+                const char* ssid,
+                const char* pass,
+                const char* host = ERA_MQTT_HOST,
+                uint16_t port = ERA_MQTT_PORT) {
+        this->begin(auth, ssid, pass,
+                    host, port, auth,
+                    auth);
     }
 
     void begin(const char* ssid,
@@ -178,7 +211,7 @@ public:
                 Base::run();
                 break;
             default:
-                if (this->connected() ||
+                if (this->netConnected() ||
                     this->connectWiFi(ERaConfig.ssid, ERaConfig.pass)) {
                     ERaState::set(StateT::STATE_CONNECTING_CLOUD);
                 }
@@ -193,7 +226,7 @@ private:
         CopyToArray(pass, ERaConfig.pass);
     }
 
-    bool connected() {
+    bool netConnected() const {
         return (WiFi.status() == WL_CONNECTED);
     }
 
@@ -207,6 +240,8 @@ void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
     cJSON_AddStringToObject(root, INFO_MODEL, ERA_MODEL_TYPE);
 	cJSON_AddStringToObject(root, INFO_BOARD_ID, this->thisProto().getBoardID());
 	cJSON_AddStringToObject(root, INFO_AUTH_TOKEN, this->thisProto().getAuth());
+    cJSON_AddStringToObject(root, INFO_BUILD_DATE, BUILD_DATE_TIME);
+    cJSON_AddStringToObject(root, INFO_VERSION, ERA_VERSION);
     cJSON_AddStringToObject(root, INFO_FIRMWARE_VERSION, ERA_FIRMWARE_VERSION);
     cJSON_AddStringToObject(root, INFO_SSID, ::getSSID().c_str());
     cJSON_AddStringToObject(root, INFO_BSSID, ::getBSSID().c_str());
@@ -214,6 +249,9 @@ void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
     cJSON_AddStringToObject(root, INFO_MAC, ::getMAC().c_str());
     cJSON_AddStringToObject(root, INFO_LOCAL_IP,::getLocalIP().c_str());
     cJSON_AddNumberToObject(root, INFO_PING, this->thisProto().getTransp().getPing());
+
+    /* Override info */
+    ERaInfo(root);
 }
 
 template <class Proto, class Flash>
@@ -229,6 +267,9 @@ void ERaApi<Proto, Flash>::addModbusInfo(cJSON* root) {
 	cJSON_AddNumberToObject(root, INFO_MB_IS_BATTERY, 0);
 	cJSON_AddNumberToObject(root, INFO_MB_RSSI, WiFi.RSSI());
 	cJSON_AddStringToObject(root, INFO_MB_WIFI_USING, ::getSSID().c_str());
+
+    /* Override modbus info */
+    ERaModbusInfo(root);
 }
 
 #endif /* INC_ERA_ARDUINO_WIFI_CLIENT_HPP_ */

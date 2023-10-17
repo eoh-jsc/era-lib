@@ -17,7 +17,8 @@ enum WrapperTypeT : uint8_t {
     WRAPPER_TYPE_UNSIGNED_LONG_LONG = 7,
     WRAPPER_TYPE_FLOAT = 8,
     WRAPPER_TYPE_DOUBLE = 9,
-    WRAPPER_TYPE_STRING = 10
+    WRAPPER_TYPE_NUMBER = 10,
+    WRAPPER_TYPE_STRING = 11
 };
 
 class WrapperBase
@@ -70,6 +71,11 @@ public:
         return this->type == WrapperTypeT::WRAPPER_TYPE_DOUBLE;
     }
 
+    bool isNumber() const {
+        return ((this->type != WrapperTypeT::WRAPPER_TYPE_INVALID) &&
+                (this->type != WrapperTypeT::WRAPPER_TYPE_STRING));
+    }
+
     bool isString() const {
         return this->type == WrapperTypeT::WRAPPER_TYPE_STRING;
     }
@@ -114,6 +120,10 @@ public:
 
     double getDouble() const {
         return (double)this->get();
+    }
+
+    float getNumber() const {
+        return this->get();
     }
 
     const char* getString() const {
@@ -187,6 +197,11 @@ public:
         return operator = ((float)_value);
     }
 
+    template <typename T>
+    WrapperBase& operator = (T _value) {
+        return operator = ((float)_value);
+    }
+
     WrapperBase& operator = (const char* _value) {
         this->setPtr((const void*)_value);
         return *this;
@@ -244,6 +259,11 @@ public:
         return operator == ((float)_value);
     }
 
+    template <typename T>
+    bool operator == (T _value) const {
+        return operator == ((float)_value);
+    }
+
     bool operator == (const char* _value) const {
         return this->StringCompare(_value);
     }
@@ -297,6 +317,11 @@ public:
     }
 
     bool operator != (double _value) const {
+        return operator != ((float)_value);
+    }
+
+    template <typename T>
+    bool operator != (T _value) const {
         return operator != ((float)_value);
     }
 

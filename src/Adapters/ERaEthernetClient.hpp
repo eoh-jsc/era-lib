@@ -5,6 +5,14 @@
     #define ERA_PROTO_TYPE            "Ethernet"
 #endif
 
+#if !defined(ERA_AUTH_TOKEN)
+    #error "Please specify your ERA_AUTH_TOKEN"
+#endif
+
+#if !defined(ERA_ETHERNET_SPI)
+    #define ERA_ETHERNET_SPI
+#endif
+
 #include <ERa/ERaProtocol.hpp>
 #include <MQTT/ERaMqtt.hpp>
 
@@ -37,12 +45,16 @@ public:
 
     bool connectNetwork(const char* auth,
                         const uint8_t mac[] = nullptr) {
+        ERaWatchdogFeed();
+
         ERA_LOG(TAG, ERA_PSTR("Connecting network..."));
         if (!Ethernet.begin(this->getMacAddress(auth, mac))) {
-            ERA_LOG(TAG, ERA_PSTR("Connect failed"));
+            ERA_LOG_ERROR(TAG, ERA_PSTR("Connect failed"));
             return false;
         }
         this->getTransp().setSSID(ERA_PROTO_TYPE);
+
+        ERaWatchdogFeed();
 
         ERaDelay(1000);
         this->getLocalIP();
@@ -53,9 +65,13 @@ public:
     bool connectNetwork(const char* auth,
                         IPAddress& localIP,
                         const uint8_t mac[] = nullptr) {
+        ERaWatchdogFeed();
+
         ERA_LOG(TAG, ERA_PSTR("Connecting network static IP..."));
         Ethernet.begin(this->getMacAddress(auth, mac), localIP);
         this->getTransp().setSSID(ERA_PROTO_TYPE);
+
+        ERaWatchdogFeed();
 
         ERaDelay(1000);
         this->getLocalIP();
@@ -69,10 +85,14 @@ public:
                         IPAddress& gateway,
                         IPAddress& subnet,
                         const uint8_t mac[] = nullptr) {
+        ERaWatchdogFeed();
+
         ERA_LOG(TAG, ERA_PSTR("Connecting network static IP..."));
         Ethernet.begin(this->getMacAddress(auth, mac),
                         localIP, dns, gateway, subnet);
         this->getTransp().setSSID(ERA_PROTO_TYPE);
+
+        ERaWatchdogFeed();
 
         ERaDelay(1000);
         this->getLocalIP();
@@ -91,15 +111,23 @@ public:
     }
 
     void begin(const char* auth,
-                const uint8_t mac[] = nullptr,
-                const char* host = ERA_MQTT_HOST,
-                uint16_t port = ERA_MQTT_PORT,
-                const char* username = ERA_MQTT_USERNAME,
-                const char* password = ERA_MQTT_PASSWORD) {
+                const uint8_t mac[],
+                const char* host,
+                uint16_t port,
+                const char* username,
+                const char* password) {
         Base::init();
         this->config(auth, host, port, username, password);
         this->connectNetwork(auth, mac);
         this->mode = EthernetModeT::ETH_MODE_DHCP;
+    }
+
+    void begin(const char* auth,
+                const uint8_t mac[] = nullptr,
+                const char* host = ERA_MQTT_HOST,
+                uint16_t port = ERA_MQTT_PORT) {
+        this->begin(auth, mac, host,
+                    port, auth, auth);
     }
 
     void begin(const uint8_t mac[] = nullptr) {
@@ -110,16 +138,25 @@ public:
 
     void begin(const char* auth,
                 IPAddress localIP,
-                const uint8_t mac[] = nullptr,
-                const char* host = ERA_MQTT_HOST,
-                uint16_t port = ERA_MQTT_PORT,
-                const char* username = ERA_MQTT_USERNAME,
-                const char* password = ERA_MQTT_PASSWORD) {
+                const uint8_t mac[],
+                const char* host,
+                uint16_t port,
+                const char* username,
+                const char* password) {
         Base::init();
         this->config(auth, host, port, username, password);
         this->connectNetwork(auth, localIP, mac);
         this->setStaticIP(localIP);
         this->mode = EthernetModeT::ETH_MODE_STATIC_IP;
+    }
+
+    void begin(const char* auth,
+                IPAddress localIP,
+                const uint8_t mac[] = nullptr,
+                const char* host = ERA_MQTT_HOST,
+                uint16_t port = ERA_MQTT_PORT) {
+        this->begin(auth, localIP, mac,
+                    host, port, auth, auth);
     }
 
     void begin(IPAddress localIP,
@@ -134,16 +171,29 @@ public:
                 IPAddress dns,
                 IPAddress gateway,
                 IPAddress subnet,
-                const uint8_t mac[] = nullptr,
-                const char* host = ERA_MQTT_HOST,
-                uint16_t port = ERA_MQTT_PORT,
-                const char* username = ERA_MQTT_USERNAME,
-                const char* password = ERA_MQTT_PASSWORD) {
+                const uint8_t mac[],
+                const char* host,
+                uint16_t port,
+                const char* username,
+                const char* password) {
         Base::init();
         this->config(auth, host, port, username, password);
         this->connectNetwork(auth, localIP, dns, gateway, subnet, mac);
         this->setStaticIP(localIP, dns, gateway, subnet);
         this->mode = EthernetModeT::ETH_MODE_STATIC;
+    }
+
+    void begin(const char* auth,
+                IPAddress localIP,
+                IPAddress dns,
+                IPAddress gateway,
+                IPAddress subnet,
+                const uint8_t mac[] = nullptr,
+                const char* host = ERA_MQTT_HOST,
+                uint16_t port = ERA_MQTT_PORT) {
+        this->begin(auth, localIP, dns,
+                    gateway, subnet, mac,
+                    host, port, auth, auth);
     }
 
     void begin(IPAddress localIP,
@@ -161,6 +211,7 @@ public:
         switch (ERaState::get()) {
             case StateT::STATE_CONNECTING_CLOUD:
                 if (Base::connect()) {
+                    ERaOptConnected(this);
                     ERaState::set(StateT::STATE_CONNECTED);
                 }
                 else {
@@ -174,7 +225,7 @@ public:
                 Base::run();
                 break;
             default:
-                if (this->connected() ||
+                if (this->netConnected() ||
                     this->reConnectNetwork()) {
                     ERaState::set(StateT::STATE_CONNECTING_CLOUD);
                 }
@@ -184,7 +235,7 @@ public:
 
 protected:
 private:
-    bool connected() const {
+    bool netConnected() const {
         return this->_connected;
     }
 
@@ -228,8 +279,8 @@ private:
     uint8_t* getMacAddress(const char* auth,
                         const uint8_t mac[]) {
         if (mac != nullptr) {
-            macUser = (uint8_t*)mac;
-            return macUser;
+            this->macUser = (uint8_t*)mac;
+            return this->macUser;
         }
 
         this->macAddress[0] = 0xFE;
@@ -253,9 +304,9 @@ private:
         }
 
         ERA_LOG(TAG, ERA_PSTR("Get MAC: %02X-%02X-%02X-%02X-%02X-%02X"),
-                this->macAddress[0], this->macAddress[1],
-                this->macAddress[2], this->macAddress[3],
-                this->macAddress[4], this->macAddress[5]);
+                            this->macAddress[0], this->macAddress[1],
+                            this->macAddress[2], this->macAddress[3],
+                            this->macAddress[4], this->macAddress[5]);
         return this->macAddress;
     }
 
@@ -281,6 +332,8 @@ void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
     cJSON_AddStringToObject(root, INFO_MODEL, ERA_MODEL_TYPE);
 	cJSON_AddStringToObject(root, INFO_BOARD_ID, this->thisProto().getBoardID());
 	cJSON_AddStringToObject(root, INFO_AUTH_TOKEN, this->thisProto().getAuth());
+    cJSON_AddStringToObject(root, INFO_BUILD_DATE, BUILD_DATE_TIME);
+    cJSON_AddStringToObject(root, INFO_VERSION, ERA_VERSION);
     cJSON_AddStringToObject(root, INFO_FIRMWARE_VERSION, ERA_FIRMWARE_VERSION);
     cJSON_AddStringToObject(root, INFO_SSID, ERA_PROTO_TYPE);
     cJSON_AddStringToObject(root, INFO_BSSID, ERA_PROTO_TYPE);
@@ -288,6 +341,9 @@ void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
     cJSON_AddStringToObject(root, INFO_MAC, ERA_PROTO_TYPE);
     cJSON_AddStringToObject(root, INFO_LOCAL_IP, ip);
     cJSON_AddNumberToObject(root, INFO_PING, this->thisProto().getTransp().getPing());
+
+    /* Override info */
+    ERaInfo(root);
 }
 
 template <class Proto, class Flash>
@@ -299,6 +355,9 @@ void ERaApi<Proto, Flash>::addModbusInfo(cJSON* root) {
 	cJSON_AddNumberToObject(root, INFO_MB_IS_BATTERY, 0);
 	cJSON_AddNumberToObject(root, INFO_MB_RSSI, 100);
 	cJSON_AddStringToObject(root, INFO_MB_WIFI_USING, ERA_PROTO_TYPE);
+
+    /* Override modbus info */
+    ERaModbusInfo(root);
 }
 
 #endif /* INC_ERA_ETHERNET_CLIENT_HPP_ */

@@ -31,10 +31,10 @@ using namespace std;
 
 class MQTTLinuxClient;
 
-typedef void (*MQTTLinuxClientCallbackSimple)(const char* topic, const char* payload);
+typedef void (*MQTTLinuxClientCallbackSimple)(const char *topic, const char *payload);
 typedef void (*MQTTLinuxClientCallbackAdvanced)(MQTTLinuxClient *client, char topic[], char bytes[], int length);
 #if MQTT_HAS_FUNCTIONAL
-typedef std::function<void(const char* topic, const char* payload)> MQTTLinuxClientCallbackSimpleFunction;
+typedef std::function<void(const char *topic, const char *payload)> MQTTLinuxClientCallbackSimpleFunction;
 typedef std::function<void(MQTTLinuxClient *client, char topic[], char bytes[], int length)>
     MQTTLinuxClientCallbackAdvancedFunction;
 #endif
@@ -112,6 +112,9 @@ class MQTTLinuxClient {
   void setTLS(bool _isTLS);
   void setTLSWithPort(int _port);
   void setSkipACK(bool skip);
+  bool getSkipACK() const {
+    return this->skipACK;
+  }
 
   void setHost(const char _hostname[]) { this->setHost(_hostname, 1883); }
   void setHost(const char hostname[], int port);
@@ -190,5 +193,7 @@ class MQTTLinuxClient {
  private:
   void close();
 };
+
+typedef MQTTLinuxClient MQTTClient;
 
 #endif /* INC_MQTT_LINUX_HPP_ */

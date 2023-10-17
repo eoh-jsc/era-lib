@@ -1,14 +1,16 @@
 #ifndef INC_ERA_SIMPLE_MBED_WIFI_HPP_
 #define INC_ERA_SIMPLE_MBED_WIFI_HPP_
 
-#define ERA_NO_RTOS
+#if !defined(ERA_ZIGBEE)
+    #define ERA_NO_RTOS
+#endif
 
 #include <ERa/ERaApiMbedDef.hpp>
-#include <Adapters/ERaWiFiClient.hpp>
+#include <Adapters/ERaTinyWiFiClient.hpp>
 #include <ERa/ERaApiMbed.hpp>
 #include <Modbus/ERaModbusArduino.hpp>
 #include <Zigbee/ERaZigbeeArduino.hpp>
-#include <Utility/ERaFlashMbed.hpp>
+#include <Storage/ERaFlashMbed.hpp>
 #include <Task/ERaTaskMbed.hpp>
 
 #if !defined(NO_GLOBAL_INSTANCES) && !defined(NO_GLOBAL_ERA)

@@ -79,18 +79,18 @@ int serialOpen(const char *device, const int baud) {
     options.c_cc[VMIN]  =   0;
     options.c_cc[VTIME] = 100;	// Ten seconds (100 deciseconds)
 
-  tcsetattr(fd, TCSANOW, &options);
+    tcsetattr(fd, TCSANOW, &options);
 
-  ioctl(fd, TIOCMGET, &status);
+    ioctl(fd, TIOCMGET, &status);
 
-  status |= TIOCM_DTR;
-  status |= TIOCM_RTS;
+    status |= TIOCM_DTR;
+    status |= TIOCM_RTS;
 
-  ioctl(fd, TIOCMSET, &status);
+    ioctl(fd, TIOCMSET, &status);
 
-  usleep(10000);	// 10mS
+    usleep(10000);	// 10mS
 
-  return fd;
+    return fd;
 }
 
 void serialFlush(const int fd) {

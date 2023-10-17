@@ -1,6 +1,7 @@
 #ifndef INC_ERA_API_STM32_HPP_
 #define INC_ERA_API_STM32_HPP_
 
+#include <string>
 #include <ERa/ERaApi.hpp>
 
 #undef ERA_DECODE_PIN_NUMBER
@@ -146,7 +147,10 @@ void ERaApi<Proto, Flash>::handleReadPin(cJSON* root) {
 		}
 		item = cJSON_GetObjectItem(current, "value_type");
 		if (cJSON_IsString(item)) {
-			if (ERaStrCmp(item->valuestring, "boolean")) {
+			if (this->skipPinReport) {
+				this->ERaPinRp.setPinRaw(pin.pin, pin.configId);
+			}
+			else if (ERaStrCmp(item->valuestring, "boolean")) {
 				this->getPinConfig(current, pin);
 				pinMode(pin.pin, pin.pinMode);
 				this->ERaPinRp.setPinReport(pin.pin, pin.pinMode, digitalReadStm32,
@@ -213,7 +217,10 @@ void ERaApi<Proto, Flash>::handleWritePin(cJSON* root) {
 		}
 		item = cJSON_GetObjectItem(current, "value_type");
 		if (cJSON_IsString(item)) {
-			if (ERaStrCmp(item->valuestring, "boolean")) {
+			if (this->skipPinReport) {
+				this->ERaPinRp.setPinRaw(pin.pin, pin.configId);
+			}
+			else if (ERaStrCmp(item->valuestring, "boolean")) {
 				this->getPinConfig(current, pin);
 				pinMode(pin.pin, pin.pinMode);
 				this->ERaPinRp.setPinReport(pin.pin, pin.pinMode, digitalReadStm32,
@@ -279,6 +286,8 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const ERaDataBuff& arrayTopi
 				if (rp != nullptr) {
 					rp->updateReport(value, true);
 				}
+				break;
+			case RAW_PIN:
 				break;
 			case VIRTUAL:
 			case ERA_VIRTUAL:

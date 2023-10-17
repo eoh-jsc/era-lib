@@ -1,11 +1,17 @@
 #ifndef INC_ERA_SERIAL_LINUX_HPP_
 #define INC_ERA_SERIAL_LINUX_HPP_
 
-#if defined(LINUX) && defined(RASPBERRY)
+#if defined(LINUX) &&        \
+    (defined(RASPBERRY) ||   \
+    defined(TINKER_BOARD) || \
+    defined(ORANGE_PI))
     #include <wiringSerial.h>
 #elif defined(LINUX)
     #include "Compat/SerialLinux.hpp"
 #endif
+
+#define DTR_PIN TIOCM_DTR
+#define RTS_PIN TIOCM_RTS
 
 #include "Compat/Stream.hpp"
 
@@ -19,7 +25,7 @@ public:
     ~ERaSerialLinux()
     {}
 
-    void begin(const char *device, const int baud) {
+    void begin(const char* device, const int baud) {
         this->end();
         this->fd = serialOpen(device, baud);
     }
@@ -71,6 +77,10 @@ public:
         serialFlush(this->fd);
     }
 
+    operator int() const override {
+        return this->fd;
+    }
+
 private:
     bool connected() {
         return (this->fd >= 0);
@@ -78,5 +88,7 @@ private:
 
     int fd;
 };
+
+typedef ERaSerialLinux ERaSerial;
 
 #endif /* INC_ERA_SERIAL_LINUX_HPP_ */

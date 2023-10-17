@@ -12,6 +12,9 @@ void ERaNoOptConnected(void ERA_UNUSED *arg) {
 void ERaNoModbusBaudrate(uint32_t ERA_UNUSED &baudrate) {
 }
 
+void ERaNoInfo(cJSON ERA_UNUSED *root) {
+}
+
 void ERaWidgetWrite(uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param) {
 	ERA_LOG(ERA_PSTR("ERa"), ERA_PSTR("No handler for writing to V%u"), pin);
 }
@@ -36,6 +39,8 @@ ERA_DISCONNECTED() __attribute__((weak, alias("ERaNoHandler")));
 ERA_WAITING() __attribute__((weak, alias("ERaNoHandler")));
 ERA_OPTION_CONNECTED() __attribute__((weak, alias("ERaNoOptConnected")));
 ERA_MODBUS_BAUDRATE() __attribute__((weak, alias("ERaNoModbusBaudrate")));
+ERA_INFO() __attribute__((weak, alias("ERaNoInfo")));
+ERA_MODBUS_INFO() __attribute__((weak, alias("ERaNoInfo")));
 
 ERA_ON_WRITE(Default);
 ERA_ON_PIN_WRITE(Default);
@@ -350,7 +355,7 @@ ERA_ON_PIN_READ(49);
 	ERA_ON_PIN_READ(99);
 #endif
 
-static const ERaWriteHandler ERaWriteHandlerVector[] ERA_PROGMEM = {
+static const ERaWriteHandler_t ERaWriteHandlerVector[] ERA_PROGMEM = {
     ERaWidgetWrite0, ERaWidgetWrite1, ERaWidgetWrite2, ERaWidgetWrite3, ERaWidgetWrite4,
     ERaWidgetWrite5, ERaWidgetWrite6, ERaWidgetWrite7, ERaWidgetWrite8, ERaWidgetWrite9,
     ERaWidgetWrite10, ERaWidgetWrite11, ERaWidgetWrite12, ERaWidgetWrite13, ERaWidgetWrite14,
@@ -375,7 +380,7 @@ static const ERaWriteHandler ERaWriteHandlerVector[] ERA_PROGMEM = {
 #endif
 };
 
-static const ERaPinWriteHandler ERaPinWriteHandlerVector[] ERA_PROGMEM = {
+static const ERaPinWriteHandler_t ERaPinWriteHandlerVector[] ERA_PROGMEM = {
     ERaWidgetPinWrite0, ERaWidgetPinWrite1, ERaWidgetPinWrite2, ERaWidgetPinWrite3, ERaWidgetPinWrite4,
     ERaWidgetPinWrite5, ERaWidgetPinWrite6, ERaWidgetPinWrite7, ERaWidgetPinWrite8, ERaWidgetPinWrite9,
     ERaWidgetPinWrite10, ERaWidgetPinWrite11, ERaWidgetPinWrite12, ERaWidgetPinWrite13, ERaWidgetPinWrite14,
@@ -400,7 +405,7 @@ static const ERaPinWriteHandler ERaPinWriteHandlerVector[] ERA_PROGMEM = {
 #endif
 };
 
-static const ERaPinReadHandler ERaPinReadHandlerVector[] ERA_PROGMEM = {
+static const ERaPinReadHandler_t ERaPinReadHandlerVector[] ERA_PROGMEM = {
     ERaWidgetPinRead0, ERaWidgetPinRead1, ERaWidgetPinRead2, ERaWidgetPinRead3, ERaWidgetPinRead4,
     ERaWidgetPinRead5, ERaWidgetPinRead6, ERaWidgetPinRead7, ERaWidgetPinRead8, ERaWidgetPinRead9,
     ERaWidgetPinRead10, ERaWidgetPinRead11, ERaWidgetPinRead12, ERaWidgetPinRead13, ERaWidgetPinRead14,
@@ -425,34 +430,34 @@ static const ERaPinReadHandler ERaPinReadHandlerVector[] ERA_PROGMEM = {
 #endif
 };
 
-ERaWriteHandler getERaWriteHandler(uint8_t pin) {
+ERaWriteHandler_t getERaWriteHandler(uint8_t pin) {
     if (pin >= ERA_COUNT_OF(ERaWriteHandlerVector)) {
         return nullptr;
     }
 #if defined(ERA_HAS_PROGMEM)
-	return (ERaWriteHandler)pgm_read_ptr(&ERaWriteHandlerVector[pin]);
+	return (ERaWriteHandler_t)pgm_read_ptr(&ERaWriteHandlerVector[pin]);
 #else
     return ERaWriteHandlerVector[pin];
 #endif
 }
 
-ERaPinWriteHandler getERaPinWriteHandler(uint8_t pin) {
+ERaPinWriteHandler_t getERaPinWriteHandler(uint8_t pin) {
     if (pin >= ERA_COUNT_OF(ERaPinWriteHandlerVector)) {
         return nullptr;
     }
 #if defined(ERA_HAS_PROGMEM)
-	return (ERaPinWriteHandler)pgm_read_ptr(&ERaPinWriteHandlerVector[pin]);
+	return (ERaPinWriteHandler_t)pgm_read_ptr(&ERaPinWriteHandlerVector[pin]);
 #else
     return ERaPinWriteHandlerVector[pin];
 #endif
 }
 
-ERaPinReadHandler getERaPinReadHandler(uint8_t pin) {
+ERaPinReadHandler_t getERaPinReadHandler(uint8_t pin) {
     if (pin >= ERA_COUNT_OF(ERaPinReadHandlerVector)) {
         return nullptr;
     }
 #if defined(ERA_HAS_PROGMEM)
-	return (ERaPinReadHandler)pgm_read_ptr(&ERaPinReadHandlerVector[pin]);
+	return (ERaPinReadHandler_t)pgm_read_ptr(&ERaPinReadHandlerVector[pin]);
 #else
     return ERaPinReadHandlerVector[pin];
 #endif

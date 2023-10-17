@@ -14,43 +14,39 @@
     #define BUTTON_HAS_FUNCTIONAL_H
 #endif
 
+enum ButtonEventT {
+    BUTTON_ON_CHANGE = 0x01,
+    BUTTON_ON_FALLING = 0x02,
+    BUTTON_ON_RISING = 0x04,
+    BUTTON_ON_HOLD = 0x08,
+    BUTTON_ON_MULTI = 0x10,
+    BUTTON_ON_DELETE = 0x80
+};
+
 class ERaButton
 {
 #if defined(BUTTON_HAS_FUNCTIONAL_H)
-    typedef std::function<void(void)> ButtonCallback_t;
-	typedef std::function<void(void*)> ButtonCallback_p_t;
+    typedef std::function<void(ButtonEventT)> ButtonCallback_t;
+	typedef std::function<void(ButtonEventT, void*)> ButtonCallback_p_t;
     typedef std::function<int(uint8_t)> ReadPinHandler_t;
 #else
-    typedef void (*ButtonCallback_t)(void);
-	typedef void (*ButtonCallback_p_t)(void*);
+    typedef void (*ButtonCallback_t)(ButtonEventT);
+	typedef void (*ButtonCallback_p_t)(ButtonEventT, void*);
     typedef int (*ReadPinHandler_t)(uint8_t);
 #endif
 
 	const static int MAX_BUTTONS = 5;
-    enum ButtonFlagT {
-        BUTTON_ON_CHANGE = 0x01,
-        BUTTON_ON_FALLING = 0x02,
-        BUTTON_ON_RISING = 0x04,
-        BUTTON_ON_HOLD = 0x08,
-        BUTTON_ON_DELETE = 0x80
-    };
 	typedef struct __Button_t {
         unsigned long prevTimeout;
 		unsigned long prevMillis;
         unsigned long delay;
+        unsigned long prevMulti;
+        unsigned long delayMulti;
         ERaButton::ReadPinHandler_t readPin;
 		ERaButton::ButtonCallback_t callback;
 		ERaButton::ButtonCallback_p_t callback_p;
-		ERaButton::ButtonCallback_t callback_falling;
-		ERaButton::ButtonCallback_p_t callback_falling_p;
-		ERaButton::ButtonCallback_t callback_rising;
-		ERaButton::ButtonCallback_p_t callback_rising_p;
-		ERaButton::ButtonCallback_t callback_hold;
-		ERaButton::ButtonCallback_p_t callback_hold_p;
 		void* param;
-		void* param_falling;
-		void* param_rising;
-		void* param_hold;
+        uint8_t flag;
         uint8_t pin;
         bool invert;
         bool state;
@@ -58,6 +54,8 @@ class ERaButton
         bool pressed;
 		bool enable;
 		uint8_t called;
+        uint8_t countMulti;
+        uint8_t numberMulti;
 	} Button_t;
 
 public:
@@ -91,52 +89,46 @@ public:
             return this->pBt;
         }
 
-        void onChange(ERaButton::ButtonCallback_t cb) {
+        iterator& onChange() {
             if (this->isValid()) {
-                this->bt->onChange(this->pBt, cb);
+                this->bt->onChange(this->pBt);
             }
+            return *this;
         }
 
-        void onChange(ERaButton::ButtonCallback_p_t cb, void* arg) {
+        iterator& onFalling() {
             if (this->isValid()) {
-                this->bt->onChange(this->pBt, cb, arg);
+                this->bt->onFalling(this->pBt);
             }
+            return *this;
         }
 
-        void onFalling(ERaButton::ButtonCallback_t cb) {
+        iterator& onRising() {
             if (this->isValid()) {
-                this->bt->onFalling(this->pBt, cb);
+                this->bt->onRising(this->pBt);
             }
+            return *this;
         }
 
-        void onFalling(ERaButton::ButtonCallback_p_t cb, void* arg) {
+        iterator& onHold(unsigned long delay) {
             if (this->isValid()) {
-                this->bt->onFalling(this->pBt, cb, arg);
+                this->bt->onHold(this->pBt, delay);
             }
+            return *this;
         }
 
-        void onRising(ERaButton::ButtonCallback_t cb) {
+        iterator& onMulti(uint8_t num, unsigned long delay) {
             if (this->isValid()) {
-                this->bt->onRising(this->pBt, cb);
+                this->bt->onMulti(this->pBt, num, delay);
             }
+            return *this;
         }
 
-        void onRising(ERaButton::ButtonCallback_p_t cb, void* arg) {
+        iterator& setBounceTime(unsigned long timeout = 50UL) {
             if (this->isValid()) {
-                this->bt->onRising(this->pBt, cb, arg);
+                this->bt->setBounceTime(timeout);
             }
-        }
-
-        void onHold(unsigned long delay, ERaButton::ButtonCallback_t cb) {
-            if (this->isValid()) {
-                this->bt->onHold(this->pBt, delay, cb);
-            }
-        }
-
-        void onHold(unsigned long delay, ERaButton::ButtonCallback_p_t cb, void* arg) {
-            if (this->isValid()) {
-                this->bt->onHold(this->pBt, delay, cb, arg);
-            }
+            return *this;
         }
 
         void deleteButton() {
@@ -183,11 +175,21 @@ public:
 
     void run();
 
-    iterator setButton(uint8_t pin, ERaButton::ReadPinHandler_t readPin, bool invert = false) {
-        return iterator(this, this->setupButton(pin, readPin, invert));
+    iterator setButton(uint8_t pin, ERaButton::ReadPinHandler_t readPin,
+                        ERaButton::ButtonCallback_t cb, bool invert = false) {
+        return iterator(this, this->setupButton(pin, readPin, cb, invert));
     }
 
-    void setTimeout(unsigned long _timeout) {
+    iterator setButton(uint8_t pin, ERaButton::ReadPinHandler_t readPin,
+                        ERaButton::ButtonCallback_p_t cb, void* arg, bool invert = false) {
+        return iterator(this, this->setupButton(pin, readPin, cb, arg, invert));
+    }
+
+    void setBounceTime(unsigned long _timeout = 50UL) {
+        this->timeout = _timeout;
+    }
+
+    void setTimeout(unsigned long _timeout = 50UL) {
         this->timeout = _timeout;
     }
 
@@ -195,14 +197,11 @@ public:
         return this->timeout;
     }
 
-    void onChange(Button_t* pButton, ERaButton::ButtonCallback_t cb);
-    void onChange(Button_t* pButton, ERaButton::ButtonCallback_p_t cb, void* arg);
-    void onFalling(Button_t* pButton, ERaButton::ButtonCallback_t cb);
-    void onFalling(Button_t* pButton, ERaButton::ButtonCallback_p_t cb, void* arg);
-    void onRising(Button_t* pButton, ERaButton::ButtonCallback_t cb);
-    void onRising(Button_t* pButton, ERaButton::ButtonCallback_p_t cb, void* arg);
-    void onHold(Button_t* pButton, unsigned long delay, ERaButton::ButtonCallback_t cb);
-    void onHold(Button_t* pButton, unsigned long delay, ERaButton::ButtonCallback_p_t cb, void* arg);
+    void onChange(Button_t* pButton);
+    void onFalling(Button_t* pButton);
+    void onRising(Button_t* pButton);
+    void onHold(Button_t* pButton, unsigned long delay);
+    void onMulti(Button_t* pButton, uint8_t num, unsigned long delay);
     void deleteButton(Button_t* pButton);
     bool isEnable(Button_t* pButton);
     void enable(Button_t* pButton);
@@ -212,17 +211,17 @@ public:
 
 protected:
 private:
-    Button_t* setupButton(uint8_t pin, ERaButton::ReadPinHandler_t readPin, bool invert = false);
+    Button_t* setupButton(uint8_t pin, ERaButton::ReadPinHandler_t readPin,
+                        ERaButton::ButtonCallback_t cb, bool invert = false);
+    Button_t* setupButton(uint8_t pin, ERaButton::ReadPinHandler_t readPin,
+                        ERaButton::ButtonCallback_p_t cb, void* arg, bool invert = false);
     bool isButtonFree();
 
     bool isValidButton(const Button_t* pButton) {
         if (pButton == nullptr) {
             return false;
         }
-        return ((pButton->callback != nullptr) || (pButton->callback_p != nullptr) ||
-                (pButton->callback_falling != nullptr) || (pButton->callback_falling_p != nullptr) ||
-                (pButton->callback_rising != nullptr) || (pButton->callback_rising_p != nullptr) ||
-                (pButton->callback_hold != nullptr) || (pButton->callback_hold_p != nullptr));
+        return ((pButton->callback != nullptr) || (pButton->callback_p != nullptr));
     }
 
     void setFlag(uint8_t& flags, uint8_t mask, bool value) {
@@ -242,5 +241,7 @@ private:
 	unsigned int numButton;
     unsigned long timeout;
 };
+
+using ButtonEntry = ERaButton::iterator;
 
 #endif /* INC_ERA_BUTTON_HPP_ */

@@ -112,6 +112,8 @@
 #define ERA_WAITING()				void ERaOnWaiting()
 #define ERA_OPTION_CONNECTED()		void ERaOptConnected(void ERA_UNUSED *arg)
 #define ERA_MODBUS_BAUDRATE()		void ERaModbusBaudrate(uint32_t ERA_UNUSED &baudrate)
+#define ERA_INFO()					void ERaInfo(cJSON ERA_UNUSED *root)
+#define ERA_MODBUS_INFO()			void ERaModbusInfo(cJSON ERA_UNUSED *root)
 
 #define ERA_WRITE_2(Pin)        	void ERaWidgetWrite ## Pin (uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param)
 #define ERA_WRITE(Pin)          	ERA_WRITE_2(Pin)
@@ -136,6 +138,7 @@ extern "C" {
 #endif
 
 void ERaNoHandler();
+void ERaNoInfo(cJSON ERA_UNUSED *root);
 void ERaNoOptConnected(void ERA_UNUSED *arg);
 void ERaNoModbusBaudrate(uint32_t ERA_UNUSED &baudrate);
 
@@ -144,6 +147,8 @@ ERA_DISCONNECTED();
 ERA_WAITING();
 ERA_OPTION_CONNECTED();
 ERA_MODBUS_BAUDRATE();
+ERA_INFO();
+ERA_MODBUS_INFO();
 
 ERA_WRITE_DEFAULT();
 ERA_PIN_WRITE_DEFAULT();
@@ -461,13 +466,13 @@ ERA_PIN_READ(49);
 	ERA_PIN_READ(99);
 #endif
 
-typedef void (*ERaWriteHandler)(uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param);
-typedef void (*ERaPinWriteHandler)(uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param, const ERaParam ERA_UNUSED &raw);
-typedef void (*ERaPinReadHandler)(uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param, const ERaParam ERA_UNUSED &raw);
+typedef void (*ERaWriteHandler_t)(uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param);
+typedef void (*ERaPinWriteHandler_t)(uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param, const ERaParam ERA_UNUSED &raw);
+typedef void (*ERaPinReadHandler_t)(uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param, const ERaParam ERA_UNUSED &raw);
 
-ERaWriteHandler getERaWriteHandler(uint8_t pin);
-ERaPinWriteHandler getERaPinWriteHandler(uint8_t pin);
-ERaPinReadHandler getERaPinReadHandler(uint8_t pin);
+ERaWriteHandler_t getERaWriteHandler(uint8_t pin);
+ERaPinWriteHandler_t getERaPinWriteHandler(uint8_t pin);
+ERaPinReadHandler_t getERaPinReadHandler(uint8_t pin);
 
 #ifdef __cplusplus
 }

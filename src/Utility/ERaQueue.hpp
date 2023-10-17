@@ -8,9 +8,11 @@
 #include <stdlib.h>
 #include <ERa/ERaDefine.hpp>
 
-template<class T, int N>
+template <class T, int N>
 class ERaQueue
 {
+	const static int eN = N + 1;
+
 public:
 	ERaQueue()
 		: w(0)
@@ -47,7 +49,7 @@ public:
 				f = c;
 			}
 			int _w = this->w;
-			int m = N - _w;
+			int m = eN - _w;
 			if (f > m) {
 				f = m;
 			}
@@ -62,7 +64,7 @@ public:
 	int space() {
 		int s = this->r - this->w;
 		if (s <= 0) {
-			s += N;
+			s += eN;
 		}
 		return (s - 1);
 	}
@@ -94,7 +96,7 @@ public:
 				f = c;
 			}
 			int _r = this->r;
-			int m = N - _r;
+			int m = eN - _r;
 			if (f > m) {
 				f = m;
 			}
@@ -109,7 +111,7 @@ public:
 	size_t size() {
 		int s = this->w - this->r;
 		if (s < 0) {
-			s += N;
+			s += eN;
 		}
 		return s;
 	}
@@ -149,15 +151,15 @@ public:
 protected:
 private:
 	int inc(int i, int n = 1) {
-		return ((i + n) % N);
+		return ((i + n) % eN);
 	}
 
-	T e[N];
+	T e[eN];
 	volatile int w;
 	volatile int r;
 };
 
-template<class T>
+template <class T>
 class ERaList
 {
 public:
@@ -277,6 +279,16 @@ public:
 			this->first = next;
 		}
 		this->last = nullptr;
+	}
+
+	size_t size() {
+		size_t _size {0};
+		iterator* next = this->first;
+		while (next != nullptr) {
+			++_size;
+			next = next->next;
+		}
+		return _size;
 	}
 
 	bool readable() const {

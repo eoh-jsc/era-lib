@@ -142,6 +142,13 @@ public:
 			return this->rp->reportEvery(this->pRp, interval);
 		}
 
+		void skipReport() {
+            if (!this->isValid()) {
+                return;
+            }
+			this->rp->skipReport(this->pRp);
+		}
+
         void restartReport() {
             if (!this->isValid()) {
                 return;
@@ -248,6 +255,7 @@ public:
 	}
 
 	bool reportEvery(Report_t* pReport, unsigned long interval);
+	void skipReport(Report_t* pReport);
 	void restartReport(Report_t* pReport);
 	void executeNow(Report_t* pReport);
 	void deleteReport(Report_t* pReport);
@@ -301,5 +309,7 @@ private:
 	ERaList<Report_t*> report;
 	unsigned int numReport;
 };
+
+using ReportEntry = ERaReport::iterator;
 
 #endif /* INC_ERA_REPORT_HPP_ */

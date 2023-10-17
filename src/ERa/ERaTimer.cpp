@@ -15,12 +15,12 @@ void ERaTimer::run() {
         if (!this->isValidTimer(pTimer)) {
             continue;
         }
-        if (currentMillis - pTimer->prevMillis < pTimer->delay) {
+        if ((currentMillis - pTimer->prevMillis) < pTimer->delay) {
             continue;
         }
-        unsigned long skipTimes = (currentMillis - pTimer->prevMillis) / pTimer->delay;
+        unsigned long skipTimes = ((currentMillis - pTimer->prevMillis) / pTimer->delay);
         // update time
-        pTimer->prevMillis += pTimer->delay * skipTimes;
+        pTimer->prevMillis += (pTimer->delay * skipTimes);
         // call callback
         if (!pTimer->enable) {
             continue;

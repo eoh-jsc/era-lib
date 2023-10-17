@@ -22,7 +22,9 @@
     #endif
 #elif defined(ARDUINO) && defined(ARDUINO_ARCH_STM32)
     #include <TinyGsmClient.hpp>
-    #if defined(TINY_GSM_MODEM_HAS_WIFI)
+    #if defined(TINY_GSM_MODEM_HAS_WIFI_PNP)
+        #include <ERaSimpleMBTiny.hpp>
+    #elif defined(TINY_GSM_MODEM_HAS_WIFI)
         #include <ERaSimpleMBStm32WiFi.hpp>
     #else
         #include <ERaSimpleMBStm32Gsm.hpp>
@@ -30,7 +32,9 @@
 #elif defined(ARDUINO) &&               \
     !defined(__MBED__) && defined(ARDUINO_ARCH_RP2040)
     #include <TinyGsmClient.hpp>
-    #if defined(TINY_GSM_MODEM_HAS_WIFI)
+    #if defined(TINY_GSM_MODEM_HAS_WIFI_PNP)
+        #include <ERaSimpleMBTiny.hpp>
+    #elif defined(TINY_GSM_MODEM_HAS_WIFI)
         #include <ERaSimpleMBRp2040WiFi.hpp>
     #else
         #include <ERaSimpleMBRp2040Gsm.hpp>
@@ -43,7 +47,9 @@
     #endif
 #elif defined(__MBED__)
     #include <TinyGsmClient.hpp>
-    #if defined(TINY_GSM_MODEM_HAS_WIFI)
+    #if defined(TINY_GSM_MODEM_HAS_WIFI_PNP)
+        #include <ERaSimpleMBTiny.hpp>
+    #elif defined(TINY_GSM_MODEM_HAS_WIFI)
         #include <ERaSimpleMBMbedWiFi.hpp>
     #else
         #include <ERaSimpleMBMbedGsm.hpp>

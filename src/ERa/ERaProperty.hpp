@@ -15,14 +15,19 @@
 #endif
 
 #if !defined(VIRTUAL)
-    #define VIRTUAL             0xFF
+    #define VIRTUAL                     0xFF
 #endif
 
-#define addProperty(p, ...) addPropertyReal(ERA_F(#p), p, __VA_ARGS__)
+#define addProperty(p, ...)             addPropertyReal(ERA_F(#p), p, __VA_ARGS__)
+#define addPropertyT(p, ...)            addPropertyRealT(ERA_F(#p), p, __VA_ARGS__)
+
+#define TOPIC_PROPERTY_DATA             "/zigbee/%s/data"
+#define PAYLOAD_PROPERTY_DATA           R"json({"type":"device_data","data":{"%s":%d}})json"
+#define PAYLOAD_PROPERTY_DATA_FLOAT     R"json({"type":"device_data","data":{"%s":%.2f}})json"
 
 enum PermissionT {
-    PERMISSION_READ = 1,
-    PERMISSION_WRITE = 2,
+    PERMISSION_READ = 0x01,
+    PERMISSION_WRITE = 0x02,
     PERMISSION_READ_WRITE = PERMISSION_READ | PERMISSION_WRITE
 };
 
@@ -79,7 +84,14 @@ public:
             return *this;
         }
 
-        iterator& publishEvery(unsigned long interval = 1000) {
+        iterator& publish() {
+            if (this->isValid()) {
+                this->prop->publish(this->pProp);
+            }
+            return *this;
+        }
+
+        iterator& publishEvery(unsigned long interval = 1000UL) {
             if (this->isValid()) {
                 this->prop->publishEvery(this->pProp, interval);
             }
@@ -87,8 +99,8 @@ public:
         }
 
         iterator& publishOnChange(float minChange = 1.0f,
-                                unsigned long minInterval = 1000,
-                                unsigned long maxInterval = 60000) {
+                                unsigned long minInterval = 1000UL,
+                                unsigned long maxInterval = 60000UL) {
             if (this->isValid()) {
                 this->prop->publishOnChange(this->pProp, minChange, minInterval, maxInterval);
             }
@@ -112,6 +124,23 @@ public:
     {}
     ~ERaProperty()
     {}
+
+    iterator getPropertyVirtual(uint8_t pin) {
+        return iterator(this, this->isPropertyIdExist(pin));
+    }
+
+    iterator getPropertyReal(const char* id) {
+        return iterator(this, this->isPropertyIdExist(id));
+    }
+
+    template <typename T>
+    iterator addPropertyVirtual(T& value, PermissionT const permission) {
+        int pin = this->findVirtualPin();
+        if (pin < 0) {
+            return iterator();
+        }
+        return this->addPropertyVirtual(pin, value, permission);
+    }
 
     iterator addPropertyVirtual(uint8_t pin, bool& value, PermissionT const permission) {
         WrapperBase* wrapper = new WrapperBool(value);
@@ -160,6 +189,12 @@ public:
 
     iterator addPropertyVirtual(uint8_t pin, WrapperBase& value, PermissionT const permission) {
         return iterator(this, this->setupProperty(pin, &value, permission));
+    }
+
+    template <typename T>
+    iterator addPropertyVirtualT(uint8_t pin, T& value, PermissionT const permission) {
+        WrapperBase* wrapper = new WrapperNumber<T>(value);
+        return iterator(this, this->setupProperty(pin, wrapper, permission));
     }
 
     iterator addPropertyReal(const char* id, bool& value, PermissionT const permission) {
@@ -211,6 +246,12 @@ public:
         return iterator(this, this->setupProperty(id, &value, permission));
     }
 
+    template <typename T>
+    iterator addPropertyRealT(const char* id, T& value, PermissionT const permission) {
+        WrapperBase* wrapper = new WrapperNumber<T>(value);
+        return iterator(this, this->setupProperty(id, wrapper, permission));
+    }
+
 #if defined(ERA_HAS_PROGMEM)
     iterator addPropertyReal(const __FlashStringHelper* id, bool& value, PermissionT const permission) {
         WrapperBase* wrapper = new WrapperBool(value);
@@ -260,6 +301,12 @@ public:
     iterator addPropertyReal(const __FlashStringHelper* id, WrapperBase& value, PermissionT const permission) {
         return iterator(this, this->setupProperty(id, &value, permission));
     }
+
+    template <typename T>
+    iterator addPropertyRealT(const __FlashStringHelper* id, T& value, PermissionT const permission) {
+        WrapperBase* wrapper = new WrapperNumber<T>(value);
+        return iterator(this, this->setupProperty(id, wrapper, permission));
+    }
 #endif
 
 protected:
@@ -277,11 +324,18 @@ private:
 
     void getValue(Property_t* pProp, const ERaParam& param);
     bool onUpdate(Property_t* pProp, ERaProperty::PropertyCallback_t cb);
-    bool publishEvery(Property_t* pProp, unsigned long interval = 1000);
+    bool publish(Property_t* pProp);
+    bool publishEvery(Property_t* pProp, unsigned long interval = 1000UL);
     bool publishOnChange(Property_t* pProp, float minChange = 1.0f,
-                        unsigned long minInterval = 1000,
-                        unsigned long maxInterval = 60000);
+                        unsigned long minInterval = 1000UL,
+                        unsigned long maxInterval = 60000UL);
     bool isPropertyFree();
+    int findVirtualPin();
+
+    template <typename T>
+    Property_t* isPropertyIdExist(T pin);
+
+    size_t splitString(char* strInput, const char* delims);
 
     void onCallbackVirtual(const Property_t* const pProp);
     void onCallbackReal(const Property_t* const pProp);
@@ -312,7 +366,7 @@ private:
 	}
 
 #if defined(PROPERTY_HAS_FUNCTIONAL_H)
-    ReportPropertyCallback_t propertyCb = [=](void* args) {
+    ReportPropertyCallback_t propertyCb = [&, this](void* args) {
 		this->onCallback(args);
 	};
 #else
@@ -327,7 +381,7 @@ private:
     unsigned long timeout;
 };
 
-template<class Api>
+template <class Api>
 void ERaProperty<Api>::run() {
 	unsigned long currentMillis = ERaMillis();
     const typename ERaList<Property_t*>::iterator* e = this->ERaProp.end();
@@ -355,7 +409,7 @@ void ERaProperty<Api>::run() {
     this->ERaPropRp.run();
 }
 
-template<class Api>
+template <class Api>
 void ERaProperty<Api>::updateValue(const Property_t* pProp) {
     switch (pProp->value->getType()) {
         case WrapperTypeT::WRAPPER_TYPE_BOOL:
@@ -381,6 +435,7 @@ void ERaProperty<Api>::updateValue(const Property_t* pProp) {
             break;
         case WrapperTypeT::WRAPPER_TYPE_FLOAT:
         case WrapperTypeT::WRAPPER_TYPE_DOUBLE:
+        case WrapperTypeT::WRAPPER_TYPE_NUMBER:
             pProp->report.updateReport(pProp->value->getFloat(), false, false);
             break;
         case WrapperTypeT::WRAPPER_TYPE_STRING:
@@ -393,12 +448,15 @@ void ERaProperty<Api>::updateValue(const Property_t* pProp) {
     }
 }
 
-template<class Api>
+template <class Api>
 void ERaProperty<Api>::handler(uint8_t pin, const ERaParam& param) {
     const typename ERaList<Property_t*>::iterator* e = this->ERaProp.end();
     for (typename ERaList<Property_t*>::iterator* it = this->ERaProp.begin(); it != e; it = it->getNext()) {
         Property_t* pProp = it->get();
         if (this->isValidProperty(pProp)) {
+            if (!pProp->id.isNumber()) {
+                continue;
+            }
             if (pProp->id == pin) {
                 this->getValue(pProp, param);
             }
@@ -406,12 +464,15 @@ void ERaProperty<Api>::handler(uint8_t pin, const ERaParam& param) {
     }
 }
 
-template<class Api>
+template <class Api>
 void ERaProperty<Api>::handler(const char* id, const ERaParam& param) {
     const typename ERaList<Property_t*>::iterator* e = this->ERaProp.end();
     for (typename ERaList<Property_t*>::iterator* it = this->ERaProp.begin(); it != e; it = it->getNext()) {
         Property_t* pProp = it->get();
         if (this->isValidProperty(pProp)) {
+            if (!pProp->id.isString()) {
+                continue;
+            }
             if (pProp->id == id) {
                 this->getValue(pProp, param);
             }
@@ -419,7 +480,7 @@ void ERaProperty<Api>::handler(const char* id, const ERaParam& param) {
     }
 }
 
-template<class Api>
+template <class Api>
 void ERaProperty<Api>::getValue(Property_t* pProp, const ERaParam& param) {
     if (pProp == nullptr) {
         return;
@@ -446,6 +507,7 @@ void ERaProperty<Api>::getValue(Property_t* pProp, const ERaParam& param) {
         case WrapperTypeT::WRAPPER_TYPE_UNSIGNED_LONG_LONG:
         case WrapperTypeT::WRAPPER_TYPE_FLOAT:
         case WrapperTypeT::WRAPPER_TYPE_DOUBLE:
+        case WrapperTypeT::WRAPPER_TYPE_NUMBER:
             if (param.isNumber()) {
                 *pProp->value = param.getFloat();
                 pProp->report.updateReport(param.getFloat());
@@ -467,7 +529,7 @@ void ERaProperty<Api>::getValue(Property_t* pProp, const ERaParam& param) {
     }
 }
 
-template<class Api>
+template <class Api>
 typename ERaProperty<Api>::Property_t* ERaProperty<Api>::setupProperty(uint8_t pin, WrapperBase* value,
                                                                     PermissionT const permission) {
     if (!this->isPropertyFree()) {
@@ -494,7 +556,7 @@ typename ERaProperty<Api>::Property_t* ERaProperty<Api>::setupProperty(uint8_t p
     return pProp;
 }
 
-template<class Api>
+template <class Api>
 typename ERaProperty<Api>::Property_t* ERaProperty<Api>::setupProperty(const char* id, WrapperBase* value,
                                                                     PermissionT const permission) {
     if (!this->isPropertyFree()) {
@@ -512,6 +574,7 @@ typename ERaProperty<Api>::Property_t* ERaProperty<Api>::setupProperty(const cha
         return nullptr;
     }
 
+    pProp->id = 0xFF;
     pProp->id = id;
     pProp->value = value;
     pProp->callback = nullptr;
@@ -525,7 +588,7 @@ typename ERaProperty<Api>::Property_t* ERaProperty<Api>::setupProperty(const cha
 }
 
 #if defined(ERA_HAS_PROGMEM)
-    template<class Api>
+    template <class Api>
     typename ERaProperty<Api>::Property_t* ERaProperty<Api>::setupProperty(const __FlashStringHelper* id,
                                                                             WrapperBase* value, PermissionT const permission) {
         if (id == nullptr) {
@@ -542,7 +605,7 @@ typename ERaProperty<Api>::Property_t* ERaProperty<Api>::setupProperty(const cha
     }
 #endif
 
-template<class Api>
+template <class Api>
 bool ERaProperty<Api>::onUpdate(Property_t* pProp, ERaProperty::PropertyCallback_t cb) {
     if (pProp == nullptr) {
         return false;
@@ -555,7 +618,17 @@ bool ERaProperty<Api>::onUpdate(Property_t* pProp, ERaProperty::PropertyCallback
     return true;
 }
 
-template<class Api>
+template <class Api>
+bool ERaProperty<Api>::publish(Property_t* pProp) {
+    if (pProp == nullptr) {
+        return false;
+    }
+
+    this->onCallback(pProp);
+    return true;
+}
+
+template <class Api>
 bool ERaProperty<Api>::publishEvery(Property_t* pProp, unsigned long interval) {
     if (pProp == nullptr) {
         return false;
@@ -568,12 +641,12 @@ bool ERaProperty<Api>::publishEvery(Property_t* pProp, unsigned long interval) {
         pProp->report.reportEvery(interval);
     }
     else {
-        this->publishOnChange(pProp, 1.0f, 1000, interval);
+        this->publishOnChange(pProp, 1.0f, 1000UL, interval);
     }
     return true;
 }
 
-template<class Api>
+template <class Api>
 bool ERaProperty<Api>::publishOnChange(Property_t* pProp, float minChange,
                                         unsigned long minInterval,
                                         unsigned long maxInterval) {
@@ -599,7 +672,7 @@ bool ERaProperty<Api>::publishOnChange(Property_t* pProp, float minChange,
     return true;
 }
 
-template<class Api>
+template <class Api>
 void ERaProperty<Api>::onCallbackVirtual(const Property_t* const pProp) {
     switch (pProp->value->getType()) {
         case WrapperTypeT::WRAPPER_TYPE_BOOL:
@@ -629,6 +702,9 @@ void ERaProperty<Api>::onCallbackVirtual(const Property_t* const pProp) {
         case WrapperTypeT::WRAPPER_TYPE_DOUBLE:
             this->thisApi().virtualWrite(pProp->id, pProp->value->getDouble());
             break;
+        case WrapperTypeT::WRAPPER_TYPE_NUMBER:
+            this->thisApi().virtualWrite(pProp->id, pProp->value->getNumber());
+            break;
         case WrapperTypeT::WRAPPER_TYPE_STRING:
             if (pProp->value->getString() != nullptr) {
                 this->thisApi().virtualWrite(pProp->id, pProp->value->getString());
@@ -639,13 +715,126 @@ void ERaProperty<Api>::onCallbackVirtual(const Property_t* const pProp) {
     }
 }
 
-template<class Api>
+template <class Api>
 void ERaProperty<Api>::onCallbackReal(const Property_t* const pProp) {
+#if defined(ERA_SPECIFIC)
+    if (pProp->value->getType() == WrapperTypeT::WRAPPER_TYPE_STRING) {
+        return this->thisApi().specificDataWrite(pProp->id, pProp->value->getString(), true, true);
+    }
+
+    const char* id = pProp->id.getString();
+    if (id == nullptr) {
+        return;
+    }
+
+	char copy[65] {0};
+	CopyToString(id, copy);
+	ERaDataBuff arrayId(copy, strlen(copy) + 1, sizeof(copy));
+	this->splitString(copy, ":");
+
+	if (arrayId.size() < 2) {
+		return;
+	}
+
+    cJSON* root = cJSON_CreateObject();
+    if (root == nullptr) {
+        return;
+    }
+    cJSON* dataItem = cJSON_CreateObject();
+    if (dataItem == nullptr) {
+        cJSON_Delete(root);
+        root = nullptr;
+        return;
+    }
+    char topic[65] {0};
+    FormatString(topic, TOPIC_PROPERTY_DATA, arrayId.at(0).getString());
+
+    cJSON_AddStringToObject(root, "type", "device_data");
+    cJSON_AddItemToObject(root, "data", dataItem);
+
+    const typename ERaList<Property_t*>::iterator* e = this->ERaProp.end();
+    for (typename ERaList<Property_t*>::iterator* it = this->ERaProp.begin(); it != e; it = it->getNext()) {
+        Property_t* property = it->get();
+        if (!this->isValidProperty(property)) {
+            continue;
+        }
+        if (!property->id.isString()) {
+            continue;
+        }
+        if (property->id.getString() == nullptr) {
+            continue;
+        }
+        if (strncmp(property->id.getString(),
+                    arrayId.at(0).getString(),
+                    strlen(arrayId.at(0).getString()))) {
+            continue;
+        }
+        const char* ptrColon = strchr(property->id.getString(), ':');
+        if (ptrColon == nullptr) {
+            continue;
+        }
+        ptrColon++;
+
+        switch (property->value->getType()) {
+            case WrapperTypeT::WRAPPER_TYPE_BOOL:
+                property->report.updateReport(property->value->getBool(), false, false);
+                cJSON_SetNumberToObject(dataItem, ptrColon, property->value->getBool());
+                break;
+            case WrapperTypeT::WRAPPER_TYPE_INT:
+                property->report.updateReport(property->value->getInt(), false, false);
+                cJSON_SetNumberToObject(dataItem, ptrColon, property->value->getInt());
+                break;
+            case WrapperTypeT::WRAPPER_TYPE_UNSIGNED_INT:
+                property->report.updateReport(property->value->getUnsignedInt(), false, false);
+                cJSON_SetNumberToObject(dataItem, ptrColon, property->value->getUnsignedInt());
+                break;
+            case WrapperTypeT::WRAPPER_TYPE_LONG:
+                property->report.updateReport(property->value->getLong(), false, false);
+                cJSON_SetNumberToObject(dataItem, ptrColon, property->value->getLong());
+                break;
+            case WrapperTypeT::WRAPPER_TYPE_UNSIGNED_LONG:
+                property->report.updateReport(property->value->getUnsignedLong(), false, false);
+                cJSON_SetNumberToObject(dataItem, ptrColon, property->value->getUnsignedLong());
+                break;
+            case WrapperTypeT::WRAPPER_TYPE_LONG_LONG:
+                property->report.updateReport(property->value->getLongLong(), false, false);
+                cJSON_SetNumberToObject(dataItem, ptrColon, property->value->getLongLong());
+                break;
+            case WrapperTypeT::WRAPPER_TYPE_UNSIGNED_LONG_LONG:
+                property->report.updateReport(property->value->getUnsignedLongLong(), false, false);
+                cJSON_SetNumberToObject(dataItem, ptrColon, property->value->getUnsignedLongLong());
+                break;
+            case WrapperTypeT::WRAPPER_TYPE_FLOAT:
+                property->report.updateReport(property->value->getFloat(), false, false);
+                cJSON_SetNumberToObject(dataItem, ptrColon, property->value->getFloat());
+                break;
+            case WrapperTypeT::WRAPPER_TYPE_DOUBLE:
+                property->report.updateReport(property->value->getFloat(), false, false);
+                cJSON_SetNumberToObject(dataItem, ptrColon, property->value->getDouble());
+                break;
+            case WrapperTypeT::WRAPPER_TYPE_NUMBER:
+                property->report.updateReport(property->value->getFloat(), false, false);
+                cJSON_SetNumberToObject(dataItem, ptrColon, property->value->getNumber());
+                break;
+            default:
+                break;
+        }
+
+        if (property != pProp) {
+            property->report.skipReport();
+        }
+    }
+
+    this->thisApi().specificDataWrite(topic, root, true, true);
+    cJSON_Delete(root);
+    root = nullptr;
+    dataItem = nullptr;
+#endif
     // Update later
     ERA_FORCE_UNUSED(pProp);
 }
 
-template<class Api>
+template <class Api>
 void ERaProperty<Api>::onCallback(void* args) {
     ERaProperty::Property_t* pProp = (ERaProperty::Property_t*)args;
     if (pProp == nullptr) {
@@ -662,7 +851,7 @@ void ERaProperty<Api>::onCallback(void* args) {
     }
 }
 
-template<class Api>
+template <class Api>
 bool ERaProperty<Api>::isPropertyFree() {
     if (this->numProperty >= MAX_PROPERTYS) {
         return false;
@@ -670,5 +859,53 @@ bool ERaProperty<Api>::isPropertyFree() {
 
     return true;
 }
+
+template <class Api>
+int ERaProperty<Api>::findVirtualPin() {
+    if (this->numProperty >= MAX_PROPERTYS) {
+        return -1;
+    }
+
+    for (int i = 0; i < ERA_MAX_VIRTUAL_PIN; ++i) {
+        if (this->isPropertyIdExist(i) != nullptr) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+template <class Api>
+template <typename T>
+typename ERaProperty<Api>::Property_t* ERaProperty<Api>::isPropertyIdExist(T pin) {
+    const typename ERaList<Property_t*>::iterator* e = this->ERaProp.end();
+    for (typename ERaList<Property_t*>::iterator* it = this->ERaProp.begin(); it != e; it = it->getNext()) {
+        Property_t* pProp = it->get();
+        if (pProp->id == pin) {
+            return pProp;
+        }
+    }
+    return nullptr;
+}
+
+template <class Api>
+size_t ERaProperty<Api>::splitString(char* strInput, const char* delims) {
+	if ((strInput == nullptr) ||
+		(delims == nullptr)) {
+		return 0;
+	}
+	if (!strlen(strInput)) {
+		return 0;
+	}
+	size_t size {0};
+    char* token = strtok(strInput, delims);
+	while (token != nullptr) {
+		++size;
+		token = strtok(nullptr, delims);
+	}
+	return size;
+}
+
+template <class Api>
+using PropertyEntry = typename ERaProperty<Api>::iterator;
 
 #endif /* INC_ERA_PROPERTY_HPP_ */

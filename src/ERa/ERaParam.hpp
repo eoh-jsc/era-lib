@@ -38,7 +38,7 @@ public:
 	{
 		add(value);
 	}
-	ERaParam(const ERaParam& value)
+	ERaParam(ERaDataJson& value)
 		: type(0)
 		, valueint(0)
 		, valuedouble(0)
@@ -47,7 +47,7 @@ public:
 	{
 		add(value);
 	}
-	ERaParam(ERaDataJson& value)
+	ERaParam(const ERaParam& value)
 		: type(0)
 		, valueint(0)
 		, valuedouble(0)
@@ -103,11 +103,11 @@ public:
 		addParam(value);
 	}
 
-	void add(const ERaParam& value) {
+	void add(ERaDataJson& value) {
 		addParam(value);
 	}
 
-	void add(ERaDataJson& value) {
+	void add(const ERaParam& value) {
 		addParam(value);
 	}
 
@@ -129,12 +129,12 @@ public:
 		return *this;
 	}
 
-	ERaParam& operator = (const ERaParam& value) {
+	ERaParam& operator = (ERaDataJson& value) {
 		add(value);
 		return *this;
 	}
 
-	ERaParam& operator = (ERaDataJson& value) {
+	ERaParam& operator = (const ERaParam& value) {
 		add(value);
 		return *this;
 	}
@@ -153,11 +153,81 @@ public:
 	}
 
 	bool operator == (char* value) const {
+		if (value == nullptr) {
+			return false;
+		}
+		if (this->valuestring == nullptr) {
+			return false;
+		}
 		return ERaStrCmp(this->valuestring, value);
 	}
 
 	bool operator == (const char* value) const {
+		if (value == nullptr) {
+			return false;
+		}
+		if (this->valuestring == nullptr) {
+			return false;
+		}
 		return ERaStrCmp(this->valuestring, value);
+	}
+
+	bool operator == (ERaDataJson* value) const {
+		if (value == nullptr) {
+			return false;
+		}
+		if (this->valueobject == nullptr) {
+			return false;
+		}
+		return (*this->valueobject == *value);
+	}
+
+	bool operator == (const ERaDataJson* value) const {
+		if (value == nullptr) {
+			return false;
+		}
+		if (this->valueobject == nullptr) {
+			return false;
+		}
+		return (*this->valueobject == *value);
+	}
+
+	bool operator == (ERaParam& value) const {
+		if (this == &value) {
+			return true;
+		}
+		if (this->isNumber() &&
+			value.isNumber()) {
+			return (*this == value.getDouble());
+		}
+		else if (this->isString() &&
+			value.isString()) {
+			return (*this == value.getString());
+		}
+		else if (this->isObject() &&
+			value.isObject()) {
+			return (*this == value.getObject());
+		}
+		return false;
+	}
+
+	bool operator == (const ERaParam& value) const {
+		if (this == &value) {
+			return true;
+		}
+		if (this->isNumber() &&
+			value.isNumber()) {
+			return (*this == value.getDouble());
+		}
+		else if (this->isString() &&
+			value.isString()) {
+			return (*this == value.getString());
+		}
+		else if (this->isObject() &&
+			value.isObject()) {
+			return (*this == value.getObject());
+		}
+		return false;
 	}
 
 	ERaDataJson::iterator operator [] (int index) const {
@@ -194,10 +264,19 @@ private:
 	}
 
 	void addParam(const ERaParam& value) {
+		if (this == &value) {
+			return;
+		}
+		this->free();
 		this->type = value.type;
 		this->valueint = value.valueint;
 		this->valuedouble = value.valuedouble;
-		this->valuestring = value.valuestring;
+		if (this->getType(ERaParamTypeT::ERA_PARAM_TYPE_STATIC_STRING)) {
+			this->valuestring = value.valuestring;
+		}
+		else if (this->getType(ERaParamTypeT::ERA_PARAM_TYPE_STRING)) {
+			this->valuestring = ERaStrdup(value.valuestring);
+		}
 		this->valueobject = value.valueobject;
 	}
 

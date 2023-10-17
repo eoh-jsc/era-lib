@@ -12,17 +12,26 @@
 
 // #define TINY_GSM_GET_AVAILABLE
 
-#ifndef TINY_GSM_MAX_SEND_RETRY
+#if !defined(TINY_GSM_DISABLE_CIP_INFO)
+	#define TINY_GSM_CIP_INFO
+#endif
+
+#if !defined(TINY_GSM_MAX_SEND_RETRY)
     #define TINY_GSM_MAX_SEND_RETRY 5
 #endif
 
+#if !defined(TINY_GSM_NO_MODEM_BUFFER)
+	#define TINY_GSM_BUFFER_READ_AND_CHECK_SIZE
+#endif
+
 #define TINY_GSM_MUX_COUNT          5
-#define TINY_GSM_BUFFER_READ_AND_CHECK_SIZE
 
 #include <TinyGsmModem.tpp>
 #include <TinyGsmSSL.tpp>
-#include <TinyGsmTCP.tpp>
 #include <TinyGsmWifi.tpp>
+#include "TinyGsmWifiAP.tpp"
+#include "TinyGsmWifiServer.tpp"
+#include "TinyGsmTCPUDP.tpp"
 
 #define GSM_NL      "\r\n"
 static const char   GSM_OK[] TINY_GSM_PROGMEM    = "OK" GSM_NL;
@@ -45,11 +54,15 @@ enum RegStatus {
 class TinyGsmESP32
 	: public TinyGsmModem<TinyGsmESP32>
 	, public TinyGsmWifi<TinyGsmESP32>
+	, public TinyGsmWifiAP<TinyGsmESP32>
+	, public TinyGsmWifiServer<TinyGsmESP32>
 	, public TinyGsmTCP<TinyGsmESP32, TINY_GSM_MUX_COUNT>
 	, public TinyGsmSSL<TinyGsmESP32>
 {
 	friend class TinyGsmModem<TinyGsmESP32>;
 	friend class TinyGsmWifi<TinyGsmESP32>;
+	friend class TinyGsmWifiAP<TinyGsmESP32>;
+	friend class TinyGsmWifiServer<TinyGsmESP32>;
 	friend class TinyGsmTCP<TinyGsmESP32, TINY_GSM_MUX_COUNT>;
 	friend class TinyGsmSSL<TinyGsmESP32>;
 
@@ -77,6 +90,9 @@ public:
 			this->prev_check     = 0;
 			this->sock_connected = false;
 			this->got_data       = false;
+			this->isUDP			 = false;
+			this->_remotePort	 = 0;
+			this->_remoteIP		 = IPAddress(0, 0, 0, 0);
 
 			if (muxNo < TINY_GSM_MUX_COUNT) {
 				this->mux = muxNo;
@@ -89,23 +105,46 @@ public:
 			return true;
 		}
 
+		TinyGsmESP32* getModem() const {
+			return this->at;
+		}
+
 	public:
+		/*
+		* Inner TCP
+		*/
 		virtual int connect(const char* host, uint16_t port, int timeout_s) {
 			this->stop();
 			TINY_GSM_YIELD();
 			this->rx.clear();
+			this->isUDP = false;
 			this->sock_connected = this->at->modemConnect(host, port, this->mux, false, timeout_s);
 			return this->sock_connected;
 		}
 		TINY_GSM_CLIENT_CONNECT_OVERRIDES
 
+		/*
+		* Inner UDP
+		*/
+		virtual uint8_t begin(const char* host, uint16_t port, int timeout_s) {
+			this->stop();
+			TINY_GSM_YIELD();
+			this->rx.clear();
+			this->isUDP = true;
+			this->sock_connected = this->at->modemConnectUDP(host, port, this->mux, timeout_s);
+			return this->sock_connected;
+		}
+		TINY_GSM_UDP_BEGIN_OVERRIDES
+
 		void stop(uint32_t maxWaitMs) {
 			TINY_GSM_YIELD();
 			this->at->sendAT(GF("+CIPCLOSE="), this->mux);
+			this->isUDP = false;
 			this->sock_connected = false;
 			this->at->waitResponse(maxWaitMs);
 			this->rx.clear();
 		}
+
 		void stop() override {
 			this->stop(5000L);
 		}
@@ -114,7 +153,7 @@ public:
 		 * Extended API
 		 */
 
-		String remoteIP() TINY_GSM_ATTR_NOT_IMPLEMENTED;
+		// String remoteIP() TINY_GSM_ATTR_NOT_IMPLEMENTED;
 	};
 
 	/*
@@ -137,6 +176,7 @@ public:
 			this->stop();
 			TINY_GSM_YIELD();
 			this->rx.clear();
+			this->isUDP = false;
 			this->sock_connected = this->at->modemConnect(host, port, this->mux, true, timeout_s);
 			return this->sock_connected;
 		}
@@ -183,10 +223,20 @@ protected:
                 return false;
             }
 		}
+#if defined(TINY_GSM_CIP_INFO)
+		this->sendAT(GF("+CIPDINFO=1"));
+#else
+		this->sendAT(GF("+CIPDINFO=0"));
+#endif
+		if (this->waitResponse() != 1) {
+            return false;
+        }
+#if defined(TINY_GSM_BUFFER_READ_AND_CHECK_SIZE)
 		this->sendAT(GF("+CIPRECVMODE=1"));
 		if (this->waitResponse() != 1) {
             return false;
         }
+#endif
 		DBG(GF("### Modem:"), this->getModemName());
 		return true;
 	}
@@ -354,6 +404,134 @@ protected:
 		return retVal;
 	}
 
+    /*
+    * WiFi AP functions
+    */
+protected:
+	bool modeImpl(bool sta = true) {
+		const char* mode = GF("1"); // "station" mode
+		if (!sta) {
+			mode = GF("3"); // AP + Station mode
+		}
+		this->sendAT(GF("+CWMODE="), mode);
+		if (this->waitResponse() != 1) {
+		    this->sendAT(GF("+CWMODE_CUR="), mode);
+			if (this->waitResponse() != 1) {
+                return false;
+            }
+		}
+
+		return true;
+	}
+
+	bool configAPImpl(const char* localIP, const char* gatewayIP,
+                    const char* netmaskIP) {
+		this->sendAT(GF("+CIPAP=\""), localIP, GF("\",\""),
+					gatewayIP, GF("\",\""), netmaskIP, GF("\""));
+		if (this->waitResponse() != 1) {
+			return false;
+		}
+
+		return true;
+	}
+
+    bool beginAPImpl(const char* ssid) {
+		this->modeImpl(false);
+		this->sendAT(GF("+CWSAP=\""), ssid, GF("\",\""),
+					GF("\","), 1, GF(","), 0);
+		if (this->waitResponse() != 1) {
+			return false;
+		}
+
+		return true;
+	}
+
+    bool beginAPImpl(const char* ssid, const char* pwd) {
+		this->modeImpl(false);
+		this->sendAT(GF("+CWSAP=\""), ssid, GF("\",\""), pwd,
+					GF("\","), 1, GF(","), 4);
+		if (this->waitResponse() != 1) {
+			return false;
+		}
+
+		return true;
+	}
+
+    bool endAPImpl() {
+		return this->modeImpl(true);
+	}
+
+	void scanNetworksImpl() {
+		TinyWiFi_t* wifiInfo;
+
+		this->sendAT(GF("+CWLAPOPT=1,23")); // Get enc, ssid, rssi and channel
+		this->waitResponse();
+		this->sendAT(GF("+CWLAP"));
+		while (this->waitResponse(10000L, GFP(GSM_OK),
+			GFP(GSM_ERROR), GF("+CWLAP:")) == 3) {
+			TINY_GSM_YIELD();
+			// TODO: Parse data
+			wifiInfo = new TinyWiFi_t;
+			if (wifiInfo == NULL) {
+				continue;
+			}
+			this->streamSkipUntil('('); // Skip byte '('
+			wifiInfo->encType = this->streamGetIntBefore(','); // Read encryption type
+			this->streamSkipUntil('"'); // Skip byte '"'
+			this->streamReadUntil(wifiInfo->ssid, '"'); // Read ssid
+			this->streamSkipUntil(','); // Skip byte ','
+			wifiInfo->rssi = this->streamGetIntBefore(','); // Read rssi
+			wifiInfo->channel = this->streamGetIntBefore(')'); // Read channel
+			if (strlen(wifiInfo->ssid)) {
+				this->listWiFi.put(wifiInfo);
+			}
+			else {
+				delete wifiInfo;
+			}
+		}
+		wifiInfo = NULL;
+	}
+
+	String SSIDImpl() {
+		this->sendAT(GF("+CWJAP?"));
+		if (this->waitResponse(GF("+CWJAP:")) != 1) {
+            return "";
+        }
+		char ssid[33] {0};
+		this->streamSkipUntil('"');
+		this->streamReadUntil(ssid, '"');
+		this->waitResponse();
+		return String(ssid);
+	}
+
+	String BSSIDImpl() {
+		this->sendAT(GF("+CIPAPMAC?"));
+		if (this->waitResponse(GF("+CIPAPMAC:")) != 1) {
+            return "";
+        }
+		char bssid[20] {0};
+		this->streamSkipUntil('"');
+		this->streamReadUntil(bssid, '"');
+		this->waitResponse();
+		return String(bssid);
+	}
+
+    /*
+    * WiFi Server functions
+    */
+protected:
+	bool beginServerImpl(uint16_t port) {
+		this->sendAT(GF("+CIPSERVERMAXCONN=1"));
+		this->waitResponse();
+		this->sendAT(GF("+CIPSERVER=1,"), port);
+		return (this->waitResponse() == 1);
+	}
+
+	bool endServerImpl() {
+		this->sendAT(GF("+CIPSERVER=0,1"));
+		return (this->waitResponse() == 1);
+	}
+
 	/*
 	* Client related functions
 	*/
@@ -378,6 +556,18 @@ protected:
 		return (rsp == 1);
 	}
 
+	bool modemConnectUDP(const char* host, uint16_t port, uint8_t mux,
+						int timeout_s = 75) {
+		uint32_t timeout_ms = ((uint32_t)timeout_s) * 1000;
+		this->sendAT(GF("+CIPSTART="), mux, ',', GF("\"UDP"),
+					GF("\",\""), host, GF("\","), port, GF(","),
+					port);
+		// TODO(?): Check mux
+		int8_t rsp = this->waitResponse(timeout_ms, GFP(GSM_OK), GFP(GSM_ERROR),
+										GF("ALREADY CONNECT"));
+		return (rsp == 1);
+	}
+
 	int16_t modemSend(const void* buff, size_t len, uint8_t mux) {
         int retry = TINY_GSM_MAX_SEND_RETRY;
         while (retry--) {
@@ -395,11 +585,46 @@ protected:
         return 0;
 	}
 
+	int16_t modemSendUDP(const void* buff, size_t len, uint8_t mux) {
+#if defined(TINY_GSM_CIP_INFO)
+		if (!this->sockets[mux] ||
+			!this->sockets[mux]->_remoteIP ||
+			!this->sockets[mux]->_remotePort) {
+			return this->modemSend(buff, len, mux);
+		}
+
+        int retry = TINY_GSM_MAX_SEND_RETRY;
+        while (retry--) {
+            this->sendAT(GF("+CIPSEND="), mux, ',', (uint16_t)len, GF(",\""),
+						TinyGsmStringFromIp(this->sockets[mux]->_remoteIP).c_str(), GF("\","),
+						this->sockets[mux]->_remotePort);
+            if (this->waitResponse(GF(">")) != 1) {
+                continue;
+            }
+            this->stream.write(reinterpret_cast<const uint8_t*>(buff), len);
+            this->stream.flush();
+            if (this->waitResponse(10000L, GF(GSM_NL "SEND OK" GSM_NL)) != 1) {
+                continue;
+            }
+            return len;
+        }
+        return 0;
+#else
+		return this->modemSend(buff, len, mux);
+#endif
+	}
+
 	size_t modemRead(size_t size, uint8_t mux) {
 		if (!this->sockets[mux]) {
             return 0;
         }
 		this->sendAT(GF("+CIPRECVDATA="), mux, ',', (uint16_t)size);
+#if defined(TINY_GSM_PASSIVE_MODE_LEGACY)
+		if (this->waitResponse(GF("+CIPRECVDATA,")) != 1) {
+            return 0;
+        }
+		int16_t len_confirmed = this->streamGetIntBefore(':');
+#else
 		if (this->waitResponse(GF("+CIPRECVDATA:")) != 1) {
             return 0;
         }
@@ -407,19 +632,29 @@ protected:
 		//  ^^ Requested number of data bytes (1-1460 bytes)to be read
 		int16_t len_confirmed = this->streamGetIntBefore(',');
 		// ^^ The data length which read in the buffer
+	#if defined(TINY_GSM_CIP_INFO)
+		char buf[20] {0};
+		this->streamReadUntil(buf, ','); // Read remove IP
+		GsmClient::TinyGsmIpFromString(this->sockets[mux]->_remoteIP, buf);
+		this->sockets[mux]->_remotePort = this->streamGetIntBefore(','); // Read remote port
+	#endif
+#endif
 		for (int i = 0; i < len_confirmed; ++i) {
 			uint32_t startMillis = millis();
 			while (!this->stream.available() &&
-				(millis() - startMillis < this->sockets[mux]->_timeout)) {
+				((millis() - startMillis) < this->sockets[mux]->Client::_timeout)) {
 				TINY_GSM_YIELD();
 			}
 			char c = this->stream.read();
 			this->sockets[mux]->rx.put(c);
 		}
-		// this->sockets[mux]->sock_available = modemGetAvailable(mux);
-		DBG("### READ:", len_confirmed, "from", mux);
-		this->sockets[mux]->sock_available -= len_confirmed;
 		this->waitResponse();
+		DBG("### READ:", len_confirmed, "from", mux);
+#ifdef TINY_GSM_GET_AVAILABLE
+		this->sockets[mux]->sock_available = this->modemGetAvailable(mux);
+#else
+		this->sockets[mux]->sock_available -= len_confirmed;
+#endif
 		return len_confirmed;
 	}
 
@@ -428,9 +663,6 @@ protected:
 		if (!this->sockets[mux]) {
             return 0;
         }
-		if (this->sockets[mux]->sock_available) {
-			return this->sockets[mux]->sock_available;
-		}
 		this->sendAT(GF("+CIPRECVLEN?"));
 		int16_t result = 0;
 		if (this->waitResponse(GF("+CIPRECVLEN:")) == 1) {
@@ -487,8 +719,8 @@ protected:
 			uint8_t has_status = this->waitResponse(GF("+CIPSTATUS:"), GFP(GSM_OK),
 													GFP(GSM_ERROR));
 			if (has_status == 1) {
-				int8_t returned_mux = this->streamGetIntBefore(',');
-				this->streamSkipUntil(',');   // Skip mux
+				int8_t returned_mux = this->streamGetIntBefore(','); // Read mux
+				// this->streamSkipUntil(',');   // Skip mux
 				this->streamSkipUntil(',');   // Skip type
 				this->streamSkipUntil(',');   // Skip remote IP
 				this->streamSkipUntil(',');   // Skip remote port
@@ -556,20 +788,100 @@ public:
 					goto finish;
 				}
                 else if (data.endsWith(GF("+IPD,"))) {
+#if defined(TINY_GSM_NO_MODEM_BUFFER)
+	#if defined(TINY_GSM_CIP_INFO)
+					char buf[20] {0};
+					int8_t  mux      = this->streamGetIntBefore(',');
+					int16_t len      = this->streamGetIntBefore(',');
+					this->streamReadUntil(buf, ','); // Read remove IP
+	#else
+					int8_t  mux      = this->streamGetIntBefore(',');
+					int16_t len      = this->streamGetIntBefore(':');
+	#endif
+					int16_t len_orig = len;
+					if ((mux >= 0) && (mux < TINY_GSM_MUX_COUNT) && this->sockets[mux]) {
+	#if defined(TINY_GSM_CIP_INFO)
+						GsmClient::TinyGsmIpFromString(this->sockets[mux]->_remoteIP, buf);
+						this->sockets[mux]->_remotePort = this->streamGetIntBefore(':'); // Read remote port
+	#endif
+						if (len > this->sockets[mux]->rx.free()) {
+							DBG("### Buffer overflow: ", len, "received vs",
+								this->sockets[mux]->rx.free(), "available");
+						} else {
+							DBG("### Got Data: ", len, "on", mux);
+						}
+						while (len--) {
+							this->moveCharFromStreamToFifo(mux);
+						}
+						if (len_orig > this->sockets[mux]->available()) {
+							DBG("### Fewer characters received than expected: ",
+								this->sockets[mux]->available(), " vs ", len_orig);
+						}
+					}
+					data = "";
+#elif defined(TINY_GSM_BUFFER_READ_AND_CHECK_SIZE)
+	#if defined(TINY_GSM_PASSIVE_MODE_LEGACY)
+					int16_t len = 0;
+					int8_t  mux = this->streamGetIntBefore(',');
+					if ((mux >= 0) && (mux < TINY_GSM_MUX_COUNT) && this->sockets[mux]) {
+						if (this->sockets[mux]->isUDP) {
+		#if defined(TINY_GSM_CIP_INFO)
+							char buf[20] {0};
+							len = this->streamGetIntBefore(',');
+							this->streamReadUntil(buf, ','); // Read remove IP
+							GsmClient::TinyGsmIpFromString(this->sockets[mux]->_remoteIP, buf);
+							this->sockets[mux]->_remotePort = this->streamGetIntBefore(':'); // Read remote port
+		#else
+							len = this->streamGetIntBefore('\n');
+		#endif
+							int16_t len_orig = len;
+							if (len > this->sockets[mux]->rx.free()) {
+								DBG("### Buffer overflow: ", len, "received vs",
+									this->sockets[mux]->rx.free(), "available");
+							} else {
+								DBG("### Got Data: ", len, "on", mux);
+							}
+							while (len--) {
+								this->moveCharFromStreamToFifo(mux);
+							}
+							if (len_orig > this->sockets[mux]->available()) {
+								DBG("### Fewer characters received than expected: ",
+									this->sockets[mux]->available(), " vs ", len_orig);
+							}
+						}
+						else {
+							len = this->streamGetIntBefore('\n');
+							this->sockets[mux]->got_data = true;
+							this->sockets[mux]->sock_connected = true;
+		#ifdef TINY_GSM_GET_AVAILABLE
+							if ((len >= 0) && (len <= 1024)) {
+								this->sockets[mux]->sock_available = len;
+							}
+		#else
+							this->sockets[mux]->sock_available = len;
+		#endif
+						}
+						DBG("### Got Data:", mux);
+					}
+					data = "";
+	#else
 					int8_t  mux = this->streamGetIntBefore(',');
 					int16_t len = this->streamGetIntBefore('\n');
 					if ((mux >= 0) && (mux < TINY_GSM_MUX_COUNT) && this->sockets[mux]) {
 						this->sockets[mux]->got_data = true;
-#ifdef TINY_GSM_GET_AVAILABLE
+						this->sockets[mux]->sock_connected = true;
+		#ifdef TINY_GSM_GET_AVAILABLE
 						if ((len >= 0) && (len <= 1024)) {
                             this->sockets[mux]->sock_available = len;
                         }
-#else
+		#else
 						this->sockets[mux]->sock_available = len;
-#endif
+		#endif
 						DBG("### Got Data:", mux);
 					}
 					data = "";
+	#endif
+#endif
 				} else if (data.endsWith(GF("CLOSED"))) {
 					int8_t muxStart = TinyGsmMax(0, data.lastIndexOf(GSM_NL, data.length() - 8));
 					int8_t coma = data.indexOf(',', muxStart);
@@ -612,6 +924,15 @@ public:
 	Stream& stream;
 
 protected:
+	template <typename T, size_t size>
+	void streamReadUntil(T(&buf)[size], char lastChar) {
+		size_t bytesRead = this->stream.readBytesUntil(lastChar,
+													(uint8_t*)buf, size);
+		if (bytesRead && (bytesRead < size)) {
+			buf[bytesRead] = '\0';
+		}
+	}
+
 	GsmClientESP32* sockets[TINY_GSM_MUX_COUNT];
 	const char*     gsmNL = GSM_NL;
 };

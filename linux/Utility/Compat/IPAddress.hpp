@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 
+class UDP;
 class Client;
 
 class IPAddress
@@ -35,6 +36,41 @@ public:
 
     virtual ~IPAddress()
     {}
+
+    bool fromString(const char* address) {
+        uint16_t acc = 0; // Accumulator
+        uint8_t dots = 0;
+
+        while (*address) {
+            char c = *address++;
+            if ((c >= '0') && (c <= '9')) {
+                acc = (acc * 10) + (c - '0');
+                if (acc > 255) {
+                    // Value out of [0..255] range
+                    return false;
+                }
+            }
+            else if (c == '.') {
+                if (dots == 3) {
+                    // Too much dots (there must be 3 dots)
+                    return false;
+                }
+                this->address.bytes[dots++] = acc;
+                acc = 0;
+            }
+            else {
+                // Invalid char
+                return false;
+            }
+        }
+
+        if (dots != 3) {
+            // Too few dots (there must be 3 dots)
+            return false;
+        }
+        this->address.bytes[3] = acc;
+        return true;
+    }
 
     operator uint32_t() const {
         return this->address.dword;
@@ -71,6 +107,7 @@ private:
         return this->address.bytes;
     }
 
+    friend class UDP;
     friend class Client;
 
 };

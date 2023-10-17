@@ -14,6 +14,13 @@ void ERaModbus<Api>::configModbus() {
         return;
     }
 
+#if (ESP_IDF_VERSION_MAJOR >= 4)
+    if (uart_is_driver_installed(UART_MODBUS)) {
+        ERA_LOG_WARNING(TAG, ERA_PSTR("[Warning] UART %d installed, please setup another UART for Modbus!"), UART_MODBUS);
+        return;
+    }
+#endif
+
     uart_config_t config = {
         .baud_rate = MODBUS_BAUDRATE,
         .data_bits = UART_DATA_8_BITS,
@@ -48,11 +55,7 @@ bool ERaModbus<Api>::waitResponse(ERaModbusResponse* response) {
     int length {0};
     uart_event_t event;
 
-    if (this->total++ > 99) {
-        this->total = 1;
-        this->failRead = 0;
-        this->failWrite = 0;
-    }
+    this->updateTotalTransmit();
 
     MillisTime_t startMillis = ERaMillis();
 
@@ -60,8 +63,10 @@ bool ERaModbus<Api>::waitResponse(ERaModbusResponse* response) {
         do {
             if (!this->stream->available()) {
 #if defined(ERA_NO_RTOS)
-                ERaOnWaiting();
-                this->thisApi().run();
+                if (this->runApiResponse) {
+                    this->thisApi().run();
+                    this->thisApi().runZigbee();
+                }
 #endif
                 if (ModbusState::is(ModbusStateT::STATE_MB_PARSE)) {
                     break;
@@ -71,7 +76,11 @@ bool ERaModbus<Api>::waitResponse(ERaModbusResponse* response) {
             }
 
             do {
-                response->add(this->stream->read());
+                int c = this->stream->read();
+                if (c < 0) {
+                    continue;
+                }
+                response->add((uint8_t)c);
             } while (this->stream->available());
 
             if (response->isComplete()) {
@@ -89,7 +98,7 @@ bool ERaModbus<Api>::waitResponse(ERaModbusResponse* response) {
                 case uart_event_type_t::UART_DATA: {
                     ESP_ERROR_CHECK(uart_get_buffered_data_len(UART_MODBUS, (size_t*)&length));
                     uint8_t receive[length] {0};
-                    uart_read_bytes(UART_MODBUS, receive, length, portMAX_DELAY);
+                    uart_read_bytes(UART_MODBUS, receive, length, MODBUS_STREAM_TIMEOUT);
                     for (int i = 0; i < length; ++i) {
                         response->add(receive[i]);
                     }
@@ -110,8 +119,10 @@ bool ERaModbus<Api>::waitResponse(ERaModbusResponse* response) {
         }
         else {
 #if defined(ERA_NO_RTOS)
-            ERaOnWaiting();
-            this->thisApi().run();
+            if (this->runApiResponse) {
+                this->thisApi().run();
+                this->thisApi().runZigbee();
+            }
 #endif
             if (ModbusState::is(ModbusStateT::STATE_MB_PARSE)) {
                 break;

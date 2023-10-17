@@ -24,12 +24,9 @@
 
 #include <Arduino.h>
 #include <ERaEsp32Ethernet.hpp>
-#include <ERa/ERaTimer.hpp>
 
 const int pwrPin = 14;
 const uint8_t phyAddr = 1;
-
-ERaTimer timer;
 
 /* This function print uptime every second */
 void timerEvent() {
@@ -46,10 +43,9 @@ void setup() {
     ERa.begin(phyAddr, pwrPin);
 
     /* Setup timer called function every second */
-    timer.setInterval(1000L, timerEvent);
+    ERa.addInterval(1000L, timerEvent);
 }
 
 void loop() {
     ERa.run();
-    timer.run();
 }

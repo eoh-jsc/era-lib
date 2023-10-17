@@ -4,38 +4,42 @@
 
 #include <Modbus/ERaModbus.hpp>
 
-#if defined(ESP8266)
-    #include <SoftwareSerial.h>
-
-    #define SerialMB     SerialModBus<SoftwareSerial, int, int>::serial(14, 12)
-#elif defined(ARDUINO_ARCH_STM32)
-    #define SerialMB     SerialModBus<HardwareSerial, uint32_t, uint32_t>::serial(PA3, PA2)
-#elif defined(ARDUINO_ARCH_RP2040)
-    #define SerialMB     Serial1
-#elif !defined(__MBED__) &&         \
-    defined(ARDUINO_ARCH_NRF5)
-    #define SerialMB     Serial
-#elif defined(ARDUINO_ARCH_AVR) ||  \
-    defined(ARDUINO_ARCH_ARC32)
-    #if defined(HAVE_HWSERIAL1)
-        #define SerialMB Serial1
-    #else
+#if !defined(SerialMB)
+    #if defined(ESP8266)
         #include <SoftwareSerial.h>
 
-        #define SerialMB SerialModBus<SoftwareSerial, uint8_t, uint8_t>::serial(10, 11)
+        #define SerialMB     SerialModBus<SoftwareSerial, int, int>::serial(14, 12)
+    #elif defined(ARDUINO_ARCH_STM32)
+        #define SerialMB     SerialModBus<HardwareSerial, uint32_t, uint32_t>::serial(PA3, PA2)
+    #elif defined(ARDUINO_ARCH_RP2040)
+        #define SerialMB     Serial1
+    #elif !defined(__MBED__) &&         \
+        defined(ARDUINO_ARCH_NRF5)
+        #define SerialMB     Serial
+    #elif defined(ARDUINO_ARCH_AVR) ||  \
+        defined(ARDUINO_ARCH_ARC32)
+        #if defined(HAVE_HWSERIAL1)
+            #define SerialMB Serial1
+        #else
+            #include <SoftwareSerial.h>
+
+            #define SerialMB SerialModBus<SoftwareSerial, uint8_t, uint8_t>::serial(10, 11)
+        #endif
+    #elif defined(ARDUINO_ARCH_SAMD)
+        #define SerialMB     Serial1
+    #elif defined(ARDUINO_ARCH_ARM)
+        #define SerialMB     Serial1
+    #elif defined(PARTICLE) ||          \
+        defined(SPARK)
+        #define SerialMB     Serial1
+    #elif defined(RTL8722DM) ||         \
+        defined(ARDUINO_AMEBA)
+        #define SerialMB     Serial1
+    #elif defined(__MBED__)
+        #define SerialMB     Serial1
+    #else
+        #define SerialMB     Serial1
     #endif
-#elif defined(ARDUINO_ARCH_SAMD)
-    #define SerialMB     Serial1
-#elif defined(PARTICLE) ||          \
-    defined(SPARK)
-    #define SerialMB     Serial1
-#elif defined(RTL8722DM) ||         \
-    defined(ARDUINO_AMEBA)
-    #define SerialMB     Serial1
-#elif defined(__MBED__)
-    #define SerialMB     Serial1
-#else
-    #define SerialMB     Serial1
 #endif
 
 template <class Api>
@@ -70,19 +74,17 @@ bool ERaModbus<Api>::waitResponse(ERaModbusResponse* response) {
         return false;
     }
 
-    if (this->total++ > 99) {
-        this->total = 1;
-        this->failRead = 0;
-        this->failWrite = 0;
-    }
+    this->updateTotalTransmit();
 
     MillisTime_t startMillis = ERaMillis();
 
     do {
         if (!this->stream->available()) {
 #if defined(ERA_NO_RTOS)
-            ERaOnWaiting();
-            this->thisApi().run();
+            if (this->runApiResponse) {
+                this->thisApi().run();
+                this->thisApi().runZigbee();
+            }
 #endif
             if (ModbusState::is(ModbusStateT::STATE_MB_PARSE)) {
                 break;
@@ -92,7 +94,11 @@ bool ERaModbus<Api>::waitResponse(ERaModbusResponse* response) {
         }
 
         do {
-            response->add(this->stream->read());
+            int c = this->stream->read();
+            if (c < 0) {
+                continue;
+            }
+            response->add((uint8_t)c);
         } while (this->stream->available());
 
         if (response->isComplete()) {

@@ -1,15 +1,16 @@
 #include <Arduino.h>
 #include <Utility/ERaOs.hpp>
 
-#if defined(ARDUINO) &&             \
-    !defined(__MBED__) &&			\
-	(defined(ESP32) ||              \
-	defined(RTL8722DM) ||			\
-    defined(ARDUINO_AMEBA) ||       \
-    defined(ARDUINO_ARCH_STM32) ||  \
+#if defined(ARDUINO) &&                 \
+    !defined(__MBED__) &&			    \
+	(defined(ESP32) ||                  \
+	defined(RTL8722DM) ||			    \
+    defined(ARDUINO_AMEBA) ||           \
+    defined(ARDUINO_RTOS_STM32) ||      \
+	defined(ARDUINO_RTOS_RENESAS) ||    \
     defined(ARDUINO_ARCH_RP2040))
 
-#if defined(ARDUINO_ARCH_STM32)
+#if defined(ARDUINO_RTOS_STM32)
     static volatile bool _osStarted {false};
 #else
     static volatile bool _osStarted {true};
@@ -17,7 +18,7 @@
 
 void ERaOs::osStartsScheduler() {
     _osStarted = true;
-#if defined(ARDUINO_ARCH_STM32)
+#if defined(ARDUINO_RTOS_STM32)
     vTaskStartScheduler();
     while (1) { delay(1000); }
 #endif
@@ -243,7 +244,7 @@ osStatus_t ERaOs::osMessageQueueReset(QueueHandle_t mq_id) {
 }
 
 SemaphoreHandle_t ERaOs::osSemaphoreNew() {
-#if defined(ARDUINO_ARCH_STM32)
+#if defined(ARDUINO_RTOS_STM32)
     if (!_osStarted) {
         return NULL;
     }
@@ -252,7 +253,7 @@ SemaphoreHandle_t ERaOs::osSemaphoreNew() {
 }
 
 osStatus_t ERaOs::osSemaphoreRelease(SemaphoreHandle_t semaphore_id) {
-#if defined(ARDUINO_ARCH_STM32)
+#if defined(ARDUINO_RTOS_STM32)
     if (!_osStarted) {
         return osOK;
     }
@@ -297,7 +298,7 @@ osStatus_t ERaOs::osSemaphoreReleaseIRQ(SemaphoreHandle_t semaphore_id) {
 }
 
 osStatus_t ERaOs::osSemaphoreAcquire(SemaphoreHandle_t semaphore_id, uint32_t timeout) {
-#if defined(ARDUINO_ARCH_STM32)
+#if defined(ARDUINO_RTOS_STM32)
     if (!_osStarted) {
         return osOK;
     }

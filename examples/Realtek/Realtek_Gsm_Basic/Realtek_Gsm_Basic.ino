@@ -33,13 +33,10 @@
 
 #include <Arduino.h>
 #include <ERaSimpleMBRealtekGsm.hpp>
-#include <ERa/ERaTimer.hpp>
 #include <SoftwareSerial.h>
 
 SoftwareSerial SerialGsm(5, 4);
 TinyGsm modem(SerialGsm);
-
-ERaTimer timer;
 
 #if defined(APN_VIETTEL)
     const char apn[] = "v-internet";
@@ -61,8 +58,6 @@ ERaTimer timer;
 
 const int pwrPin = 6;
 
-ERA_ATTACH_RUN(timer)
-
 /* This function print uptime every second */
 void timerEvent() {
     ERA_LOG("Timer", "Uptime: %d", ERaMillis() / 1000L);
@@ -81,10 +76,9 @@ void setup() {
     ERa.begin(modem, apn, user, pass, pwrPin);
 
     /* Setup timer called function every second */
-    timer.setInterval(1000L, timerEvent);
+    ERa.addInterval(1000L, timerEvent);
 }
 
 void loop() {
     ERa.run();
-    timer.run();
 }

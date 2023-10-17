@@ -1,0 +1,8 @@
+#ifndef INC_ERA_SIMPLE_MODBUS_ARDUINO_MBED_HPP_
+#define INC_ERA_SIMPLE_MODBUS_ARDUINO_MBED_HPP_
+
+#define ERA_MODBUS
+
+#include <ERaSimpleArduinoMbed.hpp>
+
+#endif /* INC_ERA_SIMPLE_MODBUS_ARDUINO_MBED_HPP_ */

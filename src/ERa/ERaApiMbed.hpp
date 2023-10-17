@@ -15,7 +15,12 @@ using namespace mbed;
 
 	inline
 	static void pwmWrite(uint8_t pin, uint8_t value) {
+#if !defined(ERA_IGNORE_ANALOG_WRITE)
 		analogWrite(pin, value);
+#else
+		ERA_FORCE_UNUSED(pin);
+		ERA_FORCE_UNUSED(value);
+#endif
 	}
 
 	inline
@@ -99,7 +104,10 @@ void ERaApi<Proto, Flash>::handleReadPin(cJSON* root) {
 		}
 		item = cJSON_GetObjectItem(current, "value_type");
 		if (cJSON_IsString(item)) {
-			if (ERaStrCmp(item->valuestring, "boolean")) {
+			if (this->skipPinReport) {
+				this->ERaPinRp.setPinRaw(pin.pin, pin.configId);
+			}
+			else if (ERaStrCmp(item->valuestring, "boolean")) {
 				this->getPinConfig(current, pin);
 #if defined(ARDUINO)
 				pinMode(pin.pin, pin.pinMode);
@@ -163,7 +171,10 @@ void ERaApi<Proto, Flash>::handleWritePin(cJSON* root) {
 		}
 		item = cJSON_GetObjectItem(current, "value_type");
 		if (cJSON_IsString(item)) {
-			if (ERaStrCmp(item->valuestring, "boolean")) {
+			if (this->skipPinReport) {
+				this->ERaPinRp.setPinRaw(pin.pin, pin.configId);
+			}
+			else if (ERaStrCmp(item->valuestring, "boolean")) {
 				this->getPinConfig(current, pin);
 #if defined(ARDUINO)
 				pinMode(pin.pin, pin.pinMode);
@@ -239,6 +250,8 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const ERaDataBuff& arrayTopi
 				if (rp != nullptr) {
 					rp->updateReport(value, true);
 				}
+				break;
+			case RAW_PIN:
 				break;
 			case VIRTUAL:
 			case ERA_VIRTUAL:

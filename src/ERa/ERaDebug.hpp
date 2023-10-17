@@ -36,22 +36,41 @@
 #endif
 
 #if defined(ERA_DEBUG)
+    #if defined(ERA_DEBUG_COLOR)
+        #define ERA_LOG_RED                             "\033[0;31m"
+        #define ERA_LOG_GREEN                           "\033[0;32m"
+        #define ERA_LOG_YELLOW                          "\033[0;33m"
+        #define ERA_LOG_RESET                           "\033[0m"
+        #pragma message "Debug with color only support VSCode!!!"
+    #else
+        #define ERA_LOG_RED
+        #define ERA_LOG_GREEN
+        #define ERA_LOG_YELLOW
+        #define ERA_LOG_RESET
+    #endif
+
     #if defined(ARDUINO) && defined(ESP32) &&   \
         (CORE_DEBUG_LEVEL >= ARDUHAL_LOG_LEVEL_INFO)
-        #define ERA_LOG(tag, ...)           ESP_LOGI(tag, ##__VA_ARGS__)
+        #define ERA_LOG_COLOR(COLOR, tag, format, ...)  ESP_LOGI(tag, ERA_LOG_ ##COLOR format ERA_LOG_RESET, ##__VA_ARGS__)
+        #define ERA_LOG(tag, format, ...)               ERA_LOG_COLOR(GREEN, tag, format, ##__VA_ARGS__)
+        #define ERA_LOG_ERROR(tag, format, ...)         ERA_LOG_COLOR(RED, tag, format, ##__VA_ARGS__)
+        #define ERA_LOG_WARNING(tag, format, ...)       ERA_LOG_COLOR(YELLOW, tag, format, ##__VA_ARGS__)
     #elif defined(ARDUINO) &&                   \
         !defined(__MBED__) &&                   \
         (defined(ESP32) || defined(ESP8266) ||  \
         defined(ARDUINO_ARCH_STM32) ||          \
         defined(ARDUINO_ARCH_RP2040))
         #ifndef ERA_SERIAL
-            #define ERA_SERIAL              Serial
+            #define ERA_SERIAL                          Serial
         #endif
 
-        #define ERA_LOG_TIME()              ERA_SERIAL.printfp(ERA_PSTR("[%6u]"), ERaMillis())
-        #define ERA_LOG_TAG(tag)            ERA_SERIAL.printfp(ERA_PSTR("[%s] "), tag)
-        #define ERA_LOG_FN()                ERA_SERIAL.printfp(ERA_PSTR("[%s:%d] %s(): "), ERaFileName(__FILE__), __LINE__, __FUNCTION__)
-        #define ERA_LOG(tag, format, ...)   { ERA_LOG_TIME(); ERA_LOG_FN(); ERA_LOG_TAG(tag); ERA_SERIAL.printfp(format, ##__VA_ARGS__); ERA_SERIAL.println(); }
+        #define ERA_LOG_TIME()                          ERA_SERIAL.printfp(ERA_PSTR("[%6u]"), ERaMillis())
+        #define ERA_LOG_TAG(tag)                        ERA_SERIAL.printfp(ERA_PSTR("[%s] "), tag)
+        #define ERA_LOG_FN()                            ERA_SERIAL.printfp(ERA_PSTR("[%s:%d] %s(): "), ERaFileName(__FILE__), __LINE__, __FUNCTION__)
+        #define ERA_LOG_COLOR(COLOR, tag, format, ...)  { ERA_LOG_TIME(); ERA_LOG_FN(); ERA_LOG_TAG(tag); ERA_SERIAL.printfp(ERA_LOG_ ##COLOR format ERA_LOG_RESET, ##__VA_ARGS__); ERA_SERIAL.println(); }
+        #define ERA_LOG(tag, format, ...)               ERA_LOG_COLOR(GREEN, tag, format, ##__VA_ARGS__)
+        #define ERA_LOG_ERROR(tag, format, ...)         ERA_LOG_COLOR(RED, tag, format, ##__VA_ARGS__)
+        #define ERA_LOG_WARNING(tag, format, ...)       ERA_LOG_COLOR(YELLOW, tag, format, ##__VA_ARGS__)
 
         static inline
         ERA_UNUSED const char* ERaFileName(const char* path) {
@@ -75,15 +94,20 @@
         defined(ARDUINO_ARCH_AVR) ||            \
         defined(ARDUINO_ARCH_SAM) ||            \
         defined(ARDUINO_ARCH_SAMD) ||           \
+        defined(ARDUINO_ARCH_RENESAS) ||        \
+        defined(ARDUINO_ARCH_ARM) ||            \
         defined(ARDUINO_ARCH_ARC32))
         #ifndef ERA_SERIAL
-            #define ERA_SERIAL              Serial
+            #define ERA_SERIAL                          Serial
         #endif
 
-        #define ERA_LOG_TIME()              ERaPrintf(ERA_PSTR("[%6u]"), ERaMillis())
-        #define ERA_LOG_TAG(tag)            ERaPrintf(ERA_PSTR("[%s] "), tag)
-        #define ERA_LOG_FN()                ERaPrintf(ERA_PSTR("[%s:%d] %s(): "), ERaFileName(__FILE__), __LINE__, __FUNCTION__)
-        #define ERA_LOG(tag, format, ...)   { ERA_LOG_TIME(); ERA_LOG_FN(); ERA_LOG_TAG(tag); ERaPrintf(format, ##__VA_ARGS__); ERA_SERIAL.println(); }
+        #define ERA_LOG_TIME()                          ERaPrintf(ERA_PSTR("[%6u]"), ERaMillis())
+        #define ERA_LOG_TAG(tag)                        ERaPrintf(ERA_PSTR("[%s] "), tag)
+        #define ERA_LOG_FN()                            ERaPrintf(ERA_PSTR("[%s:%d] %s(): "), ERaFileName(__FILE__), __LINE__, __FUNCTION__)
+        #define ERA_LOG_COLOR(COLOR, tag, format, ...)  { ERA_LOG_TIME(); ERA_LOG_FN(); ERA_LOG_TAG(tag); ERaPrintf(ERA_LOG_ ##COLOR format ERA_LOG_RESET, ##__VA_ARGS__); ERA_SERIAL.println(); }
+        #define ERA_LOG(tag, format, ...)               ERA_LOG_COLOR(GREEN, tag, format, ##__VA_ARGS__)
+        #define ERA_LOG_ERROR(tag, format, ...)         ERA_LOG_COLOR(RED, tag, format, ##__VA_ARGS__)
+        #define ERA_LOG_WARNING(tag, format, ...)       ERA_LOG_COLOR(YELLOW, tag, format, ##__VA_ARGS__)
 
         static inline
         ERA_UNUSED const char* ERaFileName(const char* path) {
@@ -135,19 +159,24 @@
         }
     #elif defined(LINUX)
         #ifndef ERA_SERIAL
-            #define ERA_SERIAL              stdout
+            #define ERA_SERIAL                          stdout
         #endif
 
-        #if defined(RASPBERRY)
+        #if defined(RASPBERRY) ||       \
+            defined(TINKER_BOARD) ||    \
+            defined(ORANGE_PI)
             #include <wiringPi.h>
         #endif
 
         #include <iostream>
         using namespace std;
-        #define ERA_LOG_TIME()              cout << '[' << ERaMillis() << ']'
-        #define ERA_LOG_TAG(tag)            cout << '[' << tag << "] "
-        #define ERA_LOG_FN()                cout << '[' << ERaFileName(__FILE__) << ':' << __LINE__ << "] " << __FUNCTION__ << "(): "
-        #define ERA_LOG(tag, format, ...)   { ERA_LOG_TIME(); ERA_LOG_FN(); ERA_LOG_TAG(tag); fprintf(ERA_SERIAL, format ERA_NEWLINE, ##__VA_ARGS__); }
+        #define ERA_LOG_TIME()                          cout << '[' << ERaMillis() << ']'
+        #define ERA_LOG_TAG(tag)                        cout << '[' << tag << "] "
+        #define ERA_LOG_FN()                            cout << '[' << ERaFileName(__FILE__) << ':' << __LINE__ << "] " << __FUNCTION__ << "(): "
+        #define ERA_LOG_COLOR(COLOR, tag, format, ...)  { ERA_LOG_TIME(); ERA_LOG_FN(); ERA_LOG_TAG(tag); fprintf(ERA_SERIAL, ERA_LOG_ ##COLOR format ERA_LOG_RESET ERA_NEWLINE, ##__VA_ARGS__); }
+        #define ERA_LOG(tag, format, ...)               ERA_LOG_COLOR(GREEN, tag, format, ##__VA_ARGS__)
+        #define ERA_LOG_ERROR(tag, format, ...)         ERA_LOG_COLOR(RED, tag, format, ##__VA_ARGS__)
+        #define ERA_LOG_WARNING(tag, format, ...)       ERA_LOG_COLOR(YELLOW, tag, format, ##__VA_ARGS__)
 
         static inline
         ERA_UNUSED const char* ERaFileName(const char* path) {
@@ -165,13 +194,16 @@
         }
     #else
         #ifndef ERA_SERIAL
-            #define ERA_SERIAL              Serial
+            #define ERA_SERIAL                          Serial
         #endif
 
-        #define ERA_LOG_TIME()              ERA_SERIAL.printfp(ERA_PSTR("[%6u]"), ERaMillis())
-        #define ERA_LOG_TAG(tag)            ERA_SERIAL.printfp(ERA_PSTR("[%s] "), tag)
-        #define ERA_LOG_FN()                ERA_SERIAL.printfp(ERA_PSTR("[%s:%d] %s(): "), ERaFileName(__FILE__), __LINE__, __FUNCTION__)
-        #define ERA_LOG(tag, format, ...)   { ERA_LOG_TIME(); ERA_LOG_FN(); ERA_LOG_TAG(tag); ERA_SERIAL.printfp(format, ##__VA_ARGS__); ERA_SERIAL.println(); }
+        #define ERA_LOG_TIME()                          ERA_SERIAL.printfp(ERA_PSTR("[%6u]"), ERaMillis())
+        #define ERA_LOG_TAG(tag)                        ERA_SERIAL.printfp(ERA_PSTR("[%s] "), tag)
+        #define ERA_LOG_FN()                            ERA_SERIAL.printfp(ERA_PSTR("[%s:%d] %s(): "), ERaFileName(__FILE__), __LINE__, __FUNCTION__)
+        #define ERA_LOG_COLOR(COLOR, tag, format, ...)  { ERA_LOG_TIME(); ERA_LOG_FN(); ERA_LOG_TAG(tag); ERA_SERIAL.printfp(ERA_LOG_ ##COLOR format ERA_LOG_RESET, ##__VA_ARGS__); ERA_SERIAL.println(); }
+        #define ERA_LOG(tag, format, ...)               ERA_LOG_COLOR(GREEN, tag, format, ##__VA_ARGS__)
+        #define ERA_LOG_ERROR(tag, format, ...)         ERA_LOG_COLOR(RED, tag, format, ##__VA_ARGS__)
+        #define ERA_LOG_WARNING(tag, format, ...)       ERA_LOG_COLOR(YELLOW, tag, format, ##__VA_ARGS__)
 
         static inline
         ERA_UNUSED const char* ERaFileName(const char* path) {
@@ -189,6 +221,14 @@
         }
     #endif
 
+    #if defined(ERA_SERIAL) &&              \
+        (defined(ARDUINO) || defined(LINUX))
+        #include <ERa/ERaDebugHelper.hpp>
+        #define ERA_PRINT(...)                          LogHelper::instance().print(__VA_ARGS__)
+    #else
+        #define ERA_PRINT(...)                          do {} while(0)
+    #endif
+
     #pragma message "Debug enabled"
     #if defined(ARDUINO) && defined(ESP32)
         #if (CORE_DEBUG_LEVEL < ARDUHAL_LOG_LEVEL_INFO)
@@ -200,13 +240,19 @@
     #endif
 #else
     #undef ERA_LOG
+    #undef ERA_LOG_ERROR
+    #undef ERA_LOG_WARNING
+    #undef ERA_PRINT
     #undef ERA_DEBUG_DUMP
-    #define ERA_LOG(...)
+    #define ERA_LOG(...)            do {} while(0)
+    #define ERA_LOG_ERROR(...)      do {} while(0)
+    #define ERA_LOG_WARNING(...)    do {} while(0)
+    #define ERA_PRINT(...)          do {} while(0)
 #endif
 
 #ifndef ERA_NO_ASSERT
     #include <assert.h>
-    #define ERA_ASSERT(expr)    assert(expr)
+    #define ERA_ASSERT(expr)        assert(expr)
 #else
     #define ERA_ASSERT(expr)
 #endif
