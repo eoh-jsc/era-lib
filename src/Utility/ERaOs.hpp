@@ -91,25 +91,19 @@ namespace ERaOs {
 	void osThreadDelete(TaskHandle_t thread_id);
 	uint32_t osThreadGetStackSpace(TaskHandle_t thread_id);
 	osStatus_t osMessageQueueGet(QueueHandle_t mq_id, void *msg_ptr, uint8_t *msg_prio, uint32_t timeout);
-	IRAM_ATTR
 	osStatus_t osMessageQueueGetIRQ(QueueHandle_t mq_id, void *msg_ptr, uint8_t *msg_prio, uint32_t timeout);
 	osStatus_t osMessageQueuePut(QueueHandle_t mq_id, const void *msg_ptr, uint8_t msg_prio, uint32_t timeout);
-	IRAM_ATTR
 	osStatus_t osMessageQueuePutIRQ(QueueHandle_t mq_id, const void *msg_ptr, uint8_t msg_prio, uint32_t timeout);
 	uint32_t osMessageQueueGetCount(QueueHandle_t mq_id);
-	IRAM_ATTR
 	uint32_t osMessageQueueGetCountIRQ(QueueHandle_t mq_id);
 	uint32_t osMessageQueueGetSpace(QueueHandle_t mq_id);
-	IRAM_ATTR
 	uint32_t osMessageQueueGetSpaceIRQ(QueueHandle_t mq_id);
 	void waitMessageQueueSpace(QueueHandle_t mq_id, uint32_t timeout);
 	osStatus_t osMessageQueueReset(QueueHandle_t mq_id);
 	SemaphoreHandle_t osSemaphoreNew();
 	osStatus_t osSemaphoreRelease(SemaphoreHandle_t semaphore_id);
-	IRAM_ATTR
 	osStatus_t osSemaphoreReleaseIRQ(SemaphoreHandle_t semaphore_id);
 	osStatus_t osSemaphoreAcquire(SemaphoreHandle_t semaphore_id, uint32_t timeout);
-	IRAM_ATTR
 	osStatus_t osSemaphoreAcquireIRQ(SemaphoreHandle_t semaphore_id, uint32_t timeout);
 	uint32_t osEventFlagsSet(EventGroupHandle_t ef_id, uint32_t flags);
 	uint32_t osEventFlagsClear(EventGroupHandle_t ef_id, uint32_t flags);

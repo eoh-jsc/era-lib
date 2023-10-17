@@ -77,28 +77,46 @@ jobs:
           - name: "Espressif32"
             fqbn: "esp32:esp32:esp32"
             platform-name: esp32:esp32
-            sketch-paths: examples/ESP32
+            sketch-paths: |
+              - examples/ESP32/ESP32_WiFi_Basic
+              - examples/ESP32/ESP32_WiFi_SSL
+              - examples/ESP32/ESP32_PlugNPlay
+              - examples/ESP32/ESP32_Ethernet
+              - examples/ESP32/ESP32_Ethernet_SSL
+              - examples/ESP32/ESP32_Gsm_Basic
             libraries: |
               - source-path: ./
               - name: TinyGSM
           - name: "Espressif32-C3"
             fqbn: "esp32:esp32:esp32c3"
             platform-name: esp32:esp32
-            sketch-paths: examples/ESP32
+            sketch-paths: |
+              - examples/ESP32/ESP32_WiFi_Basic
+              - examples/ESP32/ESP32_WiFi_SSL
+              - examples/ESP32/ESP32_PlugNPlay
+              - examples/ESP32/ESP32_Gsm_Basic
             libraries: |
               - source-path: ./
               - name: TinyGSM
           - name: "Espressif32-S2"
             fqbn: "esp32:esp32:esp32s2"
             platform-name: esp32:esp32
-            sketch-paths: examples/ESP32
+            sketch-paths: |
+              - examples/ESP32/ESP32_WiFi_Basic
+              - examples/ESP32/ESP32_WiFi_SSL
+              - examples/ESP32/ESP32_PlugNPlay
+              - examples/ESP32/ESP32_Gsm_Basic
             libraries: |
               - source-path: ./
               - name: TinyGSM
           - name: "Espressif32-S3"
             fqbn: "esp32:esp32:esp32s3"
             platform-name: esp32:esp32
-            sketch-paths: examples/ESP32
+            sketch-paths: |
+              - examples/ESP32/ESP32_WiFi_Basic
+              - examples/ESP32/ESP32_WiFi_SSL
+              - examples/ESP32/ESP32_PlugNPlay
+              - examples/ESP32/ESP32_Gsm_Basic
             libraries: |
               - source-path: ./
               - name: TinyGSM
