@@ -39,6 +39,7 @@ jobs:
               - source-path: ./
               - name: WiFi101
               - name: FlashStorage
+              - name: Adafruit SleepyDog Library
           - name: "Arduino-NANO-33-IoT"
             fqbn: "arduino:samd:nano_33_iot"
             platform-name: arduino:samd
@@ -47,6 +48,7 @@ jobs:
               - source-path: ./
               - name: WiFiNINA
               - name: FlashStorage
+              - name: Adafruit SleepyDog Library
           - name: "Arduino-MKRGSM1400"
             fqbn: "arduino:samd:mkrgsm1400"
             platform-name: arduino:samd
@@ -55,6 +57,7 @@ jobs:
               - source-path: ./
               - name: MKRGSM
               - name: FlashStorage
+              - name: Adafruit SleepyDog Library
           - name: "Arduino-MKRNB1500"
             fqbn: "arduino:samd:mkrnb1500"
             platform-name: arduino:samd
@@ -63,6 +66,7 @@ jobs:
               - source-path: ./
               - name: MKRNB
               - name: FlashStorage
+              - name: Adafruit SleepyDog Library
           - name: "Arduino-NANO-RP2040-Connect"
             fqbn: "arduino:mbed_nano:nanorp2040connect"
             platform-name: arduino:mbed_nano
