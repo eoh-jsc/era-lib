@@ -27,7 +27,7 @@ Website: https://e-ra.io
 * Download the ERa app.
 * Get the ERa Auth Token.
 * Install this library to Arduino IDE. Guide [here](http://arduino.cc/en/guide/libraries)
-* In Arduino IDE, select File -> Examples -> ERa -> ESP32 -> Basic.
+* In Arduino IDE, select File -> Examples -> ERa -> ESP32 -> ESP32_WiFi_Basic.
 * Update ERa Auth Token, ssid and pass wifi in the sketch and upload it to ESP32.
 
 ## Quickstart: ESP32 with PlatformIO
@@ -35,7 +35,7 @@ Website: https://e-ra.io
 * Download the ERa app.
 * Get the ERa Auth Token.
 * Install this library to PlatformIO. (Select PIO Home -> Libraries -> Search "ERa EoH" -> Install latest version)
-* In PlatformIO, select PIO Home -> Libraries -> Search "ERa EoH" -> Examples -> ERa -> ESP32 -> Basic.
+* In PlatformIO, select PIO Home -> Libraries -> Search "ERa EoH" -> Examples -> ERa -> ESP32 -> ESP32_WiFi_Basic.
 * Update ERa Auth Token, ssid and pass wifi in the main.cpp and upload it to ESP32.
 
 **Social Media:**
