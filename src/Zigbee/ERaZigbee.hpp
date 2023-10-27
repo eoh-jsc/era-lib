@@ -86,7 +86,8 @@ protected:
     void begin() { 
         this->configZigbee();
         if ((ZigbeeState::is(ZigbeeStateT::STATE_ZB_IGNORE)) ||
-            (ToZigbee::CommandZigbee::pingSystem(5, 1000) != ResultT::RESULT_SUCCESSFUL)) {
+            (ToZigbee::CommandZigbee::pingSystem(5, 1000, ERaWatchdogFeed) != ResultT::RESULT_SUCCESSFUL)) {
+            ZigbeeState::set(ZigbeeStateT::STATE_ZB_IGNORE);
             return;
         }
         InfoDevice_t::getInstance();

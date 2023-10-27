@@ -116,7 +116,7 @@ protected:
     ResultT removeDevice(AFAddrType_t& dstAddr, bool rejoin = false, bool removeChildren = false, bool force = false);
     void removeAllDevice(bool rejoin = false, bool removeChildren = false, bool force = false);
 
-    ResultT pingSystem(size_t limit, uint32_t timeout = MAX_TIMEOUT);
+    ResultT pingSystem(size_t limit, uint32_t timeout = MAX_TIMEOUT, void (*feed)(void) = nullptr);
     ResultT versionSystem(size_t limit, void* value = nullptr);
     ResultT getExtAddrSystem(size_t limit, void* value = nullptr);
 
