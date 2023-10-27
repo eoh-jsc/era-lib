@@ -113,7 +113,11 @@
             .idle_core_mask = ((1 << portNUM_PROCESSORS) - 1),
             .trigger_panic = true
         };
+#if !CONFIG_ESP_TASK_WDT_INIT
         esp_task_wdt_init(&twdt_config);
+#else
+        esp_task_wdt_reconfigure(&twdt_config);
+#endif
         esp_task_wdt_add(NULL);
         esp_task_wdt_status(NULL);
         isWatchdogEnable = true;
