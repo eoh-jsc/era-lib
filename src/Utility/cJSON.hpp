@@ -81,7 +81,7 @@ then using the CJSON_API_VISIBILITY flag to "export" the same symbols the way CJ
 /* project version */
 #define CJSON_VERSION_MAJOR 1
 #define CJSON_VERSION_MINOR 7
-#define CJSON_VERSION_PATCH 15
+#define CJSON_VERSION_PATCH 16
 
 #include <stddef.h>
 
@@ -287,7 +287,7 @@ CJSON_PUBLIC(double) cJSON_SetNumberHelper(cJSON *object, double number);
 /* Change the valuestring of a cJSON_String object, only takes effect when type of object is cJSON_String */
 CJSON_PUBLIC(char*) cJSON_SetValuestring(cJSON *object, const char *valuestring);
 
-/* If the object is not a boolean type this does nothing and returns cJSON_Invalid else it returns the new type*/
+/* If the object is not a boolean type this does nothing and returns cJSON_Invalid else it returns the new type */
 #define cJSON_SetBoolValue(object, boolean) ( \
     (object != NULL && ((object)->type & (cJSON_False|cJSON_True))) ? \
     (object)->type=((object)->type &(~(cJSON_False|cJSON_True)))|((boolean)?cJSON_True:cJSON_False) : \

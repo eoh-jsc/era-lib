@@ -11,6 +11,7 @@
 #define ERaSetBool(...)     cJSON_SetBoolToObject(__VA_ARGS__)
 #define ERaSetNumber(...)   cJSON_SetNumberToObject(__VA_ARGS__)
 #define ERaSetString(...)   cJSON_SetStringToObject(__VA_ARGS__)
+#define ERaDeleteItem(...)  cJSON_DeleteItemFromObject(__VA_ARGS__)
 
 CJSON_PUBLIC(cJSON*) cJSON_ParseWithLimit(const char* value, size_t limit = MAX_CJSON_PARSE);
 CJSON_PUBLIC(cJSON*) cJSON_AddNumberWithDecimalToObject(cJSON* const object, const char* const name, const double number, int decimal);

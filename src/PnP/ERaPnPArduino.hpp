@@ -280,15 +280,17 @@ public:
         Base::init();
         this->config(auth, host, port, username, password);
         this->connectWiFi(ssid, pass);
+
+        CopyToArray(ssid, ERaConfig.ssid);
+        CopyToArray(pass, ERaConfig.pass);
+        CopyToArray(auth, ERaConfig.token);
+        CopyToArray(host, ERaConfig.host);
+        ERaConfig.port = port;
+        CopyToArray(username, ERaConfig.username);
+        CopyToArray(password, ERaConfig.password);
+        ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_VALID, true);
+
         if (this->netConnected()) {
-            CopyToArray(ssid, ERaConfig.ssid);
-            CopyToArray(pass, ERaConfig.pass);
-            CopyToArray(auth, ERaConfig.token);
-            CopyToArray(host, ERaConfig.host);
-            ERaConfig.port = port;
-            CopyToArray(username, ERaConfig.username);
-            CopyToArray(password, ERaConfig.password);
-            ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_VALID, true);
             if (Base::connect()) {
                 ERaOptConnected(this);
                 ERaState::set(StateT::STATE_CONNECTED);

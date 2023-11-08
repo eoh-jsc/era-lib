@@ -6,7 +6,8 @@
 #include <wiringPi.h>
 #include <softPwm.h>
 
-#define PWM_RANGE               100
+#define PWM_SOFT_RANGE          100
+#define PWM_HARD_RANGE          1024
 
 #if defined(RASPBERRY)
     #define NUMBER_HARD_PIN_PI  4
@@ -43,13 +44,27 @@ bool isHardPin(int pin) {
     return false;
 #else
     (void)pin;
+    return false;
 #endif
 }
 
 static inline
 void pinModePi(int pin, int mode) {
+    softPwmWrite(pin, 0);
+#if defined(ORANGE_PI)
     softPwmStop(pin);
+#endif
     pinMode(pin, mode);
+}
+
+static inline
+void pwmSetRangePi(unsigned int range) {
+#if NUMBER_HARD_PIN_PI
+    /* Default range of 1024 */
+    pwmSetRange(range);
+#else
+    (void)range;
+#endif
 }
 
 static inline
@@ -58,8 +73,13 @@ void pwmModePi(int pin) {
         pinMode(pin, PWM_OUTPUT);
     }
     else {
+        softPwmWrite(pin, 0);
+#if defined(ORANGE_PI)
         softPwmStop(pin);
-        softPwmCreate(pin, 0, PWM_RANGE);
+        softPwmCreate(pin, 0, PWM_SOFT_RANGE);
+#else
+        pinMode(pin, SOFT_PWM_OUTPUT);
+#endif
     }
 }
 

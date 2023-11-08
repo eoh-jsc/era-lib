@@ -118,8 +118,8 @@ CJSON_PUBLIC(double) cJSON_GetNumberValue(const cJSON * const item)
 }
 
 /* This is a safeguard to prevent copy-pasters from using incompatible C and header files */
-#if (CJSON_VERSION_MAJOR != 1) || (CJSON_VERSION_MINOR != 7) || (CJSON_VERSION_PATCH != 15)
-    #error cJSON.h and cJSON.c have different versions. Make sure that both have the same.
+#if (CJSON_VERSION_MAJOR != 1) || (CJSON_VERSION_MINOR != 7) || (CJSON_VERSION_PATCH != 16)
+    #error "cJSON.hpp and cJSON.cpp have different versions. Make sure that both have the same".
 #endif
 
 CJSON_PUBLIC(const char*) cJSON_Version(void)
@@ -2340,7 +2340,7 @@ CJSON_PUBLIC(cJSON_bool) cJSON_InsertItemInArray(cJSON *array, int which, cJSON 
 
 CJSON_PUBLIC(cJSON_bool) cJSON_ReplaceItemViaPointer(cJSON * const parent, cJSON * const item, cJSON * replacement)
 {
-    if ((parent == NULL) || (replacement == NULL) || (item == NULL))
+    if ((parent == NULL) || (parent->child == NULL) || (replacement == NULL) || (item == NULL))
     {
         return false;
     }

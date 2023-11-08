@@ -84,21 +84,6 @@ T ERaMapNumberRange(T value, T fromLow, T fromHigh, T toLow, T toHigh) {
 	return (toLow + (ERaMin(value, fromHigh) - ERaMin(value, fromLow)) * (toHigh - toLow) / (fromHigh - fromLow));
 }
 
-#if defined(ARDUINO) && defined(ESP32)
-    #include "esp_random.h"
-    #include "driver/uart.h"
-    #include "driver/gpio.h"
-    #include <Utility/ERaOs.hpp>
-#elif defined(ARDUINO) &&               \
-    !defined(__MBED__) &&			    \
-    (defined(RTL8722DM) ||              \
-    defined(ARDUINO_AMEBA) ||           \
-    defined(ARDUINO_ARCH_STM32) ||      \
-	defined(ARDUINO_ARCH_RENESAS) ||    \
-    defined(ARDUINO_ARCH_RP2040))
-    #include <Utility/ERaOs.hpp>
-#endif
-
 #if defined(ARDUINO) ||                 \
     defined(PARTICLE) || defined(SPARK)
     #if defined(ARDUINO)
@@ -112,6 +97,23 @@ T ERaMapNumberRange(T value, T fromLow, T fromHigh, T toLow, T toHigh) {
     void CopyToArray(const String& src, T(&dst)[size]) {
         src.toCharArray(dst, size);
     }
+#endif
+
+#if defined(ARDUINO) && defined(ESP32)
+    #if (ESP_IDF_VERSION_MAJOR > 4)
+        #include "esp_random.h"
+        #include "driver/gpio.h"
+    #endif
+    #include "driver/uart.h"
+    #include <Utility/ERaOs.hpp>
+#elif defined(ARDUINO) &&               \
+    !defined(__MBED__) &&			    \
+    (defined(RTL8722DM) ||              \
+    defined(ARDUINO_AMEBA) ||           \
+    defined(ARDUINO_ARCH_STM32) ||      \
+	defined(ARDUINO_ARCH_RENESAS) ||    \
+    defined(ARDUINO_ARCH_RP2040))
+    #include <Utility/ERaOs.hpp>
 #endif
 
 template <typename T, int len, int size>

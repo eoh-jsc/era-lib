@@ -3,20 +3,27 @@
 # 1. Install WiringPi: http://wiringpi.com/download-and-install/
 # 2. Run:
 #    make clean all target=raspberry
-#    sudo era --token=YourAuthToken
-#    sudo era --token=YourAuthToken --id=YourBoardID
+#    sudo ./era --token=YourAuthToken
+#    sudo ./era --token=YourAuthToken --id=YourBoardID
 #
 # To build on TinkerBoard:
 # 1. Install WiringPi: https://github.com/TinkerBoard/gpio_lib_c/
 # 2. Run:
 #    make clean all target=tinker
-#    sudo era --token=YourAuthToken
-#    sudo era --token=YourAuthToken --id=YourBoardID
+#    sudo ./era --token=YourAuthToken
+#    sudo ./era --token=YourAuthToken --id=YourBoardID
+#
+# To build on OrangePi:
+# 1. Install WiringPi: https://github.com/orangepi-xunlong/wiringOP/
+# 2. Run:
+#    make clean all target=orangepi
+#    sudo ./era --token=YourAuthToken
+#    sudo ./era --token=YourAuthToken --id=YourBoardID
 #
 
 CC ?= gcc
 CXX ?= g++
-CXXFLAGS += -I ../src/ -I ./MbedTLS/ -I ./ -DLINUX
+CXXFLAGS += -I ../src/ -I ./MbedTLS/ -I ./Core/inc/ -I ./User/inc/ -I ./ -DLINUX
 LDFLAGS += -lrt -lpthread
 
 ifeq ($(build),debug)
@@ -98,6 +105,8 @@ endif
 
 ifeq ($(location),VN)
 	CXXFLAGS += -DERA_LOCATION_VN
+else ifeq ($(location),SG)
+	CXXFLAGS += -DERA_LOCATION_SG
 endif
 
 ifdef dev_modbus
@@ -118,6 +127,8 @@ ifdef qos
 endif
 
 SOURCES=main.cpp \
+	$(wildcard User/src/*.cpp) \
+	$(wildcard Core/src/*.cpp) \
 	../src/ERa/ERaTimer.cpp \
 	../src/ERa/ERaReport.cpp \
 	../src/ERa/ERaButton.cpp \
@@ -132,6 +143,10 @@ SOURCES=main.cpp \
 	MQTT/MQTT/unix/unix.cpp \
 	MQTT/MQTT/MQTTLinux.cpp
 
+ifndef target
+	SOURCES += Utility/Compat/SerialLinux.cpp
+endif
+
 ifeq ($(findstring true, $(ssl) $(tls)),true)
 	CXXFLAGS += -DERA_MQTT_SSL
 	SOURCES += MQTT/MQTT/unix/unix_tls.cpp
@@ -140,7 +155,9 @@ endif
 SOURCES_C=../src/MQTT/MQTT/lwmqtt/client.c \
 	../src/MQTT/MQTT/lwmqtt/helpers.c \
 	../src/MQTT/MQTT/lwmqtt/packet.c \
-	../src/MQTT/MQTT/lwmqtt/string.c
+	../src/MQTT/MQTT/lwmqtt/string.c \
+	$(wildcard User/src/*.c) \
+	$(wildcard Core/src/*.c)
 
 SOURCES_TLS=
 
@@ -163,3 +180,6 @@ $(EXECUTABLE): $(OBJECTS)
 
 .cpp.o:
 	$(CXX) $(CXXFLAGS) $< -o $@
+
+.c.o:
+	$(CC) $(CXXFLAGS) $< -o $@

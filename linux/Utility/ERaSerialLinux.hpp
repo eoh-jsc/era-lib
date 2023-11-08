@@ -21,9 +21,18 @@ class ERaSerialLinux
 public:
     ERaSerialLinux()
         : fd(-1)
+        , hasPeek(false)
+        , peekByte(0)
+    {}
+    ERaSerialLinux(int _fd)
+        : fd(_fd)
+        , hasPeek(false)
+        , peekByte(0)
     {}
     ~ERaSerialLinux()
-    {}
+    {
+        this->end();
+    }
 
     void begin(const char* device, const int baud) {
         this->end();
@@ -36,24 +45,53 @@ public:
         }
         this->flush();
         serialClose(this->fd);
+        this->fd = -1;
     }
 
     int available() override {
         if (!this->connected()) {
             return 0;
         }
-        return serialDataAvail(this->fd);
+        int result {0};
+        result = serialDataAvail(this->fd);
+        if (result < 0) {
+            return (this->hasPeek ? 1 : 0);
+        }
+        if (this->hasPeek) {
+            result++;
+        }
+        return result;
     }
 
     int read() override {
         if (!this->connected()) {
             return -1;
         }
+        if (this->hasPeek) {
+            this->hasPeek = false;
+            return this->peekByte;
+        }
         return serialGetchar(this->fd);
     }
 
     int peek() override {
-        return -1;
+        if (!this->available()) {
+            return -1;
+        }
+        uint8_t byte {0};
+        if (this->hasPeek) {
+            byte = this->peekByte;
+        }
+        else {
+            int c = serialGetchar(this->fd);
+            if (c < 0) {
+                return -1;
+            }
+            byte = (uint8_t)c;
+            this->hasPeek = true;
+            this->peekByte = byte;
+        }
+        return byte;
     }
 
     size_t write(uint8_t value) override {
@@ -87,8 +125,11 @@ private:
     }
 
     int fd;
+    bool hasPeek;
+    uint8_t peekByte;
 };
 
 typedef ERaSerialLinux ERaSerial;
+typedef ERaSerialLinux HardwareSerial;
 
 #endif /* INC_ERA_SERIAL_LINUX_HPP_ */

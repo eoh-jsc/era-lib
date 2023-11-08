@@ -1,6 +1,7 @@
 #ifndef INC_IPADDRESS_HPP_
 #define INC_IPADDRESS_HPP_
 
+#include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -36,6 +37,14 @@ public:
 
     virtual ~IPAddress()
     {}
+
+    const char* toString() const {
+        static char ipRet[20] {0};
+        memset(ipRet, 0, sizeof(ipRet));
+        snprintf(ipRet, sizeof(ipRet), "%u.%u.%u.%u", this->address.bytes[0], this->address.bytes[1],
+                                                      this->address.bytes[2], this->address.bytes[3]);
+        return ipRet;
+    }
 
     bool fromString(const char* address) {
         uint16_t acc = 0; // Accumulator
@@ -76,28 +85,28 @@ public:
         return this->address.dword;
     }
 
-    bool operator==(const IPAddress& addr) const {
+    bool operator == (const IPAddress& addr) const {
         return (this->address.dword == addr.address.dword);
     }
 
-    bool operator==(const uint8_t* addr) const {
+    bool operator == (const uint8_t* addr) const {
         return !memcmp(addr, this->address.bytes, sizeof(this->address.bytes));
     }
 
-    uint8_t operator[](int index) const {
+    uint8_t operator [] (int index) const {
         return this->address.bytes[index];
     }
 
-    uint8_t& operator[](int index) {
+    uint8_t& operator [] (int index) {
         return this->address.bytes[index];
     }
 
-    IPAddress& operator=(const uint8_t *_address) {
+    IPAddress& operator = (const uint8_t *_address) {
         memcpy(this->address.bytes, _address, sizeof(this->address.bytes));
         return *this;
     }
 
-    IPAddress& operator=(uint32_t _address) {
+    IPAddress& operator = (uint32_t _address) {
         this->address.dword = _address;
         return *this;
     }

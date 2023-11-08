@@ -120,6 +120,9 @@ public:
     }
 
     const char* getClientID() const {
+        if (this->clientID == NULL) {
+            return "";
+        }
         return this->clientID;
     }
 
@@ -238,9 +241,10 @@ bool ERaMqttLinux<MQTT>::connect() {
     this->_connected = false;
 
     while (this->mqtt.connect(_clientID, this->username, this->password) == false) {
-        ERA_LOG_ERROR(TAG, ERA_PSTR("MQTT(%d): Connect failed (%d), retrying in 5 seconds"), ++count, this->mqtt.lastError());
+        ERA_LOG_ERROR(TAG, ERA_PSTR("MQTT(%d): Connect failed (%d), retrying in 5 seconds"),
+                                    (count + 1), this->mqtt.lastError());
         ERaDelay(5000);
-        if (count >= LIMIT_CONNECT_BROKER_MQTT) {
+        if (++count >= LIMIT_CONNECT_BROKER_MQTT) {
             return false;
         }
     }

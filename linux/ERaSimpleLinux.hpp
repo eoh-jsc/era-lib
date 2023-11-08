@@ -7,6 +7,7 @@
     defined(ORANGE_PI))
     #include <wiringPi.h>
     #include <Utility/ERaPwmWiringPi.hpp>
+    #include <Utility/ERaPulseWiringPi.hpp>
     #include <ERaApiWiringPiDef.hpp>
 #elif defined(LINUX)
     #include <ERaApiLinuxDef.hpp>
@@ -23,6 +24,7 @@
     (defined(RASPBERRY) ||   \
     defined(TINKER_BOARD) || \
     defined(ORANGE_PI))
+    #include <Utility/ERaI2CWiringPi.hpp>
     #include <ERaApiWiringPi.hpp>
 #elif defined(LINUX)
     #include <ERaApiLinux.hpp>

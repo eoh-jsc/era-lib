@@ -256,15 +256,17 @@ public:
         this->restart();
         ERaWatchdogFeed();
         this->connectNetwork(ssid, pass);
+
+        CopyToArray(ssid, ERaConfig.ssid);
+        CopyToArray(pass, ERaConfig.pass);
+        CopyToArray(auth, ERaConfig.token);
+        CopyToArray(host, ERaConfig.host);
+        ERaConfig.port = port;
+        CopyToArray(username, ERaConfig.username);
+        CopyToArray(password, ERaConfig.password);
+        ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_VALID, true);
+
         if (this->netConnected()) {
-            CopyToArray(ssid, ERaConfig.ssid);
-            CopyToArray(pass, ERaConfig.pass);
-            CopyToArray(auth, ERaConfig.token);
-            CopyToArray(host, ERaConfig.host);
-            ERaConfig.port = port;
-            CopyToArray(username, ERaConfig.username);
-            CopyToArray(password, ERaConfig.password);
-            ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_VALID, true);
             if (Base::connect()) {
                 ERaOptConnected(this);
                 ERaState::set(StateT::STATE_CONNECTED);
@@ -1514,8 +1516,8 @@ void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
                                             ERA_PROTO_TYPE : this->thisProto().getTransp().getSSID()));
     cJSON_AddStringToObject(root, INFO_BSSID, ERA_PROTO_TYPE);
     cJSON_AddNumberToObject(root, INFO_RSSI, this->thisProto().getTransp().getSignalQuality());
-    cJSON_AddStringToObject(root, INFO_MAC, ERA_PROTO_TYPE);
-    cJSON_AddStringToObject(root, INFO_LOCAL_IP, ERA_PROTO_TYPE);
+    cJSON_AddStringToObject(root, INFO_MAC, ::getMAC().c_str());
+    cJSON_AddStringToObject(root, INFO_LOCAL_IP, ::getLocalIP().c_str());
     cJSON_AddNumberToObject(root, INFO_PING, this->thisProto().getTransp().getPing());
 
     /* Override info */

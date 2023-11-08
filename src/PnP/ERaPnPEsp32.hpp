@@ -149,15 +149,17 @@ public:
         Base::init();
         this->config(auth, host, port, username, password);
         this->connectWiFi(ssid, pass);
+
+        CopyToArray(ssid, ERaConfig.ssid);
+        CopyToArray(pass, ERaConfig.pass);
+        CopyToArray(auth, ERaConfig.token);
+        CopyToArray(host, ERaConfig.host);
+        ERaConfig.port = port;
+        CopyToArray(username, ERaConfig.username);
+        CopyToArray(password, ERaConfig.password);
+        ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_VALID, true);
+
         if (this->netConnected()) {
-            CopyToArray(ssid, ERaConfig.ssid);
-            CopyToArray(pass, ERaConfig.pass);
-            CopyToArray(auth, ERaConfig.token);
-            CopyToArray(host, ERaConfig.host);
-            ERaConfig.port = port;
-            CopyToArray(username, ERaConfig.username);
-            CopyToArray(password, ERaConfig.password);
-            ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_VALID, true);
             if (Base::connect()) {
                 ERaOptConnected(this);
                 ERaState::set(StateT::STATE_CONNECTED);
@@ -1682,6 +1684,27 @@ void ERaPnP<Transport>::replace(char* buf, char src, char dst) {
                 break;
             case 16:
                 rstReason = "RTCWDT_RTC_RESET";      /** <16, RTC Watch dog reset digital core and rtc module */
+                break;
+            case 17:
+                rstReason = "TG1WDT_CPU_RESET";         /** <17, Time Group1 reset CPU */
+                break;
+            case 18:
+                rstReason = "SUPER_WDT_RESET";          /** <18, Super watchdog reset digital core and rtc module */
+                break;
+            case 19:
+                rstReason = "GLITCH_RTC_RESET";         /** <19, Glitch reset digital core and rtc module */
+                break;
+            case 20:
+                rstReason = "EFUSE_RESET";              /** <20, Efuse reset digital core */
+                break;
+            case 21:
+                rstReason = "USB_UART_CHIP_RESET";      /** <21, Usb uart reset digital core */
+                break;
+            case 22:
+                rstReason = "USB_JTAG_CHIP_RESET";      /** <22, Usb jtag reset digital core */
+                break;
+            case 23:
+                rstReason = "POWER_GLITCH_RESET";       /** <23, Power glitch reset digital core and rtc module */
                 break;
             default:
                 rstReason = "UNKNOWN";
