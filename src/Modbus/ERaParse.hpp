@@ -115,9 +115,15 @@ public:
         , prevId(0)
         , baudSpeed(DEFAULT_MODBUS_BAUD_SPEED)
         , isWifi(false)
+        , ssid {}
+        , pass {}
+        , hashID {}
         , isBluetooth(false)
         , autoClosing(false)
         , isUpdated(false)
+        , sensorCount(0)
+        , readConfigCount(0)
+        , readConfigAliasCount(0)
         , writeOption {
             .enable = false,
             .len1 = 0,
