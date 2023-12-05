@@ -114,6 +114,7 @@ public:
         : id(0)
         , prevId(0)
         , baudSpeed(DEFAULT_MODBUS_BAUD_SPEED)
+        , isWifi(false)
         , isBluetooth(false)
         , autoClosing(false)
         , isUpdated(false)
