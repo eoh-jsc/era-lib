@@ -58,7 +58,9 @@ protected:
             return;
         }
 
-#if defined(ERA_OTA_SSL)
+#if defined(ERA_DETECT_SSL)
+        http.begin(url);
+#elif defined(ERA_OTA_SSL)
         http.begin(static_cast<WiFiClient&>(*client), url);
 #else
         String finalURL = url;
@@ -125,8 +127,8 @@ protected:
 
         this->flash.end();
 
-        // Client& client = http.getStream();
-        size_t written = Update.writeStream(*client);
+        Client& clientStream = http.getStream();
+        size_t written = Update.writeStream(clientStream);
         http.end();
         if (written != contentLength) {
             Update.end();

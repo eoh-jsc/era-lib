@@ -31,7 +31,7 @@ void ERaUdp<Udp>::getImeiChip(char(&ptr)[size]) {
         mac.replace(":", "");
     }
     ClearArray(ptr);
-#ifdef ERA_AUTH_TOKEN
+#if defined(ERA_AUTH_TOKEN)
     FormatString(ptr, ERA_AUTH_TOKEN);
 #else
     if ((this->authToken != nullptr) && strlen(this->authToken)) {

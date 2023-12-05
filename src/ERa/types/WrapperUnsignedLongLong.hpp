@@ -15,7 +15,7 @@ public:
 
     WrapperUnsignedLongLong& operator = (unsigned long long _value) {
         this->value = _value;
-        return *this;
+        return (*this);
     }
 
 protected:

@@ -21,6 +21,7 @@
 #include <ERa/ERaLogger.hpp>
 #include <ERa/ERaCallbacks.hpp>
 #include <OTA/ERaOTA.hpp>
+#include <Utility/ERaInfo.hpp>
 
 #if defined(__has_include) &&       \
     __has_include(<functional>) &&  \
@@ -79,6 +80,8 @@ public:
 		, pServerCallbacks(nullptr)
 		, pModel(ERA_MODEL_NAME)
 		, _connected(false)
+		, heartbeat(ERA_HEARTBEAT_INTERVAL)
+		, lastHeartbeat(0UL)
     {
         memset(this->ERA_TOPIC, 0, sizeof(this->ERA_TOPIC));
     }
@@ -98,7 +101,7 @@ public:
     }
 
 	void run() {
-		if (!Base::run()) {
+		if (!Base::run() && !this->isConfigMode()) {
 			ERaState::set(StateT::STATE_DISCONNECTED);
 		}
 		Handler::run();
@@ -106,6 +109,7 @@ public:
 			this->pLogger->run();
 		}
 		Base::runERaApiTask();
+		this->publishHeartbeat();
 	}
 
     void setERaModel(const char* model) {
@@ -169,6 +173,15 @@ public:
         this->transp.setKeepAlive(keepAlive);
     }
 
+	void setHeartbeat(unsigned long interval) {
+		if (!interval) {
+		}
+		else if (interval < ERA_HEARTBEAT_INTERVAL) {
+			interval = ERA_HEARTBEAT_INTERVAL;
+		}
+		this->heartbeat = interval;
+	}
+
 	const char* getAuth() const {
 		return this->transp.getAuth();
 	}
@@ -207,6 +220,7 @@ protected:
 		return true;
     }
 
+	bool isConfigMode();
 	void onConnected();
 	void onDisconnected();
 
@@ -227,6 +241,8 @@ private:
 	void processActionDeviceZigbee(const cJSON* const root, uint8_t type);
 	void processActionZigbee(const char* ieeeAddr, const char* payload, uint8_t type);
 #endif
+	void processState(const ERaDataBuff& arrayTopic, const char* payload);
+	void publishHeartbeat();
 	bool sendInfo();
 	bool sendData(ERaRsp_t& rsp);
 	bool sendPinData(ERaRsp_t& rsp);
@@ -296,6 +312,9 @@ private:
 	ERaServerCallbacks* pServerCallbacks;
 	const char* pModel;
 	bool _connected;
+
+	unsigned long heartbeat;
+	unsigned long lastHeartbeat;
 };
 
 template <class Transp, class Flash>
@@ -311,6 +330,19 @@ void ERaProto<Transp, Flash>::printBanner() {
 		"Connection successful (ping: %lums)!!!" ERA_NEWLINE),
 		(unsigned long)this->transp.getPing()
 	);
+}
+
+template <class Transp, class Flash>
+bool ERaProto<Transp, Flash>::isConfigMode() {
+	switch (ERaState::get()) {
+        case StateT::STATE_SWITCH_TO_AP:
+        case StateT::STATE_RESET_CONFIG:
+        case StateT::STATE_RESET_CONFIG_REBOOT:
+        case StateT::STATE_REBOOT:
+			return true;
+		default:
+			return false;
+	}
 }
 
 template <class Transp, class Flash>
@@ -330,6 +362,7 @@ void ERaProto<Transp, Flash>::onDisconnected() {
 	}
 
 	this->_connected = false;
+	Base::switchTask();
 	ERaOnDisconnected();
 }
 
@@ -368,6 +401,9 @@ void ERaProto<Transp, Flash>::processRequest(const char* topic, const char* payl
 	}
 	else if (arrayTopic.at(1) == "down") {
 		this->processDownRequest(arrayTopic, payload);
+	}
+	else if (arrayTopic.at(1) == "is_online") {
+		this->processState(arrayTopic, payload);
 	}
 #if defined(ERA_ZIGBEE)
 	else if (arrayTopic.at(1) == "zigbee") {
@@ -422,12 +458,12 @@ void ERaProto<Transp, Flash>::processDownAction(const char* payload, cJSON* root
 		ERaState::set(StateT::STATE_OTA_UPGRADE);
 	}
 	else if (ERaStrCmp(item->valuestring, "reset_eeprom")) {
-#if defined(ERA_MODBUS)
-		Base::ERaModbus::removeConfigFromFlash();
-#endif
 		Base::removePinConfig();
 #if defined(ERA_BT)
 		Base::removeBluetoothConfig();
+#endif
+#if defined(ERA_MODBUS)
+		Base::ERaModbus::removeConfigFromFlash();
 #endif
 		ERaDelay(1000);
 		ERaState::set(StateT::STATE_RESET_CONFIG_REBOOT);
@@ -534,9 +570,9 @@ bool ERaProto<Transp, Flash>::processActionChip(const char* payload, cJSON* root
 			item = cJSON_GetObjectItem(dataItem, "commands");
 			if (cJSON_IsArray(item)) {
 				cJSON* keyItem = nullptr;
-				for(int i = 0; i < cJSON_GetArraySize(item); ++i) {
+				for (int i = 0; i < cJSON_GetArraySize(item); ++i) {
 					keyItem = cJSON_GetArrayItem(item, i);
-					if(cJSON_IsString(keyItem)) {
+					if (cJSON_IsString(keyItem)) {
 						// Handle command
 						Base::ERaModbus::addModbusAction(keyItem->valuestring,
 														typeAction, paramAction);
@@ -767,14 +803,45 @@ void ERaProto<Transp, Flash>::processIOPin(cJSON* root) {
 #endif
 
 template <class Transp, class Flash>
+void ERaProto<Transp, Flash>::processState(const ERaDataBuff& arrayTopic, const char* payload) {
+	if (ERaStrCmp(payload, this->transp.getLWTPayload())) {
+		this->transp.publishState(true);
+	}
+	ERA_FORCE_UNUSED(arrayTopic);
+}
+
+template <class Transp, class Flash>
+void ERaProto<Transp, Flash>::publishHeartbeat() {
+	if (!this->heartbeat) {
+		return;
+	}
+
+    unsigned long currentMillis = ERaMillis();
+    if ((currentMillis - this->lastHeartbeat) < this->heartbeat) {
+        return;
+    }
+    unsigned long skipTimes = ((currentMillis - this->lastHeartbeat) / this->heartbeat);
+    // update time
+    this->lastHeartbeat += (this->heartbeat * skipTimes);
+
+	if (this->connected()) {
+		this->sendInfo();
+	}
+}
+
+template <class Transp, class Flash>
 bool ERaProto<Transp, Flash>::sendInfo() {
 	bool status {false};
 	cJSON* root = cJSON_CreateObject();
-	if(root == nullptr) {
+	if (root == nullptr) {
 		return false;
 	}
 
 	Base::addInfo(root);
+
+	if (this->heartbeat) {
+    	cJSON_AddNumberToObject(root, INFO_UPTIME, (ERaMillis() / 1000UL));
+	}
 
     char topic[MAX_TOPIC_LENGTH] {0};
 	char* payload = cJSON_PrintUnformatted(root);

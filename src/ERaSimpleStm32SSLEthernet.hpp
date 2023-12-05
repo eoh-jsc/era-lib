@@ -1,6 +1,8 @@
 #ifndef INC_ERA_SIMPLE_STM32_SSL_ETHERNET_HPP_
 #define INC_ERA_SIMPLE_STM32_SSL_ETHERNET_HPP_
 
+#define ERA_MQTT_SSL
+
 #include <LwIP.h>
 #include <STM32Ethernet.h>
 #include <ERa/ERaTask.hpp>

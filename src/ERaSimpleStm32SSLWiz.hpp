@@ -5,6 +5,8 @@
     #define ERA_NO_RTOS
 #endif
 
+#define ERA_MQTT_SSL
+
 #include <Ethernet.h>
 #include <EthernetClient.h>
 #include <ERa/ERaTask.hpp>

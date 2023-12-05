@@ -23,6 +23,15 @@ void ERaZigbee<Api>::configZigbee() {
 }
 
 template <class Api>
+void ERaZigbee<Api>::serialEnd() {
+    if (this->stream != NULL) {
+        return;
+    }
+    SerialZB.flush();
+    SerialZB.end();
+}
+
+template <class Api>
 void ERaZigbee<Api>::handleZigbeeData() {
     if (this->stream == NULL) {
         return;

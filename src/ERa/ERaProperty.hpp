@@ -18,6 +18,8 @@
     #define VIRTUAL                     0xFF
 #endif
 
+#define ERA_PROPERTY_TIMEOUT            500UL
+
 #define addProperty(p, ...)             addPropertyReal(ERA_F(#p), p, __VA_ARGS__)
 #define addPropertyT(p, ...)            addPropertyRealT(ERA_F(#p), p, __VA_ARGS__)
 
@@ -81,21 +83,21 @@ public:
             if (this->isValid()) {
                 this->prop->onUpdate(this->pProp, cb);
             }
-            return *this;
+            return (*this);
         }
 
         iterator& publish() {
             if (this->isValid()) {
                 this->prop->publish(this->pProp);
             }
-            return *this;
+            return (*this);
         }
 
         iterator& publishEvery(unsigned long interval = 1000UL) {
             if (this->isValid()) {
                 this->prop->publishEvery(this->pProp, interval);
             }
-            return *this;
+            return (*this);
         }
 
         iterator& publishOnChange(float minChange = 1.0f,
@@ -104,7 +106,14 @@ public:
             if (this->isValid()) {
                 this->prop->publishOnChange(this->pProp, minChange, minInterval, maxInterval);
             }
-            return *this;
+            return (*this);
+        }
+
+        ERaReport::iterator* getReport() {
+            if (this->isValid()) {
+                return &this->pProp->report;
+            }
+            return nullptr;
         }
 
     protected:
@@ -121,6 +130,7 @@ public:
     ERaProperty()
         : numProperty(0)
         , timeout(100L)
+        , writeTimeout(ERA_PROPERTY_TIMEOUT)
     {}
     ~ERaProperty()
     {}
@@ -309,10 +319,57 @@ public:
     }
 #endif
 
+    void setPropertyTimeout(unsigned long _timeout) {
+        if (_timeout < ERA_PROPERTY_TIMEOUT) {
+            _timeout = ERA_PROPERTY_TIMEOUT;
+        }
+        this->writeTimeout = _timeout;
+    }
+
 protected:
     void run();
     void handler(uint8_t pin, const ERaParam& param);
     void handler(const char* id, const ERaParam& param);
+
+#if !defined(ERA_VIRTUAL_WRITE_LEGACY)
+    template <typename T>
+    void virtualWriteProperty(uint8_t pin, T value) {
+        Property_t* pProp = this->isPropertyIdExist(pin);
+        if (pProp != nullptr) {
+            *pProp->value = value;
+            return;
+        }
+        T* wrapper = new T(value);
+        this->addPropertyVirtualT(pin, *wrapper, PermissionT::PERMISSION_READ_WRITE).publishOnChange(0, this->writeTimeout).publish();
+    }
+
+    void virtualWriteProperty(uint8_t pin, const ERaParam& value) {
+        if (value.isNumber()) {
+            this->virtualWriteProperty(pin, value.getDouble());
+        }
+        else if (value.isString()) {
+            this->virtualWriteProperty(pin, value.getString());
+        }
+    }
+
+    void virtualWriteProperty(uint8_t pin, const WrapperString& value) {
+        this->virtualWriteProperty(pin, value.getString());
+    }
+
+    void virtualWriteProperty(uint8_t pin, const char* value) {
+        Property_t* pProp = this->isPropertyIdExist(pin);
+        if (pProp != nullptr) {
+            *pProp->value = value;
+            return;
+        }
+        WrapperString* wrapper = new WrapperString(value);
+        this->addPropertyVirtual(pin, *wrapper, PermissionT::PERMISSION_READ_WRITE).publishOnChange(0, this->writeTimeout);
+    }
+
+    void virtualWriteProperty(uint8_t pin, char* value) {
+        this->virtualWriteProperty(pin, (const char*)value);
+    }
+#endif
 
 private:
     void updateValue(const Property_t* pProp);
@@ -379,6 +436,7 @@ private:
 	ERaReport ERaPropRp;
 	unsigned int numProperty;
     unsigned long timeout;
+    unsigned long writeTimeout;
 };
 
 template <class Api>
@@ -390,12 +448,12 @@ void ERaProperty<Api>::run() {
         if (!this->isValidProperty(pProp)) {
             continue;
         }
-        if (currentMillis - pProp->prevMillis < this->timeout) {
+        if ((currentMillis - pProp->prevMillis) < this->timeout) {
             continue;
         }
-        unsigned long skipTimes = (currentMillis - pProp->prevMillis) / this->timeout;
+        unsigned long skipTimes = ((currentMillis - pProp->prevMillis) / this->timeout);
         // update time
-        pProp->prevMillis += this->timeout * skipTimes;
+        pProp->prevMillis += (this->timeout * skipTimes);
         // update value
         if (!this->getFlag(pProp->permission, PermissionT::PERMISSION_READ)) {
             continue;
@@ -676,38 +734,38 @@ template <class Api>
 void ERaProperty<Api>::onCallbackVirtual(const Property_t* const pProp) {
     switch (pProp->value->getType()) {
         case WrapperTypeT::WRAPPER_TYPE_BOOL:
-            this->thisApi().virtualWrite(pProp->id, pProp->value->getBool());
+            this->thisApi().virtualWrite(pProp->id, pProp->value->getBool(), true);
             break;
         case WrapperTypeT::WRAPPER_TYPE_INT:
-            this->thisApi().virtualWrite(pProp->id, pProp->value->getInt());
+            this->thisApi().virtualWrite(pProp->id, pProp->value->getInt(), true);
             break;
         case WrapperTypeT::WRAPPER_TYPE_UNSIGNED_INT:
-            this->thisApi().virtualWrite(pProp->id, pProp->value->getUnsignedInt());
+            this->thisApi().virtualWrite(pProp->id, pProp->value->getUnsignedInt(), true);
             break;
         case WrapperTypeT::WRAPPER_TYPE_LONG:
-            this->thisApi().virtualWrite(pProp->id, pProp->value->getLong());
+            this->thisApi().virtualWrite(pProp->id, pProp->value->getLong(), true);
             break;
         case WrapperTypeT::WRAPPER_TYPE_UNSIGNED_LONG:
-            this->thisApi().virtualWrite(pProp->id, pProp->value->getUnsignedLong());
+            this->thisApi().virtualWrite(pProp->id, pProp->value->getUnsignedLong(), true);
             break;
         case WrapperTypeT::WRAPPER_TYPE_LONG_LONG:
-            this->thisApi().virtualWrite(pProp->id, pProp->value->getLongLong());
+            this->thisApi().virtualWrite(pProp->id, pProp->value->getLongLong(), true);
             break;
         case WrapperTypeT::WRAPPER_TYPE_UNSIGNED_LONG_LONG:
-            this->thisApi().virtualWrite(pProp->id, pProp->value->getUnsignedLongLong());
+            this->thisApi().virtualWrite(pProp->id, pProp->value->getUnsignedLongLong(), true);
             break;
         case WrapperTypeT::WRAPPER_TYPE_FLOAT:
-            this->thisApi().virtualWrite(pProp->id, pProp->value->getFloat());
+            this->thisApi().virtualWrite(pProp->id, pProp->value->getFloat(), true);
             break;
         case WrapperTypeT::WRAPPER_TYPE_DOUBLE:
-            this->thisApi().virtualWrite(pProp->id, pProp->value->getDouble());
+            this->thisApi().virtualWrite(pProp->id, pProp->value->getDouble(), true);
             break;
         case WrapperTypeT::WRAPPER_TYPE_NUMBER:
-            this->thisApi().virtualWrite(pProp->id, pProp->value->getNumber());
+            this->thisApi().virtualWrite(pProp->id, pProp->value->getNumber(), true);
             break;
         case WrapperTypeT::WRAPPER_TYPE_STRING:
             if (pProp->value->getString() != nullptr) {
-                this->thisApi().virtualWrite(pProp->id, pProp->value->getString());
+                this->thisApi().virtualWrite(pProp->id, pProp->value->getString(), true);
             }
             break;
         default:
@@ -775,52 +833,94 @@ void ERaProperty<Api>::onCallbackReal(const Property_t* const pProp) {
         }
         ptrColon++;
 
+        if (property == pProp) {
+            switch (property->value->getType()) {
+                case WrapperTypeT::WRAPPER_TYPE_BOOL:
+                    property->report.updateReport(property->value->getBool(), false, false);
+                    cJSON_SetNumberToObject(dataItem, ptrColon, property->value->getBool());
+                    break;
+                case WrapperTypeT::WRAPPER_TYPE_INT:
+                    property->report.updateReport(property->value->getInt(), false, false);
+                    cJSON_SetNumberToObject(dataItem, ptrColon, property->value->getInt());
+                    break;
+                case WrapperTypeT::WRAPPER_TYPE_UNSIGNED_INT:
+                    property->report.updateReport(property->value->getUnsignedInt(), false, false);
+                    cJSON_SetNumberToObject(dataItem, ptrColon, property->value->getUnsignedInt());
+                    break;
+                case WrapperTypeT::WRAPPER_TYPE_LONG:
+                    property->report.updateReport(property->value->getLong(), false, false);
+                    cJSON_SetNumberToObject(dataItem, ptrColon, property->value->getLong());
+                    break;
+                case WrapperTypeT::WRAPPER_TYPE_UNSIGNED_LONG:
+                    property->report.updateReport(property->value->getUnsignedLong(), false, false);
+                    cJSON_SetNumberToObject(dataItem, ptrColon, property->value->getUnsignedLong());
+                    break;
+                case WrapperTypeT::WRAPPER_TYPE_LONG_LONG:
+                    property->report.updateReport(property->value->getLongLong(), false, false);
+                    cJSON_SetNumberToObject(dataItem, ptrColon, property->value->getLongLong());
+                    break;
+                case WrapperTypeT::WRAPPER_TYPE_UNSIGNED_LONG_LONG:
+                    property->report.updateReport(property->value->getUnsignedLongLong(), false, false);
+                    cJSON_SetNumberToObject(dataItem, ptrColon, property->value->getUnsignedLongLong());
+                    break;
+                case WrapperTypeT::WRAPPER_TYPE_FLOAT:
+                    property->report.updateReport(property->value->getFloat(), false, false);
+                    cJSON_SetNumberToObject(dataItem, ptrColon, property->value->getFloat());
+                    break;
+                case WrapperTypeT::WRAPPER_TYPE_DOUBLE:
+                    property->report.updateReport(property->value->getFloat(), false, false);
+                    cJSON_SetNumberToObject(dataItem, ptrColon, property->value->getDouble());
+                    break;
+                case WrapperTypeT::WRAPPER_TYPE_NUMBER:
+                    property->report.updateReport(property->value->getFloat(), false, false);
+                    cJSON_SetNumberToObject(dataItem, ptrColon, property->value->getNumber());
+                    break;
+                default:
+                    break;
+            }
+            continue;
+        }
+
+        if (!property->report.isReported()) {
+            continue;
+        }
+
         switch (property->value->getType()) {
             case WrapperTypeT::WRAPPER_TYPE_BOOL:
-                property->report.updateReport(property->value->getBool(), false, false);
-                cJSON_SetNumberToObject(dataItem, ptrColon, property->value->getBool());
+                cJSON_SetNumberToObject(dataItem, ptrColon, (bool)property->report.getPreviousValue());
                 break;
             case WrapperTypeT::WRAPPER_TYPE_INT:
-                property->report.updateReport(property->value->getInt(), false, false);
-                cJSON_SetNumberToObject(dataItem, ptrColon, property->value->getInt());
+                cJSON_SetNumberToObject(dataItem, ptrColon, (int)property->report.getPreviousValue());
                 break;
             case WrapperTypeT::WRAPPER_TYPE_UNSIGNED_INT:
-                property->report.updateReport(property->value->getUnsignedInt(), false, false);
-                cJSON_SetNumberToObject(dataItem, ptrColon, property->value->getUnsignedInt());
+                cJSON_SetNumberToObject(dataItem, ptrColon, (unsigned int)property->report.getPreviousValue());
                 break;
             case WrapperTypeT::WRAPPER_TYPE_LONG:
-                property->report.updateReport(property->value->getLong(), false, false);
-                cJSON_SetNumberToObject(dataItem, ptrColon, property->value->getLong());
+                cJSON_SetNumberToObject(dataItem, ptrColon, (long)property->report.getPreviousValue());
                 break;
             case WrapperTypeT::WRAPPER_TYPE_UNSIGNED_LONG:
-                property->report.updateReport(property->value->getUnsignedLong(), false, false);
-                cJSON_SetNumberToObject(dataItem, ptrColon, property->value->getUnsignedLong());
+                cJSON_SetNumberToObject(dataItem, ptrColon, (unsigned long)property->report.getPreviousValue());
                 break;
             case WrapperTypeT::WRAPPER_TYPE_LONG_LONG:
-                property->report.updateReport(property->value->getLongLong(), false, false);
-                cJSON_SetNumberToObject(dataItem, ptrColon, property->value->getLongLong());
+                cJSON_SetNumberToObject(dataItem, ptrColon, (long long)property->report.getPreviousValue());
                 break;
             case WrapperTypeT::WRAPPER_TYPE_UNSIGNED_LONG_LONG:
-                property->report.updateReport(property->value->getUnsignedLongLong(), false, false);
-                cJSON_SetNumberToObject(dataItem, ptrColon, property->value->getUnsignedLongLong());
+                cJSON_SetNumberToObject(dataItem, ptrColon, (unsigned long long)property->report.getPreviousValue());
                 break;
             case WrapperTypeT::WRAPPER_TYPE_FLOAT:
-                property->report.updateReport(property->value->getFloat(), false, false);
-                cJSON_SetNumberToObject(dataItem, ptrColon, property->value->getFloat());
+                cJSON_SetNumberToObject(dataItem, ptrColon, property->report.getPreviousValue());
                 break;
             case WrapperTypeT::WRAPPER_TYPE_DOUBLE:
-                property->report.updateReport(property->value->getFloat(), false, false);
-                cJSON_SetNumberToObject(dataItem, ptrColon, property->value->getDouble());
+                cJSON_SetNumberToObject(dataItem, ptrColon, property->report.getPreviousValue());
                 break;
             case WrapperTypeT::WRAPPER_TYPE_NUMBER:
-                property->report.updateReport(property->value->getFloat(), false, false);
-                cJSON_SetNumberToObject(dataItem, ptrColon, property->value->getNumber());
+                cJSON_SetNumberToObject(dataItem, ptrColon, property->report.getPreviousValue());
                 break;
             default:
                 break;
         }
 
-        if (property != pProp) {
+        if (property->report.isCalled()) {
             property->report.skipReport();
         }
     }

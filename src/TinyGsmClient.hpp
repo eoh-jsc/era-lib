@@ -23,6 +23,8 @@
     #endif
 #endif
 
+#include <Compat/TinyGsm/TinyGsmFifo.hpp>
+
 #if defined(TINY_GSM_MODEM_ESP32) ||            \
     defined(TINY_GSM_MODEM_ESP8266_AT_17) ||    \
     defined(TINY_GSM_MODEM_ESP8266_LEGACY)

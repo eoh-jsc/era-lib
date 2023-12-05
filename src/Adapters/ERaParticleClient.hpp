@@ -106,12 +106,21 @@ void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
     cJSON_AddStringToObject(root, INFO_BUILD_DATE, BUILD_DATE_TIME);
     cJSON_AddStringToObject(root, INFO_VERSION, ERA_VERSION);
     cJSON_AddStringToObject(root, INFO_FIRMWARE_VERSION, ERA_FIRMWARE_VERSION);
+    cJSON_AddNumberToObject(root, INFO_PLUG_AND_PLAY, 0);
+    cJSON_AddStringToObject(root, INFO_NETWORK_PROTOCOL, ERA_PROTO_TYPE);
     cJSON_AddStringToObject(root, INFO_SSID, ERA_PROTO_TYPE);
     cJSON_AddStringToObject(root, INFO_BSSID, ERA_PROTO_TYPE);
     cJSON_AddNumberToObject(root, INFO_RSSI, 100);
+    cJSON_AddNumberToObject(root, INFO_SIGNAL_STRENGTH, 100);
     cJSON_AddStringToObject(root, INFO_MAC, ERA_PROTO_TYPE);
     cJSON_AddStringToObject(root, INFO_LOCAL_IP, ERA_PROTO_TYPE);
+    cJSON_AddNumberToObject(root, INFO_SSL, ERaInfoSSL());
     cJSON_AddNumberToObject(root, INFO_PING, this->thisProto().getTransp().getPing());
+    cJSON_AddNumberToObject(root, INFO_FREE_RAM, ERaFreeRam());
+
+#if defined(ERA_RESET_REASON)
+    cJSON_AddStringToObject(root, INFO_RESET_REASON, SystemGetResetReason().c_str());
+#endif
 
     /* Override info */
     ERaInfo(root);
@@ -125,6 +134,7 @@ void ERaApi<Proto, Flash>::addModbusInfo(cJSON* root) {
 	cJSON_AddNumberToObject(root, INFO_MB_VOLTAGE, 999);
 	cJSON_AddNumberToObject(root, INFO_MB_IS_BATTERY, 0);
 	cJSON_AddNumberToObject(root, INFO_MB_RSSI, 100);
+    cJSON_AddNumberToObject(root, INFO_MB_SIGNAL_STRENGTH, 100);
 	cJSON_AddStringToObject(root, INFO_MB_WIFI_USING, ERA_PROTO_TYPE);
 
     /* Override modbus info */

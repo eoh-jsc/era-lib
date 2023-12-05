@@ -4,6 +4,40 @@
 #include <stdint.h>
 #include <ERa/ERaParam.hpp>
 
+#if !defined(ERA_API_YIELD)
+    #if !defined(ERA_API_YIELD_MS)
+        #if defined(ERA_NO_RTOS)
+            #define ERA_API_YIELD_MS 	1
+        #else
+            #define ERA_API_YIELD_MS 	10
+        #endif
+    #endif
+    #if !defined(ERA_NO_YIELD)
+        #if defined(PARTICLE) || defined(SPARK)
+            #define ERA_RUN_YIELD() 	{ Particle.process(); }
+        #else
+        	#define ERA_API_YIELD()		{ ERaDelay(ERA_API_YIELD_MS); }
+		#endif
+    #else
+        #define ERA_API_YIELD()      	{}
+    #endif
+#endif
+
+#if !defined(ERA_API_TASK_PRIORITY)
+	#define ERA_API_TASK_PRIORITY		2
+#endif
+
+#if !defined(ERA_API_TASK_CORE)
+	#if defined(ARDUINO_RUNNING_CORE)
+		#define ERA_API_TASK_CORE		ARDUINO_RUNNING_CORE
+	#elif defined(CONFIG_ARDUINO_RUNNING_CORE)
+		#define ERA_API_TASK_CORE		CONFIG_ARDUINO_RUNNING_CORE
+	#else
+		#define ERA_API_TASK_CORE		ERA_MCU_CORE
+	#endif
+#endif
+#define ERA_API_TASK_SIZE				(8 * 1024)
+
 #if !defined(ERA_MAX_EVENTS)
 	#if defined(ERA_NO_RTOS)
 		#define ERA_MAX_EVENTS			0

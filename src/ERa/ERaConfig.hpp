@@ -87,13 +87,13 @@
 #if defined(DEFAULT_MQTT_SUBSCRIBE_QOS)
     #define ERA_MQTT_SUBSCRIBE_QOS      DEFAULT_MQTT_SUBSCRIBE_QOS
 #else
-    #define ERA_MQTT_SUBSCRIBE_QOS      0
+    #define ERA_MQTT_SUBSCRIBE_QOS      1
 #endif
 
 #if defined(DEFAULT_MQTT_PUBLISH_QOS)
     #define ERA_MQTT_PUBLISH_QOS        DEFAULT_MQTT_PUBLISH_QOS
 #else
-    #define ERA_MQTT_PUBLISH_QOS        0
+    #define ERA_MQTT_PUBLISH_QOS        1
 #endif
 
 #if defined(DEFAULT_MQTT_PUBLISH_RETAINED)
@@ -139,13 +139,19 @@
 #define INFO_VERSION                    "version"
 #define INFO_MCU_VERSION                "mcu_version"
 #define INFO_FIRMWARE_VERSION           "firmware_version"
+#define INFO_PLUG_AND_PLAY              "plug_and_play"
+#define INFO_SIGNAL_STRENGTH            "signal_strength"
+#define INFO_NETWORK_PROTOCOL           "network_protocol"
 #define INFO_SSID                       "ssid"
 #define INFO_PASS                       "pass"
 #define INFO_BSSID                      "bssid"
 #define INFO_RSSI                       "rssi"
 #define INFO_MAC                        "mac"
 #define INFO_LOCAL_IP                   "ip"
+#define INFO_SSL                        "ssl"
 #define INFO_PING                       "ping"
+#define INFO_FREE_RAM                   "free_ram"
+#define INFO_UPTIME                     "uptime"
 #define INFO_RESET_REASON               "reset_reason"
 #define BUILD_DATE_TIME                 __DATE__ " " __TIME__
 
@@ -160,6 +166,7 @@
 #define INFO_MB_VOLTAGE                 "voltage"
 #define INFO_MB_IS_BATTERY              "is_battery"
 #define INFO_MB_RSSI                    "rssi"
+#define INFO_MB_SIGNAL_STRENGTH         "signal_strength"
 #define INFO_MB_WIFI_USING              "wifi_is_using"
 
 #include <ERa/ERaDetect.hpp>

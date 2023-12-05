@@ -244,6 +244,19 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const ERaDataBuff& arrayTopi
 			}
 		}
 		switch (pMode) {
+			case RAW_PIN:
+			case VIRTUAL:
+			case ERA_VIRTUAL:
+				break;
+			default:
+				raw = value;
+				if (this->callERaPinWriteHandler(pin, param, raw) ||
+					this->skipPinWrite) {
+					pMode = RAW_PIN;
+				}
+				break;
+		}
+		switch (pMode) {
 			case PWM:
 			case ANALOG:
                 ::pwmWrite(pin, value);
@@ -268,11 +281,6 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const ERaDataBuff& arrayTopi
 					::digitalWrite(pin, value ? HIGH : LOW);
 				}
 				break;
-		}
-		if ((pMode != VIRTUAL) &&
-			(pMode != ERA_VIRTUAL)) {
-			raw = value;
-			this->callERaPinWriteHandler(pin, param, raw);
 		}
 	}
 	else if (cJSON_IsString(item)) {

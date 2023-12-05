@@ -152,6 +152,7 @@ void ERaApi<Proto, Flash>::handleWritePin(cJSON* root) {
 			else if (ERaStrCmp(item->valuestring, "integer")) {
 				this->getPinConfig(current, pin);
 				this->getScaleConfig(current, pin);
+                pwmModePi(pin.pin);
                 this->ERaPinRp.setPinReport(pin.pin, PWM, nullptr,
 											pin.report.interval, pin.report.minInterval,
 											pin.report.maxInterval, pin.report.reportableChange,
@@ -200,8 +201,20 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const ERaDataBuff& arrayTopi
 			}
 		}
 		switch (pMode) {
+			case RAW_PIN:
+			case VIRTUAL:
+			case ERA_VIRTUAL:
+				break;
+			default:
+				raw = value;
+				if (this->callERaPinWriteHandler(pin, param, raw) ||
+					this->skipPinWrite) {
+					pMode = RAW_PIN;
+				}
+				break;
+		}
+		switch (pMode) {
 			case PWM:
-                pwmModePi(pin);
                 ::pwmWritePi(pin, value);
 				if (rp != nullptr) {
 					rp->updateReport(value, true);
@@ -225,11 +238,6 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const ERaDataBuff& arrayTopi
 					::digitalWrite(pin, value ? HIGH : LOW);
 				}
 				break;
-		}
-		if ((pMode != VIRTUAL) &&
-			(pMode != ERA_VIRTUAL)) {
-			raw = value;
-			this->callERaPinWriteHandler(pin, param, raw);
 		}
 	}
 	else if (cJSON_IsString(item)) {
@@ -281,6 +289,7 @@ void ERaApi<Proto, Flash>::handlePinRequest(const ERaDataBuff& arrayTopic, const
 				pinModePi(pin.pin, OUTPUT);
 			}
             else if (ERaStrCmp(current->valuestring, "pwm")) {
+                pwmModePi(pin.pin);
                 this->ERaPinRp.setPinReport(pin.pin, PWM, nullptr,
 											pin.report.interval, pin.report.minInterval,
 											pin.report.maxInterval, pin.report.reportableChange,
@@ -337,7 +346,6 @@ void ERaApi<Proto, Flash>::handlePinRequest(const ERaDataBuff& arrayTopic, const
         }
 		if (this->getGPIOPin(current, "pwm_pin", pin.pin)) {
 			ERA_CHECK_PIN(pin.pin);
-            pwmModePi(pin.pin);
             ::pwmWritePi(pin.pin, current->valueint);
 			continue;
 		}

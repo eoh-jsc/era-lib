@@ -204,6 +204,7 @@ private:
         CLEAR_BIT(FLASH->CR, FLASH_CR_PG);
 
         if (reset) {
+            for (;;) { __NOP(); }
             NVIC_SystemReset();
         }
     }

@@ -123,7 +123,35 @@
 
 template <class Proto, class Flash>
 inline
+void* ERaApi<Proto, Flash>::apiTask(void* args) {
+#if !defined(ERA_NO_RTOS)
+    if (args == NULL) {
+        pthread_exit(NULL);
+    }
+    ERaApi* api = (ERaApi*)args;
+    api->runAPI();
+    delete api->_apiTask;
+    api->_apiTask = NULL;
+    pthread_exit(NULL);
+#endif
+    ERA_FORCE_UNUSED(args);
+}
+
+template <class Proto, class Flash>
+inline
+void ERaApi<Proto, Flash>::initApiTask() {
+#if !defined(ERA_NO_RTOS)
+    if ((this->taskSize > 0) && (this->_apiTask == NULL)) {
+        this->_apiTask = new pthread_t;
+        pthread_create((pthread_t*)(this->_apiTask), NULL, this->apiTask, this);
+    }
+#endif
+}
+
+template <class Proto, class Flash>
+inline
 void ERaApi<Proto, Flash>::initERaApiTask() {
+    this->initApiTask();
 #if defined(ERA_MODBUS)
 	Modbus::begin();
 #endif

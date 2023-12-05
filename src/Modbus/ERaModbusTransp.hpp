@@ -144,6 +144,7 @@ public:
                     uint8_t _length)
         : ERaModbusMessage(_length)
         , request(_request)
+        , status(ModbusStatusT::MODBUS_STATUS_OK)
     {}
 
     bool isComplete() {
@@ -183,6 +184,10 @@ public:
             return this->buffer[2];
         }
         return this->buffer[8];
+    }
+
+    ModbusStatusT getStatusCode() {
+        return (ModbusStatusT)this->status;
     }
 
     void setBytes(uint8_t bytes) {
@@ -308,6 +313,7 @@ private:
             return false;
         }
         else if (this->buffer[1] > 0x80) {
+            this->setStatusCode(this->buffer[2]);
             return false;
         }
         else if (!this->checkCRC()) {
@@ -333,6 +339,7 @@ private:
             return false;
         }
         else if (this->buffer[7] > 0x80) {
+            this->setStatusCode(this->buffer[8]);
             return false;
         }
         return ((this->getPacketId() == this->request->getPacketId()) &&
@@ -340,7 +347,17 @@ private:
                 (this->getFunction() == this->request->getFunction()));
     }
 
+    void setStatusCode(uint8_t code) {
+        if ((this->getFunction() & 0x1F) != this->request->getFunction()) {
+            this->status = ModbusStatusT::MODBUS_STATUS_MAX;
+        }
+        else {
+            this->status = code;
+        }
+    }
+
     ERaModbusRequest* request;
+    uint8_t status;
 };
 
 class ERaModbusRequest01
@@ -378,7 +395,7 @@ public:
         }
     }
 
-    uint8_t responseLength() {
+    uint8_t responseLength() override {
         return ((this->isRTU() ? 5 : 9) +
                 ::ceil(static_cast<float>(this->len) / 8));
     }
@@ -419,7 +436,7 @@ public:
         }
     }
 
-    uint8_t responseLength() {
+    uint8_t responseLength() override {
         return ((this->isRTU() ? 5 : 9) +
                 ::ceil(static_cast<float>(this->len) / 8));
     }
@@ -460,7 +477,7 @@ public:
         }
     }
 
-    uint8_t responseLength() {
+    uint8_t responseLength() override {
         return ((this->isRTU() ? 5 : 9) +
                 (this->len * 2));
     }
@@ -501,7 +518,7 @@ public:
         }
     }
 
-    uint8_t responseLength() {
+    uint8_t responseLength() override {
         return ((this->isRTU() ? 5 : 9) +
                 (this->len * 2));
     }
@@ -542,7 +559,7 @@ public:
         }
     }
 
-    uint8_t responseLength() {
+    uint8_t responseLength() override {
         return (this->isRTU() ? 8 : 12);
     }
 };
@@ -582,7 +599,7 @@ public:
         }
     }
 
-    uint8_t responseLength() {
+    uint8_t responseLength() override {
         return (this->isRTU() ? 8 : 12);
     }
 };
@@ -629,7 +646,7 @@ public:
         }
     }
 
-    uint8_t responseLength() {
+    uint8_t responseLength() override {
         return (this->isRTU() ? 8 : 12);
     }
 };
@@ -676,7 +693,7 @@ public:
         }
     }
 
-    uint8_t responseLength() {
+    uint8_t responseLength() override {
         return (this->isRTU() ? 8 : 12);
     }
 };

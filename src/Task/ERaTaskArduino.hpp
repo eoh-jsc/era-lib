@@ -42,6 +42,17 @@
 
 template <class Proto, class Flash>
 inline
+void ERaApi<Proto, Flash>::apiTask(void* args) {
+    ERA_FORCE_UNUSED(args);
+}
+
+template <class Proto, class Flash>
+inline
+void ERaApi<Proto, Flash>::initApiTask() {
+}
+
+template <class Proto, class Flash>
+inline
 void ERaApi<Proto, Flash>::initERaApiTask() {
 #if defined(ERA_MODBUS)
 	Modbus::begin();

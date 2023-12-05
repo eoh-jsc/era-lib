@@ -11,6 +11,7 @@ public:
     ERaFlash()
         : position(0)
         , initialized(false)
+        , maxLength(EEPROM.length() - 1024UL)
     {}
     ~ERaFlash()
     {}
@@ -45,6 +46,7 @@ private:
 
     size_t position;
     bool initialized;
+    const size_t maxLength;
 };
 
 inline
@@ -181,18 +183,18 @@ void ERaFlash::writeLine(const char* buf) {
         return;
     }
     size_t len = strlen(buf);
-    if (!len || (len >= EEPROM.length() - 1)) {
+    if (!len || (len >= (this->maxLength - 1))) {
         return;
     }
     size_t end = this->position + len;
-    for (size_t i = EEPROM.length() - 1; i > end; --i) {
+    for (size_t i = (this->maxLength - 1); i > end; --i) {
         eeprom_buffered_write_byte(i, eeprom_buffered_read_byte(i - len - 1));
     }
 	for (size_t i = 0; i < len + 1; ++i) {
 		eeprom_buffered_write_byte(this->position + i, 0);
 	}
     size_t index {0};
-    for (size_t i = this->position; i < EEPROM.length(); ++i) {
+    for (size_t i = this->position; i < (this->maxLength - 2); ++i) {
         eeprom_buffered_write_byte(i, buf[index++]);
         if (index == len) {
             this->position += index;
@@ -206,6 +208,7 @@ void ERaFlash::writeLine(const char* buf) {
 inline
 void ERaFlash::endWrite() {
 #if !defined(DATA_EEPROM_BASE)
+    eeprom_buffered_write_byte(this->position++, 0);
     eeprom_buffer_flush();
 #endif
 }
@@ -259,7 +262,7 @@ inline
 size_t ERaFlash::readFlash(const char* key, void* buf, size_t maxLen) {
 #if defined(DATA_EEPROM_BASE)
     uint16_t address = atof(key);
-    if (address + maxLen > EEPROM.length()) {
+    if ((address + maxLen) > EEPROM.length()) {
         return 0;
     }
     EEPROM.get(address, buf);
@@ -282,7 +285,7 @@ void ERaFlash::writeFlash(const char* filename, const char* buffer) {
     if (buffer == nullptr) {
         return;
     }
-    if (strlen(buffer) >= EEPROM.length() - 1) {
+    if (strlen(buffer) >= (this->maxLength - 1)) {
         return;
     }
 #if defined(DATA_EEPROM_BASE)
@@ -335,13 +338,14 @@ void ERaFlash::writeFlash(const char* filename, const char* buffer) {
         eeprom_buffered_write_byte(this->position++, filename[i]);
     }
     eeprom_buffered_write_byte(this->position++, 0);
-    for (size_t i = this->position; i < EEPROM.length(); ++i) {
+    for (size_t i = this->position; i < (this->maxLength - 1); ++i) {
         eeprom_buffered_write_byte(i, buffer[index++]);
         if (index == strlen(buffer)) {
-            this->position += index + 1;
+            this->position += index;
             break;
         }
     }
+    eeprom_buffered_write_byte(this->position++, 0);
     eeprom_buffer_flush();
 #endif
 }
@@ -374,7 +378,7 @@ size_t ERaFlash::writeFlash(const char* key, const void* value, size_t len) {
     inline
     bool ERaFlash::readFlashUntil(const char c, char* buffer, size_t size) {
         size_t index {0};
-        for (size_t i = this->position; i < EEPROM.length(); ++i) {
+        for (size_t i = this->position; i < this->maxLength; ++i) {
             char ch = eeprom_buffered_read_byte(i);
             if (ch == c) {
                 if (buffer != nullptr) {
@@ -395,7 +399,7 @@ size_t ERaFlash::writeFlash(const char* key, const void* value, size_t len) {
 
     inline
     bool ERaFlash::clearFlashUntil(const char c) {
-        for (size_t i = this->position; i < EEPROM.length(); ++i) {
+        for (size_t i = this->position; i < this->maxLength; ++i) {
             if (eeprom_buffered_read_byte(i) == c) {
                 this->position = i;
                 return true;
@@ -408,12 +412,12 @@ size_t ERaFlash::writeFlash(const char* key, const void* value, size_t len) {
     inline
     void ERaFlash::flashMove(size_t dst, size_t src) {
         size_t length = src - dst;
-        size_t e = EEPROM.length() - length - 1;
+        size_t e = this->maxLength - length - 1;
         for (size_t i = dst; i < e; ++i) {
             eeprom_buffered_write_byte(i, eeprom_buffered_read_byte(length + i + 1));
         }
-        for (size_t i = e; i < EEPROM.length(); ++i) {
-            eeprom_buffered_write_byte(i, 0);
+        for (size_t i = e; i < this->maxLength; ++i) {
+            eeprom_buffered_write_byte(i, 0xFF);
         }
     }
 

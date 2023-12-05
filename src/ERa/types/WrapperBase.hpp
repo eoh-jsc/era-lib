@@ -150,7 +150,7 @@ public:
 
     WrapperBase& operator = (const WrapperBase& _value) {
         if (this == &_value) {
-            return *this;
+            return (*this);
         }
         if (this->type == WrapperTypeT::WRAPPER_TYPE_STRING) {
             return operator = ((const char*)_value.getPtr());
@@ -162,7 +162,7 @@ public:
 
     WrapperBase& operator = (float _value) {
         this->set(_value);
-        return *this;
+        return (*this);
     }
 
     WrapperBase& operator = (bool _value) {
@@ -204,7 +204,7 @@ public:
 
     WrapperBase& operator = (const char* _value) {
         this->setPtr((const void*)_value);
-        return *this;
+        return (*this);
     }
 
     WrapperBase& operator = (char* _value) {

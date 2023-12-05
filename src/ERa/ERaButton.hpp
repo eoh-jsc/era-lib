@@ -52,6 +52,7 @@ class ERaButton
         bool state;
         bool prevState;
         bool pressed;
+        bool onHold;
 		bool enable;
 		uint8_t called;
         uint8_t countMulti;
@@ -93,42 +94,42 @@ public:
             if (this->isValid()) {
                 this->bt->onChange(this->pBt);
             }
-            return *this;
+            return (*this);
         }
 
         iterator& onFalling() {
             if (this->isValid()) {
                 this->bt->onFalling(this->pBt);
             }
-            return *this;
+            return (*this);
         }
 
         iterator& onRising() {
             if (this->isValid()) {
                 this->bt->onRising(this->pBt);
             }
-            return *this;
+            return (*this);
         }
 
         iterator& onHold(unsigned long delay) {
             if (this->isValid()) {
                 this->bt->onHold(this->pBt, delay);
             }
-            return *this;
+            return (*this);
         }
 
         iterator& onMulti(uint8_t num, unsigned long delay) {
             if (this->isValid()) {
                 this->bt->onMulti(this->pBt, num, delay);
             }
-            return *this;
+            return (*this);
         }
 
         iterator& setBounceTime(unsigned long timeout = 50UL) {
             if (this->isValid()) {
                 this->bt->setBounceTime(timeout);
             }
-            return *this;
+            return (*this);
         }
 
         void deleteButton() {

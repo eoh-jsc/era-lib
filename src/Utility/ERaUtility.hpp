@@ -17,6 +17,7 @@ typedef void* ERaMutex_t;
 
 void ERaDelay(MillisTime_t ms);
 MillisTime_t ERaMillis();
+MillisTime_t ERaSeconds();
 uint32_t ERaRandomNumber(uint32_t min, uint32_t max);
 size_t ERaFreeRam();
 void ERaRestart(bool async) ERA_NORETURN;
@@ -56,6 +57,7 @@ MillisTime_t ERaRemainingTime(MillisTime_t startMillis, MillisTime_t timeout);
 uint8_t RSSIToPercentage(int16_t value);
 int16_t GSMToRSSI(uint8_t value);
 uint8_t GSMToPercentage(uint8_t value);
+uint8_t SignalToPercentage(int16_t value);
 
 long long ERaAtoll(const char* str);
 char* ERaDtostrf(double number, int decimal, char* str);
@@ -203,5 +205,6 @@ bool ERaStrNCmp(const char* str, const char(&str2)[size]) {
 #endif
 
 #include <ERa/ERaDebug.hpp>
+#include <Utility/ERaStruct.hpp>
 
 #endif /* INC_ERA_UTILITY_HPP_ */

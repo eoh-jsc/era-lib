@@ -36,6 +36,7 @@ void ERaReport::run() {
 		if (!pReport->enable) {
 			continue;
 		}
+		pReport->reported = true;
         this->setFlag(pReport->called, ReportFlagT::REPORT_ON_CALLED, true);
 	}
 
@@ -105,6 +106,7 @@ ERaReport::Report_t* ERaReport::setupReport(unsigned long minInterval, unsigned 
 	pReport->param = nullptr;
 	pReport->enable = true;
 	pReport->updated = false;
+	pReport->reported = false;
 	pReport->called = 0;
 	this->report.put(pReport);
 	this->numReport++;
@@ -148,6 +150,7 @@ ERaReport::Report_t* ERaReport::setupReport(unsigned long minInterval, unsigned 
 	pReport->param = arg;
 	pReport->enable = true;
 	pReport->updated = false;
+	pReport->reported = false;
 	pReport->called = 0;
 	this->report.put(pReport);
 	this->numReport++;
@@ -191,6 +194,7 @@ ERaReport::Report_t* ERaReport::setupReport(unsigned long minInterval, unsigned 
 	pReport->param = &pReport->data;
 	pReport->enable = true;
 	pReport->updated = false;
+	pReport->reported = false;
 	pReport->called = 0;
 	this->report.put(pReport);
 	this->numReport++;
@@ -275,6 +279,46 @@ bool ERaReport::reportEvery(Report_t* pReport, unsigned long interval) {
 
 	pReport->maxInterval = interval;
 	return true;
+}
+
+bool ERaReport::isUpdated(Report_t* pReport) {
+	if (!this->isValidReport(pReport)) {
+		return false;
+	}
+
+	return pReport->updated;
+}
+
+bool ERaReport::isReported(Report_t* pReport) {
+	if (!this->isValidReport(pReport)) {
+		return false;
+	}
+
+	return pReport->reported;
+}
+
+bool ERaReport::isCalled(Report_t* pReport) {
+	if (!this->isValidReport(pReport)) {
+		return false;
+	}
+
+	return this->getFlag(pReport->called, ReportFlagT::REPORT_ON_CALLED);
+}
+
+float ERaReport::getValue(Report_t* pReport) {
+	if (!this->isValidReport(pReport)) {
+		return 0.0f;
+	}
+
+	return pReport->data.value;
+}
+
+float ERaReport::getPreviousValue(Report_t* pReport) {
+	if (!this->isValidReport(pReport)) {
+		return 0.0f;
+	}
+
+	return pReport->data.prevValue;
 }
 
 void ERaReport::skipReport(Report_t* pReport) {

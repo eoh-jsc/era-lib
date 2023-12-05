@@ -103,12 +103,12 @@ public:
 
     IPAddress& operator = (const uint8_t *_address) {
         memcpy(this->address.bytes, _address, sizeof(this->address.bytes));
-        return *this;
+        return (*this);
     }
 
     IPAddress& operator = (uint32_t _address) {
         this->address.dword = _address;
-        return *this;
+        return (*this);
     }
 
 private:

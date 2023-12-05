@@ -2,6 +2,7 @@
 #define INC_ERA_SIMPLE_PARTICLE_SSL_HPP_
 
 #define ERA_NO_RTOS
+#define ERA_MQTT_SSL
 
 #include <ERa/ERaApiParticleDef.hpp>
 #include <Adapters/ERaParticleSSLClient.hpp>

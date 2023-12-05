@@ -49,14 +49,14 @@ public:
 
     CloudColor& operator = (const CloudColor& _value) {
         if (this == &_value) {
-            return *this;
+            return (*this);
         }
         return operator = (_value.value);
     }
 
     CloudColor& operator = (unsigned long _value) {
         this->value = _value;
-        return *this;
+        return (*this);
     }
 
     CloudColor& operator = (const char* _value) {
@@ -67,18 +67,18 @@ public:
                 (strlen(_value) == 7)) {
             this->value = strtoul(_value + 1, nullptr, 16);
         }
-        return *this;
+        return (*this);
     }
 
     bool operator == (const CloudColor& _value) const {
         if (this == &_value) {
             return true;
         }
-        return this->value == _value.value;
+        return (this->value == _value.value);
     }
 
     bool operator == (unsigned long _value) const {
-        return this->value == _value;
+        return (this->value == _value);
     }
 
     bool operator == (const char* _value) const {
@@ -88,18 +88,18 @@ public:
             (strlen(_value) == 7)) {
             color = strtoul(_value + 1, nullptr, 16);
         }
-        return this->value == color;
+        return (this->value == color);
     }
 
     bool operator != (const CloudColor& _value) const {
         if (this == &_value) {
             return false;
         }
-        return this->value != _value.value;
+        return (this->value != _value.value);
     }
 
     bool operator != (unsigned long _value) const {
-        return this->value != _value;
+        return (this->value != _value);
     }
 
     bool operator != (const char* _value) const {

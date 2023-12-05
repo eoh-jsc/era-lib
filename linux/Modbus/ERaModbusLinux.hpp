@@ -10,7 +10,7 @@
     #elif defined(TINKER_BOARD)
         #define ERA_DEV_MODBUS      ttyS1
     #elif defined(ORANGE_PI)
-        #define ERA_DEV_MODBUS     ttyAMA0
+        #define ERA_DEV_MODBUS      ttyAMA0
     #else
         #define ERA_DEV_MODBUS      ttyAMA0
     #endif
@@ -31,6 +31,16 @@ void ERaModbus<Api>::configModbus() {
     this->streamRTU = &SerialMB;
     SerialMB.begin(ERA_SERIAL_MODBUS(ERA_DEV_MODBUS), MODBUS_BAUDRATE);
     this->_streamDefault = true;
+}
+
+template <class Api>
+void ERaModbus<Api>::endModbus() {
+    if (!this->streamDefault()) {
+        return;
+    }
+
+    SerialMB.flush();
+    SerialMB.end();
 }
 
 template <class Api>

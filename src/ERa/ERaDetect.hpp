@@ -440,6 +440,7 @@
 
     #define ERA_USE_ERA_ATOLL
     #define ERA_IGNORE_INPUT_PULLDOWN
+    #define ERA_VIRTUAL_WRITE_LEGACY
 
     #if !defined(ERA_WATCHDOG_TIMEOUT)
         #define ERA_WATCHDOG_TIMEOUT    8000
@@ -930,5 +931,11 @@
 #if !defined(ERA_WATCHDOG_TIMEOUT)
     #define ERA_WATCHDOG_TIMEOUT        60000UL
 #endif
+
+#if !defined(ERA_GET_SIGNAL_TIMEOUT)
+    #define ERA_GET_SIGNAL_TIMEOUT      60000UL
+#endif
+
+#define ERA_HEARTBEAT_INTERVAL          3600000UL
 
 #endif /* INC_ERA_DETECT_HPP_ */

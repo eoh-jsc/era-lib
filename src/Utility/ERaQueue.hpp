@@ -186,7 +186,10 @@ public:
 			}
 		}
 		~iterator()
-		{}
+		{
+			this->prev = nullptr;
+			this->next = nullptr;
+		}
 
 		iterator* getNext() const {
 			return this->next;
@@ -202,6 +205,16 @@ public:
 
 		operator T& () {
 			return this->get();
+		}
+
+		iterator& operator = (const iterator& value) {
+			if (this == &value) {
+				return (*this);
+			}
+			this->prev = value.prev;
+			this->next = value.next;
+			this->data = value.data;
+			return (*this);
 		}
 
 		iterator* prev;
@@ -273,11 +286,14 @@ public:
 
 	void clear() {
 		iterator* next = nullptr;
-		while (this->first != nullptr) {
-			next = this->first->next;
-			delete this->first;
-			this->first = next;
+		iterator* item = this->first;
+		while (item != nullptr) {
+			next = item;
+			item = item->next;
+			delete next;
 		}
+		next = nullptr;
+		this->first = nullptr;
 		this->last = nullptr;
 	}
 
@@ -292,11 +308,11 @@ public:
 	}
 
 	bool readable() const {
-		return this->first != nullptr;
+		return (this->first != nullptr);
 	}
 
 	bool isEmpty() const {
-		return this->first == nullptr;
+		return (this->first == nullptr);
 	}
 
 	iterator* begin() const {
@@ -307,11 +323,21 @@ public:
 		return nullptr;
 	}
 
+	ERaList& operator = (const ERaList& value) {
+		if (this == &value) {
+			return (*this);
+		}
+		this->clear();
+		this->first = value.first;
+		this->last = value.last;
+		return (*this);
+	}
+
 	void operator += (const T& value) {
 		this->put(value);
 	}
 
-	iterator* operator[] (const int index) {
+	iterator* operator [] (const int index) {
 		return this->get(index);
 	}
 

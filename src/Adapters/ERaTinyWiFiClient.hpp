@@ -48,6 +48,7 @@ public:
         , resetPin(-1)
         , invertPin(false)
         , softRestart(false)
+        , prevMillisSignal(0UL)
     {}
     ~ERaWiFi()
     {}
@@ -177,6 +178,7 @@ public:
                 break;
             case StateT::STATE_RUNNING:
                 Base::run();
+                this->getSignalQuality();
                 break;
             default:
                 if (this->netConnected() ||
@@ -195,6 +197,22 @@ public:
 
 protected:
 private:
+    void getSignalQuality() {
+        unsigned long currentMillis = ERaMillis();
+        if ((currentMillis - this->prevMillisSignal) < ERA_GET_SIGNAL_TIMEOUT) {
+            return;
+        }
+        unsigned long skipTimes = ((currentMillis - this->prevMillisSignal) / ERA_GET_SIGNAL_TIMEOUT);
+        // update time
+        this->prevMillisSignal += (ERA_GET_SIGNAL_TIMEOUT * skipTimes);
+
+        ERaWatchdogFeed();
+
+        this->getTransp().setSignalQuality(this->modem->getSignalQuality());
+
+        ERaWatchdogFeed();
+    }
+
     void setNetwork(const char* ssid, const char* pass) {
         CopyToArray(ssid, ERaConfig.ssid);
         CopyToArray(pass, ERaConfig.pass);
@@ -247,16 +265,24 @@ private:
     }
 
     TinyGsm* modem;
+#if defined(ERA_USE_SSL)
+    TinyGsmClientSecure client;
+#else
     TinyGsmClient client;
+#endif
     const char* authToken;
     int resetPin;
     bool invertPin;
     bool softRestart;
+
+    unsigned long prevMillisSignal;
 };
 
 template <class Proto, class Flash>
 inline
 void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
+    int16_t signal = this->thisProto().getTransp().getSignalQuality();
+
     cJSON_AddStringToObject(root, INFO_BOARD, ERA_BOARD_TYPE);
     cJSON_AddStringToObject(root, INFO_MODEL, ERA_MODEL_TYPE);
 	cJSON_AddStringToObject(root, INFO_BOARD_ID, this->thisProto().getBoardID());
@@ -264,13 +290,22 @@ void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
     cJSON_AddStringToObject(root, INFO_BUILD_DATE, BUILD_DATE_TIME);
     cJSON_AddStringToObject(root, INFO_VERSION, ERA_VERSION);
     cJSON_AddStringToObject(root, INFO_FIRMWARE_VERSION, ERA_FIRMWARE_VERSION);
+    cJSON_AddNumberToObject(root, INFO_PLUG_AND_PLAY, 0);
+    cJSON_AddStringToObject(root, INFO_NETWORK_PROTOCOL, ERA_PROTO_TYPE);
     cJSON_AddStringToObject(root, INFO_SSID, ((this->thisProto().getTransp().getSSID() == nullptr) ?
                                             ERA_PROTO_TYPE : this->thisProto().getTransp().getSSID()));
     cJSON_AddStringToObject(root, INFO_BSSID, ERA_PROTO_TYPE);
-    cJSON_AddNumberToObject(root, INFO_RSSI, this->thisProto().getTransp().getSignalQuality());
+    cJSON_AddNumberToObject(root, INFO_RSSI, signal);
+    cJSON_AddNumberToObject(root, INFO_SIGNAL_STRENGTH, SignalToPercentage(signal));
     cJSON_AddStringToObject(root, INFO_MAC, ERA_PROTO_TYPE);
     cJSON_AddStringToObject(root, INFO_LOCAL_IP, ERA_PROTO_TYPE);
+    cJSON_AddNumberToObject(root, INFO_SSL, ERaInfoSSL());
     cJSON_AddNumberToObject(root, INFO_PING, this->thisProto().getTransp().getPing());
+    cJSON_AddNumberToObject(root, INFO_FREE_RAM, ERaFreeRam());
+
+#if defined(ERA_RESET_REASON)
+    cJSON_AddStringToObject(root, INFO_RESET_REASON, SystemGetResetReason().c_str());
+#endif
 
     /* Override info */
     ERaInfo(root);
@@ -279,11 +314,14 @@ void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
 template <class Proto, class Flash>
 inline
 void ERaApi<Proto, Flash>::addModbusInfo(cJSON* root) {
+    int16_t signal = this->thisProto().getTransp().getSignalQuality();
+
 	cJSON_AddNumberToObject(root, INFO_MB_CHIP_TEMPERATURE, 5000);
 	cJSON_AddNumberToObject(root, INFO_MB_TEMPERATURE, 0);
 	cJSON_AddNumberToObject(root, INFO_MB_VOLTAGE, 999);
 	cJSON_AddNumberToObject(root, INFO_MB_IS_BATTERY, 0);
-	cJSON_AddNumberToObject(root, INFO_MB_RSSI, this->thisProto().getTransp().getSignalQuality());
+	cJSON_AddNumberToObject(root, INFO_MB_RSSI, signal);
+	cJSON_AddNumberToObject(root, INFO_MB_SIGNAL_STRENGTH, SignalToPercentage(signal));
 	cJSON_AddStringToObject(root, INFO_MB_WIFI_USING, ((this->thisProto().getTransp().getSSID() == nullptr) ?
                                                     ERA_PROTO_TYPE : this->thisProto().getTransp().getSSID()));
 

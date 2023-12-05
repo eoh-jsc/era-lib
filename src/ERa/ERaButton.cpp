@@ -53,16 +53,19 @@ void ERaButton::run() {
             }
         }
         if (!pButton->state && !pButton->pressed) {
+            pButton->onHold = false;
             pButton->pressed = true;
             pButton->prevMillis = currentMillis;
         }
         else if (!pButton->state && pButton->pressed) {
-            if ((currentMillis - pButton->prevMillis) >= pButton->delay) {
+            if (!pButton->onHold && ((currentMillis - pButton->prevMillis) >= pButton->delay)) {
+                pButton->onHold = true;
                 pButton->prevMillis = currentMillis;
                 this->setFlag(pButton->called, ButtonEventT::BUTTON_ON_HOLD, true);
             }
         }
         else if (pButton->state && pButton->pressed) {
+            pButton->onHold = false;
             pButton->pressed = false;
         }
     }
@@ -164,6 +167,7 @@ ERaButton::Button_t* ERaButton::setupButton(uint8_t pin, ERaButton::ReadPinHandl
     pButton->callback_p = nullptr;
     pButton->param = nullptr;
     pButton->enable = true;
+    pButton->onHold = false;
     pButton->called = 0;
     pButton->prevMillis = ERaMillis();
     pButton->prevTimeout = ERaMillis();
@@ -204,6 +208,7 @@ ERaButton::Button_t* ERaButton::setupButton(uint8_t pin, ERaButton::ReadPinHandl
     pButton->callback_p = cb;
     pButton->param = arg;
     pButton->enable = true;
+    pButton->onHold = false;
     pButton->called = 0;
     pButton->countMulti = 0;
     pButton->numberMulti = 0;

@@ -42,6 +42,17 @@ void ERaZigbee<Api>::configZigbee() {
 }
 
 template <class Api>
+void ERaZigbee<Api>::serialEnd() {
+#if (ESP_IDF_VERSION_MAJOR >= 4)
+    if (!uart_is_driver_installed(UART_ZIGBEE)) {
+        return;
+    }
+#endif
+    uart_flush(UART_ZIGBEE);
+    ESP_ERROR_CHECK(uart_driver_delete(UART_ZIGBEE));
+}
+
+template <class Api>
 void ERaZigbee<Api>::handleZigbeeData() {
     uart_event_t event;
     if (ERaOs::osMessageQueueGet((QueueHandle_t)(this->messageHandle), &event, NULL, 1) != osOK) {

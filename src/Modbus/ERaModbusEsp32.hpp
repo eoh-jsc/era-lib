@@ -36,6 +36,21 @@ void ERaModbus<Api>::configModbus() {
 }
 
 template <class Api>
+void ERaModbus<Api>::endModbus() {
+    if (!this->streamDefault()) {
+        return;
+    }
+
+#if (ESP_IDF_VERSION_MAJOR >= 4)
+    if (!uart_is_driver_installed(UART_MODBUS)) {
+        return;
+    }
+#endif
+    uart_flush(UART_MODBUS);
+    ESP_ERROR_CHECK(uart_driver_delete(UART_MODBUS));
+}
+
+template <class Api>
 void ERaModbus<Api>::setBaudRate(uint32_t baudrate) {
     ERaModbusBaudrate(baudrate);
     if (!this->streamDefault()) {

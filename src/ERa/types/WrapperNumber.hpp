@@ -16,7 +16,7 @@ public:
 
     WrapperNumber& operator = (T _value) {
         this->value = _value;
-        return *this;
+        return (*this);
     }
 
 protected:

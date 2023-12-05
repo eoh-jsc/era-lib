@@ -168,6 +168,8 @@ private:
 template <class Proto, class Flash>
 inline
 void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
+    int16_t signal = this->thisProto().getTransp().getSignalQuality();
+
     cJSON_AddStringToObject(root, INFO_BOARD, ERA_BOARD_TYPE);
     cJSON_AddStringToObject(root, INFO_MODEL, ERA_MODEL_TYPE);
 	cJSON_AddStringToObject(root, INFO_BOARD_ID, this->thisProto().getBoardID());
@@ -175,13 +177,22 @@ void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
     cJSON_AddStringToObject(root, INFO_BUILD_DATE, BUILD_DATE_TIME);
     cJSON_AddStringToObject(root, INFO_VERSION, ERA_VERSION);
     cJSON_AddStringToObject(root, INFO_FIRMWARE_VERSION, ERA_FIRMWARE_VERSION);
+    cJSON_AddNumberToObject(root, INFO_PLUG_AND_PLAY, 0);
+    cJSON_AddStringToObject(root, INFO_NETWORK_PROTOCOL, ERA_PROTO_TYPE);
     cJSON_AddStringToObject(root, INFO_SSID, ((this->thisProto().getTransp().getSSID() == nullptr) ?
                                             ERA_PROTO_TYPE : this->thisProto().getTransp().getSSID()));
     cJSON_AddStringToObject(root, INFO_BSSID, ERA_PROTO_TYPE);
-    cJSON_AddNumberToObject(root, INFO_RSSI, this->thisProto().getTransp().getSignalQuality());
+    cJSON_AddNumberToObject(root, INFO_RSSI, signal);
+    cJSON_AddNumberToObject(root, INFO_SIGNAL_STRENGTH, SignalToPercentage(signal));
     cJSON_AddStringToObject(root, INFO_MAC, ERA_PROTO_TYPE);
     cJSON_AddStringToObject(root, INFO_LOCAL_IP, ERA_PROTO_TYPE);
+    cJSON_AddNumberToObject(root, INFO_SSL, ERaInfoSSL());
     cJSON_AddNumberToObject(root, INFO_PING, this->thisProto().getTransp().getPing());
+    cJSON_AddNumberToObject(root, INFO_FREE_RAM, ERaFreeRam());
+
+#if defined(ERA_RESET_REASON)
+    cJSON_AddStringToObject(root, INFO_RESET_REASON, SystemGetResetReason().c_str());
+#endif
 
     /* Override info */
     ERaInfo(root);
@@ -190,6 +201,8 @@ void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
 template <class Proto, class Flash>
 inline
 void ERaApi<Proto, Flash>::addModbusInfo(cJSON* root) {
+    int16_t signal = this->thisProto().getTransp().getSignalQuality();
+
 #if defined(ESP32)
     cJSON_AddNumberToObject(root, INFO_MB_CHIP_TEMPERATURE, static_cast<uint16_t>(temperatureRead() * 100.0f));
 #else
@@ -198,7 +211,8 @@ void ERaApi<Proto, Flash>::addModbusInfo(cJSON* root) {
 	cJSON_AddNumberToObject(root, INFO_MB_TEMPERATURE, 0);
 	cJSON_AddNumberToObject(root, INFO_MB_VOLTAGE, 999);
 	cJSON_AddNumberToObject(root, INFO_MB_IS_BATTERY, 0);
-	cJSON_AddNumberToObject(root, INFO_MB_RSSI, this->thisProto().getTransp().getSignalQuality());
+	cJSON_AddNumberToObject(root, INFO_MB_RSSI, signal);
+	cJSON_AddNumberToObject(root, INFO_MB_SIGNAL_STRENGTH, SignalToPercentage(signal));
 	cJSON_AddStringToObject(root, INFO_MB_WIFI_USING, ((this->thisProto().getTransp().getSSID() == nullptr) ?
                                                     ERA_PROTO_TYPE : this->thisProto().getTransp().getSSID()));
 

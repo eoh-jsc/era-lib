@@ -65,14 +65,14 @@ public:
             if (this->isValid()) {
                 this->reg->onRead(this->pReg, cb);
             }
-            return *this;
+            return (*this);
         }
 
         iterator& onWrite(ERaModbusInternal::WriteCallback_t cb) {
             if (this->isValid()) {
                 this->reg->onWrite(this->pReg, cb);
             }
-            return *this;
+            return (*this);
         }
         
     protected:

@@ -10,6 +10,8 @@
 #include <Utility/ERaUtility.hpp>
 #include <ERa/ERaData.hpp>
 
+class WrapperString;
+
 class ERaParam
 {
 	enum ERaParamTypeT {
@@ -36,7 +38,7 @@ public:
 		, valuestring(nullptr)
 		, valueobject(nullptr)
 	{
-		add(value);
+		this->add(value);
 	}
 	ERaParam(ERaDataJson& value)
 		: type(0)
@@ -45,7 +47,7 @@ public:
 		, valuestring(nullptr)
 		, valueobject(nullptr)
 	{
-		add(value);
+		this->add(value);
 	}
 	ERaParam(const ERaParam& value)
 		: type(0)
@@ -54,7 +56,16 @@ public:
 		, valuestring(nullptr)
 		, valueobject(nullptr)
 	{
-		add(value);
+		this->add(value);
+	}
+	ERaParam(const WrapperString& value)
+		: type(0)
+		, valueint(0)
+		, valuedouble(0)
+		, valuestring(nullptr)
+		, valueobject(nullptr)
+	{
+		this->add(value);
 	}
 	~ERaParam()
 	{
@@ -94,21 +105,72 @@ public:
 		return this->valuestring;
 	}
 
+	size_t getStringLength() const {
+		if (this->valuestring == nullptr) {
+			return 0;
+		}
+		return strlen(this->valuestring);
+	}
+
 	ERaDataJson* getObject() const {
 		return this->valueobject;
 	}
 
+	int parseInt() const {
+		if (this->isNumber()) {
+			return this->valueint;
+		}
+		else if (this->isString()) {
+			return atoi(this->valuestring);
+		}
+		return 0;
+	}
+
+	int parseInt(int _base) const {
+		if (this->isNumber()) {
+			return this->valueint;
+		}
+		else if (this->isString()) {
+			return strtol(this->valuestring, nullptr, _base);
+		}
+		return 0;
+	}
+
+	float parseFloat() const {
+		if (this->isNumber()) {
+			return static_cast<float>(this->valuedouble);;
+		}
+		else if (this->isString()) {
+			return static_cast<float>(atof(this->valuestring));
+		}
+		return 0.0f;
+	}
+
+	double parseDouble() const {
+		if (this->isNumber()) {
+			return this->valuedouble;
+		}
+		else if (this->isString()) {
+			return atof(this->valuestring);
+		}
+		return 0.0;
+	}
+
 	template <typename T>
 	void add(T value) {
-		addParam(value);
+		this->addParam(value);
 	}
 
 	void add(ERaDataJson& value) {
-		addParam(value);
+		this->addParam(value);
 	}
 
 	void add(const ERaParam& value) {
-		addParam(value);
+		this->addParam(value);
+	}
+
+	void add(const WrapperString& value) {
+		this->addParam(value);
 	}
 
 	void add_static(char* value) {
@@ -125,44 +187,58 @@ public:
 
 	template <typename T>
 	ERaParam& operator = (T value) {
-		add(value);
-		return *this;
+		this->addParam(value);
+		return (*this);
 	}
 
 	ERaParam& operator = (ERaDataJson& value) {
-		add(value);
-		return *this;
+		this->addParam(value);
+		return (*this);
 	}
 
 	ERaParam& operator = (const ERaParam& value) {
-		add(value);
-		return *this;
+		this->addParam(value);
+		return (*this);
+	}
+
+	ERaParam& operator = (const WrapperString& value) {
+		this->addParam(value);
+		return (*this);
 	}
 
 	template <typename T>
 	bool operator == (T value) const {
-		return this->valueint == (int)value;
+		if (!this->isNumber()) {
+			return false;
+		}
+		return (this->valueint == (int)value);
 	}
 
 	bool operator == (float value) const {
+		if (!this->isNumber()) {
+			return false;
+		}
 		return ERaFloatCompare((float)this->valuedouble, value);
 	}
 
 	bool operator == (double value) const {
+		if (!this->isNumber()) {
+			return false;
+		}
 		return ERaDoubleCompare(this->valuedouble, value);
 	}
 
 	bool operator == (char* value) const {
-		if (value == nullptr) {
-			return false;
-		}
-		if (this->valuestring == nullptr) {
-			return false;
-		}
-		return ERaStrCmp(this->valuestring, value);
+		return operator == ((const char*)value);
 	}
 
 	bool operator == (const char* value) const {
+		if (!this->isString()) {
+			return false;
+		}
+		if (this->valuestring == value) {
+			return true;
+		}
 		if (value == nullptr) {
 			return false;
 		}
@@ -173,16 +249,16 @@ public:
 	}
 
 	bool operator == (ERaDataJson* value) const {
-		if (value == nullptr) {
-			return false;
-		}
-		if (this->valueobject == nullptr) {
-			return false;
-		}
-		return (*this->valueobject == *value);
+		return operator == ((const ERaDataJson*)value);
 	}
 
 	bool operator == (const ERaDataJson* value) const {
+		if (!this->isObject()) {
+			return false;
+		}
+		if (this->valueobject == value) {
+			return true;
+		}
 		if (value == nullptr) {
 			return false;
 		}
@@ -193,22 +269,7 @@ public:
 	}
 
 	bool operator == (ERaParam& value) const {
-		if (this == &value) {
-			return true;
-		}
-		if (this->isNumber() &&
-			value.isNumber()) {
-			return (*this == value.getDouble());
-		}
-		else if (this->isString() &&
-			value.isString()) {
-			return (*this == value.getString());
-		}
-		else if (this->isObject() &&
-			value.isObject()) {
-			return (*this == value.getObject());
-		}
-		return false;
+		return operator == ((const ERaParam&)value);
 	}
 
 	bool operator == (const ERaParam& value) const {
@@ -280,6 +341,8 @@ private:
 		this->valueobject = value.valueobject;
 	}
 
+	void addParam(const WrapperString& value);
+
 	void addParam(char* value) {
 		this->free();
 		this->valuestring = ERaStrdup(value);
@@ -347,6 +410,13 @@ void ERaDataJson::add(const char* name, ERaParam& value) {
 	else if (value.isNumber()) {
 		this->add(name, value.getDouble());
 	}
+}
+
+#include "types/WrapperString.hpp"
+
+inline
+void ERaParam::addParam(const WrapperString& value) {
+	this->addParam(value.getString());
 }
 
 #endif /* INC_ERA_PARAM_HPP_ */

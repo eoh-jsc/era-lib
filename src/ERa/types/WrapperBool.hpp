@@ -15,7 +15,7 @@ public:
 
     WrapperBool& operator = (bool _value) {
         this->value = _value;
-        return *this;
+        return (*this);
     }
 
 protected:

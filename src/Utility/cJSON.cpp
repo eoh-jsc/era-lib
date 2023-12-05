@@ -86,6 +86,232 @@
 #endif
 #endif
 
+#if defined(__has_include)
+#if __has_include(<Arduino_JSON.h>)
+#define cJSON__hpp_
+
+#include <Arduino_JSON.h>
+
+typedef struct internal_hooks
+{
+    void *(CJSON_CDECL *allocate)(size_t size);
+    void (CJSON_CDECL *deallocate)(void *pointer);
+    void *(CJSON_CDECL *reallocate)(void *pointer, size_t size);
+} internal_hooks;
+
+#if defined(_MSC_VER)
+/* work around MSVC error C2322: '...' address of dllimport '...' is not static */
+static void * CJSON_CDECL internal_malloc(size_t size)
+{
+    return malloc(size);
+}
+static void CJSON_CDECL internal_free(void *pointer)
+{
+    free(pointer);
+}
+static void * CJSON_CDECL internal_realloc(void *pointer, size_t size)
+{
+    return realloc(pointer, size);
+}
+#else
+#define internal_malloc ERA_MALLOC
+#define internal_free ERA_FREE
+#define internal_realloc ERA_REALLOC
+#endif
+
+/* strlen of character literals resolved at compile time */
+#define static_strlen(string_literal) (sizeof(string_literal) - sizeof(""))
+
+static internal_hooks global_hooks = { internal_malloc, internal_free, internal_realloc };
+
+static unsigned char* cJSON_strdup(const unsigned char* string, const internal_hooks * const hooks)
+{
+    size_t length = 0;
+    unsigned char *copy = NULL;
+
+    if (string == NULL)
+    {
+        return NULL;
+    }
+
+    length = strlen((const char*)string) + sizeof("");
+    copy = (unsigned char*)hooks->allocate(length);
+    if (copy == NULL)
+    {
+        return NULL;
+    }
+    memcpy(copy, string, length);
+
+    return copy;
+}
+
+static void* cast_away_const(const void* string)
+{
+    return (void*)string;
+}
+
+/* Utility for array list handling. */
+static void suffix_object(cJSON *prev, cJSON *item)
+{
+    prev->next = item;
+    item->prev = prev;
+}
+
+static cJSON_bool add_item_to_array(cJSON *array, cJSON *item)
+{
+    cJSON *child = NULL;
+
+    if ((item == NULL) || (array == NULL) || (array == item))
+    {
+        return false;
+    }
+
+    child = array->child;
+    /*
+     * To find the last item in array quickly, we use prev in array
+     */
+    if (child == NULL)
+    {
+        /* list is empty, start new one */
+        array->child = item;
+        item->prev = item;
+        item->next = NULL;
+    }
+    else
+    {
+        /* append to the end */
+        if (child->prev)
+        {
+            suffix_object(child->prev, item);
+            array->child->prev = item;
+        }
+    }
+
+    return true;
+}
+
+static cJSON_bool add_item_to_object(cJSON * const object, const char * const string, cJSON * const item, const internal_hooks * const hooks, const cJSON_bool constant_key)
+{
+    char *new_key = NULL;
+    int new_type = cJSON_Invalid;
+
+    if ((object == NULL) || (string == NULL) || (item == NULL) || (object == item))
+    {
+        return false;
+    }
+
+    if (constant_key)
+    {
+        new_key = (char*)cast_away_const(string);
+        new_type = item->type | cJSON_StringIsConst;
+    }
+    else
+    {
+        new_key = (char*)cJSON_strdup((const unsigned char*)string, hooks);
+        if (new_key == NULL)
+        {
+            return false;
+        }
+
+        new_type = item->type & ~cJSON_StringIsConst;
+    }
+
+    if (!(item->type & cJSON_StringIsConst) && (item->string != NULL))
+    {
+        hooks->deallocate(item->string);
+    }
+
+    item->string = new_key;
+    item->type = new_type;
+
+    return add_item_to_array(object, item);
+}
+
+/* Internal constructor. */
+static cJSON *cJSON_New_Item(const internal_hooks * const hooks)
+{
+    cJSON* node = (cJSON*)hooks->allocate(sizeof(cJSON));
+    if (node)
+    {
+        memset(node, '\0', sizeof(cJSON));
+    }
+
+    return node;
+}
+
+CJSON_PUBLIC(cJSON *) cJSON_CreateRawNumber(const char *raw)
+{
+    cJSON *item = cJSON_New_Item(&global_hooks);
+    if(item)
+    {
+        double num = atof(raw);
+        item->type = cJSON_Number;
+        item->valuedouble = num;
+
+        /* use saturation in case of overflow */
+        if (num >= INT_MAX)
+        {
+            item->valueint = INT_MAX;
+        }
+        else if (num <= (double)INT_MIN)
+        {
+            item->valueint = INT_MIN;
+        }
+        else
+        {
+            item->valueint = (int)num;
+        }
+    }
+
+    return item;
+}
+
+CJSON_PUBLIC(void) cJSON_DeleteItemViaPointer(cJSON *parent, cJSON * const item)
+{
+    cJSON *detach = cJSON_DetachItemViaPointer(parent, item);
+
+    cJSON_Delete(detach);
+}
+
+CJSON_PUBLIC(cJSON*) cJSON_AddRawNumberToObject(cJSON * const object, const char * const name, const char * const raw)
+{
+    cJSON *raw_item = cJSON_CreateRawNumber(raw);
+    if (add_item_to_object(object, name, raw_item, &global_hooks, false))
+    {
+        return raw_item;
+    }
+
+    cJSON_Delete(raw_item);
+    return NULL;
+}
+
+CJSON_PUBLIC(cJSON_bool) cJSON_Rename(cJSON * const object, const char * const name)
+{
+    if ((object == NULL) || (name == NULL))
+    {
+        return false;
+    }
+
+    /* replace the name in the replacement */
+    if (!(object->type & cJSON_StringIsConst) && (object->string != NULL))
+    {
+        cJSON_free(object->string);
+    }
+    object->string = (char*)cJSON_strdup((const unsigned char*)name, &global_hooks);
+    if (object->string == NULL)
+    {
+        return false;
+    }
+
+    object->type &= ~cJSON_StringIsConst;
+
+    return true;
+}
+#endif
+#endif
+
+#if !defined(cJSON__hpp_)
+
 typedef struct {
     const unsigned char *json;
     size_t position;
@@ -3199,3 +3425,5 @@ CJSON_PUBLIC(void) cJSON_free(void *object)
 {
     global_hooks.deallocate(object);
 }
+
+#endif

@@ -2,6 +2,7 @@
 #define INC_ERA_SIMPLE_ESP8266_SSL_WIZ_HPP_
 
 #define ERA_NO_RTOS
+#define ERA_MQTT_SSL
 
 #include <Ethernet.h>
 #include <EthernetClient.h>

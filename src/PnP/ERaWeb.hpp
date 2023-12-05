@@ -45,6 +45,9 @@ static const char webScript[] ERA_PROGMEM =
 "} else {"
 "if (!confirm('%WIFI_MSG% \"' + id.value + '\"?')) {"
 "e.preventDefault(); }}}"
+"function clickedSave(e) {"
+"if (!confirm('%SAVE_MSG%')) {"
+"e.preventDefault(); }}"
 "function clickedOTA(e) {"
 "var url = document.getElementById('url');"
 "var md5 = document.getElementById('md5');"
@@ -290,6 +293,7 @@ enum LanguageWebT {
 #define LANGUAGE_BACKUP_PASS(lang) (lang == LanguageWebT::LANGUAGE_EN) ? "Password 2" : "Mật khẩu 2"
 #define LANGUAGE_SHOW_PASSWORD(lang) (lang == LanguageWebT::LANGUAGE_EN) ? "Show password" : "Hiện mật khẩu"
 #define LANGUAGE_SCAN_NETWORK(lang) (lang == LanguageWebT::LANGUAGE_EN) ? "Scan network" : "Quét mạng"
+#define LANGUAGE_SAVE_MSG(lang) (lang == LanguageWebT::LANGUAGE_EN) ? "Do you want force save?" : "Bạn có muốn lưu?"
 #define LANGUAGE_WIFI_MSG(lang) (lang == LanguageWebT::LANGUAGE_EN) ? "Do you want connect to" : "Bạn có muốn kết nối"
 #define LANGUAGE_NONE_WIFI_MSG(lang) (lang == LanguageWebT::LANGUAGE_EN) ? "Please choose WiFi!" : "Vui lòng chọn WiFi!"
 #define LANGUAGE_NONE_AUTH_MSG(lang) (lang == LanguageWebT::LANGUAGE_EN) ? "Please provide the token!" : "Vui lòng cung cấp mã token!"
@@ -337,6 +341,7 @@ static void WebProcessor(String& str, uint8_t language = LANGUAGE_EN) {
     str.replace("%SELECT_BACKUP_SSID%", LANGUAGE_SELECT_BACKUP_SSID(language));
     str.replace("%SHOW_PASSWORD%", LANGUAGE_SHOW_PASSWORD(language));
     str.replace("%SCAN_NETWORK%", LANGUAGE_SCAN_NETWORK(language));
+    str.replace("%SAVE_MSG%", LANGUAGE_SAVE_MSG(language));
     str.replace("%WIFI_MSG%", LANGUAGE_WIFI_MSG(language));
     str.replace("%NONE_WIFI_MSG%", LANGUAGE_NONE_WIFI_MSG(language));
     str.replace("%NONE_AUTH_MSG%", LANGUAGE_NONE_AUTH_MSG(language));

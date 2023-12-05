@@ -1019,6 +1019,10 @@
     }
 #endif
 
+MillisTime_t ERaSeconds() {
+    return (ERaMillis() / 1000UL);
+}
+
 #if defined(ERA_USE_DEFAULT_RANDOM)
     #include <time.h>
 
@@ -1118,6 +1122,17 @@ int16_t GSMToRSSI(uint8_t value) {
 uint8_t GSMToPercentage(uint8_t value) {
     int16_t rssi = GSMToRSSI(value);
     return RSSIToPercentage(rssi);
+}
+
+uint8_t SignalToPercentage(int16_t value) {
+    uint8_t percentage {0};
+    if (value >= 0) {
+        percentage = GSMToPercentage(value);
+    }
+    else {
+        percentage = RSSIToPercentage(value);
+    }
+    return percentage;
 }
 
 long long ERaAtoll(const char* str) {

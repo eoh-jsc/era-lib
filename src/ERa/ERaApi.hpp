@@ -15,6 +15,7 @@
 #include <Utility/ERaQueue.hpp>
 #include <Modbus/ERaModbusSimple.hpp>
 #include <Zigbee/ERaZigbeeSimple.hpp>
+#include <Reason/ERaReason.hpp>
 
 #if defined(__has_include) &&       \
     __has_include(<functional>) &&  \
@@ -44,6 +45,7 @@ class ERaApi
     const char* FILENAME_BT_CFG = FILENAME_BT_CONFIG;
     const char* FILENAME_PIN_CFG = FILENAME_PIN_CONFIG;
 
+	typedef void* TaskHandle_t;
 	typedef ERaApiHandler Handler;
 
 protected:
@@ -64,19 +66,28 @@ public:
 		, ERaPinRp(ERaRp)
         , ledPin(-1)
         , invertLED(false)
+		, skipPinWrite(false)
 		, skipPinReport(false)
+		, taskSize(0UL)
+		, autoSwitchTask(false)
+		, _apiTask(NULL)
     {}
     ~ERaApi()
     {}
 
 	template <typename T>
-	void virtualWrite(int pin, T value) {
-		ERaRsp_t rsp;
-		rsp.type = ERaTypeWriteT::ERA_WRITE_VIRTUAL_PIN;
-		rsp.retained = true;
-		rsp.id = pin;
-		rsp.param = value;
-		this->thisProto().sendCommand(rsp);
+	void virtualWrite(int pin, T value, bool send = false) {
+#if defined(ERA_VIRTUAL_WRITE_LEGACY)
+		this->virtualWriteSingle(pin, value);
+		ERA_FORCE_UNUSED(send);
+#else
+		if (send) {
+			this->virtualWriteSingle(pin, value);
+		}
+		else {
+			Property::virtualWriteProperty(pin, value);
+		}
+#endif
 	}
 
 	template <typename T, typename... Args>
@@ -252,6 +263,20 @@ public:
 
     void setSystemLED(int pin, bool invert = false);
 
+	void setTaskSize(uint32_t size, bool switchTask = false) {
+		if (!size) {
+		}
+		else if (size < ERA_API_TASK_SIZE) {
+			size = ERA_API_TASK_SIZE;
+		}
+		this->taskSize = size;
+		this->autoSwitchTask = switchTask;
+	}
+
+	void setSkipPinWrite(bool skip) {
+		this->skipPinWrite = skip;
+	}
+
     void setSkipPinReport(bool skip) {
         this->skipPinReport = skip;
     }
@@ -259,6 +284,7 @@ public:
 	void callERaProHandler(const char* deviceId, const cJSON* const root);
 
 protected:
+	void initApiTask();
 	void initERaApiTask();
 	void runERaApiTask();
 	void addInfo(cJSON* root);
@@ -273,6 +299,12 @@ protected:
 	void parsePinConfig(const char* str);
 	void storePinConfig(const char* str);
 	void removePinConfig();
+
+#if defined(LINUX)
+    static void* apiTask(void* args);
+#else
+    static void apiTask(void* args);
+#endif
 
 #if defined(ERA_BT)
 	void initBluetoothConfig();
@@ -298,22 +330,58 @@ protected:
 
 	bool run() {
 		ERA_RUN_YIELD();
-		Property::run();
-		this->ERaPinRp.run();
-#if ERA_MAX_EVENTS
-		this->eventsWrite();
-#endif
+
+		if (!this->isTaskRunning()) {
+			this->handlerAPI(true);
+		}
 
 		ERaWatchdogFeed();
 
 #if defined(ERA_NO_RTOS)
 		ERaOnWaiting();
 #endif
-		Handler::run();
+
+		ERaWatchdogFeed();
+
+#if ERA_MAX_EVENTS
+		this->eventsWrite();
+#endif
 
 		ERaWatchdogFeed();
 
         return this->thisProto().getTransp().run();
+	}
+
+	void handlerAPI(bool feed) {
+		Property::run();
+		this->ERaPinRp.run();
+
+		if (feed) {
+			ERaWatchdogFeed();
+		}
+
+		Handler::run();
+	}
+
+	void switchTask() {
+		if (!this->autoSwitchTask) {
+			return;
+		}
+		if (this->connected()) {
+			return;
+		}
+		this->initApiTask();
+	}
+
+	void runAPI() {
+		for (;;) {
+			this->handlerAPI(false);
+			ERA_API_YIELD();
+			if (this->autoSwitchTask &&
+				this->connected()) {
+				break;
+			}
+		}
 	}
 
 	void runZigbee() {
@@ -366,17 +434,6 @@ protected:
 		}
 	}
 
-	void callERaPinWriteHandler(uint8_t pin, const ERaParam& param, const ERaParam& raw) {
-		ERaPinWriteHandler_t handle = getERaPinWriteHandler(pin);
-		if ((handle != nullptr) &&
-			(handle != ERaWidgetPinWrite)) {
-			handle(pin, param, raw);
-		}
-		else {
-			ERaWidgetPinWriteDefault(pin, param, raw);
-		}
-	}
-
 	void callERaPinReadHandler(uint8_t pin, const ERaParam& param, const ERaParam& raw) {
 		ERaPinReadHandler_t handle = getERaPinReadHandler(pin);
 		if ((handle != nullptr) &&
@@ -385,6 +442,17 @@ protected:
 		}
 		else {
 			ERaWidgetPinReadDefault(pin, param, raw);
+		}
+	}
+
+	bool callERaPinWriteHandler(uint8_t pin, const ERaParam& param, const ERaParam& raw) {
+		ERaPinWriteHandler_t handle = getERaPinWriteHandler(pin);
+		if ((handle != nullptr) &&
+			(handle != ERaWidgetPinWrite)) {
+			return handle(pin, param, raw);
+		}
+		else {
+			return ERaWidgetPinWriteDefault(pin, param, raw);
 		}
 	}
 
@@ -443,6 +511,16 @@ protected:
 	}
 
 private:
+	template <typename T>
+	void virtualWriteSingle(int pin, T value) {
+		ERaRsp_t rsp;
+		rsp.type = ERaTypeWriteT::ERA_WRITE_VIRTUAL_PIN;
+		rsp.retained = true;
+		rsp.id = pin;
+		rsp.param = value;
+		this->thisProto().sendCommand(rsp);
+	}
+
 	template <typename... Args>
 	void virtualWriteMulti(Args... tail) {
 		ERaRsp_t rsp;
@@ -483,6 +561,10 @@ private:
 	static void _sendPinEvent(void* args);
 	static void _sendPinConfigEvent(void* args);
 #endif
+
+	bool isTaskRunning() const {
+		return ((this->taskSize > 0) && (this->_apiTask != NULL));
+	}
 
 	inline
 	const Proto& thisProto() const {
@@ -553,7 +635,12 @@ private:
 
     int ledPin;
     bool invertLED;
+	bool skipPinWrite;
 	bool skipPinReport;
+
+	uint32_t taskSize;
+	bool autoSwitchTask;
+	TaskHandle_t _apiTask;
 };
 
 template <class Proto, class Flash>

@@ -65,6 +65,9 @@ typedef struct __ERaConfig_t {
     char username[64];
     char password[64];
 
+    bool connected;
+    bool forceSave;
+
     void setFlag(uint8_t mask, bool value) {
         if (value) {
             flags |= mask;
@@ -80,11 +83,21 @@ typedef struct __ERaConfig_t {
 } ERA_ATTR_PACKED ERaConfig_t;
 
 #if !defined(NO_GLOBAL_INSTANCES) && !defined(NO_GLOBAL_ERA)
-    static TinyGsmClient tinyClient;
-    static ERaConfig_t   ERaConfig {};
+    #if defined(ERA_USE_SSL)
+        static TinyGsmClientSecure  tinyClient;
+        static ERaConfig_t          ERaConfig {};
+    #else
+        static TinyGsmClient tinyClient;
+        static ERaConfig_t   ERaConfig {};
+    #endif
 #else
-    #define tinyClient   StaticHelper<TinyGsmClient>::instance()
-    #define ERaConfig    StaticHelper<ERaConfig_t>::instance()
+    #if defined(ERA_USE_SSL)
+        #define tinyClient   StaticHelper<TinyGsmClientSecure>::instance()
+        #define ERaConfig    StaticHelper<ERaConfig_t>::instance()
+    #else
+        #define tinyClient   StaticHelper<TinyGsmClient>::instance()
+        #define ERaConfig    StaticHelper<ERaConfig_t>::instance()
+    #endif
 #endif
 
 #if !defined(INADDR_ANY)
@@ -105,19 +118,33 @@ static const ERaConfig_t ERaDefault = {
     ERA_MQTT_HOST,
     ERA_MQTT_PORT,
     ERA_MQTT_USERNAME,
-    ERA_MQTT_PASSWORD
+    ERA_MQTT_PASSWORD,
+
+    false,
+    false
 };
 
 enum ConfigFlagT {
     CONFIG_FLAG_VALID = 0x01,
     CONFIG_FLAG_STORE = 0x02,
     CONFIG_FLAG_API = 0x04,
-    CONFIG_FLAG_UDP = 0x08
+    CONFIG_FLAG_UDP = 0x08,
+    CONFIG_FLAG_PNP = 0x10
 };
 
 static inline
 TinyGsm* getTinyModem() {
     return tinyClient.getModem();
+}
+
+static inline
+int16_t getRSSI() {
+    ERaWatchdogFeed();
+    TinyGsm* modem = getTinyModem();
+    if (modem == nullptr) {
+        return 0;
+    }
+    return modem->getSignalQuality();
 }
 
 static inline
@@ -213,10 +240,13 @@ public:
         : Base(_transp, _flash)
         , modem(nullptr)
         , authToken(nullptr)
+        , persistent(false)
         , resetPin(-1)
         , invertPin(false)
         , softRestart(false)
         , newWiFi {}
+        , prevMillis(0UL)
+        , prevMillisSignal(0UL)
     {}
     ~ERaPnP()
     {}
@@ -255,17 +285,22 @@ public:
         this->setResetPin(rstPin, invert);
         this->restart();
         ERaWatchdogFeed();
-        this->connectNetwork(ssid, pass);
 
-        CopyToArray(ssid, ERaConfig.ssid);
-        CopyToArray(pass, ERaConfig.pass);
-        CopyToArray(auth, ERaConfig.token);
-        CopyToArray(host, ERaConfig.host);
-        ERaConfig.port = port;
-        CopyToArray(username, ERaConfig.username);
-        CopyToArray(password, ERaConfig.password);
-        ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_VALID, true);
+        if (this->persistent) {
+            this->configLoad();
+        }
+        if (!ERaConfig.getFlag(ConfigFlagT::CONFIG_FLAG_VALID)) {
+            CopyToArray(ssid, ERaConfig.ssid);
+            CopyToArray(pass, ERaConfig.pass);
+            CopyToArray(auth, ERaConfig.token);
+            CopyToArray(host, ERaConfig.host);
+            ERaConfig.port = port;
+            CopyToArray(username, ERaConfig.username);
+            CopyToArray(password, ERaConfig.password);
+            ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_VALID, true);
+        }
 
+        this->connectNetwork(ERaConfig.ssid, ERaConfig.pass);
         if (this->netConnected()) {
             if (Base::connect()) {
                 ERaOptConnected(this);
@@ -303,6 +338,10 @@ public:
                     ERA_MQTT_USERNAME, ERA_MQTT_PASSWORD);
     }
 
+    void setPersistent(bool enable) {
+        this->persistent = enable;
+    }
+
     void begin(TinyGsm& gsm,
             int rstPin = -1,
             bool invert = false,
@@ -336,6 +375,7 @@ private:
     void switchToAP();
     void switchToSTA();
     void switchToAPSTA();
+    void getSignalQuality();
 
     template <int size>
     void getWiFiName(char(&ptr)[size], bool withPrefix = true);
@@ -343,8 +383,19 @@ private:
     void getImeiChip(char(&ptr)[size]);
     void replace(char* buf, char src, char dst);
 
-    bool netConnected() const {
-        return this->modem->isNetworkConnected();
+    bool netConnected() {
+        static bool _connected {false};
+
+        unsigned long currentMillis = ERaMillis();
+        if ((currentMillis - this->prevMillis) < 500UL) {
+            return _connected;
+        }
+        unsigned long skipTimes = ((currentMillis - this->prevMillis) / 500UL);
+        // update time
+        this->prevMillis += (500UL * skipTimes);
+
+        _connected = this->modem->isNetworkConnected();
+        return _connected;
     }
 
     void setResetPin(int pin, bool invert) {
@@ -392,10 +443,14 @@ private:
     TinyGsm* modem;
     TinyGsmServer server;
     const char* authToken;
+    bool persistent;
     int resetPin;
     bool invertPin;
     bool softRestart;
     WiFiConfig_t newWiFi;
+
+    unsigned long prevMillis;
+    unsigned long prevMillisSignal;
 };
 
 template <class Transport>
@@ -463,6 +518,8 @@ void ERaPnP<Transport>::run() {
         case StateT::STATE_RUNNING:
             if (this->netConnected()) {
                 Base::run();
+
+                this->getSignalQuality();
             }
             else {
                 ERaWatchdogFeed();
@@ -516,6 +573,14 @@ int ERaPnP<Transport>::beginModem() {
         ERA_LOG(TAG, ERA_PSTR("Can't init modem"));
         return 1;
     }
+
+    ERaWatchdogFeed();
+
+    this->modem->persistent(false);
+
+    ERaWatchdogFeed();
+
+    this->modem->networkDisconnect();
 
     ERaWatchdogFeed();
     return 2;
@@ -606,6 +671,7 @@ void ERaPnP<Transport>::configApi() {
             /* TODO: send first time */
             udpERa.sendBoardInfo();
             ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_UDP, true);
+            ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_PNP, true);
             ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_VALID, true);
             ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_STORE, true);
             ERaState::set(StateT::STATE_SWITCH_TO_AP_STA);
@@ -954,6 +1020,7 @@ void ERaPnP<Transport>::runServer(String& networks) {
                         contentType = "application/json";
                         content = ERA_F(R"json({"status":"ok","message":"Connecting wifi..."})json");
                         if (ssid.length()) {
+                            ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_PNP, true);
                             ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_VALID, true);
                             ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_STORE, true);
                             ERaState::set(StateT::STATE_SWITCH_TO_STA);
@@ -1284,6 +1351,7 @@ void ERaPnP<Transport>::connectNetwork() {
 template <class Transport>
 void ERaPnP<Transport>::connectNewNetwork() {
     if (!strlen(this->newWiFi.ssid)) {
+        ERaState::set(StateT::STATE_CONNECTING_NETWORK);
         return;
     }
 
@@ -1302,6 +1370,8 @@ void ERaPnP<Transport>::connectNewNetwork() {
 
     this->connectNetwork(this->newWiFi.ssid, this->newWiFi.pass);
     if (this->netConnected()) {
+        ClearArray(ERaConfig.ssid);
+        ClearArray(ERaConfig.pass);
         CopyToArray(this->newWiFi.ssid, ERaConfig.ssid);
         CopyToArray(this->newWiFi.pass, ERaConfig.pass);
         ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_STORE, true);
@@ -1320,12 +1390,18 @@ void ERaPnP<Transport>::connectCloud() {
                     ERaConfig.port, ERaConfig.username, ERaConfig.password);
     }
     if (Base::connect()) {
+        ERaConfig.connected = true;
         this->configSave();
         ERaOptConnected(this);
         ERaState::set(StateT::STATE_CONNECTED);
     }
-    else if (ERaState::is(StateT::STATE_RESET_CONFIG)) {
+    else if (Base::isConfigMode()) {
         return;
+    }
+    else if ((ERaConfig.connected || ERaConfig.forceSave) &&
+        this->getTransp().connectionDenied()) {
+        ERaState::set(StateT::STATE_SWITCH_TO_AP);
+        ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_API, true);
     }
     else {
         ERaState::set(StateT::STATE_CONNECTING_NETWORK);
@@ -1457,6 +1533,23 @@ void ERaPnP<Transport>::switchToAPSTA() {
 }
 
 template <class Transport>
+void ERaPnP<Transport>::getSignalQuality() {
+    unsigned long currentMillis = ERaMillis();
+    if ((currentMillis - this->prevMillisSignal) < ERA_GET_SIGNAL_TIMEOUT) {
+        return;
+    }
+    unsigned long skipTimes = ((currentMillis - this->prevMillisSignal) / ERA_GET_SIGNAL_TIMEOUT);
+    // update time
+    this->prevMillisSignal += (ERA_GET_SIGNAL_TIMEOUT * skipTimes);
+
+    ERaWatchdogFeed();
+
+    this->getTransp().setSignalQuality(this->modem->getSignalQuality());
+
+    ERaWatchdogFeed();
+}
+
+template <class Transport>
 template <int size>
 void ERaPnP<Transport>::getWiFiName(char(&ptr)[size], bool withPrefix) {
     String mac = this->modem->BSSID();
@@ -1476,7 +1569,7 @@ void ERaPnP<Transport>::getImeiChip(char(&ptr)[size]) {
     String mac = this->modem->BSSID();
     mac.replace(":", "");
     ClearArray(ptr);
-#ifdef ERA_AUTH_TOKEN
+#if defined(ERA_AUTH_TOKEN)
     FormatString(ptr, ERA_AUTH_TOKEN);
 #else
     if ((this->authToken != nullptr) && strlen(this->authToken)) {
@@ -1505,6 +1598,8 @@ void ERaPnP<Transport>::replace(char* buf, char src, char dst) {
 template <class Proto, class Flash>
 inline
 void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
+    int16_t signal = ::getRSSI();
+
     cJSON_AddStringToObject(root, INFO_BOARD, ERA_BOARD_TYPE);
     cJSON_AddStringToObject(root, INFO_MODEL, ERA_MODEL_TYPE);
 	cJSON_AddStringToObject(root, INFO_BOARD_ID, this->thisProto().getBoardID());
@@ -1512,13 +1607,22 @@ void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
     cJSON_AddStringToObject(root, INFO_BUILD_DATE, BUILD_DATE_TIME);
     cJSON_AddStringToObject(root, INFO_VERSION, ERA_VERSION);
     cJSON_AddStringToObject(root, INFO_FIRMWARE_VERSION, ERA_FIRMWARE_VERSION);
+    cJSON_AddNumberToObject(root, INFO_PLUG_AND_PLAY, ERaConfig.getFlag(ConfigFlagT::CONFIG_FLAG_PNP));
+    cJSON_AddStringToObject(root, INFO_NETWORK_PROTOCOL, ERA_PROTO_TYPE);
     cJSON_AddStringToObject(root, INFO_SSID, ((this->thisProto().getTransp().getSSID() == nullptr) ?
-                                            ERA_PROTO_TYPE : this->thisProto().getTransp().getSSID()));
-    cJSON_AddStringToObject(root, INFO_BSSID, ERA_PROTO_TYPE);
-    cJSON_AddNumberToObject(root, INFO_RSSI, this->thisProto().getTransp().getSignalQuality());
+                                            ::getSSID().c_str() : this->thisProto().getTransp().getSSID()));
+    cJSON_AddStringToObject(root, INFO_BSSID, ::getBSSID().c_str());
+    cJSON_AddNumberToObject(root, INFO_RSSI, signal);
+    cJSON_AddNumberToObject(root, INFO_SIGNAL_STRENGTH, SignalToPercentage(signal));
     cJSON_AddStringToObject(root, INFO_MAC, ::getMAC().c_str());
     cJSON_AddStringToObject(root, INFO_LOCAL_IP, ::getLocalIP().c_str());
+    cJSON_AddNumberToObject(root, INFO_SSL, ERaInfoSSL(ERaConfig.port));
     cJSON_AddNumberToObject(root, INFO_PING, this->thisProto().getTransp().getPing());
+    cJSON_AddNumberToObject(root, INFO_FREE_RAM, ERaFreeRam());
+
+#if defined(ERA_RESET_REASON)
+    cJSON_AddStringToObject(root, INFO_RESET_REASON, SystemGetResetReason().c_str());
+#endif
 
     /* Override info */
     ERaInfo(root);
@@ -1527,13 +1631,16 @@ void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
 template <class Proto, class Flash>
 inline
 void ERaApi<Proto, Flash>::addModbusInfo(cJSON* root) {
+    int16_t signal = this->thisProto().getTransp().getSignalQuality();
+
 	cJSON_AddNumberToObject(root, INFO_MB_CHIP_TEMPERATURE, 5000);
 	cJSON_AddNumberToObject(root, INFO_MB_TEMPERATURE, 0);
 	cJSON_AddNumberToObject(root, INFO_MB_VOLTAGE, 999);
 	cJSON_AddNumberToObject(root, INFO_MB_IS_BATTERY, 0);
-	cJSON_AddNumberToObject(root, INFO_MB_RSSI, this->thisProto().getTransp().getSignalQuality());
+	cJSON_AddNumberToObject(root, INFO_MB_RSSI, signal);
+	cJSON_AddNumberToObject(root, INFO_MB_SIGNAL_STRENGTH, SignalToPercentage(signal));
 	cJSON_AddStringToObject(root, INFO_MB_WIFI_USING, ((this->thisProto().getTransp().getSSID() == nullptr) ?
-                                                    ERA_PROTO_TYPE : this->thisProto().getTransp().getSSID()));
+                                                    ::getSSID().c_str() : this->thisProto().getTransp().getSSID()));
 
     /* Override modbus info */
     ERaModbusInfo(root);

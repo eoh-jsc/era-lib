@@ -90,7 +90,8 @@ public:
 
             if (mux < TINY_GSM_MUX_COUNT) {
                 this->mux = mux;
-            } else {
+            }
+            else {
                 this->mux = (mux % TINY_GSM_MUX_COUNT);
             }
             this->at->sockets[this->mux] = this;
@@ -291,7 +292,8 @@ public:
         if ((epsStatus == REG_OK_HOME) ||
             (epsStatus == REG_OK_ROAMING)) {
             return epsStatus;
-        } else {
+        }
+        else {
             // Otherwise, check generic network status
             return (RegStatus)this->getRegistrationStatusXREG("CREG");
         }
@@ -670,7 +672,8 @@ protected:
             if (this->TinyGsmIsValidNumber(result)) {
                 return result.toInt();
             }
-        } else {
+        }
+        else {
             return -1;
         }
         return -1;
@@ -903,14 +906,14 @@ public:
                     if (urc == "recv") {
                         int8_t mux = this->streamGetIntBefore('\n');
                         DBG("### URC RECV:", mux);
-                        if (mux >= 0 && mux < TINY_GSM_MUX_COUNT && this->sockets[mux]) {
+                        if ((mux >= 0) && (mux < TINY_GSM_MUX_COUNT) && this->sockets[mux]) {
                             this->sockets[mux]->got_data = true;
                         }
                     }
                     else if (urc == "closed") {
                         int8_t mux = this->streamGetIntBefore('\n');
                         DBG("### URC CLOSE:", mux);
-                        if (mux >= 0 && mux < TINY_GSM_MUX_COUNT && this->sockets[mux]) {
+                        if ((mux >= 0) && (mux < TINY_GSM_MUX_COUNT) && this->sockets[mux]) {
                             this->sockets[mux]->sock_connected = false;
                         }
                     }
@@ -920,8 +923,8 @@ public:
                     data = "";
                 }
             }
-        } while (millis() - startMillis < timeout_ms);
-    finish:
+        } while ((millis() - startMillis) < timeout_ms);
+        finish:
         if (!index) {
             data.trim();
             if (data.length()) {
@@ -929,8 +932,8 @@ public:
             }
             data = "";
         }
-        // data.replace(GSM_NL, "/");
-        // DBG('<', index, '>', data);
+        data.replace(GSM_NL, "/");
+        DBG('<', index, '>', data);
         return index;
     }
 

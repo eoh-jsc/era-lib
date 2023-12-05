@@ -17,6 +17,9 @@
 #endif
 
 void ERaOs::osStartsScheduler() {
+    if (_osStarted) {
+        return;
+    }
     _osStarted = true;
 #if defined(ARDUINO_RTOS_STM32)
     vTaskStartScheduler();
@@ -48,7 +51,17 @@ TaskHandle_t ERaOs::osThreadNew(void (*task)(void *args), const char* name, uint
     TaskHandle_t hTask = NULL;
 
 #if defined(ESP32)
-    xTaskCreatePinnedToCore(task, name, size, args, priority, &hTask, core);
+    #if !defined(CONFIG_FREERTOS_UNICORE)
+        if (core >= 0 && core < 2) {
+            xTaskCreatePinnedToCore(task, name, size, args, priority, &hTask, core);
+        }
+        else {
+    #endif
+            xTaskCreate(task, name, size, args, priority, &hTask);
+            (void)core;
+    #if !defined(CONFIG_FREERTOS_UNICORE)
+        }
+    #endif
 #else
     xTaskCreate(task, name, size, args, priority, &hTask);
     (void)core;

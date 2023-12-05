@@ -16,20 +16,28 @@
     #define MQTT_HAS_FUNCTIONAL_H
 #endif
 
-#define ERA_MQTT_PUB_LOG(status, errorCode)                                                             \
-    if (status) {                                                                                       \
-        ERA_LOG(TAG, ERA_PSTR("Publish (ok) %s: %s"), topic, payload);                                  \
-    }                                                                                                   \
-    else {                                                                                              \
-        ERA_LOG_ERROR(TAG, ERA_PSTR("Publish (error %d) %s: %s"), errorCode, topic, payload);           \
+#define ERA_MQTT_PUB_LOG(status, errorCode)                                                                                     \
+    if (status) {                                                                                                               \
+        ERA_LOG(TAG, ERA_PSTR("Publish (ok #%d) %s: %s"), this->mqtt.lastPacketID(), topic, payload);                           \
+    }                                                                                                                           \
+    else {                                                                                                                      \
+        ERA_LOG_ERROR(TAG, ERA_PSTR("Publish (error %d #%d) %s: %s"), errorCode, this->mqtt.lastPacketID(), topic, payload);    \
     }
 
-#define ERR_MQTT_SUB_LOG(status, errorCode)                                                             \
-    if (status) {                                                                                       \
-        ERA_LOG(TAG, ERA_PSTR("Subscribe (ok): %s, QoS: %d"), topicName, qos);                          \
-    }                                                                                                   \
-    else {                                                                                              \
-        ERA_LOG_ERROR(TAG, ERA_PSTR("Subscribe (error %d): %s, QoS: %d"), errorCode, topicName, qos);   \
+#define ERA_MQTT_SUB_LOG(status, errorCode)                                                                                     \
+    if (status) {                                                                                                               \
+        ERA_LOG(TAG, ERA_PSTR("Subscribe (ok): %s, QoS: %d"), topicName, qos);                                                  \
+    }                                                                                                                           \
+    else {                                                                                                                      \
+        ERA_LOG_ERROR(TAG, ERA_PSTR("Subscribe (error %d): %s, QoS: %d"), errorCode, topicName, qos);                           \
+    }
+
+#define ERA_MQTT_UNSUB_LOG(status, errorCode)                                                                                   \
+    if (status) {                                                                                                               \
+        ERA_LOG(TAG, ERA_PSTR("Unsubscribe (ok): %s"), topicName);                                                              \
+    }                                                                                                                           \
+    else {                                                                                                                      \
+        ERA_LOG_ERROR(TAG, ERA_PSTR("Unsubscribe (error %d): %s"), errorCode, topicName);                                       \
     }
 
 using namespace std;
@@ -67,8 +75,10 @@ public:
         , ERaAuth(ERA_AUTHENTICATION_TOKEN)
         , ssid(NULL)
         , ping(0L)
+        , lastPublish(0L)
         , signalQuality(0)
         , askConfig(false)
+        , needPubState(false)
         , _connected(false)
         , mutex(NULL)
         , connectedCb(NULL)
@@ -98,9 +108,11 @@ public:
     bool run();
     bool subscribeTopic(const char* baseTopic, const char* topic,
                         QoST qos = (QoST)ERA_MQTT_SUBSCRIBE_QOS) override;
+    bool unsubscribeTopic(const char* baseTopic, const char* topic) override;
     bool publishData(const char* topic, const char* payload,
                     bool retained = ERA_MQTT_PUBLISH_RETAINED,
                     QoST qos = (QoST)ERA_MQTT_PUBLISH_QOS) override;
+    bool publishState(bool online);
     bool syncConfig();
 
     void setTimeout(uint32_t timeout) {
@@ -170,6 +182,14 @@ public:
         return this->TAG;
     }
 
+    const char* getLWTTopic() const {
+        return this->LWT_TOPIC;
+    }
+
+    const char* getLWTPayload() const {
+        return this->OFFLINE_MESSAGE;
+    }
+
     void onMessage(MessageCallback_t cb) {
         this->mqtt.onMessage(cb);
     }
@@ -178,6 +198,11 @@ public:
                        StateCallback_t offCb) {
         this->connectedCb = onCb;
         this->disconnectedCb = offCb;
+    }
+
+    bool connectionDenied() {
+        return ((this->mqtt.lastError() == lwmqtt_err_t::LWMQTT_MISSING_OR_WRONG_PACKET) ||
+                (this->mqtt.lastError() == lwmqtt_err_t::LWMQTT_CONNECTION_DENIED));
     }
 
 protected:
@@ -198,8 +223,10 @@ private:
     const char* ERaAuth;
     const char* ssid;
     MillisTime_t ping;
+    MillisTime_t lastPublish;
     int16_t signalQuality;
     bool askConfig;
+    bool needPubState;
     bool _connected;
     char willTopic[MAX_TOPIC_LENGTH];
     ERaMutex_t mutex;
@@ -229,7 +256,7 @@ inline
 bool ERaMqttLinux<MQTT>::connect() {
     size_t count {0};
     char _clientID[74] {0};
-    if (this->clientID != nullptr) {
+    if (this->clientID != NULL) {
         FormatString(_clientID, this->ERaAuth);
         if (!ERaStrCmp(this->clientID, this->ERaAuth) &&
             strlen(this->clientID)) {
@@ -259,7 +286,7 @@ bool ERaMqttLinux<MQTT>::connect() {
 
     subscribeTopic(this->ERaTopic, "/arduino_pin/+");
     subscribeTopic(this->ERaTopic, "/virtual_pin/+");
-    subscribeTopic(this->ERaTopic, "/pin/down");
+    subscribeTopic(this->ERaTopic, "/+/down");
     subscribeTopic(this->ERaTopic, "/down");
 
 #if defined(ERA_ASK_CONFIG_WHEN_RESTART)
@@ -271,6 +298,10 @@ bool ERaMqttLinux<MQTT>::connect() {
         return false;
     }
 #endif
+
+    subscribeTopic(this->ERaTopic, LWT_TOPIC);
+    ERA_LOG(TAG, ERA_PSTR(R"(Connected: "%s:%d", Client ID: "%s", Username: "%s", Password: "%s")"),
+                            this->host, this->port, _clientID, this->username, this->password);
 
     this->onConnected();
     return true;
@@ -299,6 +330,10 @@ bool ERaMqttLinux<MQTT>::run() {
         this->onDisconnected();
         return this->connect();
     }
+    else if (this->needPubState) {
+        this->publishLWT(false);
+        this->needPubState = false;
+    }
     return true;
 }
 
@@ -308,13 +343,39 @@ bool ERaMqttLinux<MQTT>::subscribeTopic(const char* baseTopic, const char* topic
                                         QoST qos) {
     bool status {false};
     char topicName[MAX_TOPIC_LENGTH] {0};
-	FormatString(topicName, baseTopic);
-	FormatString(topicName, topic);
+    if (baseTopic != NULL) {
+	    FormatString(topicName, baseTopic);
+    }
+    if (topic != NULL) {
+	    FormatString(topicName, topic);
+    }
 
     this->lockMQTT();
     if (this->connected()) {
         status = this->mqtt.subscribe(topicName, qos);
-        ERR_MQTT_SUB_LOG(status, this->mqtt.lastError())
+        ERA_MQTT_SUB_LOG(status, this->mqtt.lastError())
+    }
+    this->unlockMQTT();
+
+    return status;
+}
+
+template <class MQTT>
+inline
+bool ERaMqttLinux<MQTT>::unsubscribeTopic(const char* baseTopic, const char* topic) {
+    bool status {false};
+    char topicName[MAX_TOPIC_LENGTH] {0};
+    if (baseTopic != NULL) {
+	    FormatString(topicName, baseTopic);
+    }
+    if (topic != NULL) {
+	    FormatString(topicName, topic);
+    }
+
+    this->lockMQTT();
+    if (this->connected()) {
+        status = this->mqtt.unsubscribe(topicName);
+        ERA_MQTT_UNSUB_LOG(status, this->mqtt.lastError())
     }
     this->unlockMQTT();
 
@@ -333,12 +394,21 @@ bool ERaMqttLinux<MQTT>::publishData(const char* topic, const char* payload,
 
     this->lockMQTT();
     if (this->connected()) {
+        this->lastPublish = ERaMillis();
         status = this->mqtt.publish(topic, payload, retained, qos);
+        this->ping = (ERaMillis() - this->lastPublish);
         ERA_MQTT_PUB_LOG(status, this->mqtt.lastError())
     }
     this->unlockMQTT();
 
     return status;
+}
+
+template <class MQTT>
+inline
+bool ERaMqttLinux<MQTT>::publishState(bool online) {
+    this->needPubState = online;
+    return true;
 }
 
 template <class MQTT>
@@ -355,7 +425,7 @@ bool ERaMqttLinux<MQTT>::publishLWT(bool sync) {
     char payload[100] {0};
     char* topic = this->willTopic;
 
-    if (this->getSSID() != nullptr) {
+    if (this->getSSID() != NULL) {
         FormatString(wifiInfo, WIFI_INFO, this->getSSID());
     }
 
@@ -363,9 +433,9 @@ bool ERaMqttLinux<MQTT>::publishLWT(bool sync) {
 
     this->lockMQTT();
     if (this->connected()) {
-        this->ping = ERaMillis();
+        this->lastPublish = ERaMillis();
         status = this->mqtt.publish(topic, payload, LWT_RETAINED, LWT_QOS);
-        this->ping = (ERaMillis() - this->ping);
+        this->ping = (ERaMillis() - this->lastPublish);
         ERA_MQTT_PUB_LOG(status, this->mqtt.lastError())
     }
     this->unlockMQTT();
@@ -379,11 +449,10 @@ void ERaMqttLinux<MQTT>::onConnected() {
     if (this->_connected) {
         return;
     }
+    this->_connected = true;
     if (this->connectedCb == NULL) {
         return;
     }
-
-    this->_connected = true;
     this->connectedCb();
 }
 
@@ -393,11 +462,10 @@ void ERaMqttLinux<MQTT>::onDisconnected() {
     if (!this->_connected) {
         return;
     }
+    this->_connected = false;
     if (this->disconnectedCb == NULL) {
         return;
     }
-
-    this->_connected = false;
     this->disconnectedCb();
 }
 

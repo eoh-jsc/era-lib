@@ -87,6 +87,7 @@ protected:
         this->configZigbee();
         if ((ZigbeeState::is(ZigbeeStateT::STATE_ZB_IGNORE)) ||
             (ToZigbee::CommandZigbee::pingSystem(5, 1000, ERaWatchdogFeed) != ResultT::RESULT_SUCCESSFUL)) {
+            this->serialEnd();
             ZigbeeState::set(ZigbeeStateT::STATE_ZB_IGNORE);
             return;
         }
@@ -214,6 +215,7 @@ protected:
 
 private:
     void configZigbee();
+    void serialEnd();
     void initZigbee(bool format, bool invalid = false);
     void startZigbee(bool& format, bool& invalid);
     void factoryResetZigbee();

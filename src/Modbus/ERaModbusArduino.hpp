@@ -54,6 +54,16 @@ void ERaModbus<Api>::configModbus() {
 }
 
 template <class Api>
+void ERaModbus<Api>::endModbus() {
+    if (!this->streamDefault()) {
+        return;
+    }
+
+    SerialMB.flush();
+    SerialMB.end();
+}
+
+template <class Api>
 void ERaModbus<Api>::setBaudRate(uint32_t baudrate) {
     ERaModbusBaudrate(baudrate);
     if (!this->streamDefault()) {

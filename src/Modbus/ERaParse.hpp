@@ -111,7 +111,9 @@ class ERaModbusEntry
 
 public:
     ERaModbusEntry()
-        : baudSpeed(DEFAULT_MODBUS_BAUD_SPEED)
+        : id(0)
+        , prevId(0)
+        , baudSpeed(DEFAULT_MODBUS_BAUD_SPEED)
         , isBluetooth(false)
         , autoClosing(false)
         , isUpdated(false)
@@ -143,11 +145,13 @@ public:
         return _updated;
     }
     void deleteAll();
+    void resize();
 
     bool operator == (const char* hash);
     bool operator != (const char* hash);
 
     unsigned int id;
+    unsigned int prevId;
     unsigned int baudSpeed;
     bool isWifi;
     char ssid[64];
@@ -222,21 +226,43 @@ private:
     template <typename T>
     T* create() {
         T* ptr = (T*)ERA_MALLOC(sizeof(T));
-        memset(ptr, 0, sizeof(T));
+        if (ptr != nullptr) {
+            memset(ptr, 0, sizeof(T));
+        }
         return ptr;
     }
 
     template <typename T>
-    void clear(ERaList<T*>& value) {
-        const typename ERaList<T*>::iterator* e = value.end();
-        for (typename ERaList<T*>::iterator* it = value.begin(); it != e; it = it->getNext()) {
-            if (it->get() == nullptr) {
+    void clear(ERaList<T>& value) {
+        const typename ERaList<T>::iterator* e = value.end();
+        for (typename ERaList<T>::iterator* it = value.begin(); it != e; it = it->getNext()) {
+            T& item = it->get();
+            if (item == nullptr) {
                 continue;
             }
-            free(it->get());
-            it->get() = nullptr;
+            free(item);
+            item = nullptr;
         }
         value.clear();
+        value = {};
+    }
+
+    template <typename T>
+    void resize(ERaList<T>& value, size_t capacity) {
+        size_t size = value.size();
+        typename ERaList<T>::iterator* it = nullptr;
+        for (size_t i = size; i > capacity; --i) {
+            it = value.get(i - 1);
+            if (it == nullptr) {
+                continue;
+            }
+            T& item = it->get();
+            if (item != nullptr) {
+                free(item);
+                item = nullptr;
+            }
+            value.remove(it);
+        }
     }
 
 };
@@ -264,12 +290,19 @@ void ERaModbusEntry::parseConfig(const char* ptr) {
             position = i + 1;
         }
     }
+
+    /*
+    this->resize();
+    */
 }
 
 inline
 bool ERaModbusEntry::updateHashID(const char* hash, bool skip) {
+    if (skip) {
+        this->isUpdated = false;
+    }
     if (hash == nullptr) {
-        return false;
+        return this->isUpdated;
     }
     if (strcmp(this->hashID, hash)) {
         if (!skip) {
@@ -278,7 +311,7 @@ bool ERaModbusEntry::updateHashID(const char* hash, bool skip) {
         snprintf(this->hashID, sizeof(this->hashID), hash);
         return true;
     }
-    return false;
+    return this->isUpdated;
 }
 
 inline
@@ -295,6 +328,13 @@ void ERaModbusEntry::deleteAll() {
     this->clear(this->modbusConfigParam);
     this->clear(this->modbusConfigAliasParam);
     *this = {};
+}
+
+inline
+void ERaModbusEntry::resize() {
+    this->resize(this->sensorDelay, this->sensorCount);
+    this->resize(this->modbusConfigParam, this->readConfigCount);
+    this->resize(this->modbusConfigAliasParam, this->readConfigAliasCount);
 }
 
 inline
@@ -364,8 +404,12 @@ inline
 void ERaModbusEntry::processParseConfigId(const char* ptr, size_t len) {
     LOC_BUFFER_PARSE
 
+    this->prevId = this->id;
     memcpy(buf, ptr, len);
     this->id = atoi(buf);
+    if (this->prevId != this->id) {
+        this->isUpdated = true;
+    }
 
     FREE_BUFFER_PARSE
 }
@@ -414,12 +458,16 @@ inline
 void ERaModbusEntry::processParseConfigSensorDelay(const char* ptr, size_t len) {
     LOC_BUFFER_PARSE
 
+    bool newItem {false};
     bool newSensor {true};
     size_t bufLen {0};
 
+    /*
     this->clear(this->sensorDelay);
+    */
 
     SensorDelay_t* sensor = nullptr;
+    ERaList<SensorDelay_t *>::iterator* it = nullptr;
     for (size_t i = 0; i < len; ++i) { 
         buf[bufLen++] = ptr[i];
 
@@ -428,8 +476,17 @@ void ERaModbusEntry::processParseConfigSensorDelay(const char* ptr, size_t len) 
             bufLen = 0;
 
             if (newSensor) {
+                newItem = false;
                 newSensor = false;
-                sensor = this->create<SensorDelay_t>();
+                sensor = nullptr;
+                it = this->sensorDelay.get(this->sensorCount);
+                if (it != nullptr) {
+                    sensor = it->get();
+                }
+                if (sensor == nullptr) {
+                    newItem = true;
+                    sensor = this->create<SensorDelay_t>();
+                }
                 if (sensor != nullptr) {
                     sensor->address = atoi(buf);
                 }
@@ -438,7 +495,9 @@ void ERaModbusEntry::processParseConfigSensorDelay(const char* ptr, size_t len) 
                 newSensor = true;
                 if (sensor != nullptr) {
                     sensor->delay = atoi(buf);
-                    this->sensorDelay.put(sensor);
+                    if (newItem) {
+                        this->sensorDelay.put(sensor);
+                    }
                     this->sensorCount++;
                 }
                 if (this->sensorCount >= MAX_DEVICE_MODBUS) {
@@ -453,19 +512,35 @@ void ERaModbusEntry::processParseConfigSensorDelay(const char* ptr, size_t len) 
 
 inline
 void ERaModbusEntry::processParseConfigSensorReadWrite(const char* ptr, size_t len) {
+    bool newItem {false};
     size_t position {0};
 
+    /*
     this->clear(this->modbusConfigParam);
+    */
 
+    ModbusConfig_t* config = nullptr;
+    ERaList<ModbusConfig_t*>::iterator* it = nullptr;
     for (size_t i = 0; i < len; ++i) {
         if (ptr[i] == '.') {
-            ModbusConfig_t* config = this->create<ModbusConfig_t>();
+            newItem = false;
+            config = nullptr;
+            it = this->modbusConfigParam.get(this->readConfigCount);
+            if (it != nullptr) {
+                config = it->get();
+            }
+            if (config == nullptr) {
+                newItem = true;
+                config = this->create<ModbusConfig_t>();
+            }
             if (config == nullptr) {
                 continue;
             }
             this->parseOneConfigSensorReadWrite(ptr + position, i - position, *config);
             position = i + 1;
-            this->modbusConfigParam.put(config);
+            if (newItem) {
+                this->modbusConfigParam.put(config);
+            }
             if (this->readConfigCount++ >= MAX_DEVICE_MODBUS) {
                 break;
             }
@@ -597,19 +672,35 @@ void ERaModbusEntry::processParseConfigAliasTotalRow(const char* ptr, size_t len
 
 inline
 void ERaModbusEntry::processParseConfigAliasData(const char* ptr, size_t len) {
+    bool newItem {false};
     size_t position {0};
 
+    /*
     this->clear(this->modbusConfigAliasParam);
-    
+    */
+
+    ModbusConfigAlias_t* config = nullptr;
+    ERaList<ModbusConfigAlias_t*>::iterator* it = nullptr;
     for (size_t i = 0; i < len; ++i) {
         if (ptr[i] == '.') {
-            ModbusConfigAlias_t* config = this->create<ModbusConfigAlias_t>();
+            newItem = false;
+            config = nullptr;
+            it = this->modbusConfigAliasParam.get(this->readConfigAliasCount);
+            if (it != nullptr) {
+                config = it->get();
+            }
+            if (config == nullptr) {
+                newItem = true;
+                config = this->create<ModbusConfigAlias_t>();
+            }
             if (config == nullptr) {
                 continue;
             }
             this->processOneConfigAlias(ptr + position, i - position, *config);
             position = i + 1;
-            this->modbusConfigAliasParam.put(config);
+            if (newItem) {
+                this->modbusConfigAliasParam.put(config);
+            }
             if (this->readConfigAliasCount++ >= MAX_DEVICE_MODBUS) {
                 break;
             }

@@ -168,6 +168,10 @@ public:
         return index;
     }
 
+    size_t readBytesUntil(char* buf, size_t size, char terminator) {
+        return this->readBytesUntil((uint8_t*)buf, size, terminator);
+    }
+
     int peek() override {
         return this->stream.peek();
     }

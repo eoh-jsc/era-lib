@@ -10,6 +10,7 @@ void lwmqtt_init(lwmqtt_client_t *client, uint8_t *write_buf, size_t write_buf_s
   client->write_buf_size = write_buf_size;
   client->read_buf = read_buf;
   client->read_buf_size = read_buf_size;
+  client->read_buf_size_s = read_buf_size;
 
   client->callback = NULL;
   client->callback_ref = NULL;
@@ -47,6 +48,18 @@ void lwmqtt_set_timers(lwmqtt_client_t *client, void *keep_alive_timer, void *co
 void lwmqtt_set_callback(lwmqtt_client_t *client, void *ref, lwmqtt_callback_t cb) {
   client->callback_ref = ref;
   client->callback = cb;
+}
+
+void lwmqtt_call_callback(lwmqtt_client_t *client, lwmqtt_string_t *topic, lwmqtt_message_t *msg) {
+  if (client->callback == NULL) {
+    return;
+  }
+  if ((topic == NULL) || (msg == NULL)) {
+    return;
+  }
+
+  // call callback if set
+  client->callback(client, client->callback_ref, *topic, *msg);
 }
 
 void lwmqtt_drop_overflow(lwmqtt_client_t *client, bool enabled, uint32_t *counter) {
@@ -273,13 +286,9 @@ static lwmqtt_err_t lwmqtt_cycle_once(lwmqtt_client_t *client, size_t *read, lwm
         return err;
       }
 
-      // call callback if set
-      if (client->callback != NULL) {
-        client->callback(client, client->callback_ref, topic, msg);
-      }
-
       // break early on qos zero
       if (msg.qos == LWMQTT_QOS0) {
+        lwmqtt_call_callback(client, &topic, &msg);
         break;
       }
 
@@ -295,15 +304,18 @@ static lwmqtt_err_t lwmqtt_cycle_once(lwmqtt_client_t *client, size_t *read, lwm
       size_t len;
       err = lwmqtt_encode_ack(client->write_buf, client->write_buf_size, &len, ack_type, packet_id);
       if (err != LWMQTT_SUCCESS) {
+        lwmqtt_call_callback(client, &topic, &msg);
         return err;
       }
 
       // send ack packet
       err = lwmqtt_send_packet_in_buffer(client, len);
       if (err != LWMQTT_SUCCESS) {
+        lwmqtt_call_callback(client, &topic, &msg);
         return err;
       }
 
+      lwmqtt_call_callback(client, &topic, &msg);
       break;
     }
 
@@ -369,6 +381,16 @@ static lwmqtt_err_t lwmqtt_cycle_once(lwmqtt_client_t *client, size_t *read, lwm
     default: {
       break;
     }
+  }
+
+  // recover read buffer capacity
+  if (client->read_buf_size_s != client->read_buf_size) {
+    uint8_t* copy = (uint8_t*)ERA_REALLOC(client->read_buf, client->read_buf_size_s + 1);
+    if (copy == NULL) {
+      return LWMQTT_BUFFER_TOO_SHORT;
+    }
+    client->read_buf_size = client->read_buf_size_s;
+    client->read_buf = copy;
   }
 
   return LWMQTT_SUCCESS;

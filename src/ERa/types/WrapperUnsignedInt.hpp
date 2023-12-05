@@ -15,7 +15,7 @@ public:
 
     WrapperUnsignedInt& operator = (unsigned int _value) {
         this->value = _value;
-        return *this;
+        return (*this);
     }
 
 protected:

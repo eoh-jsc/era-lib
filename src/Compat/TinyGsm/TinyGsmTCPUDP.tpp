@@ -11,7 +11,7 @@
 #define TINY_GSM_MODEM_HAS_TCP
 #define TINY_GSM_MODEM_HAS_UDP
 
-#include <TinyGsmFifo.h>
+#include "TinyGsmFifo.hpp"
 
 #if !defined(TINY_GSM_RX_BUFFER)
     #define TINY_GSM_RX_BUFFER 64
@@ -326,7 +326,7 @@ public:
                 // We need to call modemGetConnected to check the sock state.
                 return this->at->modemGetConnected(mux);
 #else
-            #error Modem client has been incorrectly created
+            #error "Modem client has been incorrectly created"
 #endif
         }
 
@@ -396,7 +396,7 @@ public:
         this->at->streamClear();
 
 #else
-        #error Modem client has been incorrectly created
+        #error "Modem client has been incorrectly created"
 #endif
     }
 
@@ -437,7 +437,7 @@ protected:
         this->thisModem().waitResponse(100, NULL, NULL);
 
 #else
-        #error Modem client has been incorrectly created
+        #error "Modem client has been incorrectly created"
 #endif
     }
 

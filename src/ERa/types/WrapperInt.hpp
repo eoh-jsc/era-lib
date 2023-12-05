@@ -15,7 +15,7 @@ public:
 
     WrapperInt& operator = (int _value) {
         this->value = _value;
-        return *this;
+        return (*this);
     }
 
 protected:

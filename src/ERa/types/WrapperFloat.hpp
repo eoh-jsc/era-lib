@@ -15,7 +15,7 @@ public:
 
     WrapperFloat& operator = (float _value) {
         this->value = _value;
-        return *this;
+        return (*this);
     }
 
 protected:

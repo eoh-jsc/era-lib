@@ -63,6 +63,7 @@ private:
 		ERaReport::ReportData_t data;
 		bool enable;
 		bool updated;
+		bool reported;
 		uint8_t called;
 	} Report_t;
 
@@ -140,6 +141,41 @@ public:
                 return false;
             }
 			return this->rp->reportEvery(this->pRp, interval);
+		}
+
+		bool isUpdated() const {
+            if (!this->isValid()) {
+                return false;
+            }
+			return this->rp->isUpdated(this->pRp);
+		}
+
+		bool isReported() const {
+            if (!this->isValid()) {
+                return false;
+            }
+			return this->rp->isReported(this->pRp);
+		}
+
+		bool isCalled() const {
+            if (!this->isValid()) {
+                return false;
+            }
+			return this->rp->isCalled(this->pRp);
+		}
+
+		float getValue() const {
+            if (!this->isValid()) {
+                return 0.0f;
+            }
+			return this->rp->getValue(this->pRp);
+		}
+
+		float getPreviousValue() const {
+            if (!this->isValid()) {
+                return 0.0f;
+            }
+			return this->rp->getPreviousValue(this->pRp);
 		}
 
 		void skipReport() {
@@ -255,6 +291,11 @@ public:
 	}
 
 	bool reportEvery(Report_t* pReport, unsigned long interval);
+	bool isUpdated(Report_t* pReport);
+	bool isReported(Report_t* pReport);
+	bool isCalled(Report_t* pReport);
+	float getValue(Report_t* pReport);
+	float getPreviousValue(Report_t* pReport);
 	void skipReport(Report_t* pReport);
 	void restartReport(Report_t* pReport);
 	void executeNow(Report_t* pReport);

@@ -63,6 +63,10 @@
     #define MODBUS_DATA_BUFFER_SIZE     1024
 #endif
 
+#if !defined(MODBUS_MAX_ACTION)
+    #define MODBUS_MAX_ACTION           10
+#endif
+
 #if !defined(ERA_MODBUS_YIELD)
     #if !defined(ERA_MODBUS_YIELD_MS)
         #if defined(ERA_NO_RTOS)

@@ -380,6 +380,15 @@ protected:
 	}
 
 	/*
+	* WiFi persistent functions
+	*/
+public:
+	bool persistent(bool enable) {
+		this->sendAT(GF("+SYSSTORE="), enable);
+		return (this->waitResponse() == 1);
+	}
+
+	/*
 	* WiFi functions
 	*/
 protected:
@@ -807,7 +816,8 @@ public:
 						if (len > this->sockets[mux]->rx.free()) {
 							DBG("### Buffer overflow: ", len, "received vs",
 								this->sockets[mux]->rx.free(), "available");
-						} else {
+						}
+						else {
 							DBG("### Got Data: ", len, "on", mux);
 						}
 						while (len--) {
@@ -838,7 +848,8 @@ public:
 							if (len > this->sockets[mux]->rx.free()) {
 								DBG("### Buffer overflow: ", len, "received vs",
 									this->sockets[mux]->rx.free(), "available");
-							} else {
+							}
+							else {
 								DBG("### Got Data: ", len, "on", mux);
 							}
 							while (len--) {
@@ -882,7 +893,8 @@ public:
 					data = "";
 	#endif
 #endif
-				} else if (data.endsWith(GF("CLOSED"))) {
+				}
+				else if (data.endsWith(GF("CLOSED"))) {
 					int8_t muxStart = TinyGsmMax(0, data.lastIndexOf(GSM_NL, data.length() - 8));
 					int8_t coma = data.indexOf(',', muxStart);
 					int8_t mux  = data.substring(muxStart, coma).toInt();
@@ -893,7 +905,7 @@ public:
 					DBG("### Closed: ", mux);
 				}
 			}
-		} while (millis() - startMillis < timeout_ms);
+		} while ((millis() - startMillis) < timeout_ms);
 		finish:
 		if (!index) {
 			data.trim();
@@ -932,6 +944,22 @@ protected:
 			buf[bytesRead] = '\0';
 		}
 	}
+
+    inline
+    int streamGetIntBefore(char lastChar) {
+        char   buf[10];
+
+        size_t bytesRead = this->stream.readBytesUntil(lastChar,
+                                    buf, static_cast<size_t>(10));
+        // if we read 7 or more bytes, it's an overflow
+        if (bytesRead && (bytesRead < 10)) {
+            buf[bytesRead] = '\0';
+            int res    = atoi(buf);
+            return res;
+        }
+
+        return -9999;
+    }
 
 	GsmClientESP32* sockets[TINY_GSM_MUX_COUNT];
 	const char*     gsmNL = GSM_NL;

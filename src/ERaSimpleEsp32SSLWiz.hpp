@@ -1,6 +1,8 @@
 #ifndef INC_ERA_SIMPLE_ESP32_SSL_WIZ_HPP_
 #define INC_ERA_SIMPLE_ESP32_SSL_WIZ_HPP_
 
+#define ERA_MQTT_SSL
+
 #include <Ethernet.h>
 #include <EthernetClient.h>
 #include <Adapters/ERaEthernetSSLClient.hpp>

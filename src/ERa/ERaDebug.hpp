@@ -41,7 +41,7 @@
         #define ERA_LOG_GREEN                           "\033[0;32m"
         #define ERA_LOG_YELLOW                          "\033[0;33m"
         #define ERA_LOG_RESET                           "\033[0m"
-        #pragma message "Debug with color only support VSCode!!!"
+        #pragma message "Debugging with color support is only available in VSCode!!!"
     #else
         #define ERA_LOG_RED
         #define ERA_LOG_GREEN
@@ -232,7 +232,7 @@
     #pragma message "Debug enabled"
     #if defined(ARDUINO) && defined(ESP32)
         #if (CORE_DEBUG_LEVEL < ARDUHAL_LOG_LEVEL_INFO)
-            #pragma message "Recommend: Set Core Debug Level to Info(3)"
+            #pragma message "Recommend: Setting the Core Debug Level to Info (3)"
         #endif
         #if defined(BOARD_HAS_PSRAM)
             #pragma message "PSRAM enabled"

@@ -5,6 +5,8 @@
     #define ERA_NO_RTOS
 #endif
 
+#define ERA_MQTT_SSL
+
 #include <NetClientSecure.h>
 #include <ERa/ERaApiArduinoDef.hpp>
 #include <Adapters/ERaLogicromClient.hpp>

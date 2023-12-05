@@ -224,6 +224,7 @@ struct lwmqtt_client_t {
   bool pong_pending;
 
   size_t write_buf_size, read_buf_size;
+  size_t read_buf_size_s;
   uint8_t *write_buf, *read_buf;
 
   lwmqtt_callback_t callback;

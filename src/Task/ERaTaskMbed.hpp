@@ -109,7 +109,38 @@ using namespace rtos;
 
 template <class Proto, class Flash>
 inline
+void ERaApi<Proto, Flash>::apiTask(void* args) {
+#if !defined(ERA_NO_RTOS)
+    ERaApi* api = (ERaApi*)args;
+    if (api == NULL) {
+        ((Thread*)api->_apiTask)->terminate();
+    }
+    api->runAPI();
+    ((Thread*)api->_apiTask)->terminate();
+    ((Thread*)api->_apiTask)->~Thread();
+    delete api->_apiTask;
+    api->_apiTask = NULL;
+#endif
+    ERA_FORCE_UNUSED(args);
+}
+
+template <class Proto, class Flash>
+inline
+void ERaApi<Proto, Flash>::initApiTask() {
+#if !defined(ERA_NO_RTOS)
+    if ((this->taskSize > 0) && (this->_apiTask == NULL)) {
+        if (this->_apiTask == NULL) {
+            this->_apiTask = new Thread(osPriority::osPriorityNormal, this->taskSize);
+        }
+        ((Thread*)this->_apiTask)->start(callback(this->apiTask, this));
+    }
+#endif
+}
+
+template <class Proto, class Flash>
+inline
 void ERaApi<Proto, Flash>::initERaApiTask() {
+    this->initApiTask();
 #if defined(ERA_MODBUS)
 	Modbus::begin();
 #endif

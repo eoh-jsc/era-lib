@@ -15,7 +15,7 @@ public:
 
     WrapperDouble& operator = (double _value) {
         this->value = _value;
-        return *this;
+        return (*this);
     }
 
 protected:
