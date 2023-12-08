@@ -39,6 +39,9 @@ class ERaModbus
 public:
     ERaModbus()
         : initialized(false)
+#if !defined(ERA_NO_RTOS)
+        , timerFatal()
+#endif
         , modbusConfig(ERaModbusEntry::config())
         , modbusControl(ERaModbusEntry::control())
         , modbusScan(ERaScanEntry::instance())
@@ -146,6 +149,9 @@ protected:
                 this->modbusConfig->modbusInterval.prevMillis = ERaMillis();
                 this->readModbusConfig();
             }
+#if !defined(ERA_NO_RTOS)
+            this->timer.run();
+#endif
             if (!forever) {
                 break;
             }
@@ -266,20 +272,28 @@ protected:
 #endif
 
 private:
-    void initModbus() {
+    void initModbus(bool skip = false) {
         if (this->initialized) {
             if (this->isEmptyConfig()) {
 #if defined(ERA_NO_RTOS)
                 this->endModbus();
                 this->initialized = false;
 #else
-                ERaDelay(1000);
-                ERaRestart(false);
+                if (this->timerFatal == false) {
+                    this->timerFatal = this->timer.setTimeout(ERA_FATALITY_TIMEOUT, [](void) {
+                        ERaFatality();
+                    });
+                }
+                this->initialized = false;
 #endif
             }
             return;
         }
         else if (this->isEmptyConfig()) {
+            return;
+        }
+
+        if (skip) {
             return;
         }
 
@@ -334,7 +348,7 @@ private:
         if (ModbusState::is(ModbusStateT::STATE_MB_PARSE)) {
             this->modbusConfig->resize();
             this->modbusControl->resize();
-            this->initModbus();
+            this->initModbus(true);
         }
         ModbusState::set(ModbusStateT::STATE_MB_RUNNING);
     }
@@ -483,6 +497,11 @@ private:
 	}
 
     bool initialized;
+
+#if !defined(ERA_NO_RTOS)
+    ERaTimer timer;
+    ERaTimer::iterator timerFatal;
+#endif
 
 	ERaQueue<ModbusAction_t, MODBUS_MAX_ACTION> queue;
     ERaDataBuffDynamic dataBuff;

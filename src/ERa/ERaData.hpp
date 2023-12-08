@@ -207,7 +207,7 @@ public:
 	void add(const __FlashStringHelper* ptr);
 #endif
 
-	template <typename T, typename... Args> 
+	template <typename T> 
 	void add_multi(const T last) {
 		this->add(last);
 	}
@@ -1069,7 +1069,12 @@ public:
 	void add(const char* name, const __FlashStringHelper* value);
 #endif
 
-	template <typename T, typename... Args> 
+	template <typename T>
+	void add_multi(const T value) {
+		(void)value;
+	}
+
+	template <typename T> 
 	void add_multi(const char* name, const T last) {
 		this->add(name, last);
 	}
@@ -1080,18 +1085,18 @@ public:
 		this->add_multi(tail...);
 	}
 
-	template <typename T, typename... Args> 
+	template <typename T> 
 	void add_multi(int id, const T last) {
 		char name[2 + 8 * sizeof(id)] {0};
 		snprintf(name, sizeof(name), "%i", id);
-		add_multi(name, last);
+		this->add_multi(name, last);
 	}
 
 	template <typename T, typename... Args> 
 	void add_multi(int id, const T head, Args... tail) {
 		char name[2 + 8 * sizeof(id)] {0};
 		snprintf(name, sizeof(name), "%i", id);
-		add_multi(name, head, tail...);
+		this->add_multi(name, head, tail...);
 	}
 
 	cJSON* detach(size_t index);

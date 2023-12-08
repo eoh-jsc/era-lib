@@ -171,18 +171,18 @@ public:
 			, next(nullptr)
 			, data(0)
 		{}
-		iterator(const T& _data)
+		iterator(const T& rData)
 			: prev(nullptr)
 			, next(nullptr)
-			, data(_data)
+			, data(rData)
 		{}
-		iterator(iterator* _prev, const T& _data)
-			: prev(_prev)
+		iterator(iterator* pPrev, const T& rData)
+			: prev(pPrev)
 			, next(nullptr)
-			, data(_data)
+			, data(rData)
 		{
-			if (_prev != nullptr) {
-				_prev->next = this;
+			if (pPrev != nullptr) {
+				pPrev->next = this;
 			}
 		}
 		~iterator()
@@ -195,8 +195,8 @@ public:
 			return this->next;
 		}
 
-		void setNext(iterator* _next) {
-			this->next = _next;
+		void setNext(iterator* pNext) {
+			this->next = pNext;
 		}
 
 		T& get() {
@@ -228,6 +228,12 @@ public:
 		: first(nullptr)
 		, last(nullptr)
 	{}
+	ERaList(const ERaList& value)
+		: first(nullptr)
+		, last(nullptr)
+	{
+		(*this) = value;
+	}
 
 	void put(const T& value) {
 		if (this->first == nullptr) {
@@ -298,13 +304,25 @@ public:
 	}
 
 	size_t size() {
-		size_t _size {0};
+		size_t totalSize {0};
 		iterator* next = this->first;
 		while (next != nullptr) {
-			++_size;
+			++totalSize;
 			next = next->next;
 		}
-		return _size;
+		return totalSize;
+	}
+
+	void copy(const ERaList& value) {
+		this->clear();
+		iterator* next = nullptr;
+		iterator* item = value.first;
+		while (item != nullptr) {
+			next = item;
+			item = item->next;
+			this->put(next->get());
+		}
+		next = nullptr;
 	}
 
 	bool readable() const {
@@ -327,9 +345,7 @@ public:
 		if (this == &value) {
 			return (*this);
 		}
-		this->clear();
-		this->first = value.first;
-		this->last = value.last;
+		this->copy(value);
 		return (*this);
 	}
 

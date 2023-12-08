@@ -936,6 +936,7 @@
     #define ERA_GET_SIGNAL_TIMEOUT      60000UL
 #endif
 
+#define ERA_FATALITY_TIMEOUT            10000UL
 #define ERA_HEARTBEAT_INTERVAL          3600000UL
 
 #endif /* INC_ERA_DETECT_HPP_ */

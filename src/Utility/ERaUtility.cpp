@@ -1049,6 +1049,11 @@ MillisTime_t ERaSeconds() {
     }
 #endif
 
+void ERaFatality() {
+    ERaDelay(1000);
+    ERaRestart(false);
+}
+
 #if defined(ERA_USE_DEFAULT_GUARD)
     void ERaGuardLockFn(ERaMutex_t& mutex) {
         ERA_FORCE_UNUSED(mutex);

@@ -196,7 +196,7 @@ public:
             return (static_cast<uint16_t>(this->rx.size()) + this->sock_available);
 
 #else
-        #error "Modem client has been incorrectly created"
+            #error "Modem client has been incorrectly created"
 #endif
         }
 
@@ -224,7 +224,7 @@ public:
 
 #elif defined(TINY_GSM_BUFFER_READ_NO_CHECK)
             // Reads characters out of the TinyGSM fifo, and from the modem chip's
-            // internal fifo if avaiable.
+            // internal fifo if available.
             this->at->maintain();
             while (cnt < size) {
                 size_t chunk = TinyGsmMin(size - cnt, this->rx.size());
@@ -251,7 +251,7 @@ public:
 
 #elif defined(TINY_GSM_BUFFER_READ_AND_CHECK_SIZE)
             // Reads characters out of the TinyGSM fifo, and from the modem chips
-            // internal fifo if avaiable, also double checking with the modem if
+            // internal fifo if available, also double checking with the modem if
             // data has arrived without issuing a UURC.
             this->at->maintain();
             while (cnt < size) {
@@ -308,23 +308,23 @@ public:
             this->at->stream.flush();
         }
 
-        uint8_t connected() {
+        uint8_t connected() override {
             if (this->available()) {
                 return true;
             }
 #if defined(TINY_GSM_BUFFER_READ_AND_CHECK_SIZE)
-                // If the modem is one where we can read and check the size of the buffer,
-                // then the 'available()' function will call a check of the current size
-                // of the buffer and state of the connection. [available calls maintain,
-                // maintain calls modemGetAvailable, modemGetAvailable calls
-                // modemGetConnected]  This cascade means that the sock_connected value
-                // should be correct and all we need
-                return this->sock_connected;
+            // If the modem is one where we can read and check the size of the buffer,
+            // then the 'available()' function will call a check of the current size
+            // of the buffer and state of the connection. [available calls maintain,
+            // maintain calls modemGetAvailable, modemGetAvailable calls
+            // modemGetConnected]  This cascade means that the sock_connected value
+            // should be correct and all we need
+            return this->sock_connected;
 #elif defined(TINY_GSM_NO_MODEM_BUFFER) || defined(TINY_GSM_BUFFER_READ_NO_CHECK)
-                // If the modem doesn't have an internal buffer, or if we can't check how
-                // many characters are in the buffer then the cascade won't happen.
-                // We need to call modemGetConnected to check the sock state.
-                return this->at->modemGetConnected(mux);
+            // If the modem doesn't have an internal buffer, or if we can't check how
+            // many characters are in the buffer then the cascade won't happen.
+            // We need to call modemGetConnected to check the sock state.
+            return this->at->modemGetConnected(mux);
 #else
             #error "Modem client has been incorrectly created"
 #endif
@@ -378,27 +378,27 @@ public:
         // closes until all data is read from the buffer.
         // Doing it this way allows the external mcu to find and get all of the
         // data that it wants from the socket even if it was closed externally.
-    inline
-    void dumpModemBuffer(uint32_t maxWaitMs) {
+        inline
+        void dumpModemBuffer(uint32_t maxWaitMs) {
 #if defined(TINY_GSM_BUFFER_READ_AND_CHECK_SIZE) || \
     defined(TINY_GSM_BUFFER_READ_NO_CHECK)
-        TINY_GSM_YIELD();
-        uint32_t startMillis = millis();
-        while ((this->sock_available > 0) && ((millis() - startMillis) < maxWaitMs)) {
+            TINY_GSM_YIELD();
+            uint32_t startMillis = millis();
+            while ((this->sock_available > 0) && ((millis() - startMillis) < maxWaitMs)) {
+                this->rx.clear();
+                this->at->modemRead(TinyGsmMin((uint16_t)this->rx.free(), this->sock_available), this->mux);
+            }
             this->rx.clear();
-            this->at->modemRead(TinyGsmMin((uint16_t)this->rx.free(), this->sock_available), this->mux);
-        }
-        this->rx.clear();
-        this->at->streamClear();
+            this->at->streamClear();
 
 #elif defined(TINY_GSM_NO_MODEM_BUFFER)
-        this->rx.clear();
-        this->at->streamClear();
+            this->rx.clear();
+            this->at->streamClear();
 
 #else
-        #error "Modem client has been incorrectly created"
+            #error "Modem client has been incorrectly created"
 #endif
-    }
+        }
 
         modemType* at;
         uint8_t    mux;
@@ -419,7 +419,7 @@ protected:
     void maintainImpl() {
 #if defined(TINY_GSM_BUFFER_READ_AND_CHECK_SIZE)
         // Keep listening for modem URC's and proactively iterate through
-        // sockets asking if any data is avaiable
+        // sockets asking if any data is available
         for (int mux = 0; mux < muxCount; mux++) {
             GsmClient* sock = this->thisModem().sockets[mux];
             if (sock && sock->got_data) {

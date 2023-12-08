@@ -21,6 +21,7 @@ MillisTime_t ERaSeconds();
 uint32_t ERaRandomNumber(uint32_t min, uint32_t max);
 size_t ERaFreeRam();
 void ERaRestart(bool async) ERA_NORETURN;
+void ERaFatality() ERA_NORETURN;
 
 #if !defined(ERA_NO_RTOS)
     #define ERaGuardAuto(mutex)     const ERaGuard ERA_CONCAT(guard, __LINE__)(mutex)

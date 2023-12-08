@@ -334,14 +334,15 @@ public:
     String getLocalIPImpl() {
         // this->sendAT(GF("+IPADDR"));  // Inquire Socket PDP address
         this->sendAT(GF("+CGPADDR=1"));  // Show PDP address
-        String res;
-        if (this->waitResponse(10000L, res) != 1) {
+        if (this->waitResponse(10000L, GF("+CGPADDR:")) != 1) {
             return "";
         }
-        res.replace("+CGPADDR: 1,", "");
-        res.replace(GSM_NL "OK" GSM_NL, "");
-        res.replace(GSM_NL, "");
-        res.trim();
+        String res;
+        this->streamSkipUntil('\"');
+        res = this->stream.readStringUntil('\"');
+        if (this->waitResponse() != 1) {
+            return "";
+        }
         return res;
     }
 
@@ -384,19 +385,14 @@ protected:
 
     bool isGprsConnectedImpl() {
         this->sendAT(GF("+CGATT?"));
-        // May return +NETOPEN: 1, 0.  We just confirm that the first number is 1
+        // May return +CGATT: 1, 0.  We just confirm that the first number is 1
         if (this->waitResponse(GF(GSM_NL "+CGATT: 1")) != 1) {
             return false;
         }
         this->waitResponse();
 
-        this->sendAT(GF("+CGPADDR=1"));  // Inquire Socket PDP address
-        // this->sendAT(GF("+CGPADDR=1")); // Show PDP address
-        if (this->waitResponse() != 1) {
-            return false;
-        }
-
-        return true;
+        // Check local IP
+        return (this->localIP() != IPAddress(0, 0, 0, 0));
     }
 
     /*

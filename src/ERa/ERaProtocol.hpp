@@ -80,7 +80,7 @@ public:
 		, pServerCallbacks(nullptr)
 		, pModel(ERA_MODEL_NAME)
 		, _connected(false)
-		, heartbeat(ERA_HEARTBEAT_INTERVAL)
+		, heartbeat(ERA_HEARTBEAT_INTERVAL * 24UL)
 		, lastHeartbeat(0UL)
     {
         memset(this->ERA_TOPIC, 0, sizeof(this->ERA_TOPIC));
