@@ -61,8 +61,10 @@ public:
         }
         , stream(NULL)
         , _streamDefault(false)
+#if !defined(ERA_NO_RTOS)
         , _modbusTask(NULL)
         , _writeModbusTask(NULL)
+#endif
         , messageHandle(NULL)
         , mutex(NULL)
         , skipModbus(false)
@@ -275,17 +277,15 @@ private:
     void initModbus(bool skip = false) {
         if (this->initialized) {
             if (this->isEmptyConfig()) {
-#if defined(ERA_NO_RTOS)
-                this->endModbus();
-                this->initialized = false;
-#else
+#if !defined(ERA_NO_RTOS)
                 if (this->timerFatal == false) {
                     this->timerFatal = this->timer.setTimeout(ERA_FATALITY_TIMEOUT, [](void) {
                         ERaFatality();
                     });
                 }
-                this->initialized = false;
 #endif
+                this->endModbus();
+                this->initialized = false;
             }
             return;
         }
@@ -297,10 +297,23 @@ private:
             return;
         }
 
+#if !defined(ERA_NO_RTOS)
+        if (this->timerFatal == true) {
+            this->timerFatal.deleteTimer();
+        }
+#endif
+
         this->configModbus();
+#if !defined(ERA_NO_RTOS)
+        if (!this->skipModbus &&
+            !this->isTaskRunning()) {
+            this->initModbusTask();
+        }
+#else
         if (!this->skipModbus) {
             this->initModbusTask();
         }
+#endif
         this->initialized = true;
     }
 
@@ -442,6 +455,13 @@ private:
                 this->modbusControl->modbusConfigParam.isEmpty());
     }
 
+#if !defined(ERA_NO_RTOS)
+    bool isTaskRunning() {
+        return ((this->_modbusTask != NULL) &&
+                (this->_writeModbusTask != NULL));
+    }
+#endif
+
     void updateTotalTransmit() {
         if (this->total++ > 99) {
             this->total = 1;
@@ -521,8 +541,12 @@ private:
     TCPIp_t ip;
     Stream* stream;
     bool _streamDefault;
+
+#if !defined(ERA_NO_RTOS)
     TaskHandle_t _modbusTask;
     TaskHandle_t _writeModbusTask;
+#endif
+
     QueueMessage_t messageHandle;
     ERaMutex_t mutex;
     bool skipModbus;

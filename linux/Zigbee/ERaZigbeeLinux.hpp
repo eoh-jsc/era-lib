@@ -11,9 +11,13 @@ void ERaZigbee<Api>::configZigbee() {
     if (this->stream != NULL) {
         return;
     }
+    if (this->initialized) {
+        return;
+    }
 
     this->stream = &SerialZB;
     SerialZB.begin("/dev/ttyACM0", ZIGBEE_BAUDRATE);
+    this->initialized = true;
 }
 
 template <class Api>
@@ -21,8 +25,12 @@ void ERaZigbee<Api>::serialEnd() {
     if (this->stream != NULL) {
         return;
     }
+    if (!this->initialized) {
+        return;
+    }
     SerialZB.flush();
     SerialZB.end();
+    this->initialized = false;
 }
 
 template <class Api>

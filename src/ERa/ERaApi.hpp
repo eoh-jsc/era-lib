@@ -70,7 +70,9 @@ public:
 		, skipPinReport(false)
 		, taskSize(0UL)
 		, autoSwitchTask(false)
+#if !defined(ERA_NO_RTOS)
 		, _apiTask(NULL)
+#endif
     {}
     ~ERaApi()
     {}
@@ -331,9 +333,13 @@ protected:
 	bool run() {
 		ERA_RUN_YIELD();
 
+#if !defined(ERA_NO_RTOS)
 		if (!this->isTaskRunning()) {
 			this->handlerAPI(true);
 		}
+#else
+		this->handlerAPI(true);
+#endif
 
 		ERaWatchdogFeed();
 
@@ -562,9 +568,11 @@ private:
 	static void _sendPinConfigEvent(void* args);
 #endif
 
+#if !defined(ERA_NO_RTOS)
 	bool isTaskRunning() const {
 		return ((this->taskSize > 0) && (this->_apiTask != NULL));
 	}
+#endif
 
 	inline
 	const Proto& thisProto() const {
@@ -640,7 +648,10 @@ private:
 
 	uint32_t taskSize;
 	bool autoSwitchTask;
+
+#if !defined(ERA_NO_RTOS)
 	TaskHandle_t _apiTask;
+#endif
 };
 
 template <class Proto, class Flash>

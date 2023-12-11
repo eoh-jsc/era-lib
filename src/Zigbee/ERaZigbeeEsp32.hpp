@@ -15,6 +15,10 @@
 
 template <class Api>
 void ERaZigbee<Api>::configZigbee() {
+    if (this->initialized) {
+        return;
+    }
+
 #if defined(ERA_MODBUS)
     #if ESP_IDF_VERSION_MAJOR < 4
         if (UART_ZIGBEE == UART_MODBUS) {
@@ -39,10 +43,14 @@ void ERaZigbee<Api>::configZigbee() {
     esp_log_level_set(TAG, ESP_LOG_INFO);
     ESP_ERROR_CHECK(uart_set_pin(UART_ZIGBEE, ZIGBEE_TXD_Pin, ZIGBEE_RXD_Pin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
     ESP_ERROR_CHECK(uart_driver_install(UART_ZIGBEE, 2 * ZIGBEE_BUFFER_SIZE, ZIGBEE_BUFFER_SIZE, 50, (QueueHandle_t*)(&this->messageHandle), 0));
+    this->initialized = true;
 }
 
 template <class Api>
 void ERaZigbee<Api>::serialEnd() {
+    if (!this->initialized) {
+        return;
+    }
 #if (ESP_IDF_VERSION_MAJOR >= 4)
     if (!uart_is_driver_installed(UART_ZIGBEE)) {
         return;
@@ -50,6 +58,7 @@ void ERaZigbee<Api>::serialEnd() {
 #endif
     uart_flush(UART_ZIGBEE);
     ESP_ERROR_CHECK(uart_driver_delete(UART_ZIGBEE));
+    this->initialized = false;
 }
 
 template <class Api>

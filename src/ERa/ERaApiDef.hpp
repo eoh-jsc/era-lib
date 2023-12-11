@@ -14,7 +14,7 @@
     #endif
     #if !defined(ERA_NO_YIELD)
         #if defined(PARTICLE) || defined(SPARK)
-            #define ERA_RUN_YIELD() 	{ Particle.process(); }
+            #define ERA_API_YIELD() 	{ Particle.process(); }
         #else
         	#define ERA_API_YIELD()		{ ERaDelay(ERA_API_YIELD_MS); }
 		#endif

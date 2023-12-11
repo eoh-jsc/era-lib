@@ -65,6 +65,7 @@ protected:
 public:
     ERaZigbee()
         : messageHandle(NULL)
+        , initialized(false)
         , timerPing()
         , timerJoin()
         , device(InfoDevice_t::instance())
@@ -340,6 +341,7 @@ private:
 	ERaQueue<Response_t, 20> queueRsp;
 	ERaQueue<DefaultRsp_t, 20> queueDefaultRsp;
     QueueMessage_t messageHandle;
+    bool initialized;
 
     ERaTimer timer;
     ERaTimer::iterator timerPing;
