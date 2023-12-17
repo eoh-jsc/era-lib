@@ -3,12 +3,12 @@
 
 #define ERA_MAJOR                   1
 #define ERA_MINOR                   1
-#define ERA_PATCH                   1
+#define ERA_PATCH                   2
 
-#define ERA_VERSION_NUMBER          10101
+#define ERA_VERSION_NUMBER          10102
 
-#define ERA_VERSION                 "1.1.1"
-#define ERA_VERSION_1_1_1
+#define ERA_VERSION                 "1.1.2"
+#define ERA_VERSION_1_1_2
 
 #define ERA_VERSION_VAL(major, minor, patch)   \
             ((major * 10000) + (minor * 100) + (patch))

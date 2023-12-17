@@ -196,6 +196,9 @@ public:
                 ERaState::set(StateT::STATE_CONNECTING_CLOUD);
             }
         }
+        else if (Base::isConfigMode()) {
+            return;
+        }
         else {
             this->configInit();
         }
@@ -248,6 +251,18 @@ public:
 
     void setPersistent(bool enable) {
         this->persistent = enable;
+    }
+
+    void switchToConfig(bool erase = false) {
+        ERaConfig.connected = false;
+        ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_API, true);
+        if (erase) {
+            ERaState::set(StateT::STATE_RESET_CONFIG);
+        }
+        else {
+            ERaState::set(StateT::STATE_SWITCH_TO_AP);
+        }
+        ERA_LOG(TAG, ERA_PSTR("Switch to config mode!"));
     }
 
     void begin(const char* auth = nullptr);
@@ -1327,6 +1342,7 @@ void ERaPnP<Transport>::configMode() {
     ERA_LOG(TAG, ERA_PSTR("AP URL: %s"), CONFIG_AP_URL);
 
     this->server.begin();
+    this->udpERa.setERaORG(Base::getERaORG());
     this->udpERa.setERaModel(Base::getERaModel());
     this->udpERa.begin((this->authToken == nullptr) ? ERaConfig.token : this->authToken);
 
@@ -1478,6 +1494,9 @@ void ERaPnP<Transport>::connectNetwork() {
         /* Udp */
         ERaState::set(StateT::STATE_CONNECTING_CLOUD);
     }
+    else if (Base::isConfigMode()) {
+        return;
+    }
     else {
         /* Udp */
         if (ERaConfig.getFlag(ConfigFlagT::CONFIG_FLAG_UDP)) {
@@ -1582,7 +1601,8 @@ void ERaPnP<Transport>::connectWiFi(const char* ssid, const char* pass) {
             ERaDelay(500);
             ERaWatchdogFeed();
             status = WiFi.status();
-            if (!ERaRemainingTime(started, WIFI_NET_CONNECT_TIMEOUT)) {
+            if (Base::isConfigMode() ||
+                !ERaRemainingTime(started, WIFI_NET_CONNECT_TIMEOUT)) {
                 WiFi.disconnect();
                 ERA_LOG_ERROR(TAG, ERA_PSTR("Connect %s failed"), ssid);
                 return;
@@ -1610,7 +1630,7 @@ void ERaPnP<Transport>::connectNewWiFi(const char* ssid, const char* pass) {
     if (!strlen(ssid)) {
         return;
     }
-    if (ERaStrCmp(this->newWiFi.ssid, ssid)) {
+    if (ERaStrCmp(ERaConfig.ssid, ssid)) {
         return;
     }
 
@@ -1725,11 +1745,13 @@ void ERaPnP<Transport>::getWiFiName(char(&ptr)[size], bool withPrefix) {
     }
     ClearArray(ptr);
     if (withPrefix) {
-        FormatString(ptr, "eoh.%s.%04x%08x", ((Base::getERaModel() != nullptr) ? Base::getERaModel() : ERA_MODEL_NAME),
+        FormatString(ptr, "%s.%s.%04x%08x", Base::getERaORG(), Base::getERaModel(),
                                             static_cast<uint16_t>(unique >> 32), static_cast<uint32_t>(unique));
-    } else {
-        FormatString(ptr, "era.%04x%08x", static_cast<uint16_t>(unique >> 32), static_cast<uint32_t>(unique));
     }
+    else {
+        FormatString(ptr, "%s.%04x%08x", Base::getERaORG(), static_cast<uint16_t>(unique >> 32), static_cast<uint32_t>(unique));
+    }
+    ERaToLowerCase(ptr);
 }
 
 template <class Transport>

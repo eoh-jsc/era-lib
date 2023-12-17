@@ -65,7 +65,9 @@ void timerEvent() {
 
 void setup() {
     /* Setup debug console */
+#if defined(ERA_DEBUG)
     Serial.begin(115200);
+#endif
 
     /* Set GSM module baud rate */
     SerialGsm.begin(115200);

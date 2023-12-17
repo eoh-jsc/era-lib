@@ -1,6 +1,8 @@
 #ifndef INC_ERA_DATA_HPP_
 #define INC_ERA_DATA_HPP_
 
+#include <math.h>
+#include <float.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
@@ -749,6 +751,13 @@ public:
 			return cJSON_IsString(this->item);
 		}
 
+		bool isNull() const {
+			if (!this->isValid()) {
+				return false;
+			}
+			return cJSON_IsNull(this->item);
+		}
+
 		bool isObject() const {
 			if (!this->isValid()) {
 				return false;
@@ -846,6 +855,13 @@ public:
 			return 0.0;
 		}
 
+		ERaDataJson toJSON() const {
+			if (!this->isString()) {
+				return ERaDataJson();
+			}
+			return ERaDataJson(this->item->valuestring);
+		}
+
 		bool rename(const char* name) const {
 			return cJSON_Rename(const_cast<cJSON*>(this->item), name);
 		}
@@ -867,6 +883,19 @@ public:
 				return 0;
 			}
 			return strlen(this->item->valuestring);
+		}
+
+		bool keyEqual(const char* name) const {
+			if (!this->isValid()) {
+				return false;
+			}
+			if (name == nullptr) {
+				return false;
+			}
+			if (this->item->string == nullptr) {
+				return false;
+			}
+			return !strcmp(this->item->string, name);
 		}
 
 		operator const cJSON* () const {
@@ -931,26 +960,62 @@ public:
 			return (*this);
 		}
 
+		iterator& operator = (nullptr_t) {
+			cJSON_SetNull(this->parent, this->item);
+			return (*this);
+		}
+
 		iterator& operator = (const iterator& it) {
 			this->item = it.item;
 			return (*this);
 		}
 
-		bool operator != (const iterator& it) {
-			return (this->item != it.item);
+		template <typename T>
+		bool operator == (T value) const {
+			if (!this->isNumber()) {
+				return false;
+			}
+			return (this->item->valueint == (int)value);
 		}
 
-		bool operator == (const char* name) {
-			if (!this->isValid()) {
+		bool operator == (bool value) const {
+			if (!this->isBool() && !this->isNumber()) {
 				return false;
 			}
-			if (name == nullptr) {
+			return (this->item->valueint == value);
+		}
+
+		bool operator == (float value) const {
+			return this->FloatCompare(value);
+		}
+
+		bool operator == (double value) const {
+			return operator == ((float)value);
+		}
+
+		bool operator == (char* value) const {
+			return operator == ((const char*)value);
+		}
+
+		bool operator == (const char* value) const {
+			if (!this->isString()) {
 				return false;
 			}
-			if (this->item->string == nullptr) {
+			if (value == nullptr) {
 				return false;
 			}
-			return !strcmp(this->item->string, name);
+			if (this->item->valuestring == nullptr) {
+				return false;
+			}
+			return !strcmp(this->item->valuestring, value);
+		}
+
+		bool operator == (nullptr_t) const {
+			return this->isNull();
+		}
+
+		bool operator != (const iterator& it) const {
+			return (this->item != it.item);
 		}
 
 		iterator& operator ++ () {
@@ -961,6 +1026,11 @@ public:
 		}
 
 	private:
+		bool FloatCompare(float value) const {
+			float maxVal = (fabs(this->item->valuedouble) > fabs(value)) ? fabs(this->item->valuedouble) : fabs(value);
+			return (fabs(this->item->valuedouble - value) <= (maxVal * FLT_EPSILON));
+		}
+
 		cJSON* item;
 		cJSON* parent;
 	};
@@ -972,6 +1042,12 @@ public:
 	ERaDataJson(const char* str)
 		: ERaDataJson(cJSON_Parse(str))
 	{}
+	ERaDataJson(const ERaDataJson& json)
+		: ptr(nullptr)
+		, root(nullptr)
+	{
+		(*this) = json;
+	}
 	~ERaDataJson()
 	{
 		this->clear();
@@ -1131,6 +1207,9 @@ public:
 	iterator operator [] (const char* key);
 	bool operator == (ERaDataJson& value) const;
 	bool operator == (const ERaDataJson& value) const;
+	bool operator == (nullptr_t) const;
+
+	ERaDataJson& operator = (const ERaDataJson& value);
 
 protected:
 	void create() {
@@ -1360,7 +1439,7 @@ inline
 ERaDataJson::iterator ERaDataJson::at(const char* key) {
 	const iterator e = this->end();
 	for (iterator it = this->begin(); it != e; ++it) {
-		if (it == key) {
+		if (it.keyEqual(key)) {
 			return it;
 		}
 	}
@@ -1393,6 +1472,22 @@ bool ERaDataJson::operator == (const ERaDataJson& value) const {
 		return true;
 	}
 	return cJSON_Compare(this->root, value.getObject(), true);
+}
+
+inline
+bool ERaDataJson::operator == (nullptr_t) const {
+	return this->isEmpty();
+}
+
+inline
+ERaDataJson& ERaDataJson::operator = (const ERaDataJson& value) {
+	if (this == &value) {
+		return (*this);
+	}
+	this->clear();
+	this->clearObject();
+	this->root = cJSON_Duplicate(value.getObject(), true);
+	return (*this);
 }
 
 using DataEntry = ERaDataBuff::iterator;

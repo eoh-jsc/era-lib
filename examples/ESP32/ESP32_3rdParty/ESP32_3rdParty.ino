@@ -51,6 +51,7 @@ ERA_PIN_WRITE(V15) {
     int pinValue = param.getInt();
     Serial.print("Pin 15 write value: ");
     Serial.println(pinValue);
+    return false;
 }
 
 /* This is a callback function that is called when the pin 0 is read. */
@@ -87,7 +88,9 @@ void reportEvent() {
 
 void setup() {
     /* Setup debug console */
+#if defined(ERA_DEBUG)
     Serial.begin(115200);
+#endif
 
     /* Setup pin mode pin */
     pinMode(RELAY_PIN, OUTPUT);

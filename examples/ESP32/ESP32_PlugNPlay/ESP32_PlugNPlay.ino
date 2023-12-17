@@ -19,8 +19,48 @@
 #define ERA_LOCATION_VN
 // #define ERA_LOCATION_SG
 
+/* Define setting button */
+// #define BUTTON_PIN              0
+
+#if defined(BUTTON_PIN)
+    // Active low (false), Active high (true)
+    #define BUTTON_INVERT       false
+    #define BUTTON_HOLD_TIMEOUT 5000UL
+#endif
+
 #include <Arduino.h>
 #include <ERa.hpp>
+#if defined(BUTTON_PIN)
+    #include <pthread.h>
+    #include <ERa/ERaButton.hpp>
+#endif
+
+#if defined(BUTTON_PIN)
+    ERaButton button;
+    pthread_t pthreadButton;
+
+    static void* handlerButton(void* arg) {
+        for (;;) {
+            button.run();
+            ERaDelay(10);
+        }
+        pthread_exit(NULL);
+    }
+
+    static void eventButton(ButtonEventT event) {
+        if (event != ButtonEventT::BUTTON_ON_HOLD) {
+            return;
+        }
+        ERa.switchToConfig(true);
+    }
+
+    void initButton() {
+        pinMode(BUTTON_PIN, INPUT);
+        button.setButton(BUTTON_PIN, digitalRead, eventButton,
+                        BUTTON_INVERT).onHold(BUTTON_HOLD_TIMEOUT);
+        pthread_create(&pthreadButton, NULL, handlerButton, NULL);
+    }
+#endif
 
 /* This function print uptime every second */
 void timerEvent() {
@@ -29,7 +69,14 @@ void timerEvent() {
 
 void setup() {
     /* Setup debug console */
+#if defined(ERA_DEBUG)
     Serial.begin(115200);
+#endif
+
+#if defined(BUTTON_PIN)
+    /* Initializing button. */
+    initButton();
+#endif
 
     /* Set board id */
     // ERa.setBoardID("Board_1");

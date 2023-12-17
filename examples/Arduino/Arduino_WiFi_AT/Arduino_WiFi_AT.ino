@@ -43,7 +43,9 @@ void timerEvent() {
 
 void setup() {
     /* Setup debug console */
+#if defined(ERA_DEBUG)
     Serial.begin(115200);
+#endif
 
     /* Set uart at command */
     Serial1.begin(AT_BAUD_RATE);

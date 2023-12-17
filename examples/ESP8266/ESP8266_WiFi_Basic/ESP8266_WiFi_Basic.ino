@@ -21,11 +21,47 @@
 // You should get Auth Token in the ERa App or ERa Dashboard
 #define ERA_AUTH_TOKEN "ERA2706"
 
+/* Define setting button */
+// #define BUTTON_PIN              0
+
+#if defined(BUTTON_PIN)
+    // Active low (false), Active high (true)
+    #define BUTTON_INVERT       false
+    #define BUTTON_HOLD_TIMEOUT 5000UL
+#endif
+
 #include <Arduino.h>
 #include <ERa.hpp>
+#if defined(BUTTON_PIN)
+    #include <Ticker.h>
+    #include <ERa/ERaButton.hpp>
+#endif
 
 const char ssid[] = "YOUR_SSID";
 const char pass[] = "YOUR_PASSWORD";
+
+#if defined(BUTTON_PIN)
+    Ticker ticker;
+    ERaButton button;
+
+    static void handlerButton() {
+        button.run();
+    }
+
+    static void eventButton(ButtonEventT event) {
+        if (event != ButtonEventT::BUTTON_ON_HOLD) {
+            return;
+        }
+        ERa.switchToConfig();
+    }
+
+    void initButton() {
+        pinMode(BUTTON_PIN, INPUT);
+        button.setButton(BUTTON_PIN, digitalRead, eventButton,
+                        BUTTON_INVERT).onHold(BUTTON_HOLD_TIMEOUT);
+        ticker.attach_ms(100, handlerButton);
+    }
+#endif
 
 /* This function print uptime every second */
 void timerEvent() {
@@ -34,7 +70,16 @@ void timerEvent() {
 
 void setup() {
     /* Setup debug console */
+#if defined(ERA_DEBUG)
     Serial.begin(115200);
+#endif
+
+#if defined(BUTTON_PIN)
+    /* Initializing button. */
+    initButton();
+    /* Enable read/write WiFi credentials */
+    ERa.setPersistent(true);
+#endif
 
     /* Set board id */
     // ERa.setBoardID("Board_1");

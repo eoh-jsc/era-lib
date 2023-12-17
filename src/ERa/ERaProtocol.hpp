@@ -60,7 +60,7 @@ class ERaProto
 
     char ERA_TOPIC[MAX_TOPIC_LENGTH];
 	const char* TAG = "Protocol";
-    const char* BASE_TOPIC = "eoh/chip";
+    const char* BASE_TOPIC = ERA_MQTT_BASE_TOPIC;
     friend class ERaApi< ERaProto<Transp, Flash>, Flash >;
     typedef ERaApi< ERaProto<Transp, Flash>, Flash > Base;
 #if defined(ERA_OTA)
@@ -78,6 +78,7 @@ public:
 		, transp(_transp)
 		, pLogger(nullptr)
 		, pServerCallbacks(nullptr)
+		, pORG(ERA_ORG_NAME)
 		, pModel(ERA_MODEL_NAME)
 		, _connected(false)
 		, heartbeat(ERA_HEARTBEAT_INTERVAL * 24UL)
@@ -112,7 +113,21 @@ public:
 		this->publishHeartbeat();
 	}
 
+    void setERaORG(const char* org) {
+		if (org == nullptr) {
+			return;
+		}
+        this->pORG = org;
+    }
+
+	const char* getERaORG() const {
+		return this->pORG;
+	}
+
     void setERaModel(const char* model) {
+		if (model == nullptr) {
+			return;
+		}
         this->pModel = model;
     }
 
@@ -310,6 +325,7 @@ private:
 	Transp& transp;
 	ERaLogger* pLogger;
 	ERaServerCallbacks* pServerCallbacks;
+	const char* pORG;
 	const char* pModel;
 	bool _connected;
 
@@ -431,7 +447,7 @@ void ERaProto<Transp, Flash>::processDownRequest(const ERaDataBuff& arrayTopic, 
 		root = nullptr;
 		return;
 	}
-	
+
 	cJSON* item = cJSON_GetObjectItem(root, "action");
 	if (cJSON_IsString(item)) {
 		this->processDownAction(payload, root, item);
@@ -846,7 +862,7 @@ bool ERaProto<Transp, Flash>::sendInfo() {
     char topic[MAX_TOPIC_LENGTH] {0};
 	char* payload = cJSON_PrintUnformatted(root);
     FormatString(topic, this->ERA_TOPIC);
-    FormatString(topic, "/info");
+    FormatString(topic, ERA_PUB_PREFIX_INFO_TOPIC);
 	
 	if (payload != nullptr) {
 		status = this->transp.publishData(topic, payload);
@@ -956,7 +972,7 @@ bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
 	char* payload = nullptr;
 	char topicName[MAX_TOPIC_LENGTH] {0};
 	FormatString(topicName, this->ERA_TOPIC);
-	FormatString(topicName, ERA_DEBUG_PREFIX "/pin/data");
+	FormatString(topicName, ERA_PUB_PREFIX_PIN_DATA_TOPIC);
 	cJSON* root = cJSON_CreateObject();
 	if (root == nullptr) {
 		return false;
@@ -1008,7 +1024,7 @@ bool ERaProto<Transp, Flash>::sendPinMultiData(ERaRsp_t& rsp) {
 	}
 	char topicName[MAX_TOPIC_LENGTH] {0};
 	FormatString(topicName, this->ERA_TOPIC);
-	FormatString(topicName, ERA_DEBUG_PREFIX "/pin/data");
+	FormatString(topicName, ERA_PUB_PREFIX_PIN_DATA_TOPIC);
 	status = this->transp.publishData(topicName, payload, rsp.retained);
 	payload = nullptr;
 	return status;
@@ -1020,7 +1036,7 @@ bool ERaProto<Transp, Flash>::sendConfigIdData(ERaRsp_t& rsp) {
 	char* payload = nullptr;
 	char topicName[MAX_TOPIC_LENGTH] {0};
 	FormatString(topicName, this->ERA_TOPIC);
-	FormatString(topicName, "/config/%d/value", rsp.id.getInt());
+	FormatString(topicName, ERA_PUB_PREFIX_CONFIG_DATA_TOPIC, rsp.id.getInt());
 	cJSON* root = cJSON_CreateObject();
 	if (root == nullptr) {
 		return false;
@@ -1051,7 +1067,7 @@ bool ERaProto<Transp, Flash>::sendConfigIdMultiData(ERaRsp_t& rsp) {
 	}
 	char topicName[MAX_TOPIC_LENGTH] {0};
 	FormatString(topicName, this->ERA_TOPIC);
-	FormatString(topicName, "/config_value");
+	FormatString(topicName, ERA_PUB_PREFIX_MULTI_CONFIG_DATA_TOPIC);
 	status = this->transp.publishData(topicName, payload, rsp.retained);
 	payload = nullptr;
 	return status;
@@ -1067,7 +1083,7 @@ bool ERaProto<Transp, Flash>::sendConfigIdMultiData(ERaRsp_t& rsp) {
 		}
 		char topicName[MAX_TOPIC_LENGTH] {0};
 		FormatString(topicName, this->ERA_TOPIC);
-		FormatString(topicName, "/data");
+		FormatString(topicName, ERA_PUB_PREFIX_MODBUS_DATA_TOPIC);
 		status = this->transp.publishData(topicName, payload, rsp.retained);
 		if (this->pLogger != nullptr) {
 			this->pLogger->put("modbus", "", payload, status);
@@ -1145,13 +1161,13 @@ void ERaProto<Transp, Flash>::sendCommand(const char* auth, ERaRsp_t& rsp, ApiDa
     FormatString(topicName, "%s/%s", BASE_TOPIC, auth);
 	switch (rsp.type) {
 		case ERaTypeWriteT::ERA_WRITE_VIRTUAL_PIN:
-			FormatString(topicName, "/virtual_pin/%d", rsp.id.getInt());
+			FormatString(topicName, ERA_PUB_PREFIX_VIRTUAL_DOWN_TOPIC, rsp.id.getInt());
 			break;
 		case ERaTypeWriteT::ERA_WRITE_DIGITAL_PIN:
 		case ERaTypeWriteT::ERA_WRITE_ANALOG_PIN:
 		case ERaTypeWriteT::ERA_WRITE_PWM_PIN:
 		case ERaTypeWriteT::ERA_WRITE_PIN:
-			FormatString(topicName, "/arduino_pin/%d", rsp.id.getInt());
+			FormatString(topicName, ERA_PUB_PREFIX_ARDUINO_DOWN_TOPIC, rsp.id.getInt());
 			break;
 		case ERaTypeWriteT::ERA_WRITE_VIRTUAL_PIN_MULTI: {
 			ERaDataJson* vrData = (ERaDataJson*)data;
@@ -1226,7 +1242,7 @@ void ERaProto<Transp, Flash>::sendCommandVirtualMulti(const char* auth, ERaRsp_t
 		}
 		char topicName[MAX_TOPIC_LENGTH] {0};
 		FormatString(topicName, "%s/%s", BASE_TOPIC, auth);
-		FormatString(topicName, "/zigbee/%s/down", id);
+		FormatString(topicName, ERA_PUB_PREFIX_ZIGBEE_DOWN_TOPIC, id);
 		this->transp.publishData(topicName, payload, rsp.retained);
 		id = nullptr;
 		payload = nullptr;

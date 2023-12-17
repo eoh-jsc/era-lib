@@ -343,6 +343,19 @@ void ERaReport::restartReport(Report_t* pReport) {
     pReport->prevMillis = ERaMillis();
 }
 
+void ERaReport::executeReport(Report_t* pReport) {
+	if (!this->isValidReport(pReport)) {
+		return;
+	}
+
+	// update time
+	pReport->prevMillis = ERaMillis();
+	// update value
+	pReport->data.prevValue = pReport->data.value;
+	// clear flag called
+	this->setFlag(pReport->called, ReportFlagT::REPORT_ON_CALLED, true);
+}
+
 void ERaReport::executeNow(Report_t* pReport) {
 	if (this->isValidReport(pReport)) {
 		pReport->prevMillis = ERaMillis() - pReport->maxInterval;

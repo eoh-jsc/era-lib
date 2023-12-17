@@ -41,7 +41,9 @@ void timerEvent() {
 
 void setup() {
     /* Setup debug console */
+#if defined(ERA_DEBUG)
     Serial.begin(115200);
+#endif
 
     /* Set board id */
     // ERa.setBoardID("Board_1");

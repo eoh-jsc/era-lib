@@ -26,7 +26,13 @@
 #endif
 
 #define MAX_TOPIC_LENGTH                100
-#define ERA_MQTT_BASE_TOPIC             "eoh/chip"
+
+#if defined(DEFAULT_MQTT_BASE_TOPIC)
+    #define ERA_MQTT_BASE_TOPIC         DEFAULT_MQTT_BASE_TOPIC
+#elif defined(ERA_MQTT_BASE_TOPIC)
+#else
+    #define ERA_MQTT_BASE_TOPIC         "eoh/chip"
+#endif
 
 #if defined(DEFAULT_MQTT_CLIENT_ID)
     #define ERA_MQTT_CLIENT_ID          DEFAULT_MQTT_CLIENT_ID
@@ -112,16 +118,18 @@
     #define ERA_ASK_CONFIG_WHEN_RESTART
 #endif
 
-#if !defined(ERA_MODEL_NAME)
+#if !defined(ERA_ORG_NAME)
+    #define ERA_ORG_NAME                "eoh"
+#endif
+
+#if defined(ERA_PREFIX_NAME)
+    #define ERA_MODEL_NAME              ERA_PREFIX_NAME
+#elif !defined(ERA_MODEL_NAME)
     #define ERA_MODEL_NAME              "era"
 #endif
 
 #if !defined(ERA_PROTO_TYPE)
     #define ERA_PROTO_TYPE              "WiFi"
-#endif
-
-#if !defined(ERA_DEBUG_PREFIX)
-    #define ERA_DEBUG_PREFIX            "/debug"
 #endif
 
 #if defined(ERA_LIMIT_CONNECT)
@@ -170,5 +178,6 @@
 #define INFO_MB_WIFI_USING              "wifi_is_using"
 
 #include <ERa/ERaDetect.hpp>
+#include <ERa/ERaTopic.hpp>
 
 #endif /* INC_ERA_CONFIG_HPP_ */

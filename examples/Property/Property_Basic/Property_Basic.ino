@@ -41,7 +41,9 @@ void timerEvent() {
 
 void setup() {
     /* Setup debug console */
+#if defined(ERA_DEBUG)
     Serial.begin(115200);
+#endif
 
     /* Setup pin mode led pin */
     pinMode(LED_PIN, OUTPUT);

@@ -19,11 +19,12 @@ void ERaUdp<Udp>::getWiFiName(char(&ptr)[size], bool withPrefix) {
                                                     macAddr[4], macAddr[5]);
     ClearArray(ptr);
     if (withPrefix) {
-        FormatString(ptr, "eoh.%s.%s", ((this->pModel != nullptr) ? this->pModel : ERA_MODEL_NAME),
-                                        mac);
-    } else {
-        FormatString(ptr, "era.%s", mac);
+        FormatString(ptr, "%s.%s.%s", this->pORG, this->pModel, mac);
     }
+    else {
+        FormatString(ptr, "%s.%s", this->pORG, mac);
+    }
+    ERaToLowerCase(ptr);
 }
 
 template <class Udp>

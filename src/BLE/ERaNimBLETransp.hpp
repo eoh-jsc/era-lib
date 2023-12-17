@@ -371,7 +371,7 @@ private:
         char _topic[MAX_TOPIC_LENGTH] {0};
         FormatString(_topic, this->topic);
         // Now support only Modbus
-        FormatString(_topic, "/down");
+        FormatString(_topic, ERA_PUB_PREFIX_DOWN_TOPIC);
 
         cJSON* object = cJSON_CreateObject();
         if (object == nullptr) {

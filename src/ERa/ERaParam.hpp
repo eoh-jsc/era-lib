@@ -156,6 +156,13 @@ public:
 		return 0.0;
 	}
 
+	ERaDataJson toJSON() const {
+		if (!this->isString()) {
+			return ERaDataJson();
+		}
+		return ERaDataJson(this->valuestring);
+	}
+
 	template <typename T>
 	void add(T value) {
 		this->addParam(value);

@@ -575,7 +575,9 @@ void ERaProperty<Api>::getValue(Property_t* pProp, const ERaParam& param) {
             if (param.isString()) {
                 *pProp->value = param.getString();
                 if (pProp->value->isUpdated()) {
+#if defined(ERA_STRING_REPORT_ON_WRITE)
                     pProp->report();
+#endif
                 }
             }
             break;
@@ -722,7 +724,9 @@ bool ERaProperty<Api>::publishOnChange(Property_t* pProp, float minChange,
         pProp->report = this->ERaPropRp.setReporting(minInterval, maxInterval, minChange, this->propertyCb, pProp);
     }
     if (pProp->value->isString()) {
+#if defined(ERA_STRING_REPORT_INTERVAL)
         pProp->report.updateReport(0.0f, false, false);
+#endif
     }
     else {
         this->updateValue(pProp);

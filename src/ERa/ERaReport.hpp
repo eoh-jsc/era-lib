@@ -94,7 +94,7 @@ public:
 			if (!this->isValid()) {
 				return;
 			}
-			this->rp->executeNow(this->pRp);
+			this->rp->executeReport(this->pRp);
 		}
 		
 		bool isValid() const {
@@ -298,6 +298,7 @@ public:
 	float getPreviousValue(Report_t* pReport);
 	void skipReport(Report_t* pReport);
 	void restartReport(Report_t* pReport);
+	void executeReport(Report_t* pReport);
 	void executeNow(Report_t* pReport);
 	void deleteReport(Report_t* pReport);
 	bool isEnable(Report_t* pReport);

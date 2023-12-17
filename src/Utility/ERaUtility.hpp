@@ -192,6 +192,22 @@ bool ERaStrNCmp(const char* str, const char(&str2)[size]) {
     return !strncmp(str, str2, size - 1);
 }
 
+template <int size>
+inline
+void ERaToLowerCase(char(&buf)[size]) {
+    for (int i = 0; i < size; ++i) {
+        buf[i] = ::tolower(buf[i]);
+    }
+}
+
+template <int size>
+inline
+void ERaToUpperCase(char(&buf)[size]) {
+    for (int i = 0; i < size; ++i) {
+        buf[i] = ::toupper(buf[i]);
+    }
+}
+
 #if defined(ESP32) && !_GLIBCXX_USE_C99_STDLIB
     #include <sstream>
 

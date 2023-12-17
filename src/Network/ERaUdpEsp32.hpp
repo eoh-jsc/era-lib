@@ -13,11 +13,13 @@ void ERaUdp<Udp>::getWiFiName(char(&ptr)[size], bool withPrefix) {
     }
     ClearArray(ptr);
     if (withPrefix) {
-        FormatString(ptr, "eoh.%s.%04x%08x", ((this->pModel != nullptr) ? this->pModel : ERA_MODEL_NAME),
+        FormatString(ptr, "%s.%s.%04x%08x", this->pORG, this->pModel,
                                             static_cast<uint16_t>(unique >> 32), static_cast<uint32_t>(unique));
-    } else {
-        FormatString(ptr, "era.%04x%08x", static_cast<uint16_t>(unique >> 32), static_cast<uint32_t>(unique));
     }
+    else {
+        FormatString(ptr, "%s.%04x%08x", this->pORG, static_cast<uint16_t>(unique >> 32), static_cast<uint32_t>(unique));
+    }
+    ERaToLowerCase(ptr);
 }
 
 template <class Udp>
