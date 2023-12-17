@@ -1,6 +1,7 @@
 #ifndef INC_ERA_UTILITY_HPP_
 #define INC_ERA_UTILITY_HPP_
 
+#include <ctype.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdarg.h>
