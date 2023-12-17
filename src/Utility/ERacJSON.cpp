@@ -303,6 +303,12 @@ CJSON_PUBLIC(cJSON*) cJSON_SetNullToObject(cJSON* const object, const char* cons
     if (null_item == NULL) {
         return cJSON_AddNullToObject(object, name);
     }
+    if (cJSON_IsNull(null_item)) {
+    }
+    else {
+        null_item = cJSON_CreateNull();
+        cJSON_ReplaceItemInObject(object, name, null_item);
+    }
     return null_item;
 }
 
@@ -348,6 +354,17 @@ CJSON_PUBLIC(cJSON*) cJSON_SetStringViaPointer(cJSON* const object, cJSON* const
     return string_item;
 }
 
+CJSON_PUBLIC(cJSON*) cJSON_SetNullViaPointer(cJSON* const object, cJSON* const item) {
+    cJSON *null_item = item;
+    if (cJSON_IsNull(null_item)) {
+    }
+    else {
+        null_item = cJSON_CreateNull();
+        cJSON_ReplaceItemViaPointer(object, item, null_item);
+    }
+    return null_item;
+}
+
 CJSON_PUBLIC(cJSON*) cJSON_SetNumberWithDecimal(cJSON* const object, cJSON* const item, const double number, int decimal) {
     if (cJSON_IsArray(object)) {
         return cJSON_SetNumberWithDecimalViaPointer(object, item, number, decimal);
@@ -381,6 +398,15 @@ CJSON_PUBLIC(cJSON*) cJSON_SetString(cJSON* const object, cJSON* const item, con
     }
     else {
         return cJSON_SetStringToObject(object, item->string, string);
+    }
+}
+
+CJSON_PUBLIC(cJSON*) cJSON_SetNull(cJSON* const object, cJSON* const item) {
+    if (cJSON_IsArray(object)) {
+        return cJSON_SetNullViaPointer(object, item);
+    }
+    else {
+        return cJSON_SetNullToObject(object, item->string);
     }
 }
 
