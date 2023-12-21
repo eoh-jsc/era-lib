@@ -12,7 +12,7 @@ namespace ZigbeeNamespace {
     };
 
     enum SubsystemT {
-        RESERVED = 0x00,
+        RESERVED_INTER = 0x00,
         SYS_INTER = 0x01,
         MAC_INTER = 0x02,
         NWK_INTER = 0x03,
@@ -22,8 +22,8 @@ namespace ZigbeeNamespace {
         UTIL_INTER = 0x07,
         DEBUG_INTER = 0x08,
         APP_INTER = 0x09,
-        APP_CNF = 0x0F,
-        GREENPOWER = 0x15
+        APP_CNF_INTER = 0x0F,
+        GREENPOWER_INTER = 0x15
     };
 
     enum TypeDeviceT {

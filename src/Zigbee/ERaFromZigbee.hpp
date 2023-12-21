@@ -179,7 +179,7 @@ Response_t ERaFromZigbee<Zigbee>::fromZigbee(const uint8_t* payload, void* value
                     this->processDeviceLeave(data, value);
                 }
                 break;
-            case SubsystemT::APP_CNF:
+            case SubsystemT::APP_CNF_INTER:
                 break;
             default:
                 break;

@@ -55,7 +55,7 @@ private:
                                 uint8_t cmdWait,
                                 void* value = nullptr,
                                 uint32_t timeout = MAX_TIMEOUT,
-                                SubsystemT subWait = SubsystemT::RESERVED,
+                                SubsystemT subWait = SubsystemT::RESERVED_INTER,
                                 uint16_t nwkAddr = NO_NWK_ADDR,
                                 ClusterIDT zclId = ClusterIDT::NO_CLUSTER_ID,
                                 uint8_t* _transId = nullptr,
@@ -235,7 +235,7 @@ ResultT ERaToZigbee<Zigbee>::createCommandBuffer(const vector<uint8_t>& payload,
     command.push_back(fcs);
 
     this->sendCommand(command);
-    status = this->waitResponse({nwkAddr, typeWait, (subWait == SubsystemT::RESERVED) ? sub : subWait,
+    status = this->waitResponse({nwkAddr, typeWait, (subWait == SubsystemT::RESERVED_INTER) ? sub : subWait,
                                 cmdWait, zclId, static_cast<uint8_t>(_transId != nullptr ? *_transId : 0x00),
                                 static_cast<uint8_t>(_transIdZcl != nullptr ? *_transIdZcl : 0x00), ZnpCommandStatusT::INVALID_PARAM, timeout}, value);
 
@@ -281,12 +281,12 @@ ResultT ERaToZigbee<Zigbee>::createCommand(AFAddrType_t& dstAddr,
     if (cmdWait == AFCommandsT::AF_INCOMING_MSG) {
         return this->createCommandBuffer(payload, TypeT::SREQ, SubsystemT::AF_INTER, AFCommandsT::AF_DATA_REQUEST,
                                         TypeT::AREQ, cmdWait, value, timeout,
-                                        SubsystemT::RESERVED, dstAddr.addr.nwkAddr, zclId, &this->transId, &_transIdZcl);
+                                        SubsystemT::RESERVED_INTER, dstAddr.addr.nwkAddr, zclId, &this->transId, &_transIdZcl);
     }
     else {
         return this->createCommandBuffer(payload, TypeT::SREQ, SubsystemT::AF_INTER, AFCommandsT::AF_DATA_REQUEST,
                                         TypeT::AREQ, cmdWait, value, timeout,
-                                        SubsystemT::RESERVED, NO_NWK_ADDR, ClusterIDT::NO_CLUSTER_ID, &this->transId, &_transIdZcl);
+                                        SubsystemT::RESERVED_INTER, NO_NWK_ADDR, ClusterIDT::NO_CLUSTER_ID, &this->transId, &_transIdZcl);
     }
 }
 

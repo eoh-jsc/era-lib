@@ -28,6 +28,16 @@ static uint16_t port;
 static const char* user;
 static const char* pass;
 
+/* This function will run every time ERa is connected */
+ERA_CONNECTED() {
+    printf("ERa connected!\r\n");
+}
+
+/* This function will run every time ERa is disconnected */
+ERA_DISCONNECTED() {
+    printf("ERa disconnected!\r\n");
+}
+
 void setup() {
     ERa.setBoardID(boardID);
     ERa.begin(auth, host, port, user, pass);

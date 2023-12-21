@@ -211,7 +211,7 @@ ResultT ERaCommandZigbee<ToZigbee>::stateStartupAppZstack(size_t limit, void* va
 													SubsystemT::ZDO_INTER, ZDOCommandsT::ZDO_STARTUP_FROM_APP,
 													TypeT::AREQ, ((this->coordinator->product == ZnpVersionT::zStack12) ? (uint8_t)ZDOCommandsT::ZDO_STATE_CHANGE_IND : (uint8_t)APPCFCommandsT::APP_CNF_BDB_COMMISSIONING_NOTIFICATION),
 													value, MAX_TIMEOUT,
-													((this->coordinator->product == ZnpVersionT::zStack12) ? SubsystemT::RESERVED : SubsystemT::APP_CNF)) == ResultT::RESULT_SUCCESSFUL) {
+													((this->coordinator->product == ZnpVersionT::zStack12) ? SubsystemT::RESERVED_INTER : SubsystemT::APP_CNF_INTER)) == ResultT::RESULT_SUCCESSFUL) {
 			if (this->coordinator->deviceState == DeviceStateListT::STARTED_COORDINATOR) {
 				return ResultT::RESULT_SUCCESSFUL;
 			}
@@ -607,7 +607,7 @@ ResultT ERaCommandZigbee<ToZigbee>::startCommissioningZstack(uint8_t mode) { /* 
 	vector<uint8_t> payload;
 	payload.push_back(mode);
 	return this->thisToZigbee().createCommandBuffer(payload, TypeT::SREQ,
-													SubsystemT::APP_CNF, APPCFCommandsT::APP_CNF_BDB_START_COMMISSIONING,
+													SubsystemT::APP_CNF_INTER, APPCFCommandsT::APP_CNF_BDB_START_COMMISSIONING,
 													TypeT::SRSP, APPCFCommandsT::APP_CNF_BDB_START_COMMISSIONING);
 }
 
@@ -620,7 +620,7 @@ ResultT ERaCommandZigbee<ToZigbee>::setBDBChannelZstack(ZBChannelT channel, bool
 	payload.push_back(BREAK_UINT32(channel, 2));
 	payload.push_back(BREAK_UINT32(channel, 3));
 	return this->thisToZigbee().createCommandBuffer(payload, TypeT::SREQ,
-													SubsystemT::APP_CNF, APPCFCommandsT::APP_CNF_BDB_SET_CHANNEL,
+													SubsystemT::APP_CNF_INTER, APPCFCommandsT::APP_CNF_BDB_SET_CHANNEL,
 													TypeT::SRSP, APPCFCommandsT::APP_CNF_BDB_SET_CHANNEL);
 }
 
