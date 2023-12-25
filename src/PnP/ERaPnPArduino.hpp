@@ -762,6 +762,8 @@ void ERaPnP<Transport>::configMode() {
         udpERa.run();
         this->runServer(networks);
         ERaWatchdogFeed();
+        Base::appLoop();
+        ERaWatchdogFeed();
 #if defined(ESP32) ||           \
     defined(ESP8266)
         if (ERaState::is(StateT::STATE_CONFIGURING) && !WiFi.softAPgetStationNum()) {
@@ -1343,6 +1345,8 @@ void ERaPnP<Transport>::connectWiFi(const char* ssid, const char* pass) {
             ERaDelay(500);
             ERaWatchdogFeed();
             status = WiFi.status();
+            Base::appLoop();
+            ERaWatchdogFeed();
             if (Base::isConfigMode() ||
                 !ERaRemainingTime(started, WIFI_NET_CONNECT_TIMEOUT)) {
                 WiFi.disconnect();

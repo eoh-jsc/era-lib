@@ -9,6 +9,7 @@
 #include <ERa/ERaDefine.hpp>
 
 class ERaParam;
+class ERaDataJson;
 
 class ERaDataBuff
 {
@@ -39,7 +40,7 @@ public:
 			if (!this->isValid()) {
 				return 0;
 			}
-			return atoi(ptr);
+			return atoi(this->ptr);
 		}
 
 		int getInt(int _base) const {
@@ -50,7 +51,7 @@ public:
 			if (!this->isValid()) {
 				return 0;
 			}
-			return atol(ptr);
+			return atol(this->ptr);
 		}
 
 		long getLong(int _base) const {
@@ -65,14 +66,14 @@ public:
 			if (!this->isValid()) {
 				return 0;
 			}
-			return ERaAtoll(ptr);
+			return ERaAtoll(this->ptr);
 		}
 #else
 		long long getLongLong() const {
 			if (!this->isValid()) {
 				return 0;
 			}
-			return atoll(ptr);
+			return atoll(this->ptr);
 		}
 
 		long long getLongLong(int _base) const {
@@ -87,15 +88,17 @@ public:
             if (!this->isValid()) {
                 return 0.0f;
             }
-            return (float)atof(ptr);
+            return (float)atof(this->ptr);
         }
 
         double getDouble() const {
             if (!this->isValid()) {
                 return 0.0;
             }
-            return atof(ptr);
+            return atof(this->ptr);
         }
+
+        ERaDataJson toJSON() const;
 
 		bool isValid() const {
 			return ((this->ptr != nullptr) && (this->ptr < this->limit));
@@ -696,6 +699,9 @@ public:
 	}
 };
 
+typedef ERaDataBuff ERaDataBuf;
+typedef ERaDataBuffDynamic ERaDataBufDynamic;
+
 class ERaDataJson
 {
 	typedef cJSON* (CJSON_STDCALL* AddBool)(cJSON* const object, const char* const name, const cJSON_bool boolean);
@@ -1208,6 +1214,7 @@ public:
 	bool operator == (ERaDataJson& value) const;
 	bool operator == (const ERaDataJson& value) const;
 	bool operator == (nullptr_t) const;
+    bool operator != (nullptr_t) const;
 
 	ERaDataJson& operator = (const ERaDataJson& value);
 
@@ -1480,6 +1487,11 @@ bool ERaDataJson::operator == (nullptr_t) const {
 }
 
 inline
+bool ERaDataJson::operator != (nullptr_t) const {
+    return !this->isEmpty();
+}
+
+inline
 ERaDataJson& ERaDataJson::operator = (const ERaDataJson& value) {
 	if (this == &value) {
 		return (*this);
@@ -1488,6 +1500,14 @@ ERaDataJson& ERaDataJson::operator = (const ERaDataJson& value) {
 	this->clearObject();
 	this->root = cJSON_Duplicate(value.getObject(), true);
 	return (*this);
+}
+
+inline
+ERaDataJson ERaDataBuff::iterator::toJSON() const {
+    if (!this->isValid()) {
+        return ERaDataJson();
+    }
+    return ERaDataJson(this->ptr);
 }
 
 using DataEntry = ERaDataBuff::iterator;

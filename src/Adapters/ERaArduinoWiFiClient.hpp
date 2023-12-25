@@ -138,6 +138,8 @@ public:
                 ERaDelay(500);
                 ERaWatchdogFeed();
                 status = WiFi.status();
+                Base::appLoop();
+                ERaWatchdogFeed();
                 if (!ERaRemainingTime(startMillis, WIFI_NET_CONNECT_TIMEOUT)) {
                     WiFi.disconnect();
                     ERA_LOG_ERROR(TAG, ERA_PSTR("Connect %s timeout"), ssid);

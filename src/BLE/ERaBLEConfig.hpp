@@ -12,7 +12,7 @@
     #endif
 #endif
 
-#define TOPIC_BLE_ACTION_LOG	     "/action_log"
+#define TOPIC_BLE_ACTION_LOG         "/action_log"
 #define MESSAGE_BLE_ACTION_LOG       R"json({"user":%d,"action":"%s","message":)json"         \
                                      R"json("Trigger by user action control via bluetooth"})json"
 

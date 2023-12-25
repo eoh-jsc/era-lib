@@ -26,7 +26,7 @@ class ERaBLETransp
     , public NimBLEServerCallbacks
     , public NimBLECharacteristicCallbacks
 {
-	const char* TAG = "BLETransp";
+    const char* TAG = "BLETransp";
 
 public:
     ERaBLETransp(ERaCallbacksHelper& helper,
@@ -46,6 +46,7 @@ public:
         , pCharacteristicCMD(NULL)
     {
         helper.setERaTransp(this);
+        ERaBLETransp::instance() = this;
     }
     ~ERaBLETransp()
     {}
@@ -140,7 +141,7 @@ public:
         ERA_FORCE_UNUSED(port);
         this->rxBuffer.clear();
         this->_connected = true;
-        return true;
+        return 1;
     }
 
     int connect(const char* host, uint16_t port) override {
@@ -148,7 +149,7 @@ public:
         ERA_FORCE_UNUSED(port);
         this->rxBuffer.clear();
         this->_connected = true;
-        return true;
+        return 1;
     }
 
     void disconnect() {
@@ -219,12 +220,15 @@ public:
         return this->_connected;
     }
 
-    static ERaBLETransp& getInstance() {
-        return ERaBLETransp::instance;
+    static ERaBLETransp* getInstance() {
+        return ERaBLETransp::instance();
     }
 
 protected:
-    static ERaBLETransp instance;
+    static ERaBLETransp*& instance() {
+        static ERaBLETransp* _instance = nullptr;
+        return _instance;
+    }
 
 private:
     void onConnect(NimBLEServer* pServer) override {

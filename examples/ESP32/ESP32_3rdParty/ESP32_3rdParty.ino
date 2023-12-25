@@ -64,13 +64,13 @@ ERA_PIN_READ(V0) {
 /* This is a callback function that is called when the ERa is connected to the server. */
 ERA_CONNECTED() {
     digitalWrite(LED_PIN, HIGH);
-    Serial.println("ERa Connected");
+    Serial.println("ERa connected!");
 }
 
 /* This is a callback function that is called when the ERa is disconnected to the server. */
 ERA_DISCONNECTED() {
     digitalWrite(LED_PIN, LOW);
-    Serial.println("ERa Disconnected");
+    Serial.println("ERa disconnected!");
 }
 
 /* This function is called every second by the timer.
@@ -88,9 +88,7 @@ void reportEvent() {
 
 void setup() {
     /* Setup debug console */
-#if defined(ERA_DEBUG)
     Serial.begin(115200);
-#endif
 
     /* Setup pin mode pin */
     pinMode(RELAY_PIN, OUTPUT);

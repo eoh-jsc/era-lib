@@ -1130,6 +1130,10 @@ uint8_t GSMToPercentage(uint8_t value) {
 }
 
 uint8_t SignalToPercentage(int16_t value) {
+    if (value >= 100) {
+        return 100;
+    }
+
     uint8_t percentage {0};
     if (value >= 0) {
         percentage = GSMToPercentage(value);

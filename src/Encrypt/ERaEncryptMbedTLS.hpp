@@ -10,6 +10,10 @@
 #include <Utility/ERaLoc.hpp>
 #include <Utility/Base64.hpp>
 
+#if !defined(RTL8722DM) && !defined(ARDUINO_AMEBA)
+    #define ERA_USE_MBEDTLS_CRYPTO_EXT
+#endif
+
 #define CF_CHECK_EQ(expr, res)              \
     if ((expr) != (res)) {                  \
         mbedtls_cipher_free(&this->ctx);    \
@@ -141,6 +145,7 @@ private:
 
         switch (this->mode) {
             case EncryptModeT::ENCRYPT_MODE_CCM: {
+#if defined(ERA_USE_MBEDTLS_CRYPTO_EXT)
                 if (operation == mbedtls_operation_t::MBEDTLS_ENCRYPT) {
                     CF_CHECK_EQB(mbedtls_cipher_auth_encrypt_ext(&this->ctx, this->iv, this->ivLen, nullptr, 0,
                                                                 locInput, inputLen, output, oSize,
@@ -151,6 +156,25 @@ private:
                                                                 locInput, inputLen, output, oSize,
                                                                 &outputLen, 16), 0)
                 }
+#else
+                size_t tagLen {16};
+                unsigned char tag[16] {0};
+                if (operation == mbedtls_operation_t::MBEDTLS_ENCRYPT) {
+                    CF_CHECK_EQB(mbedtls_cipher_auth_encrypt(&this->ctx, this->iv, this->ivLen, nullptr, 0,
+                                                            locInput, inputLen, output, &outputLen,
+                                                            tag, tagLen), 0)
+                }
+                else {
+                    CF_CHECK_EQB(mbedtls_cipher_auth_decrypt(&this->ctx, this->iv, this->ivLen, nullptr, 0,
+                                                            locInput, inputLen, output, &outputLen,
+                                                            tag, tagLen), 0)
+                }
+                if (oSize > outputLen) {
+                    size_t copyLen = ERaMin(oSize - outputLen, tagLen);
+                    memcpy(output + outputLen, tag, copyLen);
+                    outputLen += copyLen; 
+                }
+#endif
             }
                 break;
             case EncryptModeT::ENCRYPT_MODE_CBC:

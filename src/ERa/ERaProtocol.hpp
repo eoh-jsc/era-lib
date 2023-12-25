@@ -52,9 +52,11 @@ class ERaProto
 	typedef void* ApiData_t;
 #if defined(PROTO_HAS_FUNCTIONAL_H)
     typedef std::function<void(void)> StateCallback_t;
+    typedef std::function<void(void)> FunctionCallback_t;
     typedef std::function<void(const char*, const char*)> MessageCallback_t;
 #else
 	typedef void (*StateCallback_t)(void);
+    typedef void (*FunctionCallback_t)(void);
 	typedef void (*MessageCallback_t)(const char*, const char*);
 #endif
 
@@ -94,6 +96,7 @@ public:
         FormatString(this->ERA_TOPIC, "%s/%s", BASE_TOPIC, auth);
         this->transp.setAuth(auth);
 		this->transp.setTopic(this->ERA_TOPIC);
+        this->transp.onAppLoop(Base::appCb);
 		this->transp.onMessage(this->messageCb);
 		this->transp.onStateChange(this->connectedCb,
 								   this->disconnectedCb);
@@ -863,7 +866,7 @@ bool ERaProto<Transp, Flash>::sendInfo() {
 	char* payload = cJSON_PrintUnformatted(root);
     FormatString(topic, this->ERA_TOPIC);
     FormatString(topic, ERA_PUB_PREFIX_INFO_TOPIC);
-	
+
 	if (payload != nullptr) {
 		status = this->transp.publishData(topic, payload);
 	}

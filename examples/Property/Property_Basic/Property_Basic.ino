@@ -33,10 +33,20 @@ const char pass[] = "YOUR_PASSWORD";
 bool state = false;
 unsigned long timeUp = 0;
 
+/* This function will run every time ERa is connected */
+ERA_CONNECTED() {
+    ERA_LOG(ERA_PSTR("ERa"), ERA_PSTR("ERa connected!"));
+}
+
+/* This function will run every time ERa is disconnected */
+ERA_DISCONNECTED() {
+    ERA_LOG(ERA_PSTR("ERa"), ERA_PSTR("ERa disconnected!"));
+}
+
 /* This function print uptime every second */
 void timerEvent() {
     timeUp = ERaMillis() / 1000L;
-    ERA_LOG("Timer", "Uptime: %d", timeUp);
+    ERA_LOG(ERA_PSTR("Timer"), ERA_PSTR("Uptime: %d"), timeUp);
 }
 
 void setup() {

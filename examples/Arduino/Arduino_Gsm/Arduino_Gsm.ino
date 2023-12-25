@@ -49,6 +49,16 @@
 
 const char pinSIM[] = "";
 
+/* This function will run every time ERa is connected */
+ERA_CONNECTED() {
+    ERA_LOG(ERA_PSTR("ERa"), ERA_PSTR("ERa connected!"));
+}
+
+/* This function will run every time ERa is disconnected */
+ERA_DISCONNECTED() {
+    ERA_LOG(ERA_PSTR("ERa"), ERA_PSTR("ERa disconnected!"));
+}
+
 /* This function print uptime every second */
 void timerEvent() {
     ERA_LOG(ERA_PSTR("Timer"), ERA_PSTR("Uptime: %d"), ERaMillis() / 1000L);

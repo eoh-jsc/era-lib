@@ -879,6 +879,8 @@ void ERaPnP<Transport>::configMode() {
         udpERa.run();
         this->runServer(networks);
         ERaWatchdogFeed();
+        Base::appLoop();
+        ERaWatchdogFeed();
         if (ERaConfig.getFlag(ConfigFlagT::CONFIG_FLAG_VALID)) {
             if (!ERaRemainingTime(tick, WIFI_NET_CHECK_TIMEOUT)) {
                 ERaState::set(StateT::STATE_SWITCH_TO_STA);
@@ -1439,6 +1441,8 @@ bool ERaPnP<Transport>::connectNetwork(const char* ssid, const char* pass) {
     MillisTime_t startMillis = ERaMillis();
     while (!this->connectWiFi(ssid, pass)) {
         ERaDelay(500);
+        Base::appLoop();
+        ERaWatchdogFeed();
         if (Base::isConfigMode() ||
             !ERaRemainingTime(startMillis, WIFI_NET_CONNECT_TIMEOUT)) {
             ERA_LOG_ERROR(TAG, ERA_PSTR("Connect %s timeout"), ssid);

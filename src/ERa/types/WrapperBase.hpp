@@ -5,6 +5,7 @@
 #include <float.h>
 #include <stdint.h>
 #include <string.h>
+#include <ERa/ERaData.hpp>
 
 enum WrapperTypeT : uint8_t {
     WRAPPER_TYPE_INVALID = 0,
@@ -127,7 +128,14 @@ public:
     }
 
     const char* getString() const {
-        return (const char*)this->getPtr();
+        return (const char*)this->getPointer();
+    }
+
+    ERaDataJson toJSON() const {
+        if (!this->isString()) {
+            return ERaDataJson();
+        }
+        return ERaDataJson((const char*)this->getPointer());
     }
 
     operator float() const {
@@ -135,7 +143,7 @@ public:
     }
 
     operator const char*() const {
-        return (const char*)this->getPtr();
+        return (const char*)this->getPointer();
     }
 
     operator char*() const {
@@ -153,7 +161,7 @@ public:
             return (*this);
         }
         if (this->type == WrapperTypeT::WRAPPER_TYPE_STRING) {
-            return operator = ((const char*)_value.getPtr());
+            return operator = ((const char*)_value.getPointer());
         }
         else {
             return operator = ((float)_value.get());
@@ -203,7 +211,7 @@ public:
     }
 
     WrapperBase& operator = (const char* _value) {
-        this->setPtr((const void*)_value);
+        this->setPointer((const void*)_value);
         return (*this);
     }
 
@@ -216,7 +224,7 @@ public:
             return true;
         }
         if (this->type == WrapperTypeT::WRAPPER_TYPE_STRING) {
-            return operator == ((const char*)_value.getPtr());
+            return operator == ((const char*)_value.getPointer());
         }
         else {
             return operator == ((float)_value.get());
@@ -277,7 +285,7 @@ public:
             return false;
         }
         if (this->type == WrapperTypeT::WRAPPER_TYPE_STRING) {
-            return operator != ((const char*)_value.getPtr());
+            return operator != ((const char*)_value.getPointer());
         }
         else {
             return operator != ((float)_value.get());
@@ -336,8 +344,8 @@ public:
 protected:
     virtual float get() const = 0;
     virtual void set(float) = 0;
-    virtual void* getPtr() const = 0;
-    virtual void setPtr(const void*) = 0;
+    virtual void* getPointer() const = 0;
+    virtual void setPointer(const void*) = 0;
 
     WrapperTypeT type;
     bool updated;
@@ -355,16 +363,16 @@ private:
         if (this->type != WrapperTypeT::WRAPPER_TYPE_STRING) {
             return false;
         }
-        if (this->getPtr() == _value) {
+        if (this->getPointer() == _value) {
             return true;
         }
         if (_value == nullptr) {
             return false;
         }
-        if (this->getPtr() == nullptr) {
+        if (this->getPointer() == nullptr) {
             return false;
         }
-        return !strcmp((const char*)this->getPtr(), _value);
+        return !strcmp((const char*)this->getPointer(), _value);
     }
 
 };

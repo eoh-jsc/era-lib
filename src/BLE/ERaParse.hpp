@@ -121,22 +121,22 @@ bool ERaBluetooth::operator != (const char* hash) {
 
 inline
 void ERaBluetooth::processParseConfig(int part, const char* ptr, size_t len) {
-	switch(part) {
-		case ParseConfigT::PARSE_CONFIG_ID:
-			this->processParseConfigId(ptr, len);
-			break;
-		case ParseConfigT::PARSE_CONFIG_ADDRESS:
-			this->processParseConfigAddress(ptr, len);
-			break;
-		case ParseConfigT::PARSE_CONFIG_PASSWORD:
-			this->processParseConfigPassword(ptr, len);
-			break;
-		case ParseConfigT::PARSE_CONFIG_SECRET_KEY:
-			this->processParseConfigSecretKey(ptr, len);
-			break;
-		default:
-			break;
-	}
+    switch(part) {
+        case ParseConfigT::PARSE_CONFIG_ID:
+            this->processParseConfigId(ptr, len);
+            break;
+        case ParseConfigT::PARSE_CONFIG_ADDRESS:
+            this->processParseConfigAddress(ptr, len);
+            break;
+        case ParseConfigT::PARSE_CONFIG_PASSWORD:
+            this->processParseConfigPassword(ptr, len);
+            break;
+        case ParseConfigT::PARSE_CONFIG_SECRET_KEY:
+            this->processParseConfigSecretKey(ptr, len);
+            break;
+        default:
+            break;
+    }
 }
 
 inline

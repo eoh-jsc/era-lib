@@ -48,9 +48,11 @@ class ERaMqttLinux
 {
 #if defined(MQTT_HAS_FUNCTIONAL_H)
     typedef std::function<void(void)> StateCallback_t;
+    typedef std::function<void(void)> FunctionCallback_t;
     typedef std::function<void(const char*, const char*)> MessageCallback_t;
 #else
     typedef void (*StateCallback_t)(void);
+    typedef void (*FunctionCallback_t)(void);
     typedef void (*MessageCallback_t)(const char*, const char*);
 #endif
 
@@ -81,6 +83,7 @@ public:
         , needPubState(false)
         , _connected(false)
         , mutex(NULL)
+        , appCb(NULL)
         , connectedCb(NULL)
         , disconnectedCb(NULL)
     {
@@ -102,7 +105,7 @@ public:
 
     void config(const char* _host, uint16_t _port,
             const char* _username, const char* _password);
-    bool connect();
+    bool connect(FunctionCallback_t fn = NULL);
     void disconnect();
     bool connected();
     bool run();
@@ -194,6 +197,10 @@ public:
         this->mqtt.onMessage(cb);
     }
 
+    void onAppLoop(FunctionCallback_t cb) {
+        this->appCb = cb;
+    }
+
     void onStateChange(StateCallback_t onCb,
                        StateCallback_t offCb) {
         this->connectedCb = onCb;
@@ -207,6 +214,7 @@ public:
 
 protected:
 private:
+    void delays(MillisTime_t ms);
     bool publishLWT(bool sync = false);
     void onConnected();
     void onDisconnected();
@@ -230,6 +238,7 @@ private:
     bool _connected;
     char willTopic[MAX_TOPIC_LENGTH];
     ERaMutex_t mutex;
+    FunctionCallback_t appCb;
     StateCallback_t connectedCb;
     StateCallback_t disconnectedCb;
 };
@@ -253,7 +262,7 @@ void ERaMqttLinux<MQTT>::config(const char* _host, uint16_t _port,
 
 template <class MQTT>
 inline
-bool ERaMqttLinux<MQTT>::connect() {
+bool ERaMqttLinux<MQTT>::connect(FunctionCallback_t fn) {
     size_t count {0};
     char _clientID[74] {0};
     if (this->clientID != NULL) {
@@ -270,7 +279,7 @@ bool ERaMqttLinux<MQTT>::connect() {
     while (this->mqtt.connect(_clientID, this->username, this->password) == false) {
         ERA_LOG_ERROR(TAG, ERA_PSTR("MQTT(%d): Connect failed (%d), retrying in 5 seconds"),
                                     (count + 1), this->mqtt.lastError());
-        ERaDelay(5000);
+        this->delays(5000);
         if (++count >= LIMIT_CONNECT_BROKER_MQTT) {
             return false;
         }
@@ -288,6 +297,10 @@ bool ERaMqttLinux<MQTT>::connect() {
     this->subscribeTopic(this->ERaTopic, ERA_SUB_PREFIX_VIRTUAL_TOPIC);
     this->subscribeTopic(this->ERaTopic, ERA_SUB_PREFIX_OP_DOWN_TOPIC);
     this->subscribeTopic(this->ERaTopic, ERA_SUB_PREFIX_DOWN_TOPIC);
+
+    if (fn != NULL) {
+        fn();
+    }
 
 #if defined(ERA_ASK_CONFIG_WHEN_RESTART)
     if (!this->publishLWT(true)) {
@@ -344,10 +357,10 @@ bool ERaMqttLinux<MQTT>::subscribeTopic(const char* baseTopic, const char* topic
     bool status {false};
     char topicName[MAX_TOPIC_LENGTH] {0};
     if (baseTopic != NULL) {
-	    FormatString(topicName, baseTopic);
+        FormatString(topicName, baseTopic);
     }
     if (topic != NULL) {
-	    FormatString(topicName, topic);
+        FormatString(topicName, topic);
     }
 
     this->lockMQTT();
@@ -366,10 +379,10 @@ bool ERaMqttLinux<MQTT>::unsubscribeTopic(const char* baseTopic, const char* top
     bool status {false};
     char topicName[MAX_TOPIC_LENGTH] {0};
     if (baseTopic != NULL) {
-	    FormatString(topicName, baseTopic);
+        FormatString(topicName, baseTopic);
     }
     if (topic != NULL) {
-	    FormatString(topicName, topic);
+        FormatString(topicName, topic);
     }
 
     this->lockMQTT();
@@ -415,6 +428,21 @@ template <class MQTT>
 inline
 bool ERaMqttLinux<MQTT>::syncConfig() {
     return this->publishLWT(true);
+}
+
+template <class MQTT>
+inline
+void ERaMqttLinux<MQTT>::delays(MillisTime_t ms) {
+    if (!ms) {
+        return;
+    }
+    MillisTime_t startMillis = ERaMillis();
+    while (ERaRemainingTime(startMillis, ms)) {
+        if (this->appCb != NULL) {
+            this->appCb();
+        }
+        ERaDelay(10);
+    }
 }
 
 template <class MQTT>

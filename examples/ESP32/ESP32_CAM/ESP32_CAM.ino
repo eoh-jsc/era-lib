@@ -71,12 +71,16 @@ void handleStream() {
     streamer->addSession(rtspClient);
 }
 
+/* This function will run every time ERa is connected */
 ERA_CONNECTED() {
     connected = true;
+    ERA_LOG("ERa", "ERa connected!");
 }
 
+/* This function will run every time ERa is disconnected */
 ERA_DISCONNECTED() {
     connected = false;
+    ERA_LOG("ERa", "ERa disconnected!");
 }
 
 /* This function print uptime every second */

@@ -42,6 +42,16 @@ const char pass[] = "YOUR_PASSWORD";
 
 const int rstPin = 7;
 
+/* This function will run every time ERa is connected */
+ERA_CONNECTED() {
+    ERA_LOG("ERa", "ERa connected!");
+}
+
+/* This function will run every time ERa is disconnected */
+ERA_DISCONNECTED() {
+    ERA_LOG("ERa", "ERa disconnected!");
+}
+
 /* This function print uptime every second */
 void timerEvent() {
     ERA_LOG("Timer", "Uptime: %d", ERaMillis() / 1000L);

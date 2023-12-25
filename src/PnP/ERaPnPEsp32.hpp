@@ -1353,6 +1353,8 @@ void ERaPnP<Transport>::configMode() {
         this->server.handleClient();
         this->dnsServer.processNextRequest();
         ERaWatchdogFeed();
+        Base::appLoop();
+        ERaWatchdogFeed();
         if (ERaState::is(StateT::STATE_CONFIGURING) && !WiFi.softAPgetStationNum()) {
             ERaState::set(StateT::STATE_WAIT_CONFIG);
         }
@@ -1601,6 +1603,8 @@ void ERaPnP<Transport>::connectWiFi(const char* ssid, const char* pass) {
             ERaDelay(500);
             ERaWatchdogFeed();
             status = WiFi.status();
+            Base::appLoop();
+            ERaWatchdogFeed();
             if (Base::isConfigMode() ||
                 !ERaRemainingTime(started, WIFI_NET_CONNECT_TIMEOUT)) {
                 WiFi.disconnect();

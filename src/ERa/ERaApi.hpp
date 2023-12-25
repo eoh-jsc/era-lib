@@ -68,6 +68,7 @@ public:
         , invertLED(false)
 		, skipPinWrite(false)
 		, skipPinReport(false)
+        , enableAppLoop(false)
 		, taskSize(0UL)
 		, autoSwitchTask(false)
 #if !defined(ERA_NO_RTOS)
@@ -281,6 +282,10 @@ public:
 
     void setSkipPinReport(bool skip) {
         this->skipPinReport = skip;
+    }
+
+    void setAppLoop(bool enable) {
+        this->enableAppLoop = enable;
     }
 
 	void callERaProHandler(const char* deviceId, const cJSON* const root);
@@ -516,6 +521,18 @@ protected:
 		return this->ERaPinRp;
 	}
 
+    void appLoop();
+#if defined(API_HAS_FUNCTIONAL_H)
+    AppCallback_t appCb = [&, this]() {
+        this->appLoop();
+    };
+#else
+    static void _appLoop();
+    AppCallback_t appCb = []() {
+        ERaApi::_appLoop();
+    };
+#endif
+
 private:
 	template <typename T>
 	void virtualWriteSingle(int pin, T value) {
@@ -568,10 +585,14 @@ private:
 	static void _sendPinConfigEvent(void* args);
 #endif
 
-#if !defined(ERA_NO_RTOS)
-	bool isTaskRunning() const {
-		return ((this->taskSize > 0) && (this->_apiTask != NULL));
-	}
+#if defined(ERA_NO_RTOS)
+    bool isTaskRunning() const {
+        return false;
+    }
+#else
+    bool isTaskRunning() const {
+        return ((this->taskSize > 0) && (this->_apiTask != NULL));
+    }
 #endif
 
 	inline
@@ -645,6 +666,8 @@ private:
     bool invertLED;
 	bool skipPinWrite;
 	bool skipPinReport;
+
+    bool enableAppLoop;
 
 	uint32_t taskSize;
 	bool autoSwitchTask;
@@ -992,6 +1015,18 @@ bool ERaApi<Proto, Flash>::getGPIOPin(const cJSON* const root, const char* key, 
 	}
 
 	return true;
+}
+
+template <class Proto, class Flash>
+inline
+void ERaApi<Proto, Flash>::appLoop() {
+    if (!this->enableAppLoop) {
+        return;
+    }
+    if (this->isTaskRunning()) {
+        return;
+    }
+    this->handlerAPI(true);
 }
 
 template <class Proto, class Flash>

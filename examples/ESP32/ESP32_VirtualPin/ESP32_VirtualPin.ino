@@ -38,6 +38,16 @@ ERA_WRITE(V0) {
     ERa.virtualWrite(V0, digitalRead(LED_PIN));
 }
 
+/* This function will run every time ERa is connected */
+ERA_CONNECTED() {
+    ERA_LOG("ERa", "ERa connected!");
+}
+
+/* This function will run every time ERa is disconnected */
+ERA_DISCONNECTED() {
+    ERA_LOG("ERa", "ERa disconnected!");
+}
+
 /* This function send uptime every second to Virtual Pin 1 */
 void timerEvent() {
     ERa.virtualWrite(V1, ERaMillis() / 1000L);

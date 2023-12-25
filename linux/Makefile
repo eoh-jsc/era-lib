@@ -140,6 +140,7 @@ SOURCES=main.cpp \
 	../src/Utility/Base64.cpp \
 	../src/Utility/CRC32.cpp \
 	../src/Utility/MD5.cpp \
+	Network/ERaNetworkInfo.cpp \
 	MQTT/MQTT/unix/unix.cpp \
 	MQTT/MQTT/MQTTLinux.cpp
 

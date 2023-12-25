@@ -245,8 +245,8 @@ public:
     }
 
     void concat(int _value) {
-		char str[2 + 8 * sizeof(int)] {0};
-		itoa(_value, str, 10);
+        char str[2 + 8 * sizeof(int)] {0};
+        itoa(_value, str, 10);
         this->concat((const char*)str);
     }
 
@@ -413,10 +413,17 @@ public:
 
     WrapperString& operator = (const ERaParam& _value) {
         if (_value.isNumber()) {
-            *this = WrapperString(_value.getFloat());
+            (*this) = WrapperString(_value.getFloat());
         }
         else if (_value.isString()) {
             operator = (_value.getString());
+        }
+        return (*this);
+    }
+
+    WrapperString& operator = (const ERaDataJson& _value) {
+        if (_value.isValid()) {
+            operator = (const_cast<ERaDataJson&>(_value).getString());
         }
         return (*this);
     }
@@ -546,19 +553,19 @@ public:
     friend WrapperStringHelper& operator + (const WrapperStringHelper& wsh, double _value);
 
 protected:
-	float get() const override {
-		return 0.0f;
-	}
+    float get() const override {
+        return 0.0f;
+    }
 
-	void set(float _value) override {
-		(void)_value;
-	}
+    void set(float _value) override {
+        (void)_value;
+    }
 
-    void* getPtr() const override {
+    void* getPointer() const override {
         return (void*)this->getString();
     }
 
-    void setPtr(const void* _value) override {
+    void setPointer(const void* _value) override {
         this->setString((const char*)_value);
     }
 

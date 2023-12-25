@@ -75,7 +75,7 @@ public:
         if (this->network.ca_buf) {
             ret = mbedtls_x509_crt_parse(&this->network.cacert, this->network.ca_buf, this->network.ca_len);
             if (ret != 0) {
-            return 0;
+                return 0;
             }
         }
 

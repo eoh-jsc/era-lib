@@ -6,6 +6,12 @@
 #if !defined(API_HAS_FUNCTIONAL_H)
     template <class Proto, class Flash>
     inline
+    void ERaApi<Proto, Flash>::_appLoop() {
+        ERa.ERaApi::appLoop();
+    }
+
+    template <class Proto, class Flash>
+    inline
     void ERaApi<Proto, Flash>::_sendPinEvent(void* args) {
         ERa.ERaApi::sendPinEvent(args);
     }

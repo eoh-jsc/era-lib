@@ -52,7 +52,7 @@ TaskHandle_t ERaOs::osThreadNew(void (*task)(void *args), const char* name, uint
 
 #if defined(ESP32)
     #if !defined(CONFIG_FREERTOS_UNICORE)
-        if (core >= 0 && core < 2) {
+        if (core < 2) {
             xTaskCreatePinnedToCore(task, name, size, args, priority, &hTask, core);
         }
         else {

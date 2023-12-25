@@ -57,6 +57,8 @@ public:
         MillisTime_t startMillis = ERaMillis();
         while (!this->connectWiFi(ssid, pass)) {
             ERaDelay(500);
+            Base::appLoop();
+            ERaWatchdogFeed();
             if (!ERaRemainingTime(startMillis, WIFI_NET_CONNECT_TIMEOUT)) {
                 return false;
             }

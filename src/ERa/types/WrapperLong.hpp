@@ -19,19 +19,19 @@ public:
     }
 
 protected:
-	float get() const override {
-		return (float)this->value;
-	}
+    float get() const override {
+        return (float)this->value;
+    }
 
-	void set(float _value) override {
-		this->value = (long)_value;
-	}
+    void set(float _value) override {
+        this->value = (long)_value;
+    }
 
-    void* getPtr() const override {
+    void* getPointer() const override {
         return nullptr;
     }
 
-    void setPtr(const void* _value) override {
+    void setPointer(const void* _value) override {
         (void)_value;
     }
 
