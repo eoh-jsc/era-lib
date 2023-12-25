@@ -24,20 +24,20 @@ class ERaZigbee
     , public ERaDBZigbee< ERaZigbee<Api> >
 {
     const char* TAG = "Zigbee";
-	const uint8_t SOF = 0xFE;
-	const uint8_t DataStart = 4;
+    const uint8_t SOF = 0xFE;
+    const uint8_t DataStart = 4;
 
     const uint8_t PositionSOF = 0;
-	const uint8_t PositionDataLength = 1;
-	const uint8_t PositionCmd0 = 2;
-	const uint8_t PositionCmd1 = 3;
+    const uint8_t PositionDataLength = 1;
+    const uint8_t PositionCmd0 = 2;
+    const uint8_t PositionCmd1 = 3;
     
-	const uint8_t MinMessageLength = 5;
-	const uint8_t MaxDataSize = 250;
+    const uint8_t MinMessageLength = 5;
+    const uint8_t MaxDataSize = 250;
 
     const uint8_t BEACON_MAX_DEPTH = 0x0F;
-	const OptionsAFT Options = OptionsAFT::DEFAULT_OP;
-	const uint8_t Radius = 2 * BEACON_MAX_DEPTH; // 0x1E
+    const OptionsAFT Options = OptionsAFT::DEFAULT_OP;
+    const uint8_t Radius = 2 * BEACON_MAX_DEPTH; // 0x1E
 
     const uint16_t DefaultPanId = 0x2706;
     const ZBChannelT DefaultChannel = ZBChannelT::CHANNEL_11;
@@ -303,43 +303,43 @@ private:
         this->thisApi().removeFromFlash(filename, force);
     }
 
-	bool isRequest() {
-		return this->queue.readable();
-	}
+    bool isRequest() {
+        return this->queue.readable();
+    }
 
-	ZigbeeAction_t& getRequest() {
-		return this->queue;
-	}
+    ZigbeeAction_t& getRequest() {
+        return this->queue;
+    }
 
-	bool isResponse() {
-		return this->queueRsp.readable();
-	}
+    bool isResponse() {
+        return this->queueRsp.readable();
+    }
 
-	Response_t& getResponse() {
-		return this->queueRsp;
-	}
+    Response_t& getResponse() {
+        return this->queueRsp;
+    }
 
-	bool isDefaultRsp() {
-		return this->queueDefaultRsp.readable();
-	}
+    bool isDefaultRsp() {
+        return this->queueDefaultRsp.readable();
+    }
 
-	DefaultRsp_t& getDefaultRsp() {
-		return this->queueDefaultRsp;
-	}
+    DefaultRsp_t& getDefaultRsp() {
+        return this->queueDefaultRsp;
+    }
 
-	inline
-	const Api& thisApi() const {
-		return static_cast<const Api&>(*this);
-	}
+    inline
+    const Api& thisApi() const {
+        return static_cast<const Api&>(*this);
+    }
 
-	inline
-	Api& thisApi() {
-		return static_cast<Api&>(*this);
-	}
+    inline
+    Api& thisApi() {
+        return static_cast<Api&>(*this);
+    }
 
-	ERaQueue<ZigbeeAction_t, 20> queue;
-	ERaQueue<Response_t, 20> queueRsp;
-	ERaQueue<DefaultRsp_t, 20> queueDefaultRsp;
+    ERaQueue<ZigbeeAction_t, 20> queue;
+    ERaQueue<Response_t, 20> queueRsp;
+    ERaQueue<DefaultRsp_t, 20> queueDefaultRsp;
     QueueMessage_t messageHandle;
     bool initialized;
 
@@ -580,7 +580,7 @@ bool ERaZigbee<Api>::addZigbeeAction(const ZigbeeActionT type, const char* ieeeA
     if (ieeeAddr == nullptr || payload == nullptr) {
         return false;
     }
-	if (!this->queue.writeable()) {
+    if (!this->queue.writeable()) {
         return false;
     }
     char* buf = (char*)ERA_MALLOC(strlen(ieeeAddr) + 1);

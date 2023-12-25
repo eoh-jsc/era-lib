@@ -11,7 +11,7 @@ bool ERaZigbee<Api>::interviewDevice() {
         return false;
     }
 
-	EndpointListT dstEndPoint {EndpointListT::ENDPOINT1};
+    EndpointListT dstEndPoint {EndpointListT::ENDPOINT1};
 
     ERA_LOG(TAG, ERA_PSTR("Interview network address %s(%d) started"), IEEEToString(this->device->address.addr.ieeeAddr).c_str(),
                                                                     this->device->address.addr.nwkAddr);
@@ -122,7 +122,7 @@ bool ERaZigbee<Api>::interviewDevice() {
         if (this->device->epList[i].endpoint == EndpointListT::ENDPOINT242) {
             continue;
         }
-		vector<ClusterIDT> zclIds;
+        vector<ClusterIDT> zclIds;
         for (size_t j = 0; j < this->device->epList[i].inZclCount; ++j) {
             if (this->device->epList[i].inZclIdList[j] == ClusterIDT::ZCL_CLUSTER_BASIC) { /* Skip Bind Basic Cluster */
                 continue;
@@ -262,7 +262,7 @@ void ERaZigbee<Api>::readDataDevice() {
             continue;
         }
         this->device->address.endpoint = this->device->epList[i].endpoint;
-		vector<ClusterIDT> zclIds;
+        vector<ClusterIDT> zclIds;
         const ConfigBindReport_t* config = nullptr;
         for (size_t j = 0; j < this->device->epList[i].inZclCount; ++j) {
             if ((config = this->isBindReportExist(ReportingList, this->device->epList[i].inZclIdList[j])) != nullptr) {

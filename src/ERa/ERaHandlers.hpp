@@ -107,31 +107,31 @@
     #define V99 99
 #endif
 
-#define ERA_CONNECTED()         	void ERaOnConnected()
-#define ERA_DISCONNECTED()      	void ERaOnDisconnected()
-#define ERA_WAITING()				void ERaOnWaiting()
-#define ERA_OPTION_CONNECTED()		void ERaOptConnected(void ERA_UNUSED *arg)
-#define ERA_MODBUS_BAUDRATE()		void ERaModbusBaudrate(uint32_t ERA_UNUSED &baudrate)
-#define ERA_INFO()					void ERaInfo(cJSON ERA_UNUSED *root)
-#define ERA_MODBUS_INFO()			void ERaModbusInfo(cJSON ERA_UNUSED *root)
+#define ERA_CONNECTED()             void ERaOnConnected()
+#define ERA_DISCONNECTED()          void ERaOnDisconnected()
+#define ERA_WAITING()               void ERaOnWaiting()
+#define ERA_OPTION_CONNECTED()      void ERaOptConnected(void ERA_UNUSED *arg)
+#define ERA_MODBUS_BAUDRATE()       void ERaModbusBaudrate(uint32_t ERA_UNUSED &baudrate)
+#define ERA_INFO()                  void ERaInfo(cJSON ERA_UNUSED *root)
+#define ERA_MODBUS_INFO()           void ERaModbusInfo(cJSON ERA_UNUSED *root)
 
-#define ERA_WRITE_2(Pin)        	void ERaWidgetWrite ## Pin (uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param)
-#define ERA_WRITE(Pin)          	ERA_WRITE_2(Pin)
+#define ERA_WRITE_2(Pin)            void ERaWidgetWrite ## Pin (uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param)
+#define ERA_WRITE(Pin)              ERA_WRITE_2(Pin)
 
-#define ERA_PIN_READ_2(Pin)     	void ERaWidgetPinRead ## Pin (uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param, const ERaParam ERA_UNUSED &raw)
-#define ERA_PIN_READ(Pin)       	ERA_PIN_READ_2(Pin)
+#define ERA_PIN_READ_2(Pin)         void ERaWidgetPinRead ## Pin (uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param, const ERaParam ERA_UNUSED &raw)
+#define ERA_PIN_READ(Pin)           ERA_PIN_READ_2(Pin)
 
-#define ERA_PIN_WRITE_2(Pin)    	bool ERaWidgetPinWrite ## Pin (uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param, const ERaParam ERA_UNUSED &raw)
-#define ERA_PIN_WRITE(Pin)      	ERA_PIN_WRITE_2(Pin)
+#define ERA_PIN_WRITE_2(Pin)        bool ERaWidgetPinWrite ## Pin (uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param, const ERaParam ERA_UNUSED &raw)
+#define ERA_PIN_WRITE(Pin)          ERA_PIN_WRITE_2(Pin)
 
-#define ERA_WRITE_DEFAULT()			ERA_WRITE_2(Default)
-#define ERA_PIN_READ_DEFAULT()		ERA_PIN_READ_2(Default)
-#define ERA_PIN_WRITE_DEFAULT()		ERA_PIN_WRITE_2(Default)
+#define ERA_WRITE_DEFAULT()         ERA_WRITE_2(Default)
+#define ERA_PIN_READ_DEFAULT()      ERA_PIN_READ_2(Default)
+#define ERA_PIN_WRITE_DEFAULT()     ERA_PIN_WRITE_2(Default)
 
-#define ERA_ON_CHANGE(Pin)			ERA_WRITE(Pin)
-#define ERA_ON_RECEIVE(Pin)			ERA_WRITE(Pin)
-#define ERA_ON_CHANGE_DEFAULT()		ERA_WRITE_DEFAULT()
-#define ERA_ON_RECEIVE_DEFAULT()	ERA_WRITE_DEFAULT()
+#define ERA_ON_CHANGE(Pin)          ERA_WRITE(Pin)
+#define ERA_ON_RECEIVE(Pin)         ERA_WRITE(Pin)
+#define ERA_ON_CHANGE_DEFAULT()     ERA_WRITE_DEFAULT()
+#define ERA_ON_RECEIVE_DEFAULT()    ERA_WRITE_DEFAULT()
 
 #ifdef __cplusplus
 extern "C" {
@@ -206,56 +206,56 @@ ERA_WRITE(47);
 ERA_WRITE(48);
 ERA_WRITE(49);
 #if defined(ERA_100_PINS)
-	ERA_WRITE(50);
-	ERA_WRITE(51);
-	ERA_WRITE(52);
-	ERA_WRITE(53);
-	ERA_WRITE(54);
-	ERA_WRITE(55);
-	ERA_WRITE(56);
-	ERA_WRITE(57);
-	ERA_WRITE(58);
-	ERA_WRITE(59);
-	ERA_WRITE(60);
-	ERA_WRITE(61);
-	ERA_WRITE(62);
-	ERA_WRITE(63);
-	ERA_WRITE(64);
-	ERA_WRITE(65);
-	ERA_WRITE(66);
-	ERA_WRITE(67);
-	ERA_WRITE(68);
-	ERA_WRITE(69);
-	ERA_WRITE(70);
-	ERA_WRITE(71);
-	ERA_WRITE(72);
-	ERA_WRITE(73);
-	ERA_WRITE(74);
-	ERA_WRITE(75);
-	ERA_WRITE(76);
-	ERA_WRITE(77);
-	ERA_WRITE(78);
-	ERA_WRITE(79);
-	ERA_WRITE(80);
-	ERA_WRITE(81);
-	ERA_WRITE(82);
-	ERA_WRITE(83);
-	ERA_WRITE(84);
-	ERA_WRITE(85);
-	ERA_WRITE(86);
-	ERA_WRITE(87);
-	ERA_WRITE(88);
-	ERA_WRITE(89);
-	ERA_WRITE(90);
-	ERA_WRITE(91);
-	ERA_WRITE(92);
-	ERA_WRITE(93);
-	ERA_WRITE(94);
-	ERA_WRITE(95);
-	ERA_WRITE(96);
-	ERA_WRITE(97);
-	ERA_WRITE(98);
-	ERA_WRITE(99);
+    ERA_WRITE(50);
+    ERA_WRITE(51);
+    ERA_WRITE(52);
+    ERA_WRITE(53);
+    ERA_WRITE(54);
+    ERA_WRITE(55);
+    ERA_WRITE(56);
+    ERA_WRITE(57);
+    ERA_WRITE(58);
+    ERA_WRITE(59);
+    ERA_WRITE(60);
+    ERA_WRITE(61);
+    ERA_WRITE(62);
+    ERA_WRITE(63);
+    ERA_WRITE(64);
+    ERA_WRITE(65);
+    ERA_WRITE(66);
+    ERA_WRITE(67);
+    ERA_WRITE(68);
+    ERA_WRITE(69);
+    ERA_WRITE(70);
+    ERA_WRITE(71);
+    ERA_WRITE(72);
+    ERA_WRITE(73);
+    ERA_WRITE(74);
+    ERA_WRITE(75);
+    ERA_WRITE(76);
+    ERA_WRITE(77);
+    ERA_WRITE(78);
+    ERA_WRITE(79);
+    ERA_WRITE(80);
+    ERA_WRITE(81);
+    ERA_WRITE(82);
+    ERA_WRITE(83);
+    ERA_WRITE(84);
+    ERA_WRITE(85);
+    ERA_WRITE(86);
+    ERA_WRITE(87);
+    ERA_WRITE(88);
+    ERA_WRITE(89);
+    ERA_WRITE(90);
+    ERA_WRITE(91);
+    ERA_WRITE(92);
+    ERA_WRITE(93);
+    ERA_WRITE(94);
+    ERA_WRITE(95);
+    ERA_WRITE(96);
+    ERA_WRITE(97);
+    ERA_WRITE(98);
+    ERA_WRITE(99);
 #endif
 
 ERA_PIN_READ(  );
@@ -310,56 +310,56 @@ ERA_PIN_READ(47);
 ERA_PIN_READ(48);
 ERA_PIN_READ(49);
 #if defined(ERA_100_PINS)
-	ERA_PIN_READ(50);
-	ERA_PIN_READ(51);
-	ERA_PIN_READ(52);
-	ERA_PIN_READ(53);
-	ERA_PIN_READ(54);
-	ERA_PIN_READ(55);
-	ERA_PIN_READ(56);
-	ERA_PIN_READ(57);
-	ERA_PIN_READ(58);
-	ERA_PIN_READ(59);
-	ERA_PIN_READ(60);
-	ERA_PIN_READ(61);
-	ERA_PIN_READ(62);
-	ERA_PIN_READ(63);
-	ERA_PIN_READ(64);
-	ERA_PIN_READ(65);
-	ERA_PIN_READ(66);
-	ERA_PIN_READ(67);
-	ERA_PIN_READ(68);
-	ERA_PIN_READ(69);
-	ERA_PIN_READ(70);
-	ERA_PIN_READ(71);
-	ERA_PIN_READ(72);
-	ERA_PIN_READ(73);
-	ERA_PIN_READ(74);
-	ERA_PIN_READ(75);
-	ERA_PIN_READ(76);
-	ERA_PIN_READ(77);
-	ERA_PIN_READ(78);
-	ERA_PIN_READ(79);
-	ERA_PIN_READ(80);
-	ERA_PIN_READ(81);
-	ERA_PIN_READ(82);
-	ERA_PIN_READ(83);
-	ERA_PIN_READ(84);
-	ERA_PIN_READ(85);
-	ERA_PIN_READ(86);
-	ERA_PIN_READ(87);
-	ERA_PIN_READ(88);
-	ERA_PIN_READ(89);
-	ERA_PIN_READ(90);
-	ERA_PIN_READ(91);
-	ERA_PIN_READ(92);
-	ERA_PIN_READ(93);
-	ERA_PIN_READ(94);
-	ERA_PIN_READ(95);
-	ERA_PIN_READ(96);
-	ERA_PIN_READ(97);
-	ERA_PIN_READ(98);
-	ERA_PIN_READ(99);
+    ERA_PIN_READ(50);
+    ERA_PIN_READ(51);
+    ERA_PIN_READ(52);
+    ERA_PIN_READ(53);
+    ERA_PIN_READ(54);
+    ERA_PIN_READ(55);
+    ERA_PIN_READ(56);
+    ERA_PIN_READ(57);
+    ERA_PIN_READ(58);
+    ERA_PIN_READ(59);
+    ERA_PIN_READ(60);
+    ERA_PIN_READ(61);
+    ERA_PIN_READ(62);
+    ERA_PIN_READ(63);
+    ERA_PIN_READ(64);
+    ERA_PIN_READ(65);
+    ERA_PIN_READ(66);
+    ERA_PIN_READ(67);
+    ERA_PIN_READ(68);
+    ERA_PIN_READ(69);
+    ERA_PIN_READ(70);
+    ERA_PIN_READ(71);
+    ERA_PIN_READ(72);
+    ERA_PIN_READ(73);
+    ERA_PIN_READ(74);
+    ERA_PIN_READ(75);
+    ERA_PIN_READ(76);
+    ERA_PIN_READ(77);
+    ERA_PIN_READ(78);
+    ERA_PIN_READ(79);
+    ERA_PIN_READ(80);
+    ERA_PIN_READ(81);
+    ERA_PIN_READ(82);
+    ERA_PIN_READ(83);
+    ERA_PIN_READ(84);
+    ERA_PIN_READ(85);
+    ERA_PIN_READ(86);
+    ERA_PIN_READ(87);
+    ERA_PIN_READ(88);
+    ERA_PIN_READ(89);
+    ERA_PIN_READ(90);
+    ERA_PIN_READ(91);
+    ERA_PIN_READ(92);
+    ERA_PIN_READ(93);
+    ERA_PIN_READ(94);
+    ERA_PIN_READ(95);
+    ERA_PIN_READ(96);
+    ERA_PIN_READ(97);
+    ERA_PIN_READ(98);
+    ERA_PIN_READ(99);
 #endif
 
 ERA_PIN_WRITE(  );
@@ -414,56 +414,56 @@ ERA_PIN_WRITE(47);
 ERA_PIN_WRITE(48);
 ERA_PIN_WRITE(49);
 #if defined(ERA_100_PINS)
-	ERA_PIN_WRITE(50);
-	ERA_PIN_WRITE(51);
-	ERA_PIN_WRITE(52);
-	ERA_PIN_WRITE(53);
-	ERA_PIN_WRITE(54);
-	ERA_PIN_WRITE(55);
-	ERA_PIN_WRITE(56);
-	ERA_PIN_WRITE(57);
-	ERA_PIN_WRITE(58);
-	ERA_PIN_WRITE(59);
-	ERA_PIN_WRITE(60);
-	ERA_PIN_WRITE(61);
-	ERA_PIN_WRITE(62);
-	ERA_PIN_WRITE(63);
-	ERA_PIN_WRITE(64);
-	ERA_PIN_WRITE(65);
-	ERA_PIN_WRITE(66);
-	ERA_PIN_WRITE(67);
-	ERA_PIN_WRITE(68);
-	ERA_PIN_WRITE(69);
-	ERA_PIN_WRITE(70);
-	ERA_PIN_WRITE(71);
-	ERA_PIN_WRITE(72);
-	ERA_PIN_WRITE(73);
-	ERA_PIN_WRITE(74);
-	ERA_PIN_WRITE(75);
-	ERA_PIN_WRITE(76);
-	ERA_PIN_WRITE(77);
-	ERA_PIN_WRITE(78);
-	ERA_PIN_WRITE(79);
-	ERA_PIN_WRITE(80);
-	ERA_PIN_WRITE(81);
-	ERA_PIN_WRITE(82);
-	ERA_PIN_WRITE(83);
-	ERA_PIN_WRITE(84);
-	ERA_PIN_WRITE(85);
-	ERA_PIN_WRITE(86);
-	ERA_PIN_WRITE(87);
-	ERA_PIN_WRITE(88);
-	ERA_PIN_WRITE(89);
-	ERA_PIN_WRITE(90);
-	ERA_PIN_WRITE(91);
-	ERA_PIN_WRITE(92);
-	ERA_PIN_WRITE(93);
-	ERA_PIN_WRITE(94);
-	ERA_PIN_WRITE(95);
-	ERA_PIN_WRITE(96);
-	ERA_PIN_WRITE(97);
-	ERA_PIN_WRITE(98);
-	ERA_PIN_WRITE(99);
+    ERA_PIN_WRITE(50);
+    ERA_PIN_WRITE(51);
+    ERA_PIN_WRITE(52);
+    ERA_PIN_WRITE(53);
+    ERA_PIN_WRITE(54);
+    ERA_PIN_WRITE(55);
+    ERA_PIN_WRITE(56);
+    ERA_PIN_WRITE(57);
+    ERA_PIN_WRITE(58);
+    ERA_PIN_WRITE(59);
+    ERA_PIN_WRITE(60);
+    ERA_PIN_WRITE(61);
+    ERA_PIN_WRITE(62);
+    ERA_PIN_WRITE(63);
+    ERA_PIN_WRITE(64);
+    ERA_PIN_WRITE(65);
+    ERA_PIN_WRITE(66);
+    ERA_PIN_WRITE(67);
+    ERA_PIN_WRITE(68);
+    ERA_PIN_WRITE(69);
+    ERA_PIN_WRITE(70);
+    ERA_PIN_WRITE(71);
+    ERA_PIN_WRITE(72);
+    ERA_PIN_WRITE(73);
+    ERA_PIN_WRITE(74);
+    ERA_PIN_WRITE(75);
+    ERA_PIN_WRITE(76);
+    ERA_PIN_WRITE(77);
+    ERA_PIN_WRITE(78);
+    ERA_PIN_WRITE(79);
+    ERA_PIN_WRITE(80);
+    ERA_PIN_WRITE(81);
+    ERA_PIN_WRITE(82);
+    ERA_PIN_WRITE(83);
+    ERA_PIN_WRITE(84);
+    ERA_PIN_WRITE(85);
+    ERA_PIN_WRITE(86);
+    ERA_PIN_WRITE(87);
+    ERA_PIN_WRITE(88);
+    ERA_PIN_WRITE(89);
+    ERA_PIN_WRITE(90);
+    ERA_PIN_WRITE(91);
+    ERA_PIN_WRITE(92);
+    ERA_PIN_WRITE(93);
+    ERA_PIN_WRITE(94);
+    ERA_PIN_WRITE(95);
+    ERA_PIN_WRITE(96);
+    ERA_PIN_WRITE(97);
+    ERA_PIN_WRITE(98);
+    ERA_PIN_WRITE(99);
 #endif
 
 typedef void (*ERaWriteHandler_t)(uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param);

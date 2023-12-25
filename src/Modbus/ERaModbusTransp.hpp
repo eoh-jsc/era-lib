@@ -806,15 +806,15 @@ public:
     }
 
 private:
-	inline
-	const Modbus& thisModbus() const {
-		return static_cast<const Modbus&>(*this);
-	}
+    inline
+    const Modbus& thisModbus() const {
+        return static_cast<const Modbus&>(*this);
+    }
 
-	inline
-	Modbus& thisModbus() {
-		return static_cast<Modbus&>(*this);
-	}
+    inline
+    Modbus& thisModbus() {
+        return static_cast<Modbus&>(*this);
+    }
 
 };
 

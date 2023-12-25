@@ -5,8 +5,8 @@
 
 template <class Zigbee>
 bool ERaFromZigbee<Zigbee>::onOffFromZigbee(const DataAFMsg_t& afMsg, cJSON* root, uint16_t attribute, uint64_t& value) {
-	bool defined {true};
-	switch (attribute) {
+    bool defined {true};
+    switch (attribute) {
         case ZbZclOnOffSvrAttrT::ZCL_ONOFF_ATTR_ONOFF:
             this->addDataZigbee<uint8_t>(afMsg, root, KEY(ONOFF, ONOFF), value);
             break;
@@ -32,7 +32,7 @@ bool ERaFromZigbee<Zigbee>::onOffSpecificFromZigbee(const DataAFMsg_t& afMsg, cJ
         return false;
     }
 
-	bool defined {true};
+    bool defined {true};
     std::string keyId(key);
     std::transform(keyId.begin(), keyId.end(), keyId.begin(), [](unsigned char c){
         return std::tolower(c);
@@ -44,21 +44,21 @@ bool ERaFromZigbee<Zigbee>::onOffSpecificFromZigbee(const DataAFMsg_t& afMsg, cJ
     this->addDataZigbee<uint8_t>(afMsg, root, KEY_SPEC(ONOFF, STATE_COMMAND), cmd);
 
     switch (cmd) {
-		case ZbZclOnOffSvrCmdT::ZCL_ONOFF_COMMAND_OFF:
-		case ZbZclOnOffSvrCmdT::ZCL_ONOFF_COMMAND_ON:
-		case ZbZclOnOffSvrCmdT::ZCL_ONOFF_COMMAND_TOGGLE:
-		case ZbZclOnOffSvrCmdT::ZCL_ONOFF_OFF_WITH_EFFECT:
-		case ZbZclOnOffSvrCmdT::ZCL_ONOFF_ON_WITH_RECALL:
-		case ZbZclOnOffSvrCmdT::ZCL_ONOFF_ON_WITH_TIMED_OFF:
+        case ZbZclOnOffSvrCmdT::ZCL_ONOFF_COMMAND_OFF:
+        case ZbZclOnOffSvrCmdT::ZCL_ONOFF_COMMAND_ON:
+        case ZbZclOnOffSvrCmdT::ZCL_ONOFF_COMMAND_TOGGLE:
+        case ZbZclOnOffSvrCmdT::ZCL_ONOFF_OFF_WITH_EFFECT:
+        case ZbZclOnOffSvrCmdT::ZCL_ONOFF_ON_WITH_RECALL:
+        case ZbZclOnOffSvrCmdT::ZCL_ONOFF_ON_WITH_TIMED_OFF:
             break;
-		case ZbZclOnOffSvrCmdT::ZCL_ONOFF_TUYA_BUTTON:
+        case ZbZclOnOffSvrCmdT::ZCL_ONOFF_TUYA_BUTTON:
             this->addDataZigbee<uint8_t>(afMsg, root, KEY_SPEC(ONOFF, TUYA_BUTTON), afMsg.pData[0]);
             break;
         default:
             defined = false;
             break;
     }
-	return defined;
+    return defined;
 }
 
 #endif /* INC_ERA_FROM_ONOFF_ZIGBEE_HPP_ */

@@ -158,15 +158,15 @@ protected:
     }
 
 private:
-	inline
-	const Proto& thisProto() const {
-		return static_cast<const Proto&>(*this);
-	}
+    inline
+    const Proto& thisProto() const {
+        return static_cast<const Proto&>(*this);
+    }
 
-	inline
-	Proto& thisProto() {
-		return static_cast<Proto&>(*this);
-	}
+    inline
+    Proto& thisProto() {
+        return static_cast<Proto&>(*this);
+    }
 
     Flash& flash;
     ERaOTAHandler* pHandler;

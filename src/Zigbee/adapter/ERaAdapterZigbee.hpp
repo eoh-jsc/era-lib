@@ -132,13 +132,13 @@ void ERaZigbee<Api>::startZigbee(bool& format, bool& invalid) {
     ToZigbee::CommandZigbee::extendedPanIdReadOSALZstack(1);
     ToZigbee::CommandZigbee::activeKeyReadOSALZstack(1);
     ToZigbee::CommandZigbee::alternKeyReadOSALZstack(1);
-	ToZigbee::CommandZigbee::apsExtPanIdReadOSALZstack(1);
-	ToZigbee::CommandZigbee::apsLinkKeyReadOSALZstack(1);
-	ToZigbee::CommandZigbee::precfgkeysReadZstack(1);
-	ToZigbee::CommandZigbee::enablePrecfgkeysReadOSALZstack(1);
-	ToZigbee::CommandZigbee::channelListReadOSALZstack(1);
-	ToZigbee::CommandZigbee::touchlinkKeyReadOSALZstack(1);
-	ToZigbee::CommandZigbee::materialTableReadOSALZstack(1);
+    ToZigbee::CommandZigbee::apsExtPanIdReadOSALZstack(1);
+    ToZigbee::CommandZigbee::apsLinkKeyReadOSALZstack(1);
+    ToZigbee::CommandZigbee::precfgkeysReadZstack(1);
+    ToZigbee::CommandZigbee::enablePrecfgkeysReadOSALZstack(1);
+    ToZigbee::CommandZigbee::channelListReadOSALZstack(1);
+    ToZigbee::CommandZigbee::touchlinkKeyReadOSALZstack(1);
+    ToZigbee::CommandZigbee::materialTableReadOSALZstack(1);
 
     ToZigbee::CommandZigbee::requestInfoNwkExtZstack(1);
 
@@ -208,11 +208,11 @@ void ERaZigbee<Api>::generateNetworkKey(uint8_t(&nwkKey)[size]) {
         return CopyArray(this->DefaultNetworkKey, nwkKey);
     }
 
-	size_t index {0};
-	size_t len = sizeof(this->DefaultNetworkKey) / sizeof(this->DefaultNetworkKey[0]);
-	for (size_t i = 0; i < len; ++i) {
-		nwkKey[i] = this->coordinator->address.addr.ieeeAddr[index++ % LENGTH_EXTADDR_IEEE] ^ this->DefaultNetworkKey[i];
-	}
+    size_t index {0};
+    size_t len = sizeof(this->DefaultNetworkKey) / sizeof(this->DefaultNetworkKey[0]);
+    for (size_t i = 0; i < len; ++i) {
+        nwkKey[i] = this->coordinator->address.addr.ieeeAddr[index++ % LENGTH_EXTADDR_IEEE] ^ this->DefaultNetworkKey[i];
+    }
 }
 
 template <class Api>
@@ -229,67 +229,67 @@ void ERaZigbee<Api>::createInfoCoordinator() {
     }
 
     cJSON_AddStringToObject(root, "type", ((this->coordinator->product == ZnpVersionT::zStack12) ? "Zigbee 1.2 HA" : "Zigbee 3.0"));
-	cJSON_AddNumberToObject(netItem, "channel", this->coordinator->nIB.nwkLogicalChannel);
-	cJSON_AddNumberToObject(netItem, "nwk_addr", this->coordinator->address.addr.nwkAddr);
-	cJSON_AddStringToObject(netItem, "ieee_addr", IEEEToString(this->coordinator->address.addr.ieeeAddr).c_str());
-	cJSON_AddNumberToObject(netItem, "pan_id", this->coordinator->address.panId);
-	cJSON_AddStringToObject(netItem, "ext_pan_id", IEEEToString(this->coordinator->extPanId).c_str());
+    cJSON_AddNumberToObject(netItem, "channel", this->coordinator->nIB.nwkLogicalChannel);
+    cJSON_AddNumberToObject(netItem, "nwk_addr", this->coordinator->address.addr.nwkAddr);
+    cJSON_AddStringToObject(netItem, "ieee_addr", IEEEToString(this->coordinator->address.addr.ieeeAddr).c_str());
+    cJSON_AddNumberToObject(netItem, "pan_id", this->coordinator->address.panId);
+    cJSON_AddStringToObject(netItem, "ext_pan_id", IEEEToString(this->coordinator->extPanId).c_str());
 
-	switch (this->coordinator->commStatus) {
-		case APPCFCommStatusT::BDB_COMMISSIONING_SUCCESS:
-			cJSON_AddStringToObject(netItem, "commissioning", "success");
-			break;
-		case APPCFCommStatusT::BDB_COMMISSIONING_IN_PROGRESS:
-			cJSON_AddStringToObject(netItem, "commissioning", "in progress");
-			break;
-		case APPCFCommStatusT::BDB_COMMISSIONING_NO_NETWORK:
-			cJSON_AddStringToObject(netItem, "commissioning", "no network");
-			break;
-		case APPCFCommStatusT::BDB_COMMISSIONING_TL_TARGET_FAILURE:
-			cJSON_AddStringToObject(netItem, "commissioning", "target failure");
-			break;
-		case APPCFCommStatusT::BDB_COMMISSIONING_TL_NOT_AA_CAPABLE:
-			cJSON_AddStringToObject(netItem, "commissioning", "tl not aa capable");
-			break;
-		case APPCFCommStatusT::BDB_COMMISSIONING_TL_NO_SCAN_RESPONSE:
-			cJSON_AddStringToObject(netItem, "commissioning", "tl no scan response");
-			break;
-		case APPCFCommStatusT::BDB_COMMISSIONING_TL_NOT_PERMITTED:
-			cJSON_AddStringToObject(netItem, "commissioning", "tl not permitted");
-			break;
-		case APPCFCommStatusT::BDB_COMMISSIONING_TCLK_EX_FAILURE:
-			cJSON_AddStringToObject(netItem, "commissioning", "tclk ex failure");
-			break;
-		case APPCFCommStatusT::BDB_COMMISSIONING_FORMATION_FAILURE:
-			cJSON_AddStringToObject(netItem, "commissioning", "formation failure");
-			break;
-		case APPCFCommStatusT::BDB_COMMISSIONING_FB_TARGET_IN_PROGRESS:
-			cJSON_AddStringToObject(netItem, "commissioning", "fb target in progress");
-			break;
-		case APPCFCommStatusT::BDB_COMMISSIONING_FB_INITIATOR_IN_PROGRESS:
-			cJSON_AddStringToObject(netItem, "commissioning", "fb initiator in progress");
-			break;
-		case APPCFCommStatusT::BDB_COMMISSIONING_FB_NO_IDENTIFY_QUERY_RESPONSE:
-			cJSON_AddStringToObject(netItem, "commissioning", "fb no identify query response");
-			break;
-		case APPCFCommStatusT::BDB_COMMISSIONING_FB_BINDING_TABLE_FULL:
-			cJSON_AddStringToObject(netItem, "commissioning", "fb binding table full");
-			break;
-		case APPCFCommStatusT::BDB_COMMISSIONING_NETWORK_RESTORED:
-			cJSON_AddStringToObject(netItem, "commissioning", "network restored");
-			break;
-		case APPCFCommStatusT::BDB_COMMISSIONING_FAILURE:
-			cJSON_AddStringToObject(netItem, "commissioning", "failure");
-			break;
-		default:
-			cJSON_AddNumberToObject(netItem, "commissioning", this->coordinator->commStatus);
-			break;
-	}
+    switch (this->coordinator->commStatus) {
+        case APPCFCommStatusT::BDB_COMMISSIONING_SUCCESS:
+            cJSON_AddStringToObject(netItem, "commissioning", "success");
+            break;
+        case APPCFCommStatusT::BDB_COMMISSIONING_IN_PROGRESS:
+            cJSON_AddStringToObject(netItem, "commissioning", "in progress");
+            break;
+        case APPCFCommStatusT::BDB_COMMISSIONING_NO_NETWORK:
+            cJSON_AddStringToObject(netItem, "commissioning", "no network");
+            break;
+        case APPCFCommStatusT::BDB_COMMISSIONING_TL_TARGET_FAILURE:
+            cJSON_AddStringToObject(netItem, "commissioning", "target failure");
+            break;
+        case APPCFCommStatusT::BDB_COMMISSIONING_TL_NOT_AA_CAPABLE:
+            cJSON_AddStringToObject(netItem, "commissioning", "tl not aa capable");
+            break;
+        case APPCFCommStatusT::BDB_COMMISSIONING_TL_NO_SCAN_RESPONSE:
+            cJSON_AddStringToObject(netItem, "commissioning", "tl no scan response");
+            break;
+        case APPCFCommStatusT::BDB_COMMISSIONING_TL_NOT_PERMITTED:
+            cJSON_AddStringToObject(netItem, "commissioning", "tl not permitted");
+            break;
+        case APPCFCommStatusT::BDB_COMMISSIONING_TCLK_EX_FAILURE:
+            cJSON_AddStringToObject(netItem, "commissioning", "tclk ex failure");
+            break;
+        case APPCFCommStatusT::BDB_COMMISSIONING_FORMATION_FAILURE:
+            cJSON_AddStringToObject(netItem, "commissioning", "formation failure");
+            break;
+        case APPCFCommStatusT::BDB_COMMISSIONING_FB_TARGET_IN_PROGRESS:
+            cJSON_AddStringToObject(netItem, "commissioning", "fb target in progress");
+            break;
+        case APPCFCommStatusT::BDB_COMMISSIONING_FB_INITIATOR_IN_PROGRESS:
+            cJSON_AddStringToObject(netItem, "commissioning", "fb initiator in progress");
+            break;
+        case APPCFCommStatusT::BDB_COMMISSIONING_FB_NO_IDENTIFY_QUERY_RESPONSE:
+            cJSON_AddStringToObject(netItem, "commissioning", "fb no identify query response");
+            break;
+        case APPCFCommStatusT::BDB_COMMISSIONING_FB_BINDING_TABLE_FULL:
+            cJSON_AddStringToObject(netItem, "commissioning", "fb binding table full");
+            break;
+        case APPCFCommStatusT::BDB_COMMISSIONING_NETWORK_RESTORED:
+            cJSON_AddStringToObject(netItem, "commissioning", "network restored");
+            break;
+        case APPCFCommStatusT::BDB_COMMISSIONING_FAILURE:
+            cJSON_AddStringToObject(netItem, "commissioning", "failure");
+            break;
+        default:
+            cJSON_AddNumberToObject(netItem, "commissioning", this->coordinator->commStatus);
+            break;
+    }
 
-	cJSON_AddItemToObject(root, "network", netItem);
-	cJSON_AddNumberToObject(root, "transmit_power", this->coordinator->transmitPower);
-	cJSON_AddBoolToObject(root, "permit_join", this->coordinator->permitJoin.enable);
-	cJSON_AddNumberToObject(root, "device_count", this->coordinator->deviceCount);
+    cJSON_AddItemToObject(root, "network", netItem);
+    cJSON_AddNumberToObject(root, "transmit_power", this->coordinator->transmitPower);
+    cJSON_AddBoolToObject(root, "permit_join", this->coordinator->permitJoin.enable);
+    cJSON_AddNumberToObject(root, "device_count", this->coordinator->deviceCount);
 
     this->publishZigbeeData(TOPIC_ZIGBEE_BRIDGE_INFO, root);
 

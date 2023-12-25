@@ -77,9 +77,9 @@ void ERaFlash::beginRead(const char* filename) {
     while (this->readFlashUntil('/')) {
         size_t size = this->getSizeFromPosition() + 1;
         char* buf = (char*)ERA_MALLOC(size);
-		if (buf == nullptr) {
-			return;
-		}
+        if (buf == nullptr) {
+            return;
+        }
         this->readFlashUntil('\0', buf, size);
         if (strcmp(filename, buf)) {
             this->readFlashUntil('\0');
@@ -127,15 +127,15 @@ void ERaFlash::beginWriteWithMode(const char* filename, bool append) {
     while (this->readFlashUntil('/')) {
         size_t size = this->getSizeFromPosition() + 1;
         char* buf = (char*)ERA_MALLOC(size);
-		if (buf == nullptr) {
-			return;
-		}
-		this->readFlashUntil('\0', buf, size);
-		if (strcmp(filename, buf)) {
-			this->readFlashUntil('\0');
-			free(buf);
-			continue;
-		}
+        if (buf == nullptr) {
+            return;
+        }
+        this->readFlashUntil('\0', buf, size);
+        if (strcmp(filename, buf)) {
+            this->readFlashUntil('\0');
+            free(buf);
+            continue;
+        }
         if (!append) {
             this->setPosition(this->position - strlen(buf) - 2);
             dst = this->position;
@@ -190,9 +190,9 @@ void ERaFlash::writeLine(const char* buf) {
     for (size_t i = (this->maxLength - 1); i > end; --i) {
         eeprom_buffered_write_byte(i, eeprom_buffered_read_byte(i - len - 1));
     }
-	for (size_t i = 0; i < len + 1; ++i) {
-		eeprom_buffered_write_byte(this->position + i, 0);
-	}
+    for (size_t i = 0; i < len + 1; ++i) {
+        eeprom_buffered_write_byte(this->position + i, 0);
+    }
     size_t index {0};
     for (size_t i = this->position; i < (this->maxLength - 2); ++i) {
         eeprom_buffered_write_byte(i, buf[index++]);
@@ -236,9 +236,9 @@ char* ERaFlash::readFlash(const char* filename) {
     while (this->readFlashUntil('/')) {
         size_t size = this->getSizeFromPosition() + 1;
         char* buf = (char*)ERA_MALLOC(size);
-		if (buf == nullptr) {
-			return nullptr;
-		}
+        if (buf == nullptr) {
+            return nullptr;
+        }
         this->readFlashUntil('\0', buf, size);
         if (strcmp(filename, buf)) {
             this->readFlashUntil('\0');
@@ -248,9 +248,9 @@ char* ERaFlash::readFlash(const char* filename) {
         free(buf);
         size = this->getSizeFromPosition() + 1;
         buf = (char*)ERA_MALLOC(size);
-		if (buf == nullptr) {
-			return nullptr;
-		}
+        if (buf == nullptr) {
+            return nullptr;
+        }
         this->readFlashUntil('\0', buf, size);
         return buf;
     }
@@ -301,15 +301,15 @@ void ERaFlash::writeFlash(const char* filename, const char* buffer) {
     while (this->readFlashUntil('/')) {
         size_t size = this->getSizeFromPosition() + 1;
         char* buf = (char*)ERA_MALLOC(size);
-		if (buf == nullptr) {
-			return;
-		}
-		this->readFlashUntil('\0', buf, size);
-		if (strcmp(filename, buf)) {
-			this->readFlashUntil('\0');
-			free(buf);
-			continue;
-		}
+        if (buf == nullptr) {
+            return;
+        }
+        this->readFlashUntil('\0', buf, size);
+        if (strcmp(filename, buf)) {
+            this->readFlashUntil('\0');
+            free(buf);
+            continue;
+        }
         this->setPosition(this->position - strlen(buf) - 2);
         dst = this->position;
         this->clearFlashUntil('\0');
@@ -323,15 +323,15 @@ void ERaFlash::writeFlash(const char* filename, const char* buffer) {
         this->flashMove(dst, this->position);
         this->setPosition(0);
     }
-	if (!strlen(buffer)) {
-		return;
-	}
-	while (this->readFlashUntil('/')) {
-		this->readFlashUntil('\0');
-	}
-	if (found && this->position) {
-		this->readFlashUntil('\0');
-	}
+    if (!strlen(buffer)) {
+        return;
+    }
+    while (this->readFlashUntil('/')) {
+        this->readFlashUntil('\0');
+    }
+    if (found && this->position) {
+        this->readFlashUntil('\0');
+    }
     size_t index {0};
     eeprom_buffered_write_byte(this->position++, '/');
     for (size_t i = 0; i < strlen(filename); ++i) {

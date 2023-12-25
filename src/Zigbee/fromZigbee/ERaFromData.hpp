@@ -9,12 +9,12 @@ IdentDeviceAddr_t* ERaFromZigbee<Zigbee>::createDataGlobal(const DataAFMsg_t& af
     IdentDeviceAddr_t* deviceInfo = std::find_if(std::begin(this->coordinator->deviceIdent), std::end(this->coordinator->deviceIdent),
                                                 find_deviceWithNwkAddr_t(afMsg.srcAddr.addr.nwkAddr));
     if (deviceInfo == std::end(this->coordinator->deviceIdent)) {
-		if (ZigbeeState::is(ZigbeeStateT::STATE_ZB_INIT_MAX)) {
-			return nullptr;
+        if (ZigbeeState::is(ZigbeeStateT::STATE_ZB_INIT_MAX)) {
+            return nullptr;
         }
-		if (ZigbeeState::is(ZigbeeStateT::STATE_ZB_DEVICE_JOINED) ||
+        if (ZigbeeState::is(ZigbeeStateT::STATE_ZB_DEVICE_JOINED) ||
             ZigbeeState::is(ZigbeeStateT::STATE_ZB_DEVICE_INTERVIEWING)) {
-			if (afMsg.srcAddr.addr.nwkAddr == this->device->address.addr.nwkAddr) {
+            if (afMsg.srcAddr.addr.nwkAddr == this->device->address.addr.nwkAddr) {
                 deviceInfo = std::find_if(std::begin(this->coordinator->deviceIdent), std::end(this->coordinator->deviceIdent),
                                             find_deviceWithIEEEAddr_t(this->device->address.addr.ieeeAddr));
             }
@@ -24,8 +24,8 @@ IdentDeviceAddr_t* ERaFromZigbee<Zigbee>::createDataGlobal(const DataAFMsg_t& af
         }
     }
     if (deviceInfo == std::end(this->coordinator->deviceIdent)) {
-		if (afMsg.zclId == ClusterIDT::ZCL_CLUSTER_GREEN_POWER) {
-			return nullptr;
+        if (afMsg.zclId == ClusterIDT::ZCL_CLUSTER_GREEN_POWER) {
+            return nullptr;
         }
         if (this->thisZigbee().Zigbee::ToZigbee::CommandZigbee::requestIEEEAddrZstack(const_cast<DataAFMsg_t&>(afMsg).srcAddr, 0, 0) != ResultT::RESULT_SUCCESSFUL) {
             return nullptr;
@@ -38,8 +38,8 @@ IdentDeviceAddr_t* ERaFromZigbee<Zigbee>::createDataGlobal(const DataAFMsg_t& af
     }
 
     if (deviceInfo->data.topic == nullptr) {
-		if (ZigbeeState::is(ZigbeeStateT::STATE_ZB_INIT_MAX)) {
-			return nullptr;
+        if (ZigbeeState::is(ZigbeeStateT::STATE_ZB_INIT_MAX)) {
+            return nullptr;
         }
         if (IsZeroArray(deviceInfo->address.addr.ieeeAddr)) {
             return nullptr;
@@ -51,8 +51,8 @@ IdentDeviceAddr_t* ERaFromZigbee<Zigbee>::createDataGlobal(const DataAFMsg_t& af
         deviceInfo->receiveId = afMsg.receiveId + 1;
     }
 
-	deviceInfo->isConnected = true;
-	const_cast<DataAFMsg_t&>(afMsg).deviceInfo = deviceInfo;
+    deviceInfo->isConnected = true;
+    const_cast<DataAFMsg_t&>(afMsg).deviceInfo = deviceInfo;
 
     bool isSameId {false};
     cJSON* dataItem = nullptr;
@@ -79,12 +79,12 @@ IdentDeviceAddr_t* ERaFromZigbee<Zigbee>::createDataGlobal(const DataAFMsg_t& af
         cJSON_AddItemToObject(deviceInfo->data.payload, "data", dataItem);
     }
 
-	cJSON_SetStringToObject(dataItem, "model", deviceInfo->modelName);
-	cJSON_SetNumberToObject(dataItem, "nwk_addr", deviceInfo->address.addr.nwkAddr);
-	cJSON_SetNumberToObject(dataItem, "parent", afMsg.parentAddr);
-	cJSON_SetNumberToObject(dataItem, "radius", afMsg.radius);
-	cJSON_SetNumberToObject(dataItem, "lqi", afMsg.linkQuality);
-	cJSON_SetNumberToObject(dataItem, "ddr", afMsg.ddr);
+    cJSON_SetStringToObject(dataItem, "model", deviceInfo->modelName);
+    cJSON_SetNumberToObject(dataItem, "nwk_addr", deviceInfo->address.addr.nwkAddr);
+    cJSON_SetNumberToObject(dataItem, "parent", afMsg.parentAddr);
+    cJSON_SetNumberToObject(dataItem, "radius", afMsg.radius);
+    cJSON_SetNumberToObject(dataItem, "lqi", afMsg.linkQuality);
+    cJSON_SetNumberToObject(dataItem, "ddr", afMsg.ddr);
 
     switch (afMsg.zclId) {
         case ClusterIDT::ZCL_CLUSTER_POWER_CONFIG:
@@ -127,12 +127,12 @@ IdentDeviceAddr_t* ERaFromZigbee<Zigbee>::createDataSpecific(const DataAFMsg_t& 
     IdentDeviceAddr_t* deviceInfo = std::find_if(std::begin(this->coordinator->deviceIdent), std::end(this->coordinator->deviceIdent),
                                                 find_deviceWithNwkAddr_t(afMsg.srcAddr.addr.nwkAddr));
     if (deviceInfo == std::end(this->coordinator->deviceIdent)) {
-		if (ZigbeeState::is(ZigbeeStateT::STATE_ZB_INIT_MAX)) {
-			return nullptr;
+        if (ZigbeeState::is(ZigbeeStateT::STATE_ZB_INIT_MAX)) {
+            return nullptr;
         }
-		if (ZigbeeState::is(ZigbeeStateT::STATE_ZB_DEVICE_JOINED) ||
+        if (ZigbeeState::is(ZigbeeStateT::STATE_ZB_DEVICE_JOINED) ||
             ZigbeeState::is(ZigbeeStateT::STATE_ZB_DEVICE_INTERVIEWING)) {
-			if (afMsg.srcAddr.addr.nwkAddr == this->device->address.addr.nwkAddr) {
+            if (afMsg.srcAddr.addr.nwkAddr == this->device->address.addr.nwkAddr) {
                 deviceInfo = std::find_if(std::begin(this->coordinator->deviceIdent), std::end(this->coordinator->deviceIdent),
                                             find_deviceWithIEEEAddr_t(this->device->address.addr.ieeeAddr));
             }
@@ -142,8 +142,8 @@ IdentDeviceAddr_t* ERaFromZigbee<Zigbee>::createDataSpecific(const DataAFMsg_t& 
         }
     }
     if (deviceInfo == std::end(this->coordinator->deviceIdent)) {
-		if (afMsg.zclId == ClusterIDT::ZCL_CLUSTER_GREEN_POWER) {
-			return nullptr;
+        if (afMsg.zclId == ClusterIDT::ZCL_CLUSTER_GREEN_POWER) {
+            return nullptr;
         }
         if (this->thisZigbee().Zigbee::ToZigbee::CommandZigbee::requestIEEEAddrZstack(const_cast<DataAFMsg_t&>(afMsg).srcAddr, 0, 0) != ResultT::RESULT_SUCCESSFUL) {
             return nullptr;
@@ -156,8 +156,8 @@ IdentDeviceAddr_t* ERaFromZigbee<Zigbee>::createDataSpecific(const DataAFMsg_t& 
     }
 
     if (deviceInfo->data.topic == nullptr) {
-		if (ZigbeeState::is(ZigbeeStateT::STATE_ZB_INIT_MAX)) {
-			return nullptr;
+        if (ZigbeeState::is(ZigbeeStateT::STATE_ZB_INIT_MAX)) {
+            return nullptr;
         }
         if (IsZeroArray(deviceInfo->address.addr.ieeeAddr)) {
             return nullptr;
@@ -169,8 +169,8 @@ IdentDeviceAddr_t* ERaFromZigbee<Zigbee>::createDataSpecific(const DataAFMsg_t& 
         deviceInfo->receiveId = afMsg.receiveId + 1;
     }
 
-	deviceInfo->isConnected = true;
-	const_cast<DataAFMsg_t&>(afMsg).deviceInfo = deviceInfo;
+    deviceInfo->isConnected = true;
+    const_cast<DataAFMsg_t&>(afMsg).deviceInfo = deviceInfo;
 
     bool isSameId {false};
     cJSON* dataItem = nullptr;
@@ -197,12 +197,12 @@ IdentDeviceAddr_t* ERaFromZigbee<Zigbee>::createDataSpecific(const DataAFMsg_t& 
         cJSON_AddItemToObject(deviceInfo->data.payload, "data", dataItem);
     }
 
-	cJSON_SetStringToObject(dataItem, "model", deviceInfo->modelName);
-	cJSON_SetNumberToObject(dataItem, "nwk_addr", deviceInfo->address.addr.nwkAddr);
-	cJSON_SetNumberToObject(dataItem, "parent", afMsg.parentAddr);
-	cJSON_SetNumberToObject(dataItem, "radius", afMsg.radius);
-	cJSON_SetNumberToObject(dataItem, "lqi", afMsg.linkQuality);
-	cJSON_SetNumberToObject(dataItem, "ddr", afMsg.ddr);
+    cJSON_SetStringToObject(dataItem, "model", deviceInfo->modelName);
+    cJSON_SetNumberToObject(dataItem, "nwk_addr", deviceInfo->address.addr.nwkAddr);
+    cJSON_SetNumberToObject(dataItem, "parent", afMsg.parentAddr);
+    cJSON_SetNumberToObject(dataItem, "radius", afMsg.radius);
+    cJSON_SetNumberToObject(dataItem, "lqi", afMsg.linkQuality);
+    cJSON_SetNumberToObject(dataItem, "ddr", afMsg.ddr);
 
     switch (afMsg.zclId) {
         case ClusterIDT::ZCL_CLUSTER_ONOFF:
@@ -266,15 +266,15 @@ void ERaFromZigbee<Zigbee>::addDataZigbee(const DataAFMsg_t& afMsg, cJSON* root,
         cJSON_SetNumberToObject(root, key, value);
     }
     else {
-		StringPrint(name, "%s_%d", key, afMsg.srcAddr.endpoint);
-		cJSON_SetNumberToObject(root, name, value);
+        StringPrint(name, "%s_%d", key, afMsg.srcAddr.endpoint);
+        cJSON_SetNumberToObject(root, name, value);
     }
 }
 
 template <class Zigbee>
 void ERaFromZigbee<Zigbee>::addDataZigbee(const DataAFMsg_t& afMsg, cJSON* root, const char* key, float value) {
     char name[LENGTH_BUFFER] {0};
-	float scale {1.0f};
+    float scale {1.0f};
 #if defined(ENABLE_SCALE_ZIGBEE_DATA)
     const ScaleDataZigbee_t* element = std::find_if(std::begin(ScaleZigbeeList), std::end(ScaleZigbeeList), [key](const ScaleDataZigbee_t& e) {
         return ((e.key != nullptr) && (key != nullptr) && CompareString(e.key, key));
@@ -304,15 +304,15 @@ void ERaFromZigbee<Zigbee>::addDataZigbee(const DataAFMsg_t& afMsg, cJSON* root,
         cJSON_SetNumberWithDecimalToObject(root, key, value * scale, 5);
     }
     else {
-		StringPrint(name, "%s_%d", key, afMsg.srcAddr.endpoint);
-		cJSON_SetNumberWithDecimalToObject(root, name, value * scale, 5);
+        StringPrint(name, "%s_%d", key, afMsg.srcAddr.endpoint);
+        cJSON_SetNumberWithDecimalToObject(root, name, value * scale, 5);
     }
 }
 
 template <class Zigbee>
 void ERaFromZigbee<Zigbee>::addDataZigbee(const DataAFMsg_t& afMsg, cJSON* root, const char* key, double value) {
     char name[LENGTH_BUFFER] {0};
-	float scale {1.0f};
+    float scale {1.0f};
 #if defined(ENABLE_SCALE_ZIGBEE_DATA)
     const ScaleDataZigbee_t* element = std::find_if(std::begin(ScaleZigbeeList), std::end(ScaleZigbeeList), [key](const ScaleDataZigbee_t& e) {
         return ((e.key != nullptr) && (key != nullptr) && CompareString(e.key, key));
@@ -342,8 +342,8 @@ void ERaFromZigbee<Zigbee>::addDataZigbee(const DataAFMsg_t& afMsg, cJSON* root,
         cJSON_SetNumberWithDecimalToObject(root, key, value * scale, 5);
     }
     else {
-		StringPrint(name, "%s_%d", key, afMsg.srcAddr.endpoint);
-		cJSON_SetNumberWithDecimalToObject(root, name, value * scale, 5);
+        StringPrint(name, "%s_%d", key, afMsg.srcAddr.endpoint);
+        cJSON_SetNumberWithDecimalToObject(root, name, value * scale, 5);
     }
 }
 
@@ -354,8 +354,8 @@ void ERaFromZigbee<Zigbee>::addDataZigbee(const DataAFMsg_t& afMsg, cJSON* root,
         cJSON_SetStringToObject(root, key, value);
     }
     else {
-		StringPrint(name, "%s_%d", key, afMsg.srcAddr.endpoint);
-		cJSON_SetStringToObject(root, name, value);
+        StringPrint(name, "%s_%d", key, afMsg.srcAddr.endpoint);
+        cJSON_SetStringToObject(root, name, value);
     }
 }
 
@@ -366,8 +366,8 @@ void ERaFromZigbee<Zigbee>::addDataZigbee(const DataAFMsg_t& afMsg, cJSON* root,
         cJSON_SetStringToObject(root, key, value);
     }
     else {
-		StringPrint(name, "%s_%d", key, afMsg.srcAddr.endpoint);
-		cJSON_SetStringToObject(root, name, value);
+        StringPrint(name, "%s_%d", key, afMsg.srcAddr.endpoint);
+        cJSON_SetStringToObject(root, name, value);
     }
 }
 
@@ -378,8 +378,8 @@ void ERaFromZigbee<Zigbee>::addDataZigbee(const DataAFMsg_t& afMsg, cJSON* root,
         cJSON_AddItemToObject(root, key, value);
     }
     else {
-		StringPrint(name, "%s_%d", key, afMsg.srcAddr.endpoint);
-		cJSON_AddItemToObject(root, name, value);
+        StringPrint(name, "%s_%d", key, afMsg.srcAddr.endpoint);
+        cJSON_AddItemToObject(root, name, value);
     }
 }
 
@@ -390,36 +390,36 @@ void ERaFromZigbee<Zigbee>::addDataZigbee(const DataAFMsg_t& afMsg, cJSON* root,
         cJSON_AddItemToObject(root, key, value);
     }
     else {
-		StringPrint(name, "%s_%d", key, afMsg.srcAddr.endpoint);
-		cJSON_AddItemToObject(root, name, value);
+        StringPrint(name, "%s_%d", key, afMsg.srcAddr.endpoint);
+        cJSON_AddItemToObject(root, name, value);
     }
 }
 
 template <class Zigbee>
 cJSON* ERaFromZigbee<Zigbee>::getDataZigbee(const DataAFMsg_t& afMsg, cJSON* root, const char* key) {
-	char name[LENGTH_BUFFER] {0};
-	cJSON* item = nullptr;
-	if(afMsg.srcAddr.endpoint == EndpointListT::ENDPOINT1) {
-		item = cJSON_GetObjectItem(root, key);
+    char name[LENGTH_BUFFER] {0};
+    cJSON* item = nullptr;
+    if(afMsg.srcAddr.endpoint == EndpointListT::ENDPOINT1) {
+        item = cJSON_GetObjectItem(root, key);
     }
-	else {
-		StringPrint(name, "%s_%d", key, afMsg.srcAddr.endpoint);
-		item = cJSON_GetObjectItem(root, name);
-	}
-	return item;
+    else {
+        StringPrint(name, "%s_%d", key, afMsg.srcAddr.endpoint);
+        item = cJSON_GetObjectItem(root, name);
+    }
+    return item;
 }
 
 template <class Zigbee>
 void ERaFromZigbee<Zigbee>::removeDataZigbee(const DataAFMsg_t& afMsg, cJSON* root, const char* key) {
-	char name[LENGTH_BUFFER] {0};
-	cJSON* item = nullptr;
-	if(afMsg.srcAddr.endpoint == EndpointListT::ENDPOINT1) {
-		item = cJSON_DetachItemFromObject(root, key);
+    char name[LENGTH_BUFFER] {0};
+    cJSON* item = nullptr;
+    if(afMsg.srcAddr.endpoint == EndpointListT::ENDPOINT1) {
+        item = cJSON_DetachItemFromObject(root, key);
     }
-	else {
-		StringPrint(name, "%s_%d", key, afMsg.srcAddr.endpoint);
-		item = cJSON_DetachItemFromObject(root, name);
-	}
+    else {
+        StringPrint(name, "%s_%d", key, afMsg.srcAddr.endpoint);
+        item = cJSON_DetachItemFromObject(root, name);
+    }
     if (item != nullptr) {
         cJSON_Delete(item);
         item = nullptr;
@@ -438,141 +438,141 @@ void ERaFromZigbee<Zigbee>::createDeviceEvent(const DeviceEventT event, const AF
         root = nullptr;
         return;
     }
-	cJSON* definitionItem = cJSON_CreateObject();
-	if (definitionItem == nullptr)
-	{
-		cJSON_Delete(dataItem);
-		cJSON_Delete(root);
-		dataItem = nullptr;
-		root = nullptr;
-		return;
-	}
+    cJSON* definitionItem = cJSON_CreateObject();
+    if (definitionItem == nullptr)
+    {
+        cJSON_Delete(dataItem);
+        cJSON_Delete(root);
+        dataItem = nullptr;
+        root = nullptr;
+        return;
+    }
 
     cJSON_AddNumberToObject(dataItem, "nwk_addr", ((dstAddr != nullptr) ? dstAddr->addr.nwkAddr : this->device->address.addr.nwkAddr));
     cJSON_AddStringToObject(dataItem, "ieee_addr", IEEEToString((dstAddr != nullptr) ? dstAddr->addr.ieeeAddr : this->device->address.addr.ieeeAddr).c_str());
 
     if (event != DeviceEventT::DEVICE_EVENT_ANNOUNCE) {
-		cJSON_AddStringToObject(definitionItem, "model", this->device->modelName);
-		cJSON_AddStringToObject(definitionItem, "vendor", this->device->manufName);
-		cJSON_AddNumberToObject(definitionItem, "vendor_code", this->device->manufCode);
+        cJSON_AddStringToObject(definitionItem, "model", this->device->modelName);
+        cJSON_AddStringToObject(definitionItem, "vendor", this->device->manufName);
+        cJSON_AddNumberToObject(definitionItem, "vendor_code", this->device->manufCode);
     }
 
-	switch (event) {
+    switch (event) {
         case DeviceEventT::DEVICE_EVENT_JOINED:
-			cJSON_AddStringToObject(root, "type", "device_joined");
-			cJSON_Delete(definitionItem);
+            cJSON_AddStringToObject(root, "type", "device_joined");
+            cJSON_Delete(definitionItem);
             break;
-		case DeviceEventT::DEVICE_EVENT_ANNOUNCE:
-			cJSON_AddStringToObject(root, "type", "device_announce");
-			cJSON_AddBoolToObject(definitionItem, "alternate_pan_id", this->device->annceDevice.alternatePanId);
-			switch (this->device->annceDevice.type) {
-				case TypeAnnceDeviceT::ANNCE_ENDDEVICE:
-					cJSON_AddStringToObject(definitionItem, "device_type", "End Device");
-					break;
-				case TypeAnnceDeviceT::ANNCE_ROUTERDEVICE:
-					cJSON_AddStringToObject(definitionItem, "device_type", "Router");
-					break;
-				default:
-					cJSON_AddNumberToObject(definitionItem, "device_type", this->device->annceDevice.type);
-					break;
-			}
-			switch (this->device->annceDevice.power) {
-				case PowerSourceAnnceT::PWS_ANNCE_MAIN_POWER:
-					cJSON_AddStringToObject(definitionItem, "power", "main power");
-					break;
-				default:
-					cJSON_AddStringToObject(definitionItem, "power", "other");
-					break;
-			}
-			cJSON_AddBoolToObject(definitionItem, "rx_when_idle", this->device->annceDevice.isIdle);
-			cJSON_AddItemToObject(dataItem, "definition", definitionItem);
+        case DeviceEventT::DEVICE_EVENT_ANNOUNCE:
+            cJSON_AddStringToObject(root, "type", "device_announce");
+            cJSON_AddBoolToObject(definitionItem, "alternate_pan_id", this->device->annceDevice.alternatePanId);
+            switch (this->device->annceDevice.type) {
+                case TypeAnnceDeviceT::ANNCE_ENDDEVICE:
+                    cJSON_AddStringToObject(definitionItem, "device_type", "End Device");
+                    break;
+                case TypeAnnceDeviceT::ANNCE_ROUTERDEVICE:
+                    cJSON_AddStringToObject(definitionItem, "device_type", "Router");
+                    break;
+                default:
+                    cJSON_AddNumberToObject(definitionItem, "device_type", this->device->annceDevice.type);
+                    break;
+            }
+            switch (this->device->annceDevice.power) {
+                case PowerSourceAnnceT::PWS_ANNCE_MAIN_POWER:
+                    cJSON_AddStringToObject(definitionItem, "power", "main power");
+                    break;
+                default:
+                    cJSON_AddStringToObject(definitionItem, "power", "other");
+                    break;
+            }
+            cJSON_AddBoolToObject(definitionItem, "rx_when_idle", this->device->annceDevice.isIdle);
+            cJSON_AddItemToObject(dataItem, "definition", definitionItem);
             break;
-		case DeviceEventT::DEVICE_EVENT_INTERVIEW_STARTED:
-		case DeviceEventT::DEVICE_EVENT_INTERVIEW_BASIC_INFO:
-			cJSON_AddStringToObject(root, "type", "device_interview");
-			cJSON_AddStringToObject(dataItem, "status", "started");
-			cJSON_AddItemToObject(dataItem, "definition", definitionItem);
+        case DeviceEventT::DEVICE_EVENT_INTERVIEW_STARTED:
+        case DeviceEventT::DEVICE_EVENT_INTERVIEW_BASIC_INFO:
+            cJSON_AddStringToObject(root, "type", "device_interview");
+            cJSON_AddStringToObject(dataItem, "status", "started");
+            cJSON_AddItemToObject(dataItem, "definition", definitionItem);
             break;
-		case DeviceEventT::DEVICE_EVENT_INTERVIEW_SUCCESSFUL:
-			cJSON_AddStringToObject(root, "type", "device_interview");
-			cJSON_AddStringToObject(dataItem, "status", "successful");
-			switch (this->device->typeDevice) {
-				case TypeDeviceT::COORDINATOR:
-					cJSON_AddStringToObject(definitionItem, "device_type", "Coordinator");
-					break;
-				case TypeDeviceT::ROUTERDEVICE:
-					cJSON_AddStringToObject(definitionItem, "device_type", "Router");
-					break;
-				case TypeDeviceT::ENDDEVICE:
-					cJSON_AddStringToObject(definitionItem, "device_type", "End Device");
-					break;
-				default:
-					cJSON_AddNumberToObject(definitionItem, "device_type", this->device->typeDevice);
-					break;
-			}
-			switch (this->device->power) {
-				case PowerSourceT::PWS_UNKNOWN0:
-					cJSON_AddStringToObject(definitionItem, "power", "unknown");
-					break;
-				case PowerSourceT::PWS_SINGLE_PHASE:
-					cJSON_AddStringToObject(definitionItem, "power", "single phase");
-					break;
-				case PowerSourceT::PWS_THREE_PHASE:
-					cJSON_AddStringToObject(definitionItem, "power", "three phase");
-					break;
-				case PowerSourceT::PWS_BATTERY:
-					cJSON_AddStringToObject(definitionItem, "power", "battery");
-					if(this->device->batVoltage) {
-						cJSON_AddNumberToObject(definitionItem, "battery_voltage", this->device->batVoltage);
-					}
-					if(this->device->batPercent) {
-						cJSON_AddNumberToObject(definitionItem, "battery_percent", this->device->batPercent);
+        case DeviceEventT::DEVICE_EVENT_INTERVIEW_SUCCESSFUL:
+            cJSON_AddStringToObject(root, "type", "device_interview");
+            cJSON_AddStringToObject(dataItem, "status", "successful");
+            switch (this->device->typeDevice) {
+                case TypeDeviceT::COORDINATOR:
+                    cJSON_AddStringToObject(definitionItem, "device_type", "Coordinator");
+                    break;
+                case TypeDeviceT::ROUTERDEVICE:
+                    cJSON_AddStringToObject(definitionItem, "device_type", "Router");
+                    break;
+                case TypeDeviceT::ENDDEVICE:
+                    cJSON_AddStringToObject(definitionItem, "device_type", "End Device");
+                    break;
+                default:
+                    cJSON_AddNumberToObject(definitionItem, "device_type", this->device->typeDevice);
+                    break;
+            }
+            switch (this->device->power) {
+                case PowerSourceT::PWS_UNKNOWN0:
+                    cJSON_AddStringToObject(definitionItem, "power", "unknown");
+                    break;
+                case PowerSourceT::PWS_SINGLE_PHASE:
+                    cJSON_AddStringToObject(definitionItem, "power", "single phase");
+                    break;
+                case PowerSourceT::PWS_THREE_PHASE:
+                    cJSON_AddStringToObject(definitionItem, "power", "three phase");
+                    break;
+                case PowerSourceT::PWS_BATTERY:
+                    cJSON_AddStringToObject(definitionItem, "power", "battery");
+                    if(this->device->batVoltage) {
+                        cJSON_AddNumberToObject(definitionItem, "battery_voltage", this->device->batVoltage);
                     }
-					break;
-				case PowerSourceT::PWS_DC_SOURCE:
-					cJSON_AddStringToObject(definitionItem, "power", "DC source");
-					break;
-				case PowerSourceT::PWS_EMERGENCY_MAIN:
-					cJSON_AddStringToObject(definitionItem, "power", "emergency main");
-					break;
-				case PowerSourceT::PWS_EMERGENCY_MAIN_SW:
-					cJSON_AddStringToObject(definitionItem, "power", "emergency main switch");
-					break;
-				default:
-					cJSON_AddNumberToObject(definitionItem, "power", this->device->power);
-					break;
-			}
-			cJSON_AddNumberToObject(definitionItem, "app_ver", this->device->appVer);
-			cJSON_AddNumberToObject(definitionItem, "zcl_ver", this->device->zclVer);
-			cJSON_AddNumberToObject(definitionItem, "stack_ver", this->device->stackVer);
-			cJSON_AddNumberToObject(definitionItem, "hw_ver", this->device->hwVer);
-			cJSON_AddStringToObject(definitionItem, "data_code", this->device->dataCode);
-			cJSON_AddStringToObject(definitionItem, "sw_build", this->device->swBuild);
-			cJSON_AddNumberToObject(definitionItem, "parent", this->device->parentAddr);
-			cJSON_AddBoolToObject(definitionItem, "ias", this->device->ias);
-			if(this->device->pollControl) {
-				cJSON_AddItemToObject(definitionItem, "poll_control", this->createDevicePollControl());
+                    if(this->device->batPercent) {
+                        cJSON_AddNumberToObject(definitionItem, "battery_percent", this->device->batPercent);
+                    }
+                    break;
+                case PowerSourceT::PWS_DC_SOURCE:
+                    cJSON_AddStringToObject(definitionItem, "power", "DC source");
+                    break;
+                case PowerSourceT::PWS_EMERGENCY_MAIN:
+                    cJSON_AddStringToObject(definitionItem, "power", "emergency main");
+                    break;
+                case PowerSourceT::PWS_EMERGENCY_MAIN_SW:
+                    cJSON_AddStringToObject(definitionItem, "power", "emergency main switch");
+                    break;
+                default:
+                    cJSON_AddNumberToObject(definitionItem, "power", this->device->power);
+                    break;
             }
-			else {
-				cJSON_AddBoolToObject(definitionItem, "poll_control", false);
+            cJSON_AddNumberToObject(definitionItem, "app_ver", this->device->appVer);
+            cJSON_AddNumberToObject(definitionItem, "zcl_ver", this->device->zclVer);
+            cJSON_AddNumberToObject(definitionItem, "stack_ver", this->device->stackVer);
+            cJSON_AddNumberToObject(definitionItem, "hw_ver", this->device->hwVer);
+            cJSON_AddStringToObject(definitionItem, "data_code", this->device->dataCode);
+            cJSON_AddStringToObject(definitionItem, "sw_build", this->device->swBuild);
+            cJSON_AddNumberToObject(definitionItem, "parent", this->device->parentAddr);
+            cJSON_AddBoolToObject(definitionItem, "ias", this->device->ias);
+            if(this->device->pollControl) {
+                cJSON_AddItemToObject(definitionItem, "poll_control", this->createDevicePollControl());
             }
-			cJSON_AddItemToObject(definitionItem, "endpoints", this->createDeviceEndpoints());
-			cJSON_AddItemToObject(dataItem, "definition", definitionItem);
+            else {
+                cJSON_AddBoolToObject(definitionItem, "poll_control", false);
+            }
+            cJSON_AddItemToObject(definitionItem, "endpoints", this->createDeviceEndpoints());
+            cJSON_AddItemToObject(dataItem, "definition", definitionItem);
             break;
-		case DeviceEventT::DEVICE_EVENT_INTERVIEW_FAILED:
-			cJSON_AddStringToObject(root, "type", "device_interview");
-			cJSON_AddStringToObject(dataItem, "status", "failed");
-			cJSON_Delete(definitionItem);
+        case DeviceEventT::DEVICE_EVENT_INTERVIEW_FAILED:
+            cJSON_AddStringToObject(root, "type", "device_interview");
+            cJSON_AddStringToObject(dataItem, "status", "failed");
+            cJSON_Delete(definitionItem);
             break;
-		case DeviceEventT::DEVICE_EVENT_LEAVE:
-			cJSON_AddStringToObject(root, "type", "device_leave");
-			cJSON_Delete(definitionItem);
+        case DeviceEventT::DEVICE_EVENT_LEAVE:
+            cJSON_AddStringToObject(root, "type", "device_leave");
+            cJSON_Delete(definitionItem);
             break;
         default:
             break;
     }
 
-	cJSON_AddItemToObject(root, "data", dataItem);
+    cJSON_AddItemToObject(root, "data", dataItem);
 
     this->thisZigbee().publishZigbeeData(TOPIC_ZIGBEE_BRIDGE_EVENT, root, true, false);
     if ((event == DeviceEventT::DEVICE_EVENT_INTERVIEW_SUCCESSFUL) ||
@@ -740,8 +740,8 @@ cJSON* ERaFromZigbee<Zigbee>::createDeviceEndpoints() {
         }
         cJSON_AddItemToObject(clusterItem, "output", zclItem);
 
-		cJSON_AddItemToObject(epItem, "clusters", clusterItem);
-		cJSON_AddItemToObject(root, name, epItem);
+        cJSON_AddItemToObject(epItem, "clusters", clusterItem);
+        cJSON_AddItemToObject(root, name, epItem);
     }
 
     return root;

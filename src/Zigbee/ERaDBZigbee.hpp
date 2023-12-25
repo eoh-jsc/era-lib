@@ -29,15 +29,15 @@ private:
     cJSON* createDevice(const IdentDeviceAddr_t& deviceInfo);
     void checkDevice();
 
-	inline
-	const Zigbee& thisZigbee() const {
-		return static_cast<const Zigbee&>(*this);
-	}
+    inline
+    const Zigbee& thisZigbee() const {
+        return static_cast<const Zigbee&>(*this);
+    }
 
-	inline
-	Zigbee& thisZigbee() {
-		return static_cast<Zigbee&>(*this);
-	}
+    inline
+    Zigbee& thisZigbee() {
+        return static_cast<Zigbee&>(*this);
+    }
 
     InfoDevice_t*& device;
     InfoCoordinator_t*& coordinator;
@@ -53,24 +53,24 @@ void ERaDBZigbee<Zigbee>::parseDevice(const cJSON* const root) {
 
     deviceInfo.isConnected = true;
     cJSON* typeItem = cJSON_GetObjectItem(root, "type");
-	if (cJSON_IsNumber(typeItem)) {
-		deviceInfo.typeDevice = typeItem->valueint;
+    if (cJSON_IsNumber(typeItem)) {
+        deviceInfo.typeDevice = typeItem->valueint;
     }
     cJSON* nwkItem = cJSON_GetObjectItem(root, "nwk_addr");
-	if (cJSON_IsNumber(nwkItem)) {
-		deviceInfo.address.addr.nwkAddr = nwkItem->valueint;
+    if (cJSON_IsNumber(nwkItem)) {
+        deviceInfo.address.addr.nwkAddr = nwkItem->valueint;
     }
     cJSON* ieeeItem = cJSON_GetObjectItem(root, "ieee_addr");
-	if (cJSON_IsString(ieeeItem)) {
-		StringToIEEE(ieeeItem->valuestring, deviceInfo.address.addr.ieeeAddr);
+    if (cJSON_IsString(ieeeItem)) {
+        StringToIEEE(ieeeItem->valuestring, deviceInfo.address.addr.ieeeAddr);
     }
-	cJSON* appVerItem = cJSON_GetObjectItem(root, "app_ver");
-	if (cJSON_IsNumber(appVerItem)) {
-		deviceInfo.appVer = appVerItem->valueint;
+    cJSON* appVerItem = cJSON_GetObjectItem(root, "app_ver");
+    if (cJSON_IsNumber(appVerItem)) {
+        deviceInfo.appVer = appVerItem->valueint;
     }
-	cJSON* modelItem = cJSON_GetObjectItem(root, "model");
-	if (cJSON_IsString(modelItem)) {
-		ClearMem(deviceInfo.modelName);
+    cJSON* modelItem = cJSON_GetObjectItem(root, "model");
+    if (cJSON_IsString(modelItem)) {
+        ClearMem(deviceInfo.modelName);
         CopyString(modelItem->valuestring, deviceInfo.modelName);
     }
 }
@@ -99,7 +99,7 @@ void ERaDBZigbee<Zigbee>::parseZigbeeDevice() {
     this->thisZigbee().endReadFromFlash();
     this->checkDevice();
     item = nullptr;
-	ptr = nullptr;
+    ptr = nullptr;
 }
 
 template <class Zigbee>
@@ -112,10 +112,10 @@ cJSON* ERaDBZigbee<Zigbee>::createDevice(const IdentDeviceAddr_t& deviceInfo) {
     cJSON_AddNumberToObject(item, "type", deviceInfo.typeDevice);
     cJSON_AddNumberToObject(item, "nwk_addr", deviceInfo.address.addr.nwkAddr);
     cJSON_AddStringToObject(item, "ieee_addr", IEEEToString(deviceInfo.address.addr.ieeeAddr).c_str());
-	if (deviceInfo.appVer) {
-		cJSON_AddNumberToObject(item, "app_ver", deviceInfo.appVer);
+    if (deviceInfo.appVer) {
+        cJSON_AddNumberToObject(item, "app_ver", deviceInfo.appVer);
     }
-	cJSON_AddStringToObject(item, "model", deviceInfo.modelName);
+    cJSON_AddStringToObject(item, "model", deviceInfo.modelName);
 
     return item;
 }
@@ -190,8 +190,8 @@ void ERaDBZigbee<Zigbee>::checkDevice() {
     for (int i = this->coordinator->deviceCount - 1; i >= 0; --i) {
         if (IsZeroArray(this->coordinator->deviceIdent[i].address.addr.ieeeAddr) ||
             !strlen(this->coordinator->deviceIdent[i].modelName)) {
-			std::move(std::begin(this->coordinator->deviceIdent) + i + 1, std::end(this->coordinator->deviceIdent), std::begin(this->coordinator->deviceIdent) + i);
-			this->coordinator->deviceCount--;
+            std::move(std::begin(this->coordinator->deviceIdent) + i + 1, std::end(this->coordinator->deviceIdent), std::begin(this->coordinator->deviceIdent) + i);
+            this->coordinator->deviceCount--;
         }
     }
 }

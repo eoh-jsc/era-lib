@@ -21,13 +21,13 @@ class ERaModbusInternal
 {
 #if defined(MODBUS_HAS_FUNCTIONAL_H)
     typedef std::function<bool(int32_t&)> ReadCallback_t;
-	typedef std::function<bool(int32_t)> WriteCallback_t;
+    typedef std::function<bool(int32_t)> WriteCallback_t;
 #else
     typedef bool (*ReadCallback_t)(int32_t&);
-	typedef bool (*WriteCallback_t)(int32_t);
+    typedef bool (*WriteCallback_t)(int32_t);
 #endif
 
-	const static int MAX_REGISTERS = ERA_MAX_REGISTER;
+    const static int MAX_REGISTERS = ERA_MAX_REGISTER;
     typedef struct __Register_t {
         uint8_t addr;
         uint8_t sa1;
@@ -49,17 +49,17 @@ public:
             , pReg(_pReg)
         {}
 
-		bool isValid() const {
-			return ((this->reg != nullptr) && (this->pReg != nullptr));
-		}
+        bool isValid() const {
+            return ((this->reg != nullptr) && (this->pReg != nullptr));
+        }
 
         operator Register_t*() const {
             return this->pReg;
         }
 
-		operator bool() const {
-			return this->isValid();
-		}
+        operator bool() const {
+            return this->isValid();
+        }
 
         iterator& onRead(ERaModbusInternal::ReadCallback_t cb) {
             if (this->isValid()) {
@@ -77,10 +77,10 @@ public:
         
     protected:
     private:
-		void invalidate() {
-			this->reg = nullptr;
-			this->pReg = nullptr;
-		}
+        void invalidate() {
+            this->reg = nullptr;
+            this->pReg = nullptr;
+        }
 
         ERaModbusInternal* reg;
         Register_t* pReg;
@@ -122,7 +122,7 @@ private:
     }
 
     ERaList<Register_t*> ERaReg;
-	unsigned int numRegister;
+    unsigned int numRegister;
 };
 
 inline

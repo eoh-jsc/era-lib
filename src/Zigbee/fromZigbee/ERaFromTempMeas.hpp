@@ -5,8 +5,8 @@
 
 template <class Zigbee>
 bool ERaFromZigbee<Zigbee>::temperatureMeasFromZigbee(const DataAFMsg_t& afMsg, cJSON* root, uint16_t attribute, uint64_t& value) {
-	bool defined {true};
-	switch (attribute) {
+    bool defined {true};
+    switch (attribute) {
         case ZbZclTempMeasSvrAttrT::ZCL_TEMP_MEAS_ATTR_MEAS_VAL:
             this->addDataZigbee<int16_t>(afMsg, root, KEY(MEAS_TEMPERATURE, MEAS_VAL), static_cast<int16_t>(value));
             break;

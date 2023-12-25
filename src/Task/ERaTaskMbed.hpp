@@ -142,10 +142,10 @@ inline
 void ERaApi<Proto, Flash>::initERaApiTask() {
     this->initApiTask();
 #if defined(ERA_MODBUS)
-	Modbus::begin();
+    Modbus::begin();
 #endif
 #if defined(ERA_ZIGBEE)
-	Zigbee::begin();
+    Zigbee::begin();
 #endif
 }
 
@@ -154,11 +154,11 @@ inline
 void ERaApi<Proto, Flash>::runERaApiTask() {
 #if defined(ERA_MODBUS) &&  \
     defined(ERA_NO_RTOS)
-	Modbus::run();
+    Modbus::run();
 #endif
 #if defined(ERA_ZIGBEE) &&  \
     defined(ERA_NO_RTOS)
-	Zigbee::run();
+    Zigbee::run();
 #endif
 }
 

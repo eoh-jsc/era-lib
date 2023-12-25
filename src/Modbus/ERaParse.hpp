@@ -15,7 +15,7 @@
 #endif
 
 #ifndef DEFAULT_MODBUS_INTERVAL
-    #define DEFAULT_MODBUS_INTERVAL 	1000
+    #define DEFAULT_MODBUS_INTERVAL     1000
 #endif
 
 #ifndef DEFAULT_PUB_MODBUS_INTERVAL
@@ -27,8 +27,8 @@
 #endif
 
 typedef struct __SensorDelay_t {
-	int delay;
-	int address;
+    int delay;
+    int address;
 } SensorDelay_t;
 
 typedef struct __IPSlave_t {
@@ -40,49 +40,49 @@ typedef struct __IPSlave_t {
 } IPSlave_t;
 
 typedef struct __ModbusConfig_t {
-	int id;
-	uint8_t addr;
-	uint8_t func;
-	uint8_t sa1;
-	uint8_t sa2;
-	uint8_t len1;
-	uint8_t len2;
-	uint8_t extra[10];
-	uint8_t type;
-	uint8_t button;
-	uint16_t delay;
-	IPSlave_t ipSlave;
-	uint8_t totalFail;
-	uint8_t sizeData;
-	uint32_t value;
-	uint8_t ack;
+    int id;
+    uint8_t addr;
+    uint8_t func;
+    uint8_t sa1;
+    uint8_t sa2;
+    uint8_t len1;
+    uint8_t len2;
+    uint8_t extra[10];
+    uint8_t type;
+    uint8_t button;
+    uint16_t delay;
+    IPSlave_t ipSlave;
+    uint8_t totalFail;
+    uint8_t sizeData;
+    uint32_t value;
+    uint8_t ack;
 } ModbusConfig_t;
 
 typedef struct __Action_t {
-	int id;
-	uint8_t len1;
-	uint8_t len2;
-	uint8_t extra[10];
+    int id;
+    uint8_t len1;
+    uint8_t len2;
+    uint8_t extra[10];
 } Action_t;
 
 typedef struct __ModbusConfigAlias_t {
-	int readActionCount;
-	int id;
-	char key[37];
-	Action_t action[10];
-	uint16_t timer;
+    int readActionCount;
+    int id;
+    char key[37];
+    Action_t action[10];
+    uint16_t timer;
 } ModbusConfigAlias_t;
 
 typedef struct __ModbusWriteOption_t {
     bool enable;
     uint8_t len1;
     uint8_t len2;
-	uint8_t extra[10];
+    uint8_t extra[10];
 } ModbusWriteOption_t;
 
 typedef struct __IntervalDelay_t {
-	uint32_t delay;
-	unsigned long prevMillis;
+    uint32_t delay;
+    unsigned long prevMillis;
 } IntervalDelay_t;
 
 class ERaModbusEntry
@@ -362,49 +362,49 @@ bool ERaModbusEntry::operator != (const char* hash) {
 
 inline
 void ERaModbusEntry::processParseConfig(int part, const char* ptr, size_t len) {
-	switch(part) {
-		case ParseConfigT::PARSE_CONFIG_ID:
-			this->processParseConfigId(ptr, len);
-			break;
-		case ParseConfigT::PARSE_BAUD_SPEED:
-			this->processParseConfigBaudSpeed(ptr, len);
-			break;
-		case ParseConfigT::PARSE_TOTAL_ROW:
-			this->processParseConfigTotalRow(ptr, len);
-			break;
-		case ParseConfigT::PARSE_SENSOR_DISPLAY:
-			this->processParseConfigSensorDelay(ptr, len);
-			break;
-		case ParseConfigT::PARSE_SENSOR_READ_WRITE:
-			this->processParseConfigSensorReadWrite(ptr, len);
-			break;
-		case ParseConfigT::PARSE_LOCAL_ALARM:
-			this->processParseConfigLocalAlarm(ptr, len);
-			break;
-		case ParseConfigT::PARSE_CONTACT_PHONE:
-			this->processParseStationContactPhone(ptr, len);
-			break;
-		case ParseConfigT::PARSE_IS_WIFI:
-			this->processParseIsWifi(ptr, len);
-			break;
-		case ParseConfigT::PARSE_CONFIG_WIFI:
-    		this->processParseConfigWifi(ptr, len);
-			break;
-		case ParseConfigT::PARSE_CONFIG_ALIAS_TOTAL_ROW:
-			this->processParseConfigAliasTotalRow(ptr, len);
-			break;
-		case ParseConfigT::PARSE_CONFIG_ALIAS_DATA:
-			this->processParseConfigAliasData(ptr, len);
-			break;
-		case ParseConfigT::PARSE_IS_BLUETOOTH:
-			this->processParseIsEnableBluetooth(ptr, len);
-			break;
+    switch(part) {
+        case ParseConfigT::PARSE_CONFIG_ID:
+            this->processParseConfigId(ptr, len);
+            break;
+        case ParseConfigT::PARSE_BAUD_SPEED:
+            this->processParseConfigBaudSpeed(ptr, len);
+            break;
+        case ParseConfigT::PARSE_TOTAL_ROW:
+            this->processParseConfigTotalRow(ptr, len);
+            break;
+        case ParseConfigT::PARSE_SENSOR_DISPLAY:
+            this->processParseConfigSensorDelay(ptr, len);
+            break;
+        case ParseConfigT::PARSE_SENSOR_READ_WRITE:
+            this->processParseConfigSensorReadWrite(ptr, len);
+            break;
+        case ParseConfigT::PARSE_LOCAL_ALARM:
+            this->processParseConfigLocalAlarm(ptr, len);
+            break;
+        case ParseConfigT::PARSE_CONTACT_PHONE:
+            this->processParseStationContactPhone(ptr, len);
+            break;
+        case ParseConfigT::PARSE_IS_WIFI:
+            this->processParseIsWifi(ptr, len);
+            break;
+        case ParseConfigT::PARSE_CONFIG_WIFI:
+            this->processParseConfigWifi(ptr, len);
+            break;
+        case ParseConfigT::PARSE_CONFIG_ALIAS_TOTAL_ROW:
+            this->processParseConfigAliasTotalRow(ptr, len);
+            break;
+        case ParseConfigT::PARSE_CONFIG_ALIAS_DATA:
+            this->processParseConfigAliasData(ptr, len);
+            break;
+        case ParseConfigT::PARSE_IS_BLUETOOTH:
+            this->processParseIsEnableBluetooth(ptr, len);
+            break;
         case ParseConfigT::PARSE_AUTO_CLOSING:
             this->processParseEnableAutoClosing(ptr, len);
             break;
-		default:
-			break;
-	}
+        default:
+            break;
+    }
 }
 
 inline
@@ -437,17 +437,17 @@ void ERaModbusEntry::processParseConfigBaudSpeed(const char* ptr, size_t len) {
     char* token = strtok(buf, ",");
     while (token != nullptr) {
         switch (step++) {
-			case ParseIntervalT::PARSE_MODBUS_BAUDRATE:
-				this->baudSpeed = atoi(token);
-				break;
-			case ParseIntervalT::PARSE_MODBUS_INTERVAL:
-				this->modbusInterval.delay = (atoi(token) < DEFAULT_MIN_MODBUS_INTERVAL ? DEFAULT_MIN_MODBUS_INTERVAL : atoi(token));
-				break;
-			case ParseIntervalT::PARSE_PUB_MODBUS_INTERVAL:
-				this->pubInterval.delay = (atoi(token) < DEFAULT_MIN_MODBUS_INTERVAL ? DEFAULT_MIN_MODBUS_INTERVAL : atoi(token));
-				break;
-			default:
-				break;
+            case ParseIntervalT::PARSE_MODBUS_BAUDRATE:
+                this->baudSpeed = atoi(token);
+                break;
+            case ParseIntervalT::PARSE_MODBUS_INTERVAL:
+                this->modbusInterval.delay = (atoi(token) < DEFAULT_MIN_MODBUS_INTERVAL ? DEFAULT_MIN_MODBUS_INTERVAL : atoi(token));
+                break;
+            case ParseIntervalT::PARSE_PUB_MODBUS_INTERVAL:
+                this->pubInterval.delay = (atoi(token) < DEFAULT_MIN_MODBUS_INTERVAL ? DEFAULT_MIN_MODBUS_INTERVAL : atoi(token));
+                break;
+            default:
+                break;
         }
         token = strtok(nullptr, ",");
     }
@@ -919,16 +919,16 @@ void ERaScanEntry::parseConfig(const char* ptr) {
 
 inline
 void ERaScanEntry::processParseConfig(int part, const char* ptr, size_t len) {
-	switch(part) {
-		case ParseConfigT::PARSE_CONFIG_RANGE:
-			this->processParseConfigRange(ptr, len);
-			break;
-		case ParseConfigT::PARSE_CONFIG_NUMBER_SCAN:
-			this->processParseConfigNumberScan(ptr, len);
-			break;
-		default:
-			break;
-	}
+    switch(part) {
+        case ParseConfigT::PARSE_CONFIG_RANGE:
+            this->processParseConfigRange(ptr, len);
+            break;
+        case ParseConfigT::PARSE_CONFIG_NUMBER_SCAN:
+            this->processParseConfigNumberScan(ptr, len);
+            break;
+        default:
+            break;
+    }
 }
 
 inline

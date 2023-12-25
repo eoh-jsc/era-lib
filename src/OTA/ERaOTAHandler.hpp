@@ -9,7 +9,7 @@
 
 class ERaOTAHandler
 {
-	const char* TAG = "OTA";
+    const char* TAG = "OTA";
 
 public:
     ERaOTAHandler()

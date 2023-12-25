@@ -139,12 +139,12 @@ bool StringToIEEE(const char* str, T(&ieee)[size]) {
         return false;
     }
     std::string hex;
-	for(int i = 0; i < size; ++i) {
-		hex.assign(str, 2 * i + 2, 2);
-		if(IsHexDigit(hex)) {
-			ieee[size - i - 1] = strtol(hex.c_str(), nullptr, 16);
+    for(int i = 0; i < size; ++i) {
+        hex.assign(str, 2 * i + 2, 2);
+        if(IsHexDigit(hex)) {
+            ieee[size - i - 1] = strtol(hex.c_str(), nullptr, 16);
         }
-	}
+    }
     return true;
 }
 

@@ -10,9 +10,9 @@
 #include <Utility/ERacJSON.hpp>
 
 class ERaApiHandler
-	: public ERaCallbacksHelper
+    : public ERaCallbacksHelper
 {
-	const char* TAG = "API";
+    const char* TAG = "API";
 
 public:
     ERaApiHandler()
@@ -29,8 +29,8 @@ public:
         return this->specificDataWrite(id, value, true, false);
     }
 
-	virtual void specificDataWrite(const char* id, cJSON* value,
-						        bool specific = false, bool retained = true) {
+    virtual void specificDataWrite(const char* id, cJSON* value,
+                                bool specific = false, bool retained = true) {
         ERA_LOG(TAG, ERA_PSTR("specificDataWrite default."));
         ERA_FORCE_UNUSED(id);
         ERA_FORCE_UNUSED(value);
@@ -38,8 +38,8 @@ public:
         ERA_FORCE_UNUSED(retained);
     }
 
-	virtual void specificDataWrite(const char* id, const char* value,
-						        bool specific = false, bool retained = true) {
+    virtual void specificDataWrite(const char* id, const char* value,
+                                bool specific = false, bool retained = true) {
         ERA_LOG(TAG, ERA_PSTR("specificDataWrite default."));
         ERA_FORCE_UNUSED(id);
         ERA_FORCE_UNUSED(value);
@@ -56,27 +56,27 @@ public:
     }
 
     virtual void writeToFlash(const char* filename, const char* buf,
-											        bool force = false) {
+                                                    bool force = false) {
         ERA_LOG(TAG, ERA_PSTR("writeToFlash default."));
         ERA_FORCE_UNUSED(filename);
         ERA_FORCE_UNUSED(buf);
         ERA_FORCE_UNUSED(force);
     }
 
-	template <typename... Args>
-	ERaTimer::iterator addInterval(unsigned long interval, Args... tail) {
-		return this->ERaTm.setInterval(interval, tail...);
-	}
+    template <typename... Args>
+    ERaTimer::iterator addInterval(unsigned long interval, Args... tail) {
+        return this->ERaTm.setInterval(interval, tail...);
+    }
 
-	template <typename... Args>
-	ERaTimer::iterator addTimeout(unsigned long interval, Args... tail) {
-		return this->ERaTm.setTimeout(interval, tail...);
-	}
+    template <typename... Args>
+    ERaTimer::iterator addTimeout(unsigned long interval, Args... tail) {
+        return this->ERaTm.setTimeout(interval, tail...);
+    }
 
-	template <typename... Args>
-	ERaTimer::iterator addTimer(unsigned long interval, Args... tail) {
-		return this->ERaTm.setTimer(interval, tail...);
-	}
+    template <typename... Args>
+    ERaTimer::iterator addTimer(unsigned long interval, Args... tail) {
+        return this->ERaTm.setTimer(interval, tail...);
+    }
 
     virtual bool connected() = 0;
 
@@ -92,7 +92,7 @@ protected:
     }
 
 private:
-	ERaTimer ERaTm;
+    ERaTimer ERaTm;
 };
 
 #endif /* INC_ERA_API_HANDLER_HPP_ */

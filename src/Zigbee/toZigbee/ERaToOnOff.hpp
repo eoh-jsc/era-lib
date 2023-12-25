@@ -5,36 +5,36 @@
 
 template <class Zigbee>
 bool ERaToZigbee<Zigbee>::stateToZigbee(const cJSON* const root, const cJSON* const current, AFAddrType_t& dstAddr, const ConvertToZigbeeT type) {
-	cJSON* subItem = nullptr;
-	uint16_t transition {0};
-	uint8_t controlBits {0};
-	uint16_t onTime {0};
-	uint16_t offWaitTime {0};
-	bool isSpecific {false};
-	bool isOnWithTimedOff {false};
+    cJSON* subItem = nullptr;
+    uint16_t transition {0};
+    uint8_t controlBits {0};
+    uint16_t onTime {0};
+    uint16_t offWaitTime {0};
+    bool isSpecific {false};
+    bool isOnWithTimedOff {false};
 
     switch (type) {
         case ConvertToZigbeeT::CONVERT_SET_TO_ZIGBEE:
             if (CompareNString(current->string, "state")) {
                 this->getEndpointToZigbee(current, "state", dstAddr.endpoint);
-				subItem = cJSON_GetObjectItem(root, "is_specific");
-				if (cJSON_IsBool(subItem) || cJSON_IsNumber(subItem)) {
-					isSpecific = subItem->valueint;
+                subItem = cJSON_GetObjectItem(root, "is_specific");
+                if (cJSON_IsBool(subItem) || cJSON_IsNumber(subItem)) {
+                    isSpecific = subItem->valueint;
                 }
-				subItem = cJSON_GetObjectItem(root, "control_bit");
-				if (cJSON_IsNumber(subItem)) {
-					controlBits = subItem->valueint;
+                subItem = cJSON_GetObjectItem(root, "control_bit");
+                if (cJSON_IsNumber(subItem)) {
+                    controlBits = subItem->valueint;
                 }
-				subItem = cJSON_GetObjectItem(root, "on_time");
-				if (cJSON_IsNumber(subItem)) {
-					isOnWithTimedOff = true;
-					onTime = subItem->valueint * (isSpecific ? 1 : 10);
-				}
-				subItem = cJSON_GetObjectItem(root, "off_wait_time");
-				if (cJSON_IsNumber(subItem))	{
-					isOnWithTimedOff = true;
-					offWaitTime = subItem->valueint * (isSpecific ? 1 : 10);
-				}
+                subItem = cJSON_GetObjectItem(root, "on_time");
+                if (cJSON_IsNumber(subItem)) {
+                    isOnWithTimedOff = true;
+                    onTime = subItem->valueint * (isSpecific ? 1 : 10);
+                }
+                subItem = cJSON_GetObjectItem(root, "off_wait_time");
+                if (cJSON_IsNumber(subItem))    {
+                    isOnWithTimedOff = true;
+                    offWaitTime = subItem->valueint * (isSpecific ? 1 : 10);
+                }
                 if (cJSON_IsNumber(current)) {
                     if (current->valueint == ZbZclOnOffSvrCmdT::ZCL_ONOFF_COMMAND_ON && isOnWithTimedOff) {
                         CommandZigbee::onWithTimeOffGenOnOff(dstAddr, controlBits, onTime, offWaitTime);

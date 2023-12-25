@@ -328,9 +328,9 @@ private:
     ClientCallback_t clientCb = this->clientCallbackDummy;
 #endif
 
-	WiFiEventCallback_t wifiCb = [&, this](WiFiEvent_t event, WiFiEventInfo_t info) {
-		this->onWiFiEvent(event, info);
-	};
+    WiFiEventCallback_t wifiCb = [&, this](WiFiEvent_t event, WiFiEventInfo_t info) {
+        this->onWiFiEvent(event, info);
+    };
 
     const char* authToken;
     const char* specSSID;
@@ -1802,8 +1802,8 @@ void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
 
     cJSON_AddStringToObject(root, INFO_BOARD, ERA_BOARD_TYPE);
     cJSON_AddStringToObject(root, INFO_MODEL, ERA_MODEL_TYPE);
-	cJSON_AddStringToObject(root, INFO_BOARD_ID, this->thisProto().getBoardID());
-	cJSON_AddStringToObject(root, INFO_AUTH_TOKEN, this->thisProto().getAuth());
+    cJSON_AddStringToObject(root, INFO_BOARD_ID, this->thisProto().getBoardID());
+    cJSON_AddStringToObject(root, INFO_AUTH_TOKEN, this->thisProto().getAuth());
     cJSON_AddStringToObject(root, INFO_BUILD_DATE, BUILD_DATE_TIME);
     cJSON_AddStringToObject(root, INFO_VERSION, ERA_VERSION);
     cJSON_AddStringToObject(root, INFO_FIRMWARE_VERSION, ERA_FIRMWARE_VERSION);
@@ -1833,12 +1833,12 @@ void ERaApi<Proto, Flash>::addModbusInfo(cJSON* root) {
     int16_t signal = WiFi.RSSI();
 
     cJSON_AddNumberToObject(root, INFO_MB_CHIP_TEMPERATURE, static_cast<uint16_t>(temperatureRead() * 100.0f));
-	cJSON_AddNumberToObject(root, INFO_MB_TEMPERATURE, 0);
-	cJSON_AddNumberToObject(root, INFO_MB_VOLTAGE, 999);
-	cJSON_AddNumberToObject(root, INFO_MB_IS_BATTERY, 0);
-	cJSON_AddNumberToObject(root, INFO_MB_RSSI, signal);
-	cJSON_AddNumberToObject(root, INFO_MB_SIGNAL_STRENGTH, SignalToPercentage(signal));
-	cJSON_AddStringToObject(root, INFO_MB_WIFI_USING, WiFi.SSID().c_str());
+    cJSON_AddNumberToObject(root, INFO_MB_TEMPERATURE, 0);
+    cJSON_AddNumberToObject(root, INFO_MB_VOLTAGE, 999);
+    cJSON_AddNumberToObject(root, INFO_MB_IS_BATTERY, 0);
+    cJSON_AddNumberToObject(root, INFO_MB_RSSI, signal);
+    cJSON_AddNumberToObject(root, INFO_MB_SIGNAL_STRENGTH, SignalToPercentage(signal));
+    cJSON_AddStringToObject(root, INFO_MB_WIFI_USING, WiFi.SSID().c_str());
 
     /* Override modbus info */
     ERaModbusInfo(root);

@@ -55,10 +55,10 @@ template <class Proto, class Flash>
 inline
 void ERaApi<Proto, Flash>::initERaApiTask() {
 #if defined(ERA_MODBUS)
-	Modbus::begin();
+    Modbus::begin();
 #endif
 #if defined(ERA_ZIGBEE)
-	Zigbee::begin();
+    Zigbee::begin();
 #endif
 }
 
@@ -66,10 +66,10 @@ template <class Proto, class Flash>
 inline
 void ERaApi<Proto, Flash>::runERaApiTask() {
 #if defined(ERA_MODBUS)
-	Modbus::run();
+    Modbus::run();
 #endif
 #if defined(ERA_ZIGBEE)
-	Zigbee::run();
+    Zigbee::run();
 #endif
 }
 

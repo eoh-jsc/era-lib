@@ -24,11 +24,11 @@ enum ZbZclBasicSvrAttrT {
     ZCL_BASIC_ATTR_TUYA_TRANSMIT_POWER = 0xFFDE, /**< TransmitPower (Optional) */
 
     ZCL_BASIC_ATTR_XIAOMI_CURTAIN_OPTIONS = 0x0401, /**< Xiaomi Curtain Options - zcl_charStr - LUMI_UNITED_TECH */
-	ZCL_BASIC_ATTR_XIAOMI_DATA = 0xFF01, /**< Xiaomi Data - LUMI_UNITED_TECH */
-	ZCL_BASIC_ATTR_XIAOMI_VIBRATION_SENSITIVITY = 0xFF0D, /**< Xiaomi Vibration Sensitivity - zcl_uint8 - LUMI_UNITED_TECH */
+    ZCL_BASIC_ATTR_XIAOMI_DATA = 0xFF01, /**< Xiaomi Data - LUMI_UNITED_TECH */
+    ZCL_BASIC_ATTR_XIAOMI_VIBRATION_SENSITIVITY = 0xFF0D, /**< Xiaomi Vibration Sensitivity - zcl_uint8 - LUMI_UNITED_TECH */
     ZCL_BASIC_ATTR_XIAOMI_PREVENT_RESET = 0xFFF0, /**< Xiaomi Prevent Reset - zcl_octetStr - LUMI_UNITED_TECH */
 
-	ZCL_ATTR_CLUSTER_REVISION = 0xFFFD,
+    ZCL_ATTR_CLUSTER_REVISION = 0xFFFD,
 
     ZCL_BASIC_ATTR_TUYA_UNKNOWN = 0xFFFE
 };

@@ -132,53 +132,53 @@ CJSON_PUBLIC(cJSON*) cJSON_ParseWithLimit(const char* value, size_t limit) {
 }
 
 CJSON_PUBLIC(cJSON*) cJSON_AddNumberWithDecimalToObject(cJSON* const object, const char* const name, const double number, int decimal) {
-	if (round(number) == number || decimal <= 0) {
-		return cJSON_AddNumberToObject(object, name, number);
+    if (round(number) == number || decimal <= 0) {
+        return cJSON_AddNumberToObject(object, name, number);
     }
 
-	char number_buffer[26] {0};
-	char number_format[10] {0};
-	unsigned int number_length {0};
-	double n = number;
-	long long d = (long long)number;
+    char number_buffer[26] {0};
+    char number_format[10] {0};
+    unsigned int number_length {0};
+    double n = number;
+    long long d = (long long)number;
 
-	do {
-		++number_length;
-		d /= 10;
-	} while (d);
+    do {
+        ++number_length;
+        d /= 10;
+    } while (d);
 
-	while (abs(n) < 1.f && --decimal) {
-		n *= 10;
-	}
+    while (abs(n) < 1.f && --decimal) {
+        n *= 10;
+    }
 
-	snprintf(number_format, sizeof(number_format), "%%.%dg", decimal + number_length);
-	snprintf(number_buffer, sizeof(number_buffer), number_format, number);
-	return cJSON_AddRawNumberToObject(object, name, number_buffer);
+    snprintf(number_format, sizeof(number_format), "%%.%dg", decimal + number_length);
+    snprintf(number_buffer, sizeof(number_buffer), number_format, number);
+    return cJSON_AddRawNumberToObject(object, name, number_buffer);
 }
 
 CJSON_PUBLIC(cJSON*) cJSON_CreateNumberWithDecimalToObject(const double number, int decimal) {
-	if (round(number) == number || decimal <= 0) {
-		return cJSON_CreateNumber(number);
+    if (round(number) == number || decimal <= 0) {
+        return cJSON_CreateNumber(number);
     }
 
-	char number_buffer[26] {0};
-	char number_format[10] {0};
-	unsigned int number_length {0};
-	double n = number;
-	long long d = (long long)number;
+    char number_buffer[26] {0};
+    char number_format[10] {0};
+    unsigned int number_length {0};
+    double n = number;
+    long long d = (long long)number;
 
-	do {
-		++number_length;
-		d /= 10;
-	} while (d);
+    do {
+        ++number_length;
+        d /= 10;
+    } while (d);
 
-	while (abs(n) < 1.f && --decimal) {
-		n *= 10;
-	}
+    while (abs(n) < 1.f && --decimal) {
+        n *= 10;
+    }
 
-	snprintf(number_format, sizeof(number_format), "%%.%dg", decimal + number_length);
-	snprintf(number_buffer, sizeof(number_buffer), number_format, number);
-	return cJSON_CreateRawNumber(number_buffer);
+    snprintf(number_format, sizeof(number_format), "%%.%dg", decimal + number_length);
+    snprintf(number_buffer, sizeof(number_buffer), number_format, number);
+    return cJSON_CreateRawNumber(number_buffer);
 }
 
 /* Create Arrays: */
@@ -411,14 +411,14 @@ CJSON_PUBLIC(cJSON*) cJSON_SetNull(cJSON* const object, cJSON* const item) {
 }
 
 CJSON_PUBLIC(cJSON*) cJSON_GetArrayIndex(cJSON* const object, int index) {
-	cJSON* item = cJSON_GetArrayItem(object, index);
-	if (item == nullptr) {
-		while (index >= cJSON_GetArraySize(object)) {
-			item = cJSON_CreateNull();
+    cJSON* item = cJSON_GetArrayItem(object, index);
+    if (item == nullptr) {
+        while (index >= cJSON_GetArraySize(object)) {
+            item = cJSON_CreateNull();
 
-			cJSON_AddItemToArray(object, item);
-		}
-	}
+            cJSON_AddItemToArray(object, item);
+        }
+    }
     return item;
 }
 

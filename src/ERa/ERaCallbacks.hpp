@@ -8,7 +8,7 @@
 
 class ERaServerCallbacks
 {
-	const char* TAG = "Callbacks";
+    const char* TAG = "Callbacks";
 
 public:
     ERaServerCallbacks()

@@ -3,9 +3,9 @@
 
 namespace ZigbeeNamespace {
 
-	enum ManufacturerCodesT {
-		MANUF_CODE_NONE = 0x0000
-	};
+    enum ManufacturerCodesT {
+        MANUF_CODE_NONE = 0x0000
+    };
 
 };
 

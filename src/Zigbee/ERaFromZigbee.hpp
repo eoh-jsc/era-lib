@@ -74,15 +74,15 @@ private:
     cJSON* getDataZigbee(const DataAFMsg_t& afMsg, cJSON* root, const char* key);
     void removeDataZigbee(const DataAFMsg_t& afMsg, cJSON* root, const char* key);
 
-	inline
-	const Zigbee& thisZigbee() const {
-		return static_cast<const Zigbee&>(*this);
-	}
+    inline
+    const Zigbee& thisZigbee() const {
+        return static_cast<const Zigbee&>(*this);
+    }
 
-	inline
-	Zigbee& thisZigbee() {
-		return static_cast<Zigbee&>(*this);
-	}
+    inline
+    Zigbee& thisZigbee() {
+        return static_cast<Zigbee&>(*this);
+    }
 
     InfoDevice_t*& device;
     InfoCoordinator_t*& coordinator;
@@ -104,20 +104,20 @@ Response_t ERaFromZigbee<Zigbee>::fromZigbee(const uint8_t* payload, void* value
         .timeout = 0,
     };
     uint8_t fcs {0};
-	if (payload[this->thisZigbee().PositionSOF] != this->thisZigbee().SOF) {
-		return rsp;
+    if (payload[this->thisZigbee().PositionSOF] != this->thisZigbee().SOF) {
+        return rsp;
     }
-	uint8_t length = payload[this->thisZigbee().PositionDataLength];
-	uint8_t type = (payload[this->thisZigbee().PositionCmd0] & 0xE0) >> 5;
-	uint8_t sub = payload[this->thisZigbee().PositionCmd0] & 0x1F;
-	uint8_t cmd = payload[this->thisZigbee().PositionCmd1];
+    uint8_t length = payload[this->thisZigbee().PositionDataLength];
+    uint8_t type = (payload[this->thisZigbee().PositionCmd0] & 0xE0) >> 5;
+    uint8_t sub = payload[this->thisZigbee().PositionCmd0] & 0x1F;
+    uint8_t cmd = payload[this->thisZigbee().PositionCmd1];
     data.assign(payload + this->thisZigbee().DataStart, payload + this->thisZigbee().DataStart + length);
     if (data.size() > this->thisZigbee().MaxDataSize) {
         return rsp;
     }
     fcs = this->getCheckSumReceive(payload + this->thisZigbee().PositionDataLength, length + 3);
-	if(fcs != payload[length + 4]) {
-		return rsp;
+    if(fcs != payload[length + 4]) {
+        return rsp;
     }
 
     rsp = {
@@ -242,39 +242,39 @@ bool ERaFromZigbee<Zigbee>::getDataAFMsg(DataAFMsg_t& afMsg, vector<uint8_t>& da
     afMsg.srcAddr.addr.nwkAddr = BUILD_UINT16(data.at(4));
     afMsg.srcAddr.endpoint = static_cast<EndpointListT>(data.at(6));
     afMsg.dstEndpoint = static_cast<EndpointListT>(data.at(7));
-	afMsg.wasBroadcast = data.at(8);
-	afMsg.linkQuality = data.at(9);
-	afMsg.securityUse = data.at(10);
-	afMsg.timestamp = BUILD_UINT32(data.at(11));
-	afMsg.seqNum = data.at(15);
-	afMsg.len = data.at(16);
-	if (afMsg.len < ZCL_DATA_MIN) {
-		return false;
+    afMsg.wasBroadcast = data.at(8);
+    afMsg.linkQuality = data.at(9);
+    afMsg.securityUse = data.at(10);
+    afMsg.timestamp = BUILD_UINT32(data.at(11));
+    afMsg.seqNum = data.at(15);
+    afMsg.len = data.at(16);
+    if (afMsg.len < ZCL_DATA_MIN) {
+        return false;
     }
-	afMsg.frameCtrl = data.at(17);
-	bool manufSpec = (afMsg.frameCtrl >> 2) & 0x01;
-	uint8_t manufShift = (manufSpec ? 2 : 0);
-	if (afMsg.len < ZCL_DATA_MIN + manufShift) {
-		return false;
+    afMsg.frameCtrl = data.at(17);
+    bool manufSpec = (afMsg.frameCtrl >> 2) & 0x01;
+    uint8_t manufShift = (manufSpec ? 2 : 0);
+    if (afMsg.len < ZCL_DATA_MIN + manufShift) {
+        return false;
     }
-	if (manufSpec) {
-		afMsg.manufCode = static_cast<ManufacturerCodesT>(BUILD_UINT16(data.at(18)));
+    if (manufSpec) {
+        afMsg.manufCode = static_cast<ManufacturerCodesT>(BUILD_UINT16(data.at(18)));
     }
-	else {
-		afMsg.manufCode = ManufacturerCodesT::MANUF_CODE_NONE;
+    else {
+        afMsg.manufCode = ManufacturerCodesT::MANUF_CODE_NONE;
     }
-	afMsg.receiveId = data.at(18 + manufShift);
-	afMsg.cmdId = data.at(19 + manufShift);
-	afMsg.pDataLen = afMsg.len - ZCL_DATA_MIN - manufShift;
-	if (afMsg.pDataLen) {
-		afMsg.pData = &data.at(20 + manufShift);
+    afMsg.receiveId = data.at(18 + manufShift);
+    afMsg.cmdId = data.at(19 + manufShift);
+    afMsg.pDataLen = afMsg.len - ZCL_DATA_MIN - manufShift;
+    if (afMsg.pDataLen) {
+        afMsg.pData = &data.at(20 + manufShift);
     }
-	afMsg.radius = data.at(19 + afMsg.len); /* Radius (remain) - limits the number of hops */
-	if ((afMsg.radius < this->thisZigbee().Radius - 1) || (afMsg.zclId == ClusterIDT::ZCL_CLUSTER_GREEN_POWER)) { /* afMsg.srcEndpoint == ENDPOINT242 */
-		afMsg.parentAddr = BUILD_UINT16(data.at(17 + afMsg.len)); /* MAC header source short address */
+    afMsg.radius = data.at(19 + afMsg.len); /* Radius (remain) - limits the number of hops */
+    if ((afMsg.radius < this->thisZigbee().Radius - 1) || (afMsg.zclId == ClusterIDT::ZCL_CLUSTER_GREEN_POWER)) { /* afMsg.srcEndpoint == ENDPOINT242 */
+        afMsg.parentAddr = BUILD_UINT16(data.at(17 + afMsg.len)); /* MAC header source short address */
     }
-	if (afMsg.parentAddr == afMsg.srcAddr.addr.nwkAddr) {
-		afMsg.parentAddr = 0;
+    if (afMsg.parentAddr == afMsg.srcAddr.addr.nwkAddr) {
+        afMsg.parentAddr = 0;
     }
     afMsg.ddr = ((afMsg.frameCtrl >> 4) & 0x01);
     return true;
@@ -282,28 +282,28 @@ bool ERaFromZigbee<Zigbee>::getDataAFMsg(DataAFMsg_t& afMsg, vector<uint8_t>& da
 
 template <class Zigbee>
 void ERaFromZigbee<Zigbee>::processDataAFMsg(const DataAFMsg_t& afMsg, Response_t& rsp, void* value) {
-	FrameTypeT type = static_cast<FrameTypeT>(afMsg.frameCtrl & 0x03);
-	bool manufSpec = (afMsg.frameCtrl >> 2) & 0x01;
-	DirectionT direction = static_cast<DirectionT>((afMsg.frameCtrl >> 3) & 0x01);
-	bool disableRsp = (afMsg.frameCtrl >> 4) & 0x01;
-	uint8_t reservedBits = afMsg.frameCtrl >> 5;
+    FrameTypeT type = static_cast<FrameTypeT>(afMsg.frameCtrl & 0x03);
+    bool manufSpec = (afMsg.frameCtrl >> 2) & 0x01;
+    DirectionT direction = static_cast<DirectionT>((afMsg.frameCtrl >> 3) & 0x01);
+    bool disableRsp = (afMsg.frameCtrl >> 4) & 0x01;
+    uint8_t reservedBits = afMsg.frameCtrl >> 5;
 
-	uint8_t manufShift = (manufSpec ? 2 : 0);
+    uint8_t manufShift = (manufSpec ? 2 : 0);
 
-	if (afMsg.len < ZCL_DATA_MIN + manufShift) {
-		return;
+    if (afMsg.len < ZCL_DATA_MIN + manufShift) {
+        return;
     }
 
     DefaultRsp_t defaultRsp {};
     defaultRsp.isSpecific = ((type == FrameTypeT::SPECIFIC) ? true : false);
-	defaultRsp.frameCtrl = afMsg.frameCtrl;
-	defaultRsp.manufCode = afMsg.manufCode;
-	defaultRsp.zclId = afMsg.zclId;
-	defaultRsp.dstEndpoint = afMsg.srcAddr.endpoint;
-	defaultRsp.srcEndpoint = afMsg.dstEndpoint;
-	defaultRsp.dstAddr = afMsg.srcAddr.addr.nwkAddr;
-	defaultRsp.transId = afMsg.receiveId;
-	defaultRsp.hasResponse = afMsg.wasBroadcast; /* skip default response if broadcast */
+    defaultRsp.frameCtrl = afMsg.frameCtrl;
+    defaultRsp.manufCode = afMsg.manufCode;
+    defaultRsp.zclId = afMsg.zclId;
+    defaultRsp.dstEndpoint = afMsg.srcAddr.endpoint;
+    defaultRsp.srcEndpoint = afMsg.dstEndpoint;
+    defaultRsp.dstAddr = afMsg.srcAddr.addr.nwkAddr;
+    defaultRsp.transId = afMsg.receiveId;
+    defaultRsp.hasResponse = afMsg.wasBroadcast; /* skip default response if broadcast */
     rsp.transIdZcl = afMsg.receiveId;
 
     if (type == FrameTypeT::GLOBAL) {
@@ -320,19 +320,19 @@ void ERaFromZigbee<Zigbee>::processDataAFMsg(const DataAFMsg_t& afMsg, Response_
         }
     }
 
-	ERA_FORCE_UNUSED(manufSpec);
-	ERA_FORCE_UNUSED(direction);
-	ERA_FORCE_UNUSED(disableRsp);
-	ERA_FORCE_UNUSED(reservedBits);
+    ERA_FORCE_UNUSED(manufSpec);
+    ERA_FORCE_UNUSED(direction);
+    ERA_FORCE_UNUSED(disableRsp);
+    ERA_FORCE_UNUSED(reservedBits);
 }
 
 template <class Zigbee>
 uint8_t ERaFromZigbee<Zigbee>::getCheckSumReceive(const uint8_t* pData, size_t pDataLen) {
-	uint8_t crc {0};
-	for (size_t i = 0; i < pDataLen; ++i) {
-		crc = crc ^ pData[i];
-	}
-	return crc;
+    uint8_t crc {0};
+    for (size_t i = 0; i < pDataLen; ++i) {
+        crc = crc ^ pData[i];
+    }
+    return crc;
 }
 
 #include "fromZigbee/ERaFromKey.hpp"

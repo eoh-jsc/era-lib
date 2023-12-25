@@ -67,39 +67,39 @@ static const StringifyZcl_t StrifyZcl[] = {
 };
 
 static const KeyDataZigbee_t KeyDataZb[] = {
-	{
-		ClusterIDT::ZCL_CLUSTER_POWER_CONFIG, 2, {
+    {
+        ClusterIDT::ZCL_CLUSTER_POWER_CONFIG, 2, {
             KEY(POWER_CONFIG, BATTERY_VOLTAGE), KEY(POWER_CONFIG, BATTERY_PCT)
         }
-	},
-	{
-		ClusterIDT::ZCL_CLUSTER_ONOFF, 1, {
+    },
+    {
+        ClusterIDT::ZCL_CLUSTER_ONOFF, 1, {
             KEY(ONOFF, ONOFF)
         }, 1, {
             KEY_SPEC(ONOFF, STATE_COMMAND)
         }
-	},
-	{
-		ClusterIDT::ZCL_CLUSTER_LEVEL_CONTROL, 1, {
+    },
+    {
+        ClusterIDT::ZCL_CLUSTER_LEVEL_CONTROL, 1, {
             KEY(LEVEL, CURRLEVEL)
         }, 3, {
             KEY_SPEC(LEVEL, LEVEL_COMMAND), KEY_SPEC(LEVEL, MOVELEVEL), KEY_SPEC(LEVEL, MOVELEVEL_ONOFF)
         }
-	},
-	{
-		ClusterIDT::ZCL_CLUSTER_MULTISTATE_INPUT_BASIC, 1, {
-			KEY(MULTISTATE_INPUT, PREVALUE)
-		}
-	},
-	{
-		ClusterIDT::ZCL_CLUSTER_GREEN_POWER, 0, {}, 1,  {
+    },
+    {
+        ClusterIDT::ZCL_CLUSTER_MULTISTATE_INPUT_BASIC, 1, {
+            KEY(MULTISTATE_INPUT, PREVALUE)
+        }
+    },
+    {
+        ClusterIDT::ZCL_CLUSTER_GREEN_POWER, 0, {}, 1,  {
             KEY_SPEC(GREEN_POWER, COMMAND_ID)
         }
-	},
+    },
     {
-		ClusterIDT::ZCL_CLUSTER_MEAS_TEMPERATURE, 1, {
-			KEY(MEAS_TEMPERATURE, MEAS_VAL)
-		}
+        ClusterIDT::ZCL_CLUSTER_MEAS_TEMPERATURE, 1, {
+            KEY(MEAS_TEMPERATURE, MEAS_VAL)
+        }
     },
     {
         ClusterIDT::ZCL_CLUSTER_MEAS_PRESSURE, 1, {
@@ -107,17 +107,17 @@ static const KeyDataZigbee_t KeyDataZb[] = {
         }
     },
     {
-		ClusterIDT::ZCL_CLUSTER_MEAS_HUMIDITY, 1, {
-			KEY(MEAS_HUMIDITY, MEAS_VAL) 
-		}
+        ClusterIDT::ZCL_CLUSTER_MEAS_HUMIDITY, 1, {
+            KEY(MEAS_HUMIDITY, MEAS_VAL) 
+        }
     },
-	{
-		ClusterIDT::ZCL_CLUSTER_SECURITY_IAS_ZONE, 3, {
+    {
+        ClusterIDT::ZCL_CLUSTER_SECURITY_IAS_ZONE, 3, {
             KEY(IAS_ZONE, ALARM_STATE), KEY(IAS_ZONE, TAMPER), KEY(IAS_ZONE, BATTERY_LOW)
         }, 3, {
             KEY_SPEC(IAS_ZONE, ALARM_STATE), KEY_SPEC(IAS_ZONE, TAMPER), KEY_SPEC(IAS_ZONE, BATTERY_LOW)
         }
-	},
+    },
 };
 
 #endif /* INC_ERA_CLUSTER_ZIGBEE_HPP_ */

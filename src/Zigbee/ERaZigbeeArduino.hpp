@@ -93,8 +93,8 @@ ResultT ERaToZigbee<Zigbee>::waitResponse(Response_t rspWait, void* value) {
         return ResultT::RESULT_FAIL;
     }
     
-	if(!rspWait.timeout || rspWait.timeout > MAX_TIMEOUT) {
-		rspWait.timeout = MAX_TIMEOUT;
+    if(!rspWait.timeout || rspWait.timeout > MAX_TIMEOUT) {
+        rspWait.timeout = MAX_TIMEOUT;
     }
     uint8_t cmdStatus = ZnpCommandStatusT::INVALID_PARAM;
 

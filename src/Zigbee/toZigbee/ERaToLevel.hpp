@@ -5,17 +5,17 @@
 
 template <class Zigbee>
 bool ERaToZigbee<Zigbee>::levelToZigbee(const cJSON* const root, const cJSON* const current, AFAddrType_t& dstAddr, const ConvertToZigbeeT type) {
-	cJSON* subItem = nullptr;
-	uint16_t transition {0};
-	bool onOff {false};
+    cJSON* subItem = nullptr;
+    uint16_t transition {0};
+    bool onOff {false};
 
     switch (type) {
         case ConvertToZigbeeT::CONVERT_SET_TO_ZIGBEE:
             if (ERaStrNCmp(current->string, "level")) {
                 onOff = this->getEndpointToZigbee(current, "level", dstAddr.endpoint);
                 subItem = cJSON_GetObjectItem(root, "transition");
-				if (cJSON_IsNumber(subItem)) {
-					transition = subItem->valueint * 10;
+                if (cJSON_IsNumber(subItem)) {
+                    transition = subItem->valueint * 10;
                 }
                 if (cJSON_IsNumber(current)) {
                     if (onOff) {

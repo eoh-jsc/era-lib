@@ -34,7 +34,7 @@ class ERaModbus
     const IPAddress ipNone{0, 0, 0, 0};
 
     friend class ERaModbusTransp < ERaModbus<Api> >;
-	typedef ERaModbusTransp < ERaModbus<Api> > ModbusTransp;
+    typedef ERaModbusTransp < ERaModbus<Api> > ModbusTransp;
 
 public:
     ERaModbus()
@@ -97,13 +97,13 @@ public:
         ERaModbusEntry::getConfig()->pubInterval.delay = _interval;
     }
 
-	void setModbusCallbacks(ERaModbusCallbacks& callbacks) {
-		this->pModbusCallbacks = &callbacks;
-	}
+    void setModbusCallbacks(ERaModbusCallbacks& callbacks) {
+        this->pModbusCallbacks = &callbacks;
+    }
 
-	void setModbusCallbacks(ERaModbusCallbacks* pCallbacks) {
-		this->pModbusCallbacks = pCallbacks;
-	}
+    void setModbusCallbacks(ERaModbusCallbacks* pCallbacks) {
+        this->pModbusCallbacks = pCallbacks;
+    }
 
     void writeAllModbus(uint8_t len1, uint8_t len2, const uint8_t* pData = NULL,
                         size_t pDataLen = 0, bool force = false, bool execute = false);
@@ -246,7 +246,7 @@ protected:
         if (strlen(ptr) != 36) {
             return false;
         }
-	    if (!this->queue.writeable()) {
+        if (!this->queue.writeable()) {
             return false;
         }
         char* buf = (char*)ERA_MALLOC(37 * sizeof(char));
@@ -494,27 +494,27 @@ private:
         this->modbusConfig->modbusInterval.prevMillis = (ERaMillis() - this->modbusConfig->modbusInterval.delay + ERA_MODBUS_EXECUTE_MS);
     }
 
-	bool isRequest() {
-		return this->queue.readable();
-	}
+    bool isRequest() {
+        return this->queue.readable();
+    }
 
-	ModbusAction_t& getRequest() {
-		return this->queue;
-	}
+    ModbusAction_t& getRequest() {
+        return this->queue;
+    }
 
     bool isEmptyRequest() {
         return this->queue.isEmpty();
     }
 
-	inline
-	const Api& thisApi() const {
-		return static_cast<const Api&>(*this);
-	}
+    inline
+    const Api& thisApi() const {
+        return static_cast<const Api&>(*this);
+    }
 
-	inline
-	Api& thisApi() {
-		return static_cast<Api&>(*this);
-	}
+    inline
+    Api& thisApi() {
+        return static_cast<Api&>(*this);
+    }
 
     bool initialized;
 
@@ -523,7 +523,7 @@ private:
     ERaTimer::iterator timerFatal;
 #endif
 
-	ERaQueue<ModbusAction_t, MODBUS_MAX_ACTION> queue;
+    ERaQueue<ModbusAction_t, MODBUS_MAX_ACTION> queue;
     ERaDataBuffDynamic dataBuff;
     ERaModbusEntry*& modbusConfig;
     ERaModbusEntry*& modbusControl;

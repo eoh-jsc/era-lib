@@ -38,13 +38,13 @@ class ERaProperty
 {
 #if defined(PROPERTY_HAS_FUNCTIONAL_H)
     typedef std::function<void(void)> PropertyCallback_t;
-	typedef std::function<void(void*)> ReportPropertyCallback_t;
+    typedef std::function<void(void*)> ReportPropertyCallback_t;
 #else
     typedef void (*PropertyCallback_t)(void);
-	typedef void (*ReportPropertyCallback_t)(void*);
+    typedef void (*ReportPropertyCallback_t)(void*);
 #endif
 
-	const static int MAX_PROPERTYS = ERA_MAX_PROPERTY;
+    const static int MAX_PROPERTYS = ERA_MAX_PROPERTY;
     typedef struct __Property_t {
         ERaProperty::PropertyCallback_t callback;
         ERaReport::iterator report;
@@ -67,17 +67,17 @@ public:
             , pProp(_pProp)
         {}
 
-		bool isValid() const {
-			return ((this->prop != nullptr) && (this->pProp != nullptr));
-		}
+        bool isValid() const {
+            return ((this->prop != nullptr) && (this->pProp != nullptr));
+        }
 
         operator Property_t*() const {
             return this->pProp;
         }
 
-		operator bool() const {
-			return this->isValid();
-		}
+        operator bool() const {
+            return this->isValid();
+        }
 
         iterator& onUpdate(ERaProperty::PropertyCallback_t cb) {
             if (this->isValid()) {
@@ -118,10 +118,10 @@ public:
 
     protected:
     private:
-		void invalidate() {
-			this->prop = nullptr;
-			this->pProp = nullptr;
-		}
+        void invalidate() {
+            this->prop = nullptr;
+            this->pProp = nullptr;
+        }
 
         ERaProperty* prop;
         Property_t* pProp;
@@ -412,36 +412,36 @@ private:
         return (flags & mask) == mask;
     }
 
-	inline
-	const Api& thisApi() const {
-		return static_cast<const Api&>(*this);
-	}
+    inline
+    const Api& thisApi() const {
+        return static_cast<const Api&>(*this);
+    }
 
-	inline
-	Api& thisApi() {
-		return static_cast<Api&>(*this);
-	}
+    inline
+    Api& thisApi() {
+        return static_cast<Api&>(*this);
+    }
 
 #if defined(PROPERTY_HAS_FUNCTIONAL_H)
     ReportPropertyCallback_t propertyCb = [&, this](void* args) {
-		this->onCallback(args);
-	};
+        this->onCallback(args);
+    };
 #else
     ReportPropertyCallback_t propertyCb = [](void* args) {
-		ERaProperty::_onCallback(args);
-	};
+        ERaProperty::_onCallback(args);
+    };
 #endif
 
     ERaList<Property_t*> ERaProp;
-	ERaReport ERaPropRp;
-	unsigned int numProperty;
+    ERaReport ERaPropRp;
+    unsigned int numProperty;
     unsigned long timeout;
     unsigned long writeTimeout;
 };
 
 template <class Api>
 void ERaProperty<Api>::run() {
-	unsigned long currentMillis = ERaMillis();
+    unsigned long currentMillis = ERaMillis();
     const typename ERaList<Property_t*>::iterator* e = this->ERaProp.end();
     for (typename ERaList<Property_t*>::iterator* it = this->ERaProp.begin(); it != e; it = it->getNext()) {
         Property_t* pProp = it->get();
@@ -789,14 +789,14 @@ void ERaProperty<Api>::onCallbackReal(const Property_t* const pProp) {
         return;
     }
 
-	char copy[65] {0};
-	CopyToString(id, copy);
-	ERaDataBuff arrayId(copy, strlen(copy) + 1, sizeof(copy));
-	this->splitString(copy, ":");
+    char copy[65] {0};
+    CopyToString(id, copy);
+    ERaDataBuff arrayId(copy, strlen(copy) + 1, sizeof(copy));
+    this->splitString(copy, ":");
 
-	if (arrayId.size() < 2) {
-		return;
-	}
+    if (arrayId.size() < 2) {
+        return;
+    }
 
     cJSON* root = cJSON_CreateObject();
     if (root == nullptr) {
@@ -993,20 +993,20 @@ typename ERaProperty<Api>::Property_t* ERaProperty<Api>::isPropertyIdExist(T pin
 
 template <class Api>
 size_t ERaProperty<Api>::splitString(char* strInput, const char* delims) {
-	if ((strInput == nullptr) ||
-		(delims == nullptr)) {
-		return 0;
-	}
-	if (!strlen(strInput)) {
-		return 0;
-	}
-	size_t size {0};
+    if ((strInput == nullptr) ||
+        (delims == nullptr)) {
+        return 0;
+    }
+    if (!strlen(strInput)) {
+        return 0;
+    }
+    size_t size {0};
     char* token = strtok(strInput, delims);
-	while (token != nullptr) {
-		++size;
-		token = strtok(nullptr, delims);
-	}
-	return size;
+    while (token != nullptr) {
+        ++size;
+        token = strtok(nullptr, delims);
+    }
+    return size;
 }
 
 template <class Api>

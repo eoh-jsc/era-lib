@@ -201,25 +201,25 @@ void ERaFlashLinux::mkdir(const char* path) {
     if (path == nullptr) {
         return;
     }
-	size_t len {0};
+    size_t len {0};
     char dir[256] {0};
     char* p = nullptr;
-	struct stat st {0};
+    struct stat st {0};
 
-	snprintf(dir, sizeof(dir), "%s", path);
-	len = strlen(dir);
-	if (dir[len - 1] == '/') {
-		dir[len - 1] = 0;
+    snprintf(dir, sizeof(dir), "%s", path);
+    len = strlen(dir);
+    if (dir[len - 1] == '/') {
+        dir[len - 1] = 0;
     }
-	for (p = dir + 1; *p; p++) {
-		if (*p == '/') {
-			*p = 0;
-			if (stat(dir, &st) == -1) {
-				::mkdir(dir, 0755);
-			}
-			*p = '/';
-		}
-	}
+    for (p = dir + 1; *p; p++) {
+        if (*p == '/') {
+            *p = 0;
+            if (stat(dir, &st) == -1) {
+                ::mkdir(dir, 0755);
+            }
+            *p = '/';
+        }
+    }
 }
 
 typedef ERaFlashLinux ERaFlash;

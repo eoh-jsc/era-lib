@@ -128,9 +128,9 @@ public:
         return (n - c);
     }
 
-	uint8_t peek() {
-		return this->_b[this->_r];
-	}
+    uint8_t peek() {
+        return this->_b[this->_r];
+    }
 
 private:
     int _inc(int i, int n = 1) {

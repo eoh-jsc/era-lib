@@ -137,7 +137,7 @@ void ERaFromZigbee<Zigbee>::processReportAttribute(const DataAFMsg_t& afMsg, Def
     }
 
     uint16_t attribute = BUILD_UINT16(afMsg.pData[0]);
-	DataTypeT dataType = static_cast<DataTypeT>(afMsg.pData[2]);
+    DataTypeT dataType = static_cast<DataTypeT>(afMsg.pData[2]);
 
     switch (afMsg.zclId) {
         case ZCL_CLUSTER_BASIC:
@@ -147,8 +147,8 @@ void ERaFromZigbee<Zigbee>::processReportAttribute(const DataAFMsg_t& afMsg, Def
     }
     this->getDataAttributes(afMsg, defaultRsp, afMsg.srcAddr.addr.nwkAddr, afMsg.srcAddr.endpoint, {});
 
-	ERA_FORCE_UNUSED(attribute);
-	ERA_FORCE_UNUSED(dataType);
+    ERA_FORCE_UNUSED(attribute);
+    ERA_FORCE_UNUSED(dataType);
 }
 
 template <class Zigbee>
@@ -196,83 +196,83 @@ bool ERaFromZigbee<Zigbee>::getDataAttributes(const DataAFMsg_t& afMsg, DefaultR
         }
         type = afMsg.pData[position + 2];
         shiftPos = 0;
-		switch (type) {
-			case DataTypeT::zcl_doublePrec:
-			case DataTypeT::zcl_data64:
-			case DataTypeT::zcl_bitmap64:
-			case DataTypeT::zcl_int64:
-			case DataTypeT::zcl_uint64:
-			case DataTypeT::zcl_ieeeAddr:
-				len = 8;
-				break;
-			case DataTypeT::zcl_data56:
-			case DataTypeT::zcl_bitmap56:
-			case DataTypeT::zcl_int56:
-			case DataTypeT::zcl_uint56:
-				len = 7;
-				break;
-			case DataTypeT::zcl_data48:
-			case DataTypeT::zcl_bitmap48:
-			case DataTypeT::zcl_int48:
-			case DataTypeT::zcl_uint48:
-				len = 6;
-				break;
-			case DataTypeT::zcl_data40:
-			case DataTypeT::zcl_bitmap40:
-			case DataTypeT::zcl_int40:
-			case DataTypeT::zcl_uint40:
-				len = 5;
-				break;
-			case DataTypeT::zcl_singlePrec:
-			case DataTypeT::zcl_data32:
-			case DataTypeT::zcl_bitmap32:
-			case DataTypeT::zcl_int32:
-			case DataTypeT::zcl_uint32:
-			case DataTypeT::zcl_tod:
-			case DataTypeT::zcl_date:
-			case DataTypeT::zcl_utc:
-			case DataTypeT::zcl_bacOid:
-				len = 4;
-				break;
-			case DataTypeT::zcl_data24:
-			case DataTypeT::zcl_bitmap24:
-			case DataTypeT::zcl_int24:
-			case DataTypeT::zcl_uint24:
-				len = 3;
-				break;
-			case DataTypeT::zcl_data16:
-			case DataTypeT::zcl_bitmap16:
-			case DataTypeT::zcl_int16:
-			case DataTypeT::zcl_uint16:
-			case DataTypeT::zcl_enum16:
-			case DataTypeT::zcl_semiPrec:
-			case DataTypeT::zcl_clusterId:
-			case DataTypeT::zcl_attrId:
-				len = 2;
-				break;
-			case DataTypeT::zcl_data8:
-			case DataTypeT::zcl_boolean:
-			case DataTypeT::zcl_bitmap8:
-			case DataTypeT::zcl_int8:
-			case DataTypeT::zcl_uint8:
-			case DataTypeT::zcl_enum8:
-				len = 1;
-				break;
-			case DataTypeT::zcl_octetStr:
-			case DataTypeT::zcl_charStr:
-				len = 1 + afMsg.pData[position + 2 + 1]; // string
-				shiftPos = 1;
-				break;
-			case DataTypeT::zcl_longOctetStr:
-			case DataTypeT::zcl_longCharStr:
-				len = 2 + BUILD_UINT16(afMsg.pData[position + 2 + 1]); // long string
-				shiftPos = 2;
-				break;
-			case DataTypeT::zcl_noData:
-			case DataTypeT::zcl_unknown:
-			default:
-				return false;
-		}
+        switch (type) {
+            case DataTypeT::zcl_doublePrec:
+            case DataTypeT::zcl_data64:
+            case DataTypeT::zcl_bitmap64:
+            case DataTypeT::zcl_int64:
+            case DataTypeT::zcl_uint64:
+            case DataTypeT::zcl_ieeeAddr:
+                len = 8;
+                break;
+            case DataTypeT::zcl_data56:
+            case DataTypeT::zcl_bitmap56:
+            case DataTypeT::zcl_int56:
+            case DataTypeT::zcl_uint56:
+                len = 7;
+                break;
+            case DataTypeT::zcl_data48:
+            case DataTypeT::zcl_bitmap48:
+            case DataTypeT::zcl_int48:
+            case DataTypeT::zcl_uint48:
+                len = 6;
+                break;
+            case DataTypeT::zcl_data40:
+            case DataTypeT::zcl_bitmap40:
+            case DataTypeT::zcl_int40:
+            case DataTypeT::zcl_uint40:
+                len = 5;
+                break;
+            case DataTypeT::zcl_singlePrec:
+            case DataTypeT::zcl_data32:
+            case DataTypeT::zcl_bitmap32:
+            case DataTypeT::zcl_int32:
+            case DataTypeT::zcl_uint32:
+            case DataTypeT::zcl_tod:
+            case DataTypeT::zcl_date:
+            case DataTypeT::zcl_utc:
+            case DataTypeT::zcl_bacOid:
+                len = 4;
+                break;
+            case DataTypeT::zcl_data24:
+            case DataTypeT::zcl_bitmap24:
+            case DataTypeT::zcl_int24:
+            case DataTypeT::zcl_uint24:
+                len = 3;
+                break;
+            case DataTypeT::zcl_data16:
+            case DataTypeT::zcl_bitmap16:
+            case DataTypeT::zcl_int16:
+            case DataTypeT::zcl_uint16:
+            case DataTypeT::zcl_enum16:
+            case DataTypeT::zcl_semiPrec:
+            case DataTypeT::zcl_clusterId:
+            case DataTypeT::zcl_attrId:
+                len = 2;
+                break;
+            case DataTypeT::zcl_data8:
+            case DataTypeT::zcl_boolean:
+            case DataTypeT::zcl_bitmap8:
+            case DataTypeT::zcl_int8:
+            case DataTypeT::zcl_uint8:
+            case DataTypeT::zcl_enum8:
+                len = 1;
+                break;
+            case DataTypeT::zcl_octetStr:
+            case DataTypeT::zcl_charStr:
+                len = 1 + afMsg.pData[position + 2 + 1]; // string
+                shiftPos = 1;
+                break;
+            case DataTypeT::zcl_longOctetStr:
+            case DataTypeT::zcl_longCharStr:
+                len = 2 + BUILD_UINT16(afMsg.pData[position + 2 + 1]); // long string
+                shiftPos = 2;
+                break;
+            case DataTypeT::zcl_noData:
+            case DataTypeT::zcl_unknown:
+            default:
+                return false;
+        }
         result = true;
         if (listAttr.size()) {
             auto eachAttr = std::find_if(listAttr.begin(), listAttr.end(), [attrRsp](const DataAttr_t& e) {
@@ -311,14 +311,14 @@ bool ERaFromZigbee<Zigbee>::getDataAttributes(const DataAFMsg_t& afMsg, DefaultR
                         this->createDataGlobal(afMsg, attrRsp, type, value);
                     }
 
-					defaultRsp.attribute = attrRsp;
-					defaultRsp.value = value;
+                    defaultRsp.attribute = attrRsp;
+                    defaultRsp.value = value;
                     /* Queue Zigbee Rsp */
                     if (this->thisZigbee().queueDefaultRsp.writeable()) {
                         this->thisZigbee().queueDefaultRsp += defaultRsp;
                     }
-					defaultRsp.isFirst = false;
-					defaultRsp.isSent = true;
+                    defaultRsp.isFirst = false;
+                    defaultRsp.isSent = true;
                     break;
             }
         }

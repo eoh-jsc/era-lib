@@ -19,7 +19,7 @@ enum ZbZclOnOffSvrAttrT {
 
     ZCL_ONOFF_ATTR_ELKO_PRE_WARNING_TIME = 0xE000, /**< ElkoPreWarningTime (Optional) - uint16 code ELKO*/
     ZCL_ONOFF_ATTR_ELKO_ON_TIME_RELOAD, /**< ElkoOnTimeReload (Optional) - uint32 code ELKO*/
-	ZCL_ONOFF_ATTR_ELKO_ON_TIME_RELOAD_OPTION /**< ElkoOnTimeReloadOptions (Optional) - bitmap8 code ELKO*/
+    ZCL_ONOFF_ATTR_ELKO_ON_TIME_RELOAD_OPTION /**< ElkoOnTimeReloadOptions (Optional) - bitmap8 code ELKO*/
 };
 
 /* OnOff Command IDs (don't include in doxygen) */

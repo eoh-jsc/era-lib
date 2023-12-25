@@ -85,7 +85,7 @@ T ERaMathClamp(T val, T2 low, T2 high) {
 template <typename T>
 inline
 T ERaMapNumberRange(T value, T fromLow, T fromHigh, T toLow, T toHigh) {
-	return (toLow + (ERaMin(value, fromHigh) - ERaMin(value, fromLow)) * (toHigh - toLow) / (fromHigh - fromLow));
+    return (toLow + (ERaMin(value, fromHigh) - ERaMin(value, fromLow)) * (toHigh - toLow) / (fromHigh - fromLow));
 }
 
 #if defined(ARDUINO) ||                 \
@@ -111,11 +111,11 @@ T ERaMapNumberRange(T value, T fromLow, T fromHigh, T toLow, T toHigh) {
     #include "driver/uart.h"
     #include <Utility/ERaOs.hpp>
 #elif defined(ARDUINO) &&               \
-    !defined(__MBED__) &&			    \
+    !defined(__MBED__) &&               \
     (defined(RTL8722DM) ||              \
     defined(ARDUINO_AMEBA) ||           \
     defined(ARDUINO_ARCH_STM32) ||      \
-	defined(ARDUINO_ARCH_RENESAS) ||    \
+    defined(ARDUINO_ARCH_RENESAS) ||    \
     defined(ARDUINO_ARCH_RP2040))
     #include <Utility/ERaOs.hpp>
 #endif

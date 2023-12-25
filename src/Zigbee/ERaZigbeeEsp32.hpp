@@ -100,8 +100,8 @@ ResultT ERaToZigbee<Zigbee>::waitResponse(Response_t rspWait, void* value) {
     int length {0};
     uart_event_t event;
     
-	if(!rspWait.timeout || rspWait.timeout > MAX_TIMEOUT) {
-		rspWait.timeout = MAX_TIMEOUT;
+    if(!rspWait.timeout || rspWait.timeout > MAX_TIMEOUT) {
+        rspWait.timeout = MAX_TIMEOUT;
     }
     uint8_t cmdStatus = ZnpCommandStatusT::INVALID_PARAM;
 
@@ -160,8 +160,8 @@ template <class Zigbee>
 void ERaToZigbee<Zigbee>::sendByte(uint8_t byte) {
     ERaGuardLock(this->mutex);
     ERaLogHex("ZB >>", &byte, 1);
-	SEND_UART(UART_ZIGBEE, &byte, 1);
-	WAIT_SEND_UART_DONE(UART_ZIGBEE);
+    SEND_UART(UART_ZIGBEE, &byte, 1);
+    WAIT_SEND_UART_DONE(UART_ZIGBEE);
     ERaGuardUnlock(this->mutex);
 }
 
@@ -169,8 +169,8 @@ template <class Zigbee>
 void ERaToZigbee<Zigbee>::sendCommand(const vector<uint8_t>& data) {
     ERaGuardLock(this->mutex);
     ERaLogHex("ZB >>", data.data(), data.size());
-	SEND_UART(UART_ZIGBEE, const_cast<uint8_t*>(data.data()), data.size());
-	WAIT_SEND_UART_DONE(UART_ZIGBEE);
+    SEND_UART(UART_ZIGBEE, const_cast<uint8_t*>(data.data()), data.size());
+    WAIT_SEND_UART_DONE(UART_ZIGBEE);
     ERaGuardUnlock(this->mutex);
 }
 

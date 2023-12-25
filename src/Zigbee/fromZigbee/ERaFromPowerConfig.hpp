@@ -5,8 +5,8 @@
 
 template <class Zigbee>
 bool ERaFromZigbee<Zigbee>::powerConfigFromZigbee(const DataAFMsg_t& afMsg, cJSON* root, uint16_t attribute, uint64_t& value) {
-	bool defined {true};
-	switch (attribute) {
+    bool defined {true};
+    switch (attribute) {
         case ZbZclPowerConfigSvrAttrT::ZCL_POWER_CONFIG_ATTR_BATTERY_VOLTAGE:
             this->addDataZigbee<uint8_t>(afMsg, root, KEY(POWER_CONFIG, BATTERY_VOLTAGE), value);
             break;
@@ -31,7 +31,7 @@ bool ERaFromZigbee<Zigbee>::powerConfigFromZigbee(const DataAFMsg_t& afMsg, cJSO
         case ZbZclPowerConfigSvrAttrT::ZCL_POWER_CONFIG_ATTR_BATTERY_VTHRESHOLD3:
             this->addDataZigbee<uint8_t>(afMsg, root, KEY(POWER_CONFIG, BATTERY_VTHRESHOLD3), value);
             break;
-		case ZbZclPowerConfigSvrAttrT::ZCL_POWER_CONFIG_ATTR_BATTERY_PCT_MIN:
+        case ZbZclPowerConfigSvrAttrT::ZCL_POWER_CONFIG_ATTR_BATTERY_PCT_MIN:
             this->addDataZigbee<uint8_t>(afMsg, root, KEY(POWER_CONFIG, BATTERY_PCT_MIN), value);
             break;
         case ZbZclPowerConfigSvrAttrT::ZCL_POWER_CONFIG_ATTR_BATTERY_PTHRESHOLD1:

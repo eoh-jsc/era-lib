@@ -26,21 +26,21 @@
 typedef unsigned long MD5_u32plus_t;
 
 typedef struct __MD5_CTX_t {
-	MD5_u32plus_t lo, hi;
-	MD5_u32plus_t a, b, c, d;
-	unsigned char buffer[64];
-	MD5_u32plus_t block[16];
+    MD5_u32plus_t lo, hi;
+    MD5_u32plus_t a, b, c, d;
+    unsigned char buffer[64];
+    MD5_u32plus_t block[16];
 } MD5_CTX_t;
 
 class MD5
 {
 public:
-	MD5()
+    MD5()
         : pCtx(NULL)
     {
         memset(this->state, 0, sizeof(this->state));
     }
-	~MD5()
+    ~MD5()
     {
         if (this->pCtx != NULL) {
             delete this->pCtx;
@@ -102,13 +102,13 @@ public:
         return MD5::makeDigest(hash, sizeof(hash), this->state);
     }
 
-	static unsigned char* makeHash(char* arg);
-	static unsigned char* makeHash(char* arg, size_t size);
-	static char* makeDigest(const unsigned char* digest, int len, char* result = NULL);
- 	static const void* body(void* ctxBuf, const void* data, size_t size);
-	static void MD5Init(void* ctxBuf);
-	static void MD5Final(unsigned char* result, void* ctxBuf);
-	static void MD5Update(void* ctxBuf, const void* data, size_t size);
+    static unsigned char* makeHash(char* arg);
+    static unsigned char* makeHash(char* arg, size_t size);
+    static char* makeDigest(const unsigned char* digest, int len, char* result = NULL);
+     static const void* body(void* ctxBuf, const void* data, size_t size);
+    static void MD5Init(void* ctxBuf);
+    static void MD5Final(unsigned char* result, void* ctxBuf);
+    static void MD5Update(void* ctxBuf, const void* data, size_t size);
 
 private:
     MD5_CTX_t* pCtx;

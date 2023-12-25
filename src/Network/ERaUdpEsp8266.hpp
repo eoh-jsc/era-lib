@@ -6,9 +6,9 @@
 template <class Udp>
 template <int size>
 void ERaUdp<Udp>::getWiFiName(char(&ptr)[size], bool withPrefix) {
-	String macAddr = WiFi.macAddress();
-	macAddr.replace(":", "");
-	macAddr.toLowerCase();
+    String macAddr = WiFi.macAddress();
+    macAddr.replace(":", "");
+    macAddr.toLowerCase();
     ClearArray(ptr);
     if (withPrefix) {
         FormatString(ptr, "%s.%s.%s", this->pORG, this->pModel, macAddr.c_str());
@@ -22,9 +22,9 @@ void ERaUdp<Udp>::getWiFiName(char(&ptr)[size], bool withPrefix) {
 template <class Udp>
 template <int size>
 void ERaUdp<Udp>::getImeiChip(char(&ptr)[size]) {
-	String macAddr = WiFi.macAddress();
-	macAddr.replace(":", "");
-	macAddr.toLowerCase();
+    String macAddr = WiFi.macAddress();
+    macAddr.replace(":", "");
+    macAddr.toLowerCase();
     ClearArray(ptr);
 #if defined(ERA_AUTH_TOKEN)
     FormatString(ptr, ERA_AUTH_TOKEN);

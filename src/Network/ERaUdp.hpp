@@ -17,7 +17,7 @@ public:
         : udp(_udp)
         , _connected(false)
         , authToken(nullptr)
-		, pORG(ERA_ORG_NAME)
+        , pORG(ERA_ORG_NAME)
         , pModel(ERA_MODEL_NAME)
         , dataObject(nullptr)
         , firstHandler(nullptr)
@@ -59,9 +59,9 @@ public:
     }
 
     void setERaORG(const char* org) {
-		if (org == nullptr) {
-			return;
-		}
+        if (org == nullptr) {
+            return;
+        }
         this->pORG = org;
     }
 
@@ -175,7 +175,7 @@ private:
     Udp& udp;
     bool _connected;
     const char* authToken;
-	const char* pORG;
+    const char* pORG;
     const char* pModel;
     cJSON* dataObject;
     ERaCmdHandler* firstHandler;

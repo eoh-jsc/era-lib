@@ -100,18 +100,18 @@ private:
     void sendByte(uint8_t byte);
     void sendCommand(const vector<uint8_t>& data);
 
-	inline
-	const Zigbee& thisZigbee() const {
-		return static_cast<const Zigbee&>(*this);
-	}
+    inline
+    const Zigbee& thisZigbee() const {
+        return static_cast<const Zigbee&>(*this);
+    }
 
-	inline
-	Zigbee& thisZigbee() {
-		return static_cast<Zigbee&>(*this);
-	}
+    inline
+    Zigbee& thisZigbee() {
+        return static_cast<Zigbee&>(*this);
+    }
 
-	uint8_t transId;
-	uint8_t transIdZcl;
+    uint8_t transId;
+    uint8_t transIdZcl;
 
     InfoCoordinator_t*& coordinator;
     ERaMutex_t mutex;
@@ -226,11 +226,11 @@ ResultT ERaToZigbee<Zigbee>::createCommandBuffer(const vector<uint8_t>& payload,
     vector<uint8_t> command;
     uint8_t fcs {0};
     ResultT status {ResultT::RESULT_SUCCESSFUL};
-	command.push_back(this->thisZigbee().SOF);
-	command.push_back(payload.size());
-	command.push_back(((type << 5) & 0xE0) | (sub & 0x1F));
-	command.push_back(cmd);
-	command.insert(command.end(), payload.begin(), payload.end());
+    command.push_back(this->thisZigbee().SOF);
+    command.push_back(payload.size());
+    command.push_back(((type << 5) & 0xE0) | (sub & 0x1F));
+    command.push_back(cmd);
+    command.insert(command.end(), payload.begin(), payload.end());
     fcs = getCheckSumCommand(command);
     command.push_back(fcs);
 
@@ -266,17 +266,17 @@ ResultT ERaToZigbee<Zigbee>::createCommand(AFAddrType_t& dstAddr,
     }
 
     vector<uint8_t> payload;
-	payload.push_back(LO_UINT16(dstAddr.addr.nwkAddr));
-	payload.push_back(HI_UINT16(dstAddr.addr.nwkAddr));
-	payload.push_back(dstAddr.endpoint);
-	payload.push_back(srcEndpoint);
-	payload.push_back(LO_UINT16(zclId));
-	payload.push_back(HI_UINT16(zclId));
-	payload.push_back(++this->transId);
-	payload.push_back(this->thisZigbee().Options);
-	payload.push_back(this->thisZigbee().Radius);
-	payload.push_back(data.size());
-	payload.insert(payload.end(), data.begin(), data.end());
+    payload.push_back(LO_UINT16(dstAddr.addr.nwkAddr));
+    payload.push_back(HI_UINT16(dstAddr.addr.nwkAddr));
+    payload.push_back(dstAddr.endpoint);
+    payload.push_back(srcEndpoint);
+    payload.push_back(LO_UINT16(zclId));
+    payload.push_back(HI_UINT16(zclId));
+    payload.push_back(++this->transId);
+    payload.push_back(this->thisZigbee().Options);
+    payload.push_back(this->thisZigbee().Radius);
+    payload.push_back(data.size());
+    payload.insert(payload.end(), data.begin(), data.end());
 
     if (cmdWait == AFCommandsT::AF_INCOMING_MSG) {
         return this->createCommandBuffer(payload, TypeT::SREQ, SubsystemT::AF_INTER, AFCommandsT::AF_DATA_REQUEST,
@@ -311,8 +311,8 @@ ResultT ERaToZigbee<Zigbee>::sendCommandInternalZigbee(HeaderZclFrame_t& zclHead
 
     this->createZclHeader(payload, zclHeader, (_transId != nullptr ? *static_cast<uint8_t*>(_transId) : ++this->transIdZcl), cmd.command);
     
-	if(cmd.data != nullptr) {
-		payload.insert(payload.end(), cmd.data->begin(), cmd.data->end());
+    if(cmd.data != nullptr) {
+        payload.insert(payload.end(), cmd.data->begin(), cmd.data->end());
     }
 
     return this->createCommand(dstAddr, srcEndpoint, cmd.zclId, payload,
@@ -354,33 +354,33 @@ ResultT ERaToZigbee<Zigbee>::sendCommandIdZigbee(HeaderZclFrame_t& zclHeader,
 
 template <class Zigbee>
 uint8_t ERaToZigbee<Zigbee>::createFrameControl(HeaderZclFrame_t& zclHeader) {
-	bool manufSpec = (zclHeader.manufCode != ManufacturerCodesT::MANUF_CODE_NONE ? true : false);
-	uint8_t frameCtrl = zclHeader.frameType & 0x03;
-	frameCtrl |= (manufSpec << 2) & 0x04;
-	frameCtrl |= (zclHeader.direction << 3) & 0x08;
-	frameCtrl |= (zclHeader.disableRsp << 4) & 0x10;
-	frameCtrl |= (zclHeader.reservedBits << 5) & 0xE0;
-	return frameCtrl;
+    bool manufSpec = (zclHeader.manufCode != ManufacturerCodesT::MANUF_CODE_NONE ? true : false);
+    uint8_t frameCtrl = zclHeader.frameType & 0x03;
+    frameCtrl |= (manufSpec << 2) & 0x04;
+    frameCtrl |= (zclHeader.direction << 3) & 0x08;
+    frameCtrl |= (zclHeader.disableRsp << 4) & 0x10;
+    frameCtrl |= (zclHeader.reservedBits << 5) & 0xE0;
+    return frameCtrl;
 }
 
 template <class Zigbee>
 void ERaToZigbee<Zigbee>::createZclHeader(vector<uint8_t>& payload, HeaderZclFrame_t& zclHeader, uint8_t _transIdZcl, uint8_t cmdId) {
-	payload.push_back(this->createFrameControl(zclHeader));
-	if(zclHeader.manufCode != ManufacturerCodesT::MANUF_CODE_NONE) {
-		payload.push_back(LO_UINT16(zclHeader.manufCode));
-		payload.push_back(HI_UINT16(zclHeader.manufCode));
-	}
-	payload.push_back(_transIdZcl);
-	payload.push_back(cmdId);
+    payload.push_back(this->createFrameControl(zclHeader));
+    if(zclHeader.manufCode != ManufacturerCodesT::MANUF_CODE_NONE) {
+        payload.push_back(LO_UINT16(zclHeader.manufCode));
+        payload.push_back(HI_UINT16(zclHeader.manufCode));
+    }
+    payload.push_back(_transIdZcl);
+    payload.push_back(cmdId);
 }
 
 template <class Zigbee>
 uint8_t ERaToZigbee<Zigbee>::getCheckSumCommand(const vector<uint8_t>& data) {
-	uint8_t crc {0};
-	for (auto i = data.begin() + 1; i != data.end(); ++i) {
-		crc = crc ^ *i;
-	}
-	return crc;
+    uint8_t crc {0};
+    for (auto i = data.begin() + 1; i != data.end(); ++i) {
+        crc = crc ^ *i;
+    }
+    return crc;
 }
 
 #include "toZigbee/ERaToBridge.hpp"

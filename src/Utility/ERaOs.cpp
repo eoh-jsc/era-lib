@@ -2,12 +2,12 @@
 #include <Utility/ERaOs.hpp>
 
 #if defined(ARDUINO) &&                 \
-    !defined(__MBED__) &&			    \
-	(defined(ESP32) ||                  \
-	defined(RTL8722DM) ||			    \
+    !defined(__MBED__) &&               \
+    (defined(ESP32) ||                  \
+    defined(RTL8722DM) ||               \
     defined(ARDUINO_AMEBA) ||           \
     defined(ARDUINO_RTOS_STM32) ||      \
-	defined(ARDUINO_RTOS_RENESAS) ||    \
+    defined(ARDUINO_RTOS_RENESAS) ||    \
     defined(ARDUINO_ARCH_RP2040))
 
 #if defined(ARDUINO_RTOS_STM32)
@@ -47,7 +47,7 @@ uint32_t ERaOs::osFreeHeapSize() {
 }
 
 TaskHandle_t ERaOs::osThreadNew(void (*task)(void *args), const char* name, uint32_t size,
-							    void* args, unsigned int priority, unsigned int core) {
+                                void* args, unsigned int priority, unsigned int core) {
     TaskHandle_t hTask = NULL;
 
 #if defined(ESP32)
@@ -75,11 +75,11 @@ void ERaOs::osThreadDelete(TaskHandle_t thread_id) {
 }
 
 uint32_t ERaOs::osThreadGetStackSpace(TaskHandle_t thread_id) {
-	uint32_t sz;
+    uint32_t sz;
 
-	sz = (uint32_t)(uxTaskGetStackHighWaterMark(thread_id) * sizeof(StackType_t));
+    sz = (uint32_t)(uxTaskGetStackHighWaterMark(thread_id) * sizeof(StackType_t));
 
-	return (sz);
+    return (sz);
 }
 
 osStatus_t ERaOs::osMessageQueueGet(QueueHandle_t mq_id, void *msg_ptr, uint8_t *msg_prio, uint32_t timeout) {
@@ -206,54 +206,54 @@ uint32_t ERaOs::osMessageQueueGetCountIRQ(QueueHandle_t mq_id) {
 }
 
 uint32_t ERaOs::osMessageQueueGetSpace(QueueHandle_t mq_id) {
-	StaticQueue_t *mq = (StaticQueue_t *)mq_id;
-	uint32_t space;
+    StaticQueue_t *mq = (StaticQueue_t *)mq_id;
+    uint32_t space;
 
-	if (mq == NULL) {
-		space = 0U;
-	}
-	else {
-		space = (uint32_t)uxQueueSpacesAvailable((QueueHandle_t)mq);
-	}
+    if (mq == NULL) {
+        space = 0U;
+    }
+    else {
+        space = (uint32_t)uxQueueSpacesAvailable((QueueHandle_t)mq);
+    }
 
-	return (space);
+    return (space);
 }
 
 IRAM_ATTR
 uint32_t ERaOs::osMessageQueueGetSpaceIRQ(QueueHandle_t mq_id) {
-	StaticQueue_t *mq = (StaticQueue_t *)mq_id;
-	uint32_t space;
+    StaticQueue_t *mq = (StaticQueue_t *)mq_id;
+    uint32_t space;
 
-	if (mq == NULL) {
-		space = 0U;
-	}
-	else {
-		/* space = pxQueue->uxLength - pxQueue->uxMessagesWaiting; */
-		space = mq->uxDummy4[1] - mq->uxDummy4[0];
-	}
+    if (mq == NULL) {
+        space = 0U;
+    }
+    else {
+        /* space = pxQueue->uxLength - pxQueue->uxMessagesWaiting; */
+        space = mq->uxDummy4[1] - mq->uxDummy4[0];
+    }
 
-	return (space);
+    return (space);
 }
 
 void ERaOs::waitMessageQueueSpace(QueueHandle_t mq_id, uint32_t timeout) {
-	unsigned long tick = millis();
-	while (!ERaOs::osMessageQueueGetSpace(mq_id) && (millis() - tick < timeout)) {
-		osDelay(100);
-	}
+    unsigned long tick = millis();
+    while (!ERaOs::osMessageQueueGetSpace(mq_id) && (millis() - tick < timeout)) {
+        osDelay(100);
+    }
 }
 
 osStatus_t ERaOs::osMessageQueueReset(QueueHandle_t mq_id) {
-	osStatus_t stat;
+    osStatus_t stat;
 
-	if (mq_id == NULL) {
-		stat = osErrorParameter;
-	}
-	else {
-		stat = osOK;
-		(void)xQueueReset(mq_id);
-	}
+    if (mq_id == NULL) {
+        stat = osErrorParameter;
+    }
+    else {
+        stat = osOK;
+        (void)xQueueReset(mq_id);
+    }
 
-	return (stat);
+    return (stat);
 }
 
 SemaphoreHandle_t ERaOs::osSemaphoreNew() {
@@ -361,143 +361,143 @@ osStatus_t ERaOs::osSemaphoreAcquireIRQ(SemaphoreHandle_t semaphore_id, uint32_t
 }
 
 uint32_t ERaOs::osEventFlagsSet(EventGroupHandle_t ef_id, uint32_t flags) {
-	uint32_t rflags;
+    uint32_t rflags;
 
-	if (ef_id == NULL) {
-		rflags = (uint32_t)osErrorParameter;
-	}
-	else {
-		rflags = xEventGroupSetBits(ef_id, (EventBits_t)flags);
-	}
+    if (ef_id == NULL) {
+        rflags = (uint32_t)osErrorParameter;
+    }
+    else {
+        rflags = xEventGroupSetBits(ef_id, (EventBits_t)flags);
+    }
 
-	return (rflags);
+    return (rflags);
 }
 
 uint32_t ERaOs::osEventFlagsClear(EventGroupHandle_t ef_id, uint32_t flags) {
-	uint32_t rflags;
+    uint32_t rflags;
 
-	if (ef_id == NULL) {
-		rflags = (uint32_t)osErrorParameter;
-	}
-	else {
-		rflags = xEventGroupClearBits(ef_id, (EventBits_t)flags);
-	}
+    if (ef_id == NULL) {
+        rflags = (uint32_t)osErrorParameter;
+    }
+    else {
+        rflags = xEventGroupClearBits(ef_id, (EventBits_t)flags);
+    }
 
-	return (rflags);
+    return (rflags);
 }
 
 uint32_t ERaOs::osEventFlagsWait(EventGroupHandle_t ef_id, uint32_t flags, uint32_t options, uint32_t timeout) {
-	BaseType_t wait_all;
-	BaseType_t exit_clr;
-	uint32_t rflags;
+    BaseType_t wait_all;
+    BaseType_t exit_clr;
+    uint32_t rflags;
 
-	if (ef_id == NULL) {
-		rflags = (uint32_t)osErrorParameter;
-	}
-	else {
-		if (options & osFlagsWaitAll) {
-		    wait_all = pdTRUE;
-		} else {
-		    wait_all = pdFAIL;
-		}
+    if (ef_id == NULL) {
+        rflags = (uint32_t)osErrorParameter;
+    }
+    else {
+        if (options & osFlagsWaitAll) {
+            wait_all = pdTRUE;
+        } else {
+            wait_all = pdFAIL;
+        }
 
-		if (options & osFlagsNoClear) {
-		    exit_clr = pdFAIL;
-		} else {
-		    exit_clr = pdTRUE;
-		}
+        if (options & osFlagsNoClear) {
+            exit_clr = pdFAIL;
+        } else {
+            exit_clr = pdTRUE;
+        }
 
-		rflags = xEventGroupWaitBits(ef_id, (EventBits_t)flags, exit_clr, wait_all, (TickType_t)timeout);
-	}
+        rflags = xEventGroupWaitBits(ef_id, (EventBits_t)flags, exit_clr, wait_all, (TickType_t)timeout);
+    }
 
-	return (rflags);
+    return (rflags);
 }
 
 TimerHandle_t ERaOs::osTimerNew(const char *name, osTimerType_t type, void *argument, TimerCallbackFunction_t callback) {
-	TimerHandle_t hTimer;
-	UBaseType_t reload;
+    TimerHandle_t hTimer;
+    UBaseType_t reload;
 
-	if (name != NULL && callback != NULL) {
-		if (type == osTimerOnce) {
-		    reload = pdFALSE;
-		} else {
-		    reload = pdTRUE;
-		}
+    if (name != NULL && callback != NULL) {
+        if (type == osTimerOnce) {
+            reload = pdFALSE;
+        } else {
+            reload = pdTRUE;
+        }
 
-		hTimer = xTimerCreate(name, pdMS_TO_TICKS(1000), reload, argument, callback);
-	} else {
-		hTimer = NULL;
-	}
+        hTimer = xTimerCreate(name, pdMS_TO_TICKS(1000), reload, argument, callback);
+    } else {
+        hTimer = NULL;
+    }
 
-	return (hTimer);
+    return (hTimer);
 }
 
 osStatus_t ERaOs::osTimerStart(TimerHandle_t timer_id, uint32_t ticks) {
-	osStatus_t stat;
+    osStatus_t stat;
 
-	if (timer_id == NULL) {
-		stat = osErrorParameter;
-	}
-	else {
-		if (xTimerChangePeriod(timer_id, ticks, 0) == pdPASS) {
-		    stat = osOK;
-		} else {
-		    stat = osErrorResource;
-		}
-	}
+    if (timer_id == NULL) {
+        stat = osErrorParameter;
+    }
+    else {
+        if (xTimerChangePeriod(timer_id, ticks, 0) == pdPASS) {
+            stat = osOK;
+        } else {
+            stat = osErrorResource;
+        }
+    }
 
-	return (stat);
+    return (stat);
 }
 
 osStatus_t ERaOs::osTimerStop(TimerHandle_t timer_id) {
-	osStatus_t stat;
+    osStatus_t stat;
 
-	if (timer_id == NULL) {
-		stat = osErrorParameter;
-	}
-	else {
-		if (xTimerIsTimerActive(timer_id) == pdFALSE) {
-		    stat = osErrorResource;
-		}
-		else {
+    if (timer_id == NULL) {
+        stat = osErrorParameter;
+    }
+    else {
+        if (xTimerIsTimerActive(timer_id) == pdFALSE) {
+            stat = osErrorResource;
+        }
+        else {
             if (xTimerStop(timer_id, 0) == pdPASS) {
                 stat = osOK;
             } else {
                 stat = osError;
             }
-		}
-	}
+        }
+    }
 
-	return (stat);
+    return (stat);
 }
 
 uint32_t ERaOs::osTimerIsRunning(TimerHandle_t timer_id) {
-	uint32_t running;
+    uint32_t running;
 
-	if (timer_id == NULL) {
-		running = 0U;
-	} else {
-		running = (uint32_t)xTimerIsTimerActive(timer_id);
-	}
+    if (timer_id == NULL) {
+        running = 0U;
+    } else {
+        running = (uint32_t)xTimerIsTimerActive(timer_id);
+    }
 
-	return (running);
+    return (running);
 }
 
 osStatus_t ERaOs::osTimerDelete(TimerHandle_t timer_id) {
-	osStatus_t stat;
+    osStatus_t stat;
 
-	if (timer_id == NULL) {
-		stat = osErrorParameter;
-	}
-	else {
-		if (xTimerDelete(timer_id, 0) == pdPASS) {
-		    stat = osOK;
-		} else {
-		    stat = osErrorResource;
-		}
-	}
+    if (timer_id == NULL) {
+        stat = osErrorParameter;
+    }
+    else {
+        if (xTimerDelete(timer_id, 0) == pdPASS) {
+            stat = osOK;
+        } else {
+            stat = osErrorResource;
+        }
+    }
 
-	return (stat);
+    return (stat);
 }
 
 #endif

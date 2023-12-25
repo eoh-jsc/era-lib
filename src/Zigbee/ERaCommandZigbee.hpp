@@ -13,7 +13,7 @@ class ERaCommandZigbee
 protected:
     const uint8_t SkipBootByte = 0xEF;
     const uint16_t AddrBroadcastJoin = NWK_ADDR_BROADCAST_JOIN;
-	const uint16_t AddrBroadcastAll = NWK_ADDR_BROADCAST_GP;
+    const uint16_t AddrBroadcastAll = NWK_ADDR_BROADCAST_GP;
 
 public:
     ERaCommandZigbee()
@@ -231,24 +231,24 @@ protected:
     ResultT stopWithOnOffGenLevelCtrl(AFAddrType_t& dstAddr);
 
 private:
-	inline
-	const ToZigbee& thisToZigbee() const {
-		return static_cast<const ToZigbee&>(*this);
-	}
+    inline
+    const ToZigbee& thisToZigbee() const {
+        return static_cast<const ToZigbee&>(*this);
+    }
 
-	inline
-	ToZigbee& thisToZigbee() {
-		return static_cast<ToZigbee&>(*this);
-	}
+    inline
+    ToZigbee& thisToZigbee() {
+        return static_cast<ToZigbee&>(*this);
+    }
 
-	HeaderZclFrame_t zclHeader01;
-	HeaderZclFrame_t zclHeader10;
-	HeaderZclFrame_t zclHeader11;
-	HeaderZclFrame_t zclHeader15;
-	HeaderZclFrame_t zclHeader18;
-	HeaderZclFrame_t zclHeader19;
-	HeaderZclFrame_t zclHeaderCus;
-	HeaderZclFrame_t zclHeaderRsp;
+    HeaderZclFrame_t zclHeader01;
+    HeaderZclFrame_t zclHeader10;
+    HeaderZclFrame_t zclHeader11;
+    HeaderZclFrame_t zclHeader15;
+    HeaderZclFrame_t zclHeader18;
+    HeaderZclFrame_t zclHeader19;
+    HeaderZclFrame_t zclHeaderCus;
+    HeaderZclFrame_t zclHeaderRsp;
 
     InfoDevice_t*& device;
     InfoCoordinator_t*& coordinator;
@@ -256,46 +256,46 @@ private:
 
 template <class ToZigbee>
 ResultT ERaCommandZigbee<ToZigbee>::defaultResponse(const DefaultRsp_t& defaultRsp, uint8_t statusCode) {
-	AFAddrType_t dstAddr {
-		.addr = {
+    AFAddrType_t dstAddr {
+        .addr = {
             .nwkAddr = defaultRsp.dstAddr
         },
-		.addrMode = AddressModeT::ADDR_16BIT,
-		.endpoint = defaultRsp.dstEndpoint,
-		.panId = 0
-	};
-	DirectionT direction = static_cast<DirectionT>((defaultRsp.frameCtrl >> 3) & 0x01);
-	bool disableRsp = (defaultRsp.frameCtrl >> 4) & 0x01;
-	if(disableRsp || defaultRsp.hasResponse) {
-		return ResultT::RESULT_FAIL;
+        .addrMode = AddressModeT::ADDR_16BIT,
+        .endpoint = defaultRsp.dstEndpoint,
+        .panId = 0
+    };
+    DirectionT direction = static_cast<DirectionT>((defaultRsp.frameCtrl >> 3) & 0x01);
+    bool disableRsp = (defaultRsp.frameCtrl >> 4) & 0x01;
+    if(disableRsp || defaultRsp.hasResponse) {
+        return ResultT::RESULT_FAIL;
     }
-	this->zclHeaderRsp.manufCode = defaultRsp.manufCode;
-	if(direction == DirectionT::CLIENT_TO_SERVER) {
-		this->zclHeaderRsp.direction = DirectionT::SERVER_TO_CLIENT;
+    this->zclHeaderRsp.manufCode = defaultRsp.manufCode;
+    if(direction == DirectionT::CLIENT_TO_SERVER) {
+        this->zclHeaderRsp.direction = DirectionT::SERVER_TO_CLIENT;
     }
-	else {
-		this->zclHeaderRsp.direction = DirectionT::CLIENT_TO_SERVER;
+    else {
+        this->zclHeaderRsp.direction = DirectionT::CLIENT_TO_SERVER;
     }
-	vector<uint8_t> payload;
-	payload.push_back(defaultRsp.cmdId);
-	payload.push_back(statusCode);
+    vector<uint8_t> payload;
+    payload.push_back(defaultRsp.cmdId);
+    payload.push_back(statusCode);
     return this->thisToZigbee().sendCommandIdZigbee(this->zclHeaderRsp, dstAddr,
-													defaultRsp.srcEndpoint, {defaultRsp.zclId, CommandIdT::DEFAULT_RSP, &payload},
-													AFCommandsT::AF_DATA_CONFIRM, nullptr,
-													DEFAULT_TIMEOUT, const_cast<uint8_t*>(&defaultRsp.transId));
+                                                    defaultRsp.srcEndpoint, {defaultRsp.zclId, CommandIdT::DEFAULT_RSP, &payload},
+                                                    AFCommandsT::AF_DATA_CONFIRM, nullptr,
+                                                    DEFAULT_TIMEOUT, const_cast<uint8_t*>(&defaultRsp.transId));
 }
 
 template <class ToZigbee>
 ResultT ERaCommandZigbee<ToZigbee>::permitJoinRequest(AFAddrType_t& dstAddr, uint8_t seconds) {
-	vector<uint8_t> payload;
-	payload.push_back(dstAddr.addrMode);
-	payload.push_back(LO_UINT16(dstAddr.addr.nwkAddr));
-	payload.push_back(HI_UINT16(dstAddr.addr.nwkAddr));
-	payload.push_back(seconds);
-	payload.push_back(0x00); /* Trust Center Significance */
-	return this->thisToZigbee().createCommandBuffer(payload, TypeT::SREQ,
-													SubsystemT::ZDO_INTER, ZDOCommandsT::ZDO_MGMT_PERMIT_JOIN_REQ,
-													TypeT::AREQ, ZDOCommandsT::ZDO_MGMT_PERMIT_JOIN_RSP); /* Set the Permit Join for the destination device */
+    vector<uint8_t> payload;
+    payload.push_back(dstAddr.addrMode);
+    payload.push_back(LO_UINT16(dstAddr.addr.nwkAddr));
+    payload.push_back(HI_UINT16(dstAddr.addr.nwkAddr));
+    payload.push_back(seconds);
+    payload.push_back(0x00); /* Trust Center Significance */
+    return this->thisToZigbee().createCommandBuffer(payload, TypeT::SREQ,
+                                                    SubsystemT::ZDO_INTER, ZDOCommandsT::ZDO_MGMT_PERMIT_JOIN_REQ,
+                                                    TypeT::AREQ, ZDOCommandsT::ZDO_MGMT_PERMIT_JOIN_RSP); /* Set the Permit Join for the destination device */
 }
 
 #include "cmdZigbee/ERaCmdDevice.hpp"

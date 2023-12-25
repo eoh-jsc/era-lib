@@ -31,15 +31,15 @@ class ERaPin
 {
 #if defined(PIN_HAS_FUNCTIONAL_H)
     typedef std::function<int(uint8_t)> ReadPinHandler_t;
-	typedef std::function<void(void*)> ReportPinCallback_t;
+    typedef std::function<void(void*)> ReportPinCallback_t;
 #else
     typedef int (*ReadPinHandler_t)(uint8_t);
-	typedef void (*ReportPinCallback_t)(void*);
+    typedef void (*ReportPinCallback_t)(void*);
 #endif
 
     const static int MAX_CHANNELS = 16;
-	const static int MAX_PINS = ERA_MAX_GPIO_PIN;
-	const static int MAX_VPINS = ERA_MAX_VIRTUAL_PIN;
+    const static int MAX_PINS = ERA_MAX_GPIO_PIN;
+    const static int MAX_VPINS = ERA_MAX_VIRTUAL_PIN;
     enum PinFlagT {
         PIN_ON_DELETE = 0x80
     };
@@ -48,7 +48,7 @@ class ERaPin
         unsigned long delay;
         ERaPin::ReadPinHandler_t readPin;
         typename Report::iterator report;
-		unsigned int configId;
+        unsigned int configId;
         uint8_t pin;
         uint8_t pinMode;
         uint8_t channel; /* for pwm mode */
@@ -58,7 +58,7 @@ class ERaPin
 
     typedef struct __VPin_t {
         uint8_t pin;
-		unsigned int configId;
+        unsigned int configId;
     } VPin_t;
 
 public:
@@ -81,13 +81,13 @@ public:
             , pPin(_pPin)
         {}
         
-		operator Pin_t*() const {
-			return this->pPin;
-		}
+        operator Pin_t*() const {
+            return this->pPin;
+        }
 
-		operator bool() const {
-			return this->isValid();
-		}
+        operator bool() const {
+            return this->isValid();
+        }
         
         void operator() (void) const {
             if (!this->isValid()) {
@@ -96,9 +96,9 @@ public:
             this->Pin->executeNow(this->pPin);
         }
 
-		bool isValid() const {
-			return ((this->Pin != nullptr) && (this->pPin != nullptr));
-		}
+        bool isValid() const {
+            return ((this->Pin != nullptr) && (this->pPin != nullptr));
+        }
 
         Pin_t* getId() const {
             return this->pPin;
@@ -164,10 +164,10 @@ public:
 
     protected:
     private:
-		void invalidate() {
-			this->Pin = nullptr;
-			this->pPin = nullptr;
-		}
+        void invalidate() {
+            this->Pin = nullptr;
+            this->pPin = nullptr;
+        }
 
         ERaPin* Pin;
         Pin_t* pPin;
@@ -223,30 +223,30 @@ public:
         return iterator(this, this->setupPWMPinReport(p, pMode, channel, readPin, interval, minInterval, maxInterval, minChange, cb, configId));
     }
 
-	bool changeInterval(Pin_t* pPin, unsigned long interval,
+    bool changeInterval(Pin_t* pPin, unsigned long interval,
                         unsigned long minInterval, unsigned long maxInterval,
                         float minChange);
-	void restartPin(Pin_t* pPin);
+    void restartPin(Pin_t* pPin);
     void executeNow(Pin_t* pPin);
-	void deletePin(Pin_t* pPin);
+    void deletePin(Pin_t* pPin);
     void deleteWithPin(uint8_t p);
     void deleteAll();
     void writeAllPin(ERaPin::WritePinHandler_t writePin,
                     uint32_t value, uint8_t pMode, bool pwm = false);
-	bool isEnable(Pin_t* pPin);
-	void enable(Pin_t* pPin);
-	void disable(Pin_t* pPin);
+    bool isEnable(Pin_t* pPin);
+    void enable(Pin_t* pPin);
+    void disable(Pin_t* pPin);
     void setScale(Pin_t* pPin, float min, float max, float rawMin, float rawMax);
     typename Report::ScaleData_t* getScale(Pin_t* pPin);
     typename Report::ScaleData_t* findScale(uint8_t p);
     typename Report::iterator* getReport(uint8_t p);
-	void enableAll();
-	void disableAll();
+    void enableAll();
+    void disableAll();
     int findPinMode(uint8_t p);
     int findChannelPWM(uint8_t p);
     int findConfigId(uint8_t p);
     int findVPinConfigId(uint8_t p);
-	int findChannelFree();
+    int findChannelFree();
 
 protected:
 private:
@@ -269,21 +269,21 @@ private:
                             unsigned long minInterval, unsigned long maxInterval,
                             float minChange, ERaPin::ReportPinCallback_t cb,
                             unsigned int configId);
-	bool isPinFree();
-	bool isVPinFree();
+    bool isPinFree();
+    bool isVPinFree();
     Pin_t* findPinExist(uint8_t p);
     VPin_t* findVPinExist(uint8_t p);
     Pin_t* findPinOfChannel(uint8_t channel);
 
-	bool isValidPin(const Pin_t* pPin) {
+    bool isValidPin(const Pin_t* pPin) {
         if (pPin == nullptr) {
             return false;
         }
-		return ((pPin->readPin != nullptr) ||
+        return ((pPin->readPin != nullptr) ||
                 (pPin->pinMode == PWM) ||
                 (pPin->pinMode == RAW_PIN) ||
                 (pPin->pinMode == VIRTUAL));
-	}
+    }
 
     void setFlag(uint8_t& flags, uint8_t mask, bool value) {
         if (value) {
@@ -299,29 +299,29 @@ private:
     }
 
     Report& report;
-	ERaList<Pin_t*> pin;
+    ERaList<Pin_t*> pin;
     ERaList<VPin_t*> vPin;
-	unsigned int numPin;
-	unsigned int numVPin;
+    unsigned int numPin;
+    unsigned int numVPin;
     char hashID[37];
 };
 
 template <class Report>
 void ERaPin<Report>::run() {
-	unsigned long currentMillis = ERaMillis();
+    unsigned long currentMillis = ERaMillis();
     const typename ERaList<Pin_t*>::iterator* e = this->pin.end();
     for (typename ERaList<Pin_t*>::iterator* it = this->pin.begin(); it != e; it = it->getNext()) {
         Pin_t* pPin = it->get();
         if (!this->isValidPin(pPin)) {
-			continue;
-		}
+            continue;
+        }
         if ((pPin->pinMode == RAW_PIN) ||
             (pPin->pinMode == VIRTUAL)) {
             continue;
         }
-		if ((currentMillis - pPin->prevMillis) < pPin->delay) {
-			continue;
-		}
+        if ((currentMillis - pPin->prevMillis) < pPin->delay) {
+            continue;
+        }
         unsigned long skipTimes = ((currentMillis - pPin->prevMillis) / pPin->delay);
         // update time
         pPin->prevMillis += (pPin->delay * skipTimes);
@@ -350,8 +350,8 @@ void ERaPin<Report>::run() {
         next = it->getNext();
         Pin_t* pPin = it->get();
         if (!this->isValidPin(pPin)) {
-			continue;
-		}
+            continue;
+        }
         if (!pPin->called) {
             continue;
         }
@@ -390,12 +390,12 @@ typename ERaPin<Report>::Pin_t* ERaPin<Report>::setupPinReport(uint8_t p, uint8_
     if (!interval) {
         interval = 1;
     }
-	if (!minInterval) {
+    if (!minInterval) {
         minInterval = 1;
-	}
-	if (maxInterval < minInterval) {
-		maxInterval = minInterval;
-	}
+    }
+    if (maxInterval < minInterval) {
+        maxInterval = minInterval;
+    }
 
     Pin_t* pPin = this->findPinExist(p);
     if (pPin == nullptr) {
@@ -426,7 +426,7 @@ typename ERaPin<Report>::Pin_t* ERaPin<Report>::setupPinReport(uint8_t p, uint8_
     pPin->channel = 0;
     pPin->enable = true;
     pPin->called = 0;
-	return pPin;
+    return pPin;
 }
 
 template <class Report>
@@ -437,12 +437,12 @@ typename ERaPin<Report>::Pin_t* ERaPin<Report>::setupPinReport(uint8_t p, uint8_
     if (!interval) {
         interval = 1;
     }
-	if (!minInterval) {
+    if (!minInterval) {
         minInterval = 1;
-	}
-	if (maxInterval < minInterval) {
-		maxInterval = minInterval;
-	}
+    }
+    if (maxInterval < minInterval) {
+        maxInterval = minInterval;
+    }
 
     Pin_t* pPin = this->findPinExist(p);
     if (pPin == nullptr) {
@@ -473,7 +473,7 @@ typename ERaPin<Report>::Pin_t* ERaPin<Report>::setupPinReport(uint8_t p, uint8_
     pPin->channel = 0;
     pPin->enable = true;
     pPin->called = 0;
-	return pPin;
+    return pPin;
 }
 
 template <class Report>
@@ -516,12 +516,12 @@ typename ERaPin<Report>::VPin_t* ERaPin<Report>::setupPinVirtual(uint8_t p, unsi
             return nullptr;
         }
         this->vPin.put(pVPin);
-	    this->numVPin++;
+        this->numVPin++;
     }
     
     pVPin->pin = p;
     pVPin->configId = configId;
-	return pVPin;
+    return pVPin;
 }
 
 template <class Report>
@@ -532,12 +532,12 @@ typename ERaPin<Report>::Pin_t* ERaPin<Report>::setupPWMPinReport(uint8_t p, uin
     if (!interval) {
         interval = 1;
     }
-	if (!minInterval) {
+    if (!minInterval) {
         minInterval = 1;
-	}
-	if (maxInterval < minInterval) {
-		maxInterval = minInterval;
-	}
+    }
+    if (maxInterval < minInterval) {
+        maxInterval = minInterval;
+    }
 
     Pin_t* pPin = this->findPinExist(p);
     if (pPin == nullptr) {
@@ -568,7 +568,7 @@ typename ERaPin<Report>::Pin_t* ERaPin<Report>::setupPWMPinReport(uint8_t p, uin
     pPin->channel = channel;
     pPin->enable = true;
     pPin->called = 0;
-	return pPin;
+    return pPin;
 }
 
 template <class Report>
@@ -580,12 +580,12 @@ typename ERaPin<Report>::Pin_t* ERaPin<Report>::setupPWMPinReport(uint8_t p, uin
     if (!interval) {
         interval = 1;
     }
-	if (!minInterval) {
+    if (!minInterval) {
         minInterval = 1;
-	}
-	if (maxInterval < minInterval) {
-		maxInterval = minInterval;
-	}
+    }
+    if (maxInterval < minInterval) {
+        maxInterval = minInterval;
+    }
 
     Pin_t* pPin = this->findPinExist(p);
     if (pPin == nullptr) {
@@ -616,7 +616,7 @@ typename ERaPin<Report>::Pin_t* ERaPin<Report>::setupPWMPinReport(uint8_t p, uin
     pPin->channel = channel;
     pPin->enable = true;
     pPin->called = 0;
-	return pPin;
+    return pPin;
 }
 
 template <class Report>
@@ -630,7 +630,7 @@ bool ERaPin<Report>::changeInterval(Pin_t* pPin, unsigned long interval,
         minInterval = 1;
     }
     if (maxInterval < minInterval) {
-		maxInterval = minInterval;
+        maxInterval = minInterval;
     }
     if (!this->isValidPin(pPin)) {
         return false;
@@ -663,11 +663,11 @@ void ERaPin<Report>::executeNow(Pin_t* pPin) {
 
 template <class Report>
 void ERaPin<Report>::deletePin(Pin_t* pPin) {
-	if (!this->numPin) {
-		return;
-	}
+    if (!this->numPin) {
+        return;
+    }
 
-	if (this->isValidPin(pPin)) {
+    if (this->isValidPin(pPin)) {
         this->setFlag(pPin->called, PinFlagT::PIN_ON_DELETE, true);
     }
 }
@@ -688,8 +688,8 @@ void ERaPin<Report>::deleteAll() {
     for (typename ERaList<Pin_t*>::iterator* it = this->pin.begin(); it != e; it = it->getNext()) {
         Pin_t* pPin = it->get();
         if (pPin == nullptr) {
-			continue;
-		}
+            continue;
+        }
         pPin->report.deleteReport();
         delete pPin;
         pPin = nullptr;
@@ -737,8 +737,8 @@ void ERaPin<Report>::writeAllPin(ERaPin::WritePinHandler_t writePin,
 
 template <class Report>
 bool ERaPin<Report>::isEnable(Pin_t* pPin) {
-	if (this->isValidPin(pPin)) {
-	    return pPin->enable;
+    if (this->isValidPin(pPin)) {
+        return pPin->enable;
     }
     else {
         return false;
@@ -747,7 +747,7 @@ bool ERaPin<Report>::isEnable(Pin_t* pPin) {
 
 template <class Report>
 void ERaPin<Report>::enable(Pin_t* pPin) {
-	if (this->isValidPin(pPin)) {
+    if (this->isValidPin(pPin)) {
         pPin->enable = true;
         pPin->report.enable();
     }
@@ -755,7 +755,7 @@ void ERaPin<Report>::enable(Pin_t* pPin) {
 
 template <class Report>
 void ERaPin<Report>::disable(Pin_t* pPin) {
-	if (this->isValidPin(pPin)) {
+    if (this->isValidPin(pPin)) {
         pPin->enable = false;
         pPin->report.disable();
     }
@@ -763,14 +763,14 @@ void ERaPin<Report>::disable(Pin_t* pPin) {
 
 template <class Report>
 void ERaPin<Report>::setScale(Pin_t* pPin, float min, float max, float rawMin, float rawMax) {
-	if (this->isValidPin(pPin)) {
+    if (this->isValidPin(pPin)) {
         pPin->report.setScale(min, max, rawMin, rawMax);
     }
 }
 
 template <class Report>
 typename Report::ScaleData_t* ERaPin<Report>::getScale(Pin_t* pPin) {
-	if (this->isValidPin(pPin)) {
+    if (this->isValidPin(pPin)) {
         return pPin->report.getScale();
     }
     else {
@@ -814,10 +814,10 @@ void ERaPin<Report>::enableAll() {
     for (typename ERaList<Pin_t*>::iterator* it = this->pin.begin(); it != e; it = it->getNext()) {
         Pin_t* pPin = it->get();
         if (this->isValidPin(pPin)) {
-			pPin->enable = true;
+            pPin->enable = true;
             pPin->report.enable();
-		}
-	}
+        }
+    }
 }
 
 template <class Report>
@@ -826,26 +826,26 @@ void ERaPin<Report>::disableAll() {
     for (typename ERaList<Pin_t*>::iterator* it = this->pin.begin(); it != e; it = it->getNext()) {
         Pin_t* pPin = it->get();
         if (this->isValidPin(pPin)) {
-			pPin->enable = false;
+            pPin->enable = false;
             pPin->report.disable();
-		}
-	}
+        }
+    }
 }
 
 template <class Report>
 bool ERaPin<Report>::isPinFree() {
-	if (this->numPin >= MAX_PINS) {
-		return false;
-	}
+    if (this->numPin >= MAX_PINS) {
+        return false;
+    }
     
     return true;
 }
 
 template <class Report>
 bool ERaPin<Report>::isVPinFree() {
-	if (this->numVPin >= MAX_VPINS) {
-		return false;
-	}
+    if (this->numVPin >= MAX_VPINS) {
+        return false;
+    }
 
     return true;
 }

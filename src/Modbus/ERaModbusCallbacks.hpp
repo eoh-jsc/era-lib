@@ -8,7 +8,7 @@
 
 class ERaModbusCallbacks
 {
-	const char* TAG = "Callbacks";
+    const char* TAG = "Callbacks";
 
 public:
     ERaModbusCallbacks()

@@ -9,7 +9,7 @@
 
 class ERaCallbacksHelper
 {
-	const char* TAG = "Callbacks";
+    const char* TAG = "Callbacks";
 
 public:
     ERaCallbacksHelper()

@@ -89,7 +89,7 @@
     #elif defined(ARDUINO) &&                   \
         (defined(__AVR__) ||                    \
         defined(__MBED__) ||                    \
-	    defined(RTL8722DM) ||			        \
+        defined(RTL8722DM) ||                   \
         defined(ARDUINO_AMEBA) ||               \
         defined(ARDUINO_ARCH_AVR) ||            \
         defined(ARDUINO_ARCH_SAM) ||            \
