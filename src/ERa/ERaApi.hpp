@@ -707,7 +707,15 @@ void ERaApi<Proto, Flash>::handleVirtualPin(cJSON* root) {
         }
         item = cJSON_GetObjectItem(current, "value_type");
         if (cJSON_IsString(item)) {
-            if (ERaStrCmp(item->valuestring, "virtual")) {
+            if (ERaStrCmp(item->valuestring, "number")) {
+                this->ERaPinRp.setPinVirtual(pin.pin, pin.configId,
+                                            ERaPin<ERaReport>::VIRTUAL_NUMBER);
+            }
+            else if (ERaStrCmp(item->valuestring, "string")) {
+                this->ERaPinRp.setPinVirtual(pin.pin, pin.configId,
+                                            ERaPin<ERaReport>::VIRTUAL_STRING);
+            }
+            else {
                 this->ERaPinRp.setPinVirtual(pin.pin, pin.configId);
             }
         }

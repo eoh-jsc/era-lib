@@ -1,8 +1,8 @@
 #ifndef INC_ERA_ETHERNET_ESP32_CLIENT_IDF_5_HPP_
 #define INC_ERA_ETHERNET_ESP32_CLIENT_IDF_5_HPP_
 
-#if !defined(ERA_PROTO_TYPE)
-    #define ERA_PROTO_TYPE            "Ethernet"
+#if !defined(ERA_NETWORK_TYPE)
+    #define ERA_NETWORK_TYPE          "Ethernet"
 #endif
 
 #if !defined(ERA_AUTH_TOKEN)
@@ -91,7 +91,7 @@ public:
             ERA_LOG_ERROR(TAG, ERA_PSTR("Connect failed"));
             return false;
         }
-        this->getTransp().setSSID(ERA_PROTO_TYPE);
+        this->getTransp().setSSID(ERA_NETWORK_TYPE);
 
         ERaWatchdogFeed();
 
@@ -164,7 +164,7 @@ public:
             ERA_LOG_ERROR(TAG, ERA_PSTR("Connect failed"));
             return false;
         }
-        this->getTransp().setSSID(ERA_PROTO_TYPE);
+        this->getTransp().setSSID(ERA_NETWORK_TYPE);
 
         ERaWatchdogFeed();
 
@@ -243,7 +243,7 @@ public:
             ERA_LOG_ERROR(TAG, ERA_PSTR("Connect failed"));
             return false;
         }
-        this->getTransp().setSSID(ERA_PROTO_TYPE);
+        this->getTransp().setSSID(ERA_NETWORK_TYPE);
 
         ERaWatchdogFeed();
 
@@ -353,9 +353,9 @@ void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
     cJSON_AddStringToObject(root, INFO_VERSION, ERA_VERSION);
     cJSON_AddStringToObject(root, INFO_FIRMWARE_VERSION, ERA_FIRMWARE_VERSION);
     cJSON_AddNumberToObject(root, INFO_PLUG_AND_PLAY, 0);
-    cJSON_AddStringToObject(root, INFO_NETWORK_PROTOCOL, ERA_PROTO_TYPE);
-    cJSON_AddStringToObject(root, INFO_SSID, ERA_PROTO_TYPE);
-    cJSON_AddStringToObject(root, INFO_BSSID, ERA_PROTO_TYPE);
+    cJSON_AddStringToObject(root, INFO_NETWORK_PROTOCOL, ERA_NETWORK_TYPE);
+    cJSON_AddStringToObject(root, INFO_SSID, ERA_NETWORK_TYPE);
+    cJSON_AddStringToObject(root, INFO_BSSID, ERA_NETWORK_TYPE);
     cJSON_AddNumberToObject(root, INFO_RSSI, ETH.linkSpeed());
     cJSON_AddNumberToObject(root, INFO_SIGNAL_STRENGTH, 100);
     cJSON_AddStringToObject(root, INFO_MAC, ETH.macAddress().c_str());

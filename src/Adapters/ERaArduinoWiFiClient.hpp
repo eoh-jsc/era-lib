@@ -1,8 +1,8 @@
 #ifndef INC_ERA_ARDUINO_WIFI_CLIENT_HPP_
 #define INC_ERA_ARDUINO_WIFI_CLIENT_HPP_
 
-#if !defined(ERA_PROTO_TYPE)
-    #define ERA_PROTO_TYPE            "WiFi"
+#if !defined(ERA_NETWORK_TYPE)
+    #define ERA_NETWORK_TYPE          "WiFi"
 #endif
 
 #if !defined(ERA_AUTH_TOKEN)
@@ -248,7 +248,7 @@ void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
     cJSON_AddStringToObject(root, INFO_VERSION, ERA_VERSION);
     cJSON_AddStringToObject(root, INFO_FIRMWARE_VERSION, ERA_FIRMWARE_VERSION);
     cJSON_AddNumberToObject(root, INFO_PLUG_AND_PLAY, 0);
-    cJSON_AddStringToObject(root, INFO_NETWORK_PROTOCOL, ERA_PROTO_TYPE);
+    cJSON_AddStringToObject(root, INFO_NETWORK_PROTOCOL, ERA_NETWORK_TYPE);
     cJSON_AddStringToObject(root, INFO_SSID, ::getSSID().c_str());
     cJSON_AddStringToObject(root, INFO_BSSID, ::getBSSID().c_str());
     cJSON_AddNumberToObject(root, INFO_RSSI, signal);

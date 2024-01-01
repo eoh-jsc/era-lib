@@ -128,8 +128,8 @@
     #define ERA_MODEL_NAME              "era"
 #endif
 
-#if !defined(ERA_PROTO_TYPE)
-    #define ERA_PROTO_TYPE              "WiFi"
+#if !defined(ERA_NETWORK_TYPE)
+    #define ERA_NETWORK_TYPE            "WiFi"
 #endif
 
 #if defined(ERA_LIMIT_CONNECT)

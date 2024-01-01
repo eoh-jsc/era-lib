@@ -1,8 +1,8 @@
 #ifndef INC_ERA_LINUX_CLIENT_HPP_
 #define INC_ERA_LINUX_CLIENT_HPP_
 
-#if !defined(ERA_PROTO_TYPE)
-    #define ERA_PROTO_TYPE            "Socket"
+#if !defined(ERA_NETWORK_TYPE)
+    #define ERA_NETWORK_TYPE          "Socket"
 #endif
 
 #include <ERa/ERaProtocol.hpp>
@@ -102,7 +102,7 @@ void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
     cJSON_AddNumberToObject(root, INFO_PLUG_AND_PLAY, 0);
     cJSON_AddStringToObject(root, INFO_NETWORK_PROTOCOL, GetNetworkProtocol());
     cJSON_AddStringToObject(root, INFO_SSID, GetSSIDNetwork());
-    cJSON_AddStringToObject(root, INFO_BSSID, ERA_PROTO_TYPE);
+    cJSON_AddStringToObject(root, INFO_BSSID, ERA_NETWORK_TYPE);
     cJSON_AddNumberToObject(root, INFO_RSSI, signal);
     cJSON_AddNumberToObject(root, INFO_SIGNAL_STRENGTH, SignalToPercentage(signal));
     cJSON_AddStringToObject(root, INFO_MAC, GetMACAddress(NULL));

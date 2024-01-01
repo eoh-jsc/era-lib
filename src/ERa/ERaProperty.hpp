@@ -109,7 +109,7 @@ public:
             return (*this);
         }
 
-        ERaReport::iterator* getReport() {
+        ERaReport::iterator* getReport() const {
             if (this->isValid()) {
                 return &this->pProp->report;
             }
@@ -330,13 +330,15 @@ protected:
     void run();
     void handler(uint8_t pin, const ERaParam& param);
     void handler(const char* id, const ERaParam& param);
+    void updateProperty(const ERaPin<ERaReport>& pin);
 
 #if !defined(ERA_VIRTUAL_WRITE_LEGACY)
     template <typename T>
     void virtualWriteProperty(uint8_t pin, T value) {
         Property_t* pProp = this->isPropertyIdExist(pin);
         if (pProp != nullptr) {
-            *pProp->value = value;
+            (*pProp->value) = value;
+            pProp->report.updateReport(value, false, false);
             return;
         }
         T* wrapper = new T(value);
@@ -359,7 +361,7 @@ protected:
     void virtualWriteProperty(uint8_t pin, const char* value) {
         Property_t* pProp = this->isPropertyIdExist(pin);
         if (pProp != nullptr) {
-            *pProp->value = value;
+            (*pProp->value) = value;
             return;
         }
         WrapperString* wrapper = new WrapperString(value);
@@ -437,13 +439,15 @@ private:
     unsigned int numProperty;
     unsigned long timeout;
     unsigned long writeTimeout;
+
+    using PropertyIterator = typename ERaList<Property_t*>::iterator;
 };
 
 template <class Api>
 void ERaProperty<Api>::run() {
     unsigned long currentMillis = ERaMillis();
-    const typename ERaList<Property_t*>::iterator* e = this->ERaProp.end();
-    for (typename ERaList<Property_t*>::iterator* it = this->ERaProp.begin(); it != e; it = it->getNext()) {
+    const PropertyIterator* e = this->ERaProp.end();
+    for (PropertyIterator* it = this->ERaProp.begin(); it != e; it = it->getNext()) {
         Property_t* pProp = it->get();
         if (!this->isValidProperty(pProp)) {
             continue;
@@ -508,35 +512,96 @@ void ERaProperty<Api>::updateValue(const Property_t* pProp) {
 
 template <class Api>
 void ERaProperty<Api>::handler(uint8_t pin, const ERaParam& param) {
-    const typename ERaList<Property_t*>::iterator* e = this->ERaProp.end();
-    for (typename ERaList<Property_t*>::iterator* it = this->ERaProp.begin(); it != e; it = it->getNext()) {
-        Property_t* pProp = it->get();
-        if (this->isValidProperty(pProp)) {
-            if (!pProp->id.isNumber()) {
-                continue;
-            }
-            if (pProp->id == pin) {
-                this->getValue(pProp, param);
-            }
+    bool found {false};
+    Property_t* pProp = nullptr;
+    const PropertyIterator* e = this->ERaProp.end();
+    for (PropertyIterator* it = this->ERaProp.begin(); it != e; it = it->getNext()) {
+        pProp = it->get();
+        if (!this->isValidProperty(pProp)) {
+            continue;
+        }
+        if (!pProp->id.isNumber()) {
+            continue;
+        }
+        if (pProp->id == pin) {
+            found = true;
+            this->getValue(pProp, param);
+            break;
         }
     }
+#if !defined(ERA_VIRTUAL_WRITE_LEGACY)
+    if (!found) {
+        this->virtualWriteProperty(pin, param);
+#if !defined(ERA_STRING_REPORT_INTERVAL)
+        if (!param.isString()) {
+            return;
+        }
+        pProp = this->isPropertyIdExist(pin);
+        if ((pProp != nullptr) &&
+            (pProp->value != nullptr)) {
+            pProp->value->isUpdated();
+        }
+    }
+#endif
+#endif
 }
 
 template <class Api>
 void ERaProperty<Api>::handler(const char* id, const ERaParam& param) {
-    const typename ERaList<Property_t*>::iterator* e = this->ERaProp.end();
-    for (typename ERaList<Property_t*>::iterator* it = this->ERaProp.begin(); it != e; it = it->getNext()) {
-        Property_t* pProp = it->get();
-        if (this->isValidProperty(pProp)) {
-            if (!pProp->id.isString()) {
-                continue;
-            }
-            if (pProp->id == id) {
-                this->getValue(pProp, param);
-            }
+    bool found {false};
+    Property_t* pProp = nullptr;
+    const PropertyIterator* e = this->ERaProp.end();
+    for (PropertyIterator* it = this->ERaProp.begin(); it != e; it = it->getNext()) {
+        pProp = it->get();
+        if (!this->isValidProperty(pProp)) {
+            continue;
+        }
+        if (!pProp->id.isString()) {
+            continue;
+        }
+        if (pProp->id == id) {
+            found = true;
+            this->getValue(pProp, param);
+            break;
         }
     }
 }
+
+#if defined(ERA_VIRTUAL_WRITE_LEGACY)
+    template <class Api>
+    void ERaProperty<Api>::updateProperty(const ERaPin<ERaReport>& pin) {
+        ERA_FORCE_UNUSED(pin);
+    }
+#else
+    template <class Api>
+    void ERaProperty<Api>::updateProperty(const ERaPin<ERaReport>& pin) {
+        Property_t* pProp = nullptr;
+        PropertyIterator* next = nullptr;
+        const PropertyIterator* e = this->ERaProp.end();
+        for (PropertyIterator* it = this->ERaProp.begin(); it != e; it = next) {
+            next = it->getNext();
+            pProp = it->get();
+            if (!this->isValidProperty(pProp)) {
+                continue;
+            }
+            if (!pProp->id.isNumber()) {
+                continue;
+            }
+            if (pin.isVPinExist(pProp->id.getInt())) {
+                if (pProp->report) {
+                    pProp->report.executeNow();
+                }
+                continue;
+            }
+            else {
+                delete pProp;
+                pProp = nullptr;
+                it->get() = nullptr;
+                this->ERaProp.remove(it);
+            }
+        }
+    }
+#endif
 
 template <class Api>
 void ERaProperty<Api>::getValue(Property_t* pProp, const ERaParam& param) {
@@ -555,7 +620,7 @@ void ERaProperty<Api>::getValue(Property_t* pProp, const ERaParam& param) {
         case WrapperTypeT::WRAPPER_TYPE_INT:
         case WrapperTypeT::WRAPPER_TYPE_UNSIGNED_INT:
             if (param.isNumber()) {
-                *pProp->value = param.getInt();
+                (*pProp->value) = param.getInt();
                 pProp->report.updateReport(param.getInt());
             }
             break;
@@ -567,13 +632,13 @@ void ERaProperty<Api>::getValue(Property_t* pProp, const ERaParam& param) {
         case WrapperTypeT::WRAPPER_TYPE_DOUBLE:
         case WrapperTypeT::WRAPPER_TYPE_NUMBER:
             if (param.isNumber()) {
-                *pProp->value = param.getFloat();
+                (*pProp->value) = param.getFloat();
                 pProp->report.updateReport(param.getFloat());
             }
             break;
         case WrapperTypeT::WRAPPER_TYPE_STRING:
             if (param.isString()) {
-                *pProp->value = param.getString();
+                (*pProp->value) = param.getString();
                 if (pProp->value->isUpdated()) {
 #if defined(ERA_STRING_REPORT_ON_WRITE)
                     pProp->report();
@@ -814,8 +879,8 @@ void ERaProperty<Api>::onCallbackReal(const Property_t* const pProp) {
     cJSON_AddStringToObject(root, "type", "device_data");
     cJSON_AddItemToObject(root, "data", dataItem);
 
-    const typename ERaList<Property_t*>::iterator* e = this->ERaProp.end();
-    for (typename ERaList<Property_t*>::iterator* it = this->ERaProp.begin(); it != e; it = it->getNext()) {
+    const PropertyIterator* e = this->ERaProp.end();
+    for (PropertyIterator* it = this->ERaProp.begin(); it != e; it = it->getNext()) {
         Property_t* property = it->get();
         if (!this->isValidProperty(property)) {
             continue;
@@ -981,8 +1046,8 @@ int ERaProperty<Api>::findVirtualPin() {
 template <class Api>
 template <typename T>
 typename ERaProperty<Api>::Property_t* ERaProperty<Api>::isPropertyIdExist(T pin) {
-    const typename ERaList<Property_t*>::iterator* e = this->ERaProp.end();
-    for (typename ERaList<Property_t*>::iterator* it = this->ERaProp.begin(); it != e; it = it->getNext()) {
+    const PropertyIterator* e = this->ERaProp.end();
+    for (PropertyIterator* it = this->ERaProp.begin(); it != e; it = it->getNext()) {
         Property_t* pProp = it->get();
         if (pProp->id == pin) {
             return pProp;

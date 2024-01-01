@@ -244,7 +244,6 @@ protected:
 
 private:
     void printBanner();
-    void processPinRequest(const ERaDataBuff& arrayTopic, const char* payload);
     void processDownRequest(const ERaDataBuff& arrayTopic, const char* payload);
     void processDownAction(const char* payload, cJSON* root, cJSON* item);
     bool processActionChip(const char* payload, cJSON* root, uint8_t type);
@@ -253,6 +252,7 @@ private:
     void processConfiguration(const char* payload, const char* hash, cJSON* root);
     void processDeviceConfig(cJSON* root, uint8_t type);
     void processIOPin(cJSON* root);
+    void processPinRequest(const ERaDataBuff& arrayTopic, const char* payload, size_t index);
 #if defined(ERA_ZIGBEE)
     void processZigbeeRequest(const ERaDataBuff& arrayTopic, const char* payload);
     void processDeviceZigbee(const char* payload);
@@ -409,10 +409,7 @@ void ERaProto<Transp, Flash>::processRequest(const char* topic, const char* payl
         return;
     }
 
-    if (arrayTopic.at(1) == "pin") {
-        this->processPinRequest(arrayTopic, payload);
-    }
-    else if (arrayTopic.at(1) == "arduino_pin") {
+    if (arrayTopic.at(1) == "arduino_pin") {
         Base::processArduinoPinRequest(arrayTopic, payload);
     }
     else if (arrayTopic.at(1) == "virtual_pin") {
@@ -424,6 +421,9 @@ void ERaProto<Transp, Flash>::processRequest(const char* topic, const char* payl
     else if (arrayTopic.at(1) == "is_online") {
         this->processState(arrayTopic, payload);
     }
+    else if (arrayTopic.at(1) == "pin") {
+        this->processPinRequest(arrayTopic, payload, 2);
+    }
 #if defined(ERA_ZIGBEE)
     else if (arrayTopic.at(1) == "zigbee") {
         this->processZigbeeRequest(arrayTopic, payload);
@@ -433,13 +433,19 @@ void ERaProto<Transp, Flash>::processRequest(const char* topic, const char* payl
     if (this->pServerCallbacks != nullptr) {
         this->pServerCallbacks->onWrite(arrayTopic, payload);
     }
-}
 
-template <class Transp, class Flash>
-void ERaProto<Transp, Flash>::processPinRequest(const ERaDataBuff& arrayTopic, const char* payload) {
-    if (arrayTopic.at(2) == "down") {
-        Base::handlePinRequest(arrayTopic, payload);
+#if defined(ERA_DEBUG_PREFIX)
+    const char* debug = ERA_DEBUG_PREFIX;
+    if (strchr(debug, '/') != debug) {
+        return;
     }
+    if (arrayTopic.size() < 3) {
+        return;
+    }
+    if (arrayTopic.at(2) == "pin") {
+        this->processPinRequest(arrayTopic, payload, 3);
+    }
+#endif
 }
 
 template <class Transp, class Flash>
@@ -482,7 +488,7 @@ void ERaProto<Transp, Flash>::processDownAction(const char* payload, cJSON* root
         Base::removeBluetoothConfig();
 #endif
 #if defined(ERA_MODBUS)
-        Base::ERaModbus::removeConfigFromFlash();
+        Base::Modbus::removeConfigFromFlash();
 #endif
         ERaDelay(1000);
         ERaState::set(StateT::STATE_RESET_CONFIG_REBOOT);
@@ -560,7 +566,7 @@ bool ERaProto<Transp, Flash>::processActionChip(const char* payload, cJSON* root
             }
             item = cJSON_GetObjectItem(dataItem, "configuration");
             if (cJSON_IsString(item)) {
-                Base::ERaModbus::parseModbusConfig(item->valuestring, hash, payload, false);
+                Base::Modbus::parseModbusConfig(item->valuestring, hash, payload, false);
             }
             break;
         case ERaChipCfgT::CHIP_UPDATE_CONTROL:
@@ -570,7 +576,7 @@ bool ERaProto<Transp, Flash>::processActionChip(const char* payload, cJSON* root
             }
             item = cJSON_GetObjectItem(dataItem, "control");
             if (cJSON_IsString(item)) {
-                Base::ERaModbus::parseModbusConfig(item->valuestring, hash, payload, true);
+                Base::Modbus::parseModbusConfig(item->valuestring, hash, payload, true);
             }
             break;
         case ERaChipCfgT::CHIP_CONTROL_ALIAS: {
@@ -593,7 +599,7 @@ bool ERaProto<Transp, Flash>::processActionChip(const char* payload, cJSON* root
                     keyItem = cJSON_GetArrayItem(item, i);
                     if (cJSON_IsString(keyItem)) {
                         // Handle command
-                        Base::ERaModbus::addModbusAction(keyItem->valuestring,
+                        Base::Modbus::addModbusAction(keyItem->valuestring,
                                                         typeAction, paramAction);
                     }
                 }
@@ -603,7 +609,7 @@ bool ERaProto<Transp, Flash>::processActionChip(const char* payload, cJSON* root
         case ERaChipCfgT::CHIP_SCAN_MODBUS:
             item = cJSON_GetObjectItem(dataItem, "scan_data");
             if (cJSON_IsString(item)) {
-                Base::ERaModbus::parseModbusScan(item->valuestring);
+                Base::Modbus::parseModbusScan(item->valuestring);
             }
             break;
 #endif
@@ -656,6 +662,7 @@ void ERaProto<Transp, Flash>::processConfiguration(const char* payload, const ch
         Base::getPinRp().deleteAll();
         this->processDeviceConfig(item, ERaChipCfgT::CHIP_IO_PIN);
         if (Base::getPinRp().updateHashID(hash)) {
+            Base::Property::updateProperty(Base::getPinRp());
             Base::storePinConfig(payload);
         }
     }
@@ -697,6 +704,16 @@ void ERaProto<Transp, Flash>::processIOPin(cJSON* root) {
         if (ERaStrCmp(current->string, "virtual_pins")) {
             Base::handleVirtualPin(current);
         }
+    }
+}
+
+template <class Transp, class Flash>
+void ERaProto<Transp, Flash>::processPinRequest(const ERaDataBuff& arrayTopic, const char* payload, size_t index) {
+    if (arrayTopic.size() <= index) {
+        return;
+    }
+    if (arrayTopic.at(index) == "down") {
+        Base::handlePinRequest(arrayTopic, payload);
     }
 }
 
@@ -915,7 +932,7 @@ bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
     int pMode = Base::getPinRp().findPinMode(rsp.id.getInt());
     switch (rsp.type) {
         case ERaTypeWriteT::ERA_WRITE_VIRTUAL_PIN: {
-                configId = Base::getPinRp().findVPinConfigId(rsp.id.getInt());
+                configId = Base::getPinRp().findVPinConfigId(rsp.id.getInt(), rsp.param);
                 if (configId == -1) {
                     break;
                 }
@@ -927,7 +944,7 @@ bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
         case ERaTypeWriteT::ERA_WRITE_DIGITAL_PIN:
             if ((pMode == OUTPUT) || (pMode == INPUT) ||
                 (pMode == INPUT_PULLUP) || (pMode == INPUT_PULLDOWN)) {
-                configId = Base::getPinRp().findConfigId(rsp.id.getInt());
+                configId = Base::getPinRp().findConfigId(rsp.id.getInt(), rsp.param);
                 if (configId == -1) {
                     break;
                 }
@@ -938,7 +955,7 @@ bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
             break;
         case ERaTypeWriteT::ERA_WRITE_ANALOG_PIN:
             if (pMode == ANALOG) {
-                configId = Base::getPinRp().findConfigId(rsp.id.getInt());
+                configId = Base::getPinRp().findConfigId(rsp.id.getInt(), rsp.param);
                 if (configId == -1) {
                     break;
                 }
@@ -949,7 +966,7 @@ bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
             break;
         case ERaTypeWriteT::ERA_WRITE_PWM_PIN:
             if (pMode == PWM) {
-                configId = Base::getPinRp().findConfigId(rsp.id.getInt());
+                configId = Base::getPinRp().findConfigId(rsp.id.getInt(), rsp.param);
                 if (configId == -1) {
                     break;
                 }
@@ -959,7 +976,7 @@ bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
             }
             break;
         case ERaTypeWriteT::ERA_WRITE_PIN:
-            configId = Base::getPinRp().findConfigId(rsp.id.getInt());
+            configId = Base::getPinRp().findConfigId(rsp.id.getInt(), rsp.param);
             if (configId == -1) {
                 break;
             }
@@ -1290,7 +1307,7 @@ void ERaProto<Transp, Flash>::sendCommandVirtual(ERaRsp_t& rsp, ERaDataJson* dat
             continue;
         }
         char name[2 + 8 * sizeof(int)] {0};
-        int configId = Base::getPinRp().findVPinConfigId(atoi(it.getName()));
+        int configId = Base::getPinRp().findVPinConfigId(atoi(it.getName()), it);
         if (configId == -1) {
             cJSON* item = data->detach(it);
             FormatString(name, "virtual_pin_%s", it.getName());

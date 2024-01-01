@@ -9,6 +9,7 @@
 #include <Network/ERaNetworkInfo.hpp>
 
 static int16_t erssi {100};
+static bool iswireless {false};
 static char essid[IW_ESSID_MAX_SIZE + 1] {
     'S', 'o', 'c', 'k', 'e', 't', '\0'
 };
@@ -18,7 +19,6 @@ static char ifrName[IFNAMSIZ] {
 
 void GetNetworkInfo(void) {
     int fd = -1;
-    bool iswireless = false;
     struct iwreq wrq;
     struct ifaddrs* ifaddr;
     struct ifaddrs* ifa;
@@ -33,8 +33,18 @@ void GetNetworkInfo(void) {
         if (ifa->ifa_addr == NULL) {
             continue;
         }
+        if (ifa->ifa_addr->sa_family != AF_INET) {
+            continue;
+        }
+        if (ifa->ifa_flags & IFF_LOOPBACK) {
+            continue;
+        }
+        if (!(ifa->ifa_flags & IFF_RUNNING)) {
+            continue;
+        }
 
         strncpy(wrq.ifr_name, ifa->ifa_name, IFNAMSIZ);
+        wrq.ifr_name[IFNAMSIZ - 1] = '\0';
 
         fd = socket(AF_INET, SOCK_DGRAM, 0);
         if (fd < 0) {
@@ -45,22 +55,23 @@ void GetNetworkInfo(void) {
         if (ioctl(fd, SIOCGIWNAME, &wrq) == 0) {
             iswireless = true;
             printf("IF Wireless: %s\r\n", wrq.ifr_name);
-            strcpy(ifrName, wrq.ifr_name);
-            break;
         }
-
-        close(fd);
+        else {
+            iswireless = false;
+            printf("IF: %s\r\n", wrq.ifr_name);
+        }
+        strcpy(ifrName, wrq.ifr_name);
+        break;
     }
 
     freeifaddrs(ifaddr);
 
-    if (!iswireless) {
-        printf("IF: %s\r\n", wrq.ifr_name);
-        strcpy(ifrName, wrq.ifr_name);
+    if (fd < 0) {
         return;
     }
 
-    if (fd < 0) {
+    if (!iswireless) {
+        close(fd);
         return;
     }
 
@@ -165,14 +176,14 @@ const char* GetNetworkProtocol(void) {
 }
 
 const char* GetSSIDNetwork(void) {
-    if (strncmp(ifrName, "wlan", 4)) {
+    if (!iswireless) {
         return "Ethernet";
     }
     return essid;
 }
 
 int16_t GetRSSINetwork(void) {
-    if (strncmp(ifrName, "wlan", 4)) {
+    if (!iswireless) {
         return 100;
     }
     return erssi;

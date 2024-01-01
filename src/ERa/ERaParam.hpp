@@ -101,7 +101,7 @@ public:
         return this->valuedouble;
     }
 
-    char* getString() const {
+    const char* getString() const {
         return this->valuestring;
     }
 
@@ -296,6 +296,43 @@ public:
             return (*this == value.getObject());
         }
         return false;
+    }
+
+    template <typename T>
+    bool operator != (T value) const {
+        return !(operator == <T> (value));
+    }
+
+    bool operator != (float value) const {
+        return !(operator == (value));
+    }
+
+    bool operator != (double value) const {
+        return !(operator == (value));
+    }
+
+    bool operator != (char* value) const {
+        return !(operator == (value));
+    }
+
+    bool operator != (const char* value) const {
+        return !(operator == (value));
+    }
+
+    bool operator != (ERaDataJson* value) const {
+        return !(operator == (value));
+    }
+
+    bool operator != (const ERaDataJson* value) const {
+        return !(operator == (value));
+    }
+
+    bool operator != (ERaParam& value) const {
+        return !(operator == (value));
+    }
+
+    bool operator != (const ERaParam& value) const {
+        return !(operator == (value));
     }
 
     ERaDataJson::iterator operator [] (int index) const {

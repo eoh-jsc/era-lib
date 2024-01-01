@@ -77,18 +77,39 @@ public:
             return this->pTm;
         }
 
-        bool changeInterval(unsigned long interval) {
+        bool changeInterval(unsigned long interval) const {
             if (!this->isValid()) {
                 return false;
             }
             return this->tm->changeInterval(this->pTm, interval);
         }
 
-        void restartTimer() {
+        void restartTimer() const {
             if (!this->isValid()) {
                 return;
             }
             this->tm->restartTimer(this->pTm);
+        }
+
+        bool isEnable() const {
+            if (!this->isValid()) {
+                return false;
+            }
+            return this->tm->isEnable(this->pTm);
+        }
+
+        void enable() const {
+            if (!this->isValid()) {
+                return;
+            }
+            this->tm->enable(this->pTm);
+        }
+
+        void disable() const {
+            if (!this->isValid()) {
+                return;
+            }
+            this->tm->disable(this->pTm);
         }
 
         void deleteTimer() {
@@ -97,25 +118,6 @@ public:
             }
             this->tm->deleteTimer(this->pTm);
             this->invalidate();
-        }
-
-        bool isEnable() {
-            if (!this->isValid()) {
-                return false;
-            }
-            return this->tm->isEnable(this->pTm);
-        }
-
-        void enable() {
-            if (this->isValid()) {
-                this->tm->enable(this->pTm);
-            }
-        }
-
-        void disable() {
-            if (this->isValid()) {
-                this->tm->disable(this->pTm);
-            }
         }
 
     protected:
@@ -175,7 +177,7 @@ private:
     Timer_t* setupTimer(unsigned long interval, ERaTimer::TimerCallback_p_t cb, void* arg, unsigned int limit);
     bool isTimerFree();
 
-    bool isValidTimer(const Timer_t* pTimer) {
+    bool isValidTimer(const Timer_t* pTimer) const {
         if (pTimer == nullptr) {
             return false;
         }

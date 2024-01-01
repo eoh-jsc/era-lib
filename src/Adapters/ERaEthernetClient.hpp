@@ -1,8 +1,8 @@
 #ifndef INC_ERA_ETHERNET_CLIENT_HPP_
 #define INC_ERA_ETHERNET_CLIENT_HPP_
 
-#if !defined(ERA_PROTO_TYPE)
-    #define ERA_PROTO_TYPE            "Ethernet"
+#if !defined(ERA_NETWORK_TYPE)
+    #define ERA_NETWORK_TYPE          "Ethernet"
 #endif
 
 #if !defined(ERA_AUTH_TOKEN)
@@ -52,7 +52,7 @@ public:
             ERA_LOG_ERROR(TAG, ERA_PSTR("Connect failed"));
             return false;
         }
-        this->getTransp().setSSID(ERA_PROTO_TYPE);
+        this->getTransp().setSSID(ERA_NETWORK_TYPE);
 
         ERaWatchdogFeed();
 
@@ -69,7 +69,7 @@ public:
 
         ERA_LOG(TAG, ERA_PSTR("Connecting network static IP..."));
         Ethernet.begin(this->getMacAddress(auth, mac), localIP);
-        this->getTransp().setSSID(ERA_PROTO_TYPE);
+        this->getTransp().setSSID(ERA_NETWORK_TYPE);
 
         ERaWatchdogFeed();
 
@@ -90,7 +90,7 @@ public:
         ERA_LOG(TAG, ERA_PSTR("Connecting network static IP..."));
         Ethernet.begin(this->getMacAddress(auth, mac),
                         localIP, dns, gateway, subnet);
-        this->getTransp().setSSID(ERA_PROTO_TYPE);
+        this->getTransp().setSSID(ERA_NETWORK_TYPE);
 
         ERaWatchdogFeed();
 
@@ -336,12 +336,12 @@ void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
     cJSON_AddStringToObject(root, INFO_VERSION, ERA_VERSION);
     cJSON_AddStringToObject(root, INFO_FIRMWARE_VERSION, ERA_FIRMWARE_VERSION);
     cJSON_AddNumberToObject(root, INFO_PLUG_AND_PLAY, 0);
-    cJSON_AddStringToObject(root, INFO_NETWORK_PROTOCOL, ERA_PROTO_TYPE);
-    cJSON_AddStringToObject(root, INFO_SSID, ERA_PROTO_TYPE);
-    cJSON_AddStringToObject(root, INFO_BSSID, ERA_PROTO_TYPE);
+    cJSON_AddStringToObject(root, INFO_NETWORK_PROTOCOL, ERA_NETWORK_TYPE);
+    cJSON_AddStringToObject(root, INFO_SSID, ERA_NETWORK_TYPE);
+    cJSON_AddStringToObject(root, INFO_BSSID, ERA_NETWORK_TYPE);
     cJSON_AddNumberToObject(root, INFO_RSSI, 100);
     cJSON_AddNumberToObject(root, INFO_SIGNAL_STRENGTH, 100);
-    cJSON_AddStringToObject(root, INFO_MAC, ERA_PROTO_TYPE);
+    cJSON_AddStringToObject(root, INFO_MAC, ERA_NETWORK_TYPE);
     cJSON_AddStringToObject(root, INFO_LOCAL_IP, ip);
     cJSON_AddNumberToObject(root, INFO_SSL, ERaInfoSSL());
     cJSON_AddNumberToObject(root, INFO_PING, this->thisProto().getTransp().getPing());
@@ -364,7 +364,7 @@ void ERaApi<Proto, Flash>::addModbusInfo(cJSON* root) {
     cJSON_AddNumberToObject(root, INFO_MB_IS_BATTERY, 0);
     cJSON_AddNumberToObject(root, INFO_MB_RSSI, 100);
     cJSON_AddNumberToObject(root, INFO_MB_SIGNAL_STRENGTH, 100);
-    cJSON_AddStringToObject(root, INFO_MB_WIFI_USING, ERA_PROTO_TYPE);
+    cJSON_AddStringToObject(root, INFO_MB_WIFI_USING, ERA_NETWORK_TYPE);
 
     /* Override modbus info */
     ERaModbusInfo(root);

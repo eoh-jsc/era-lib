@@ -90,6 +90,35 @@ public:
             return this->pBt;
         }
 
+        bool isEnable() const {
+            if (!this->isValid()) {
+                return false;
+            }
+            return this->bt->isEnable(this->pBt);
+        }
+
+        void enable() const {
+            if (!this->isValid()) {
+                return;
+            }
+            this->bt->enable(this->pBt);
+        }
+
+        void disable() const {
+            if (!this->isValid()) {
+                return;
+            }
+            this->bt->disable(this->pBt);
+        }
+
+        void deleteButton() {
+            if (!this->isValid()) {
+                return;
+            }
+            this->bt->deleteButton(this->pBt);
+            this->invalidate();
+        }
+
         iterator& onChange() {
             if (this->isValid()) {
                 this->bt->onChange(this->pBt);
@@ -130,33 +159,6 @@ public:
                 this->bt->setBounceTime(timeout);
             }
             return (*this);
-        }
-
-        void deleteButton() {
-            if (!this->isValid()) {
-                return;
-            }
-            this->bt->deleteButton(this->pBt);
-            this->invalidate();
-        }
-
-        bool isEnable() {
-            if (!this->isValid()) {
-                return false;
-            }
-            return this->bt->isEnable(this->pBt);
-        }
-
-        void enable() {
-            if (this->isValid()) {
-                this->bt->enable(this->pBt);
-            }
-        }
-
-        void disable() {
-            if (this->isValid()) {
-                this->bt->disable(this->pBt);
-            }
         }
 
     protected:
@@ -218,7 +220,7 @@ private:
                         ERaButton::ButtonCallback_p_t cb, void* arg, bool invert = false);
     bool isButtonFree();
 
-    bool isValidButton(const Button_t* pButton) {
+    bool isValidButton(const Button_t* pButton) const {
         if (pButton == nullptr) {
             return false;
         }

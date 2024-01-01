@@ -412,15 +412,6 @@ void ERaReport::setScale(Report_t* pReport, float min, float max, float rawMin, 
                                         0.0f, rawMax - rawMin, 0.0f, max - min);
 }
 
-ERaReport::ScaleData_t* ERaReport::getScale(Report_t* pReport) {
-    if (this->isValidReport(pReport)) {
-        return &pReport->data.scale;
-    }
-    else {
-        return nullptr;
-    }
-}
-
 void ERaReport::enableAll() {
     const ERaList<Report_t*>::iterator* e = this->report.end();
     for (ERaList<Report_t*>::iterator* it = this->report.begin(); it != e; it = it->getNext()) {
@@ -438,6 +429,15 @@ void ERaReport::disableAll() {
         if (this->isValidReport(pReport)) {
             pReport->enable = false;
         }
+    }
+}
+
+ERaReport::ScaleData_t* ERaReport::getScale(Report_t* pReport) const {
+    if (this->isValidReport(pReport)) {
+        return &pReport->data.scale;
+    }
+    else {
+        return nullptr;
     }
 }
 

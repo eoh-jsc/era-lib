@@ -1,8 +1,8 @@
 #ifndef INC_ERA_ARDUINO_GSM_CLIENT_HPP_
 #define INC_ERA_ARDUINO_GSM_CLIENT_HPP_
 
-#if !defined(ERA_PROTO_TYPE)
-    #define ERA_PROTO_TYPE            "GSM"
+#if !defined(ERA_NETWORK_TYPE)
+    #define ERA_NETWORK_TYPE          "GSM"
 #endif
 
 #if !defined(ERA_AUTH_TOKEN)
@@ -13,7 +13,7 @@
 #include <ERa/ERaProtocol.hpp>
 #include <MQTT/ERaMqtt.hpp>
 
-#define GSM_NET_CONNECT_TIMEOUT      3 * 60000
+#define GSM_NET_CONNECT_TIMEOUT       3 * 60000
 
 typedef struct __ERaConfig_t {
     char apn[64];
@@ -58,7 +58,7 @@ public:
                 return false;
             }
         }
-        this->getTransp().setSSID(strlen(apn) ? apn : ERA_PROTO_TYPE);
+        this->getTransp().setSSID(strlen(apn) ? apn : ERA_NETWORK_TYPE);
         return true;
     }
 
@@ -194,14 +194,14 @@ void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
     cJSON_AddStringToObject(root, INFO_VERSION, ERA_VERSION);
     cJSON_AddStringToObject(root, INFO_FIRMWARE_VERSION, ERA_FIRMWARE_VERSION);
     cJSON_AddNumberToObject(root, INFO_PLUG_AND_PLAY, 0);
-    cJSON_AddStringToObject(root, INFO_NETWORK_PROTOCOL, ERA_PROTO_TYPE);
+    cJSON_AddStringToObject(root, INFO_NETWORK_PROTOCOL, ERA_NETWORK_TYPE);
     cJSON_AddStringToObject(root, INFO_SSID, ((this->thisProto().getTransp().getSSID() == nullptr) ?
-                                            ERA_PROTO_TYPE : this->thisProto().getTransp().getSSID()));
-    cJSON_AddStringToObject(root, INFO_BSSID, ERA_PROTO_TYPE);
+                                            ERA_NETWORK_TYPE : this->thisProto().getTransp().getSSID()));
+    cJSON_AddStringToObject(root, INFO_BSSID, ERA_NETWORK_TYPE);
     cJSON_AddNumberToObject(root, INFO_RSSI, 100);
     cJSON_AddNumberToObject(root, INFO_SIGNAL_STRENGTH, 100);
-    cJSON_AddStringToObject(root, INFO_MAC, ERA_PROTO_TYPE);
-    cJSON_AddStringToObject(root, INFO_LOCAL_IP, ERA_PROTO_TYPE);
+    cJSON_AddStringToObject(root, INFO_MAC, ERA_NETWORK_TYPE);
+    cJSON_AddStringToObject(root, INFO_LOCAL_IP, ERA_NETWORK_TYPE);
     cJSON_AddNumberToObject(root, INFO_SSL, ERaInfoSSL());
     cJSON_AddNumberToObject(root, INFO_PING, this->thisProto().getTransp().getPing());
     cJSON_AddNumberToObject(root, INFO_FREE_RAM, ERaFreeRam());
@@ -224,7 +224,7 @@ void ERaApi<Proto, Flash>::addModbusInfo(cJSON* root) {
     cJSON_AddNumberToObject(root, INFO_MB_RSSI, 100);
     cJSON_AddNumberToObject(root, INFO_MB_SIGNAL_STRENGTH, 100);
     cJSON_AddStringToObject(root, INFO_MB_WIFI_USING, ((this->thisProto().getTransp().getSSID() == nullptr) ?
-                                                    ERA_PROTO_TYPE : this->thisProto().getTransp().getSSID()));
+                                                    ERA_NETWORK_TYPE : this->thisProto().getTransp().getSSID()));
 
     /* Override modbus info */
     ERaModbusInfo(root);

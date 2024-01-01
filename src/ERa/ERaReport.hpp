@@ -91,10 +91,7 @@ public:
         }
 
         void operator() (void) const {
-            if (!this->isValid()) {
-                return;
-            }
-            this->rp->executeReport(this->pRp);
+            this->executeReport();
         }
         
         bool isValid() const {
@@ -105,6 +102,20 @@ public:
             return this->pRp;
         }
 
+        void executeReport() const {
+            if (!this->isValid()) {
+                return;
+            }
+            this->rp->executeReport(this->pRp);
+        }
+
+        void executeNow() const {
+            if (!this->isValid()) {
+                return;
+            }
+            this->rp->executeNow(this->pRp);
+        }
+
         void updateReport(float value, bool isRound = false, bool execute = true) const {
             if (!this->isValid()) {
                 return;
@@ -112,7 +123,7 @@ public:
             this->rp->updateReport(this->pRp, value, isRound, execute);
         }
 
-        bool changeReportableChange(unsigned long minInterval, unsigned long maxInterval, float minChange) {
+        bool changeReportableChange(unsigned long minInterval, unsigned long maxInterval, float minChange) const {
             if (!this->isValid()) {
                 return false;
             }
@@ -121,7 +132,7 @@ public:
 
         bool changeReportableChange(unsigned long minInterval, unsigned long maxInterval, float minChange,
                                     ERaReport::ReportCallback_p_t cb, uint8_t pin, uint8_t pinMode,
-                                    unsigned int configId) {
+                                    unsigned int configId) const {
             if (!this->isValid()) {
                 return false;
             }
@@ -129,14 +140,14 @@ public:
         }
 
         bool changeReportableChange(unsigned long minInterval, unsigned long maxInterval, float minChange,
-                                    ERaReport::ReportCallback_p_t cb, uint8_t pin, uint8_t pinMode) {
+                                    ERaReport::ReportCallback_p_t cb, uint8_t pin, uint8_t pinMode) const {
             if (!this->isValid()) {
                 return false;
             }
             return this->rp->changeReportableChange(this->pRp, minInterval, maxInterval, minChange, cb, pin, pinMode);
         }
 
-        bool reportEvery(unsigned long interval) {
+        bool reportEvery(unsigned long interval) const {
             if (!this->isValid()) {
                 return false;
             }
@@ -178,50 +189,42 @@ public:
             return this->rp->getPreviousValue(this->pRp);
         }
 
-        void skipReport() {
+        void skipReport() const {
             if (!this->isValid()) {
                 return;
             }
             this->rp->skipReport(this->pRp);
         }
 
-        void restartReport() {
+        void restartReport() const {
             if (!this->isValid()) {
                 return;
             }
             this->rp->restartReport(this->pRp);
         }
 
-        void deleteReport() {
-            if (!this->isValid()) {
-                return;
-            }
-            this->rp->deleteReport(this->pRp);
-            this->invalidate();
-        }
-
-        bool isEnable() {
+        bool isEnable() const {
             if (!this->isValid()) {
                 return false;
             }
             return this->rp->isEnable(this->pRp);
         }
 
-        void enable() {
+        void enable() const {
             if (!this->isValid()) {
                 return;
             }
             this->rp->enable(this->pRp);
         }
 
-        void disable() {
+        void disable() const {
             if (!this->isValid()) {
                 return;
             }
             this->rp->disable(this->pRp);
         }
 
-        void setScale(float min, float max, float rawMin, float rawMax) {
+        void setScale(float min, float max, float rawMin, float rawMax) const {
             if (!this->isValid()) {
                 return;
             }
@@ -233,6 +236,14 @@ public:
                 return nullptr;
             }
             return this->rp->getScale(this->pRp);
+        }
+
+        void deleteReport() {
+            if (!this->isValid()) {
+                return;
+            }
+            this->rp->deleteReport(this->pRp);
+            this->invalidate();
         }
 
     protected:
@@ -305,9 +316,10 @@ public:
     void enable(Report_t* pReport);
     void disable(Report_t* pReport);
     void setScale(Report_t* pReport, float min, float max, float rawMin, float rawMax);
-    ERaReport::ScaleData_t* getScale(Report_t* pReport);
     void enableAll();
     void disableAll();
+
+    ERaReport::ScaleData_t* getScale(Report_t* pReport) const;
 
 protected:
 private:
@@ -328,7 +340,7 @@ private:
 
     bool isReportFree();
 
-    bool isValidReport(const Report_t* pReport) {
+    bool isValidReport(const Report_t* pReport) const {
         if (pReport == nullptr) {
             return false;
         }

@@ -133,6 +133,16 @@ public:
             return !strcmp(this->ptr, _ptr);
         }
 
+        bool operator != (const char* _ptr) {
+            if (!this->isValid()) {
+                return false;
+            }
+            if (_ptr == nullptr) {
+                return true;
+            }
+            return strcmp(this->ptr, _ptr);
+        }
+
         iterator& operator ++ () {
             if (this->isValid()) {
                 this->ptr += strlen(this->ptr) + 1;
@@ -1024,6 +1034,35 @@ public:
             return (this->item != it.item);
         }
 
+        template <typename T>
+        bool operator != (T value) const {
+            return !(operator == <T> (value));
+        }
+
+        bool operator != (bool value) const {
+            return !(operator == (value));
+        }
+
+        bool operator != (float value) const {
+            return !(operator == (value));
+        }
+
+        bool operator != (double value) const {
+            return !(operator == (value));
+        }
+
+        bool operator != (char* value) const {
+            return !(operator == (value));
+        }
+
+        bool operator != (const char* value) const {
+            return !(operator == (value));
+        }
+
+        bool operator != (nullptr_t) const {
+            return !this->isNull();
+        }
+
         iterator& operator ++ () {
             if (this->isValid()) {
                 this->item = this->item->next;
@@ -1214,6 +1253,8 @@ public:
     bool operator == (ERaDataJson& value) const;
     bool operator == (const ERaDataJson& value) const;
     bool operator == (nullptr_t) const;
+    bool operator != (ERaDataJson& value) const;
+    bool operator != (const ERaDataJson& value) const;
     bool operator != (nullptr_t) const;
 
     ERaDataJson& operator = (const ERaDataJson& value);
@@ -1484,6 +1525,16 @@ bool ERaDataJson::operator == (const ERaDataJson& value) const {
 inline
 bool ERaDataJson::operator == (nullptr_t) const {
     return this->isEmpty();
+}
+
+inline
+bool ERaDataJson::operator != (ERaDataJson& value) const {
+    return !(operator == (value));
+}
+
+inline
+bool ERaDataJson::operator != (const ERaDataJson& value) const {
+    return !(operator == (value));
 }
 
 inline

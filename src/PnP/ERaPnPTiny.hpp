@@ -1,8 +1,8 @@
 #ifndef INC_ERA_PNP_ARDUINO_HPP_
 #define INC_ERA_PNP_ARDUINO_HPP_
 
-#if !defined(ERA_PROTO_TYPE)
-    #define ERA_PROTO_TYPE            "WiFi"
+#if !defined(ERA_NETWORK_TYPE)
+    #define ERA_NETWORK_TYPE          "WiFi"
 #endif
 
 #include <TinyGsmClient.hpp>
@@ -152,7 +152,7 @@ String getSSID() {
     ERaWatchdogFeed();
     TinyGsm* modem = getTinyModem();
     if (modem == nullptr) {
-        return String(ERA_PROTO_TYPE);
+        return String(ERA_NETWORK_TYPE);
     }
     return modem->SSID();
 }
@@ -162,7 +162,7 @@ String getSSID(uint8_t networkItem) {
     ERaWatchdogFeed();
     TinyGsm* modem = getTinyModem();
     if (modem == nullptr) {
-        return String(ERA_PROTO_TYPE);
+        return String(ERA_NETWORK_TYPE);
     }
     return modem->SSID(networkItem);
 }
@@ -172,7 +172,7 @@ String getBSSID() {
     ERaWatchdogFeed();
     TinyGsm* modem = getTinyModem();
     if (modem == nullptr) {
-        return String(ERA_PROTO_TYPE);
+        return String(ERA_NETWORK_TYPE);
     }
     return modem->BSSID();
 }
@@ -182,7 +182,7 @@ String getMAC() {
     ERaWatchdogFeed();
     TinyGsm* modem = getTinyModem();
     if (modem == nullptr) {
-        return String(ERA_PROTO_TYPE);
+        return String(ERA_NETWORK_TYPE);
     }
     return modem->BSSID();
 }
@@ -192,7 +192,7 @@ String getLocalIP() {
     ERaWatchdogFeed();
     TinyGsm* modem = getTinyModem();
     if (modem == nullptr) {
-        return String(ERA_PROTO_TYPE);
+        return String(ERA_NETWORK_TYPE);
     }
     return TinyGsmClient::TinyGsmStringFromIp(modem->localIP());
 }
@@ -202,7 +202,7 @@ String getSoftAPIP() {
     ERaWatchdogFeed();
     TinyGsm* modem = getTinyModem();
     if (modem == nullptr) {
-        return String(ERA_PROTO_TYPE);
+        return String(ERA_NETWORK_TYPE);
     }
     return TinyGsmClient::TinyGsmStringFromIp(modem->localIPAP());
 }
@@ -1634,7 +1634,7 @@ void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
     cJSON_AddStringToObject(root, INFO_VERSION, ERA_VERSION);
     cJSON_AddStringToObject(root, INFO_FIRMWARE_VERSION, ERA_FIRMWARE_VERSION);
     cJSON_AddNumberToObject(root, INFO_PLUG_AND_PLAY, ERaConfig.getFlag(ConfigFlagT::CONFIG_FLAG_PNP));
-    cJSON_AddStringToObject(root, INFO_NETWORK_PROTOCOL, ERA_PROTO_TYPE);
+    cJSON_AddStringToObject(root, INFO_NETWORK_PROTOCOL, ERA_NETWORK_TYPE);
     cJSON_AddStringToObject(root, INFO_SSID, ((this->thisProto().getTransp().getSSID() == nullptr) ?
                                             ::getSSID().c_str() : this->thisProto().getTransp().getSSID()));
     cJSON_AddStringToObject(root, INFO_BSSID, ::getBSSID().c_str());
