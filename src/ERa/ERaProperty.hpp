@@ -424,7 +424,7 @@ protected:
         if (pValue == nullptr) {
             return;
         }
-        memset(pValue, 0, sizeof(ERaString));
+        memset((void*)pValue, 0, sizeof(ERaString));
         (*pValue) = value;
         WrapperBase* wrapper = new WrapperString(*pValue);
         if (wrapper == nullptr) {
