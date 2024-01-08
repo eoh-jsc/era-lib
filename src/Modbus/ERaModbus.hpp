@@ -194,7 +194,7 @@ protected:
             if (this->modbusConfig->updateHashID(hash)) {
                 this->clearDataBuff();
                 this->thisApi().writeToFlash(FILENAME_CONFIG, buf);
-                if (this->wifiConfig && this->modbusConfig->isWifi) {
+                if (this->wifiConfig && this->modbusConfig->isWiFi) {
                     this->thisApi().connectNewWiFi(this->modbusConfig->ssid,
                                                    this->modbusConfig->pass);
                 }
