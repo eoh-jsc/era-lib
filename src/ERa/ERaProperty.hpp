@@ -30,7 +30,9 @@
 enum PermissionT {
     PERMISSION_READ = 0x01,
     PERMISSION_WRITE = 0x02,
-    PERMISSION_READ_WRITE = PERMISSION_READ | PERMISSION_WRITE
+    PERMISSION_READ_WRITE = PERMISSION_READ | PERMISSION_WRITE,
+    PERMISSION_CLOUD = 0x80,
+    PERMISSION_CLOUD_READ_WRITE = PERMISSION_CLOUD | PERMISSION_READ_WRITE
 };
 
 template <class Api>
@@ -50,6 +52,7 @@ class ERaProperty
         ERaReport::iterator report;
         unsigned long prevMillis;
         PermissionT permission;
+        void* allocPointer;
         WrapperBase* value;
         ERaParam id;
     } Property_t;
@@ -57,6 +60,8 @@ class ERaProperty
 public:
     class iterator
     {
+        friend class ERaProperty;
+
     public:
         iterator()
             : prop(nullptr)
@@ -117,6 +122,13 @@ public:
         }
 
     protected:
+        iterator& allocatorPointer(void* ptr) {
+            if (this->isValid()) {
+                this->prop->allocatorPointer(this->pProp, ptr);
+            }
+            return (*this);
+        }
+
     private:
         void invalidate() {
             this->prop = nullptr;
@@ -197,6 +209,16 @@ public:
         return iterator(this, this->setupProperty(pin, wrapper, permission));
     }
 
+    iterator addPropertyVirtual(uint8_t pin, ERaDataJson& value, PermissionT const permission) {
+        WrapperBase* wrapper = new WrapperObject(value);
+        return iterator(this, this->setupProperty(pin, wrapper, permission));
+    }
+
+    iterator addPropertyVirtual(uint8_t pin, ERaString& value, PermissionT const permission) {
+        WrapperBase* wrapper = new WrapperString(value);
+        return iterator(this, this->setupProperty(pin, wrapper, permission));
+    }
+
     iterator addPropertyVirtual(uint8_t pin, WrapperBase& value, PermissionT const permission) {
         return iterator(this, this->setupProperty(pin, &value, permission));
     }
@@ -249,6 +271,16 @@ public:
 
     iterator addPropertyReal(const char* id, double& value, PermissionT const permission) {
         WrapperBase* wrapper = new WrapperDouble(value);
+        return iterator(this, this->setupProperty(id, wrapper, permission));
+    }
+
+    iterator addPropertyReal(const char* id, ERaDataJson& value, PermissionT const permission) {
+        WrapperBase* wrapper = new WrapperObject(value);
+        return iterator(this, this->setupProperty(id, wrapper, permission));
+    }
+
+    iterator addPropertyReal(const char* id, ERaString& value, PermissionT const permission) {
+        WrapperBase* wrapper = new WrapperString(value);
         return iterator(this, this->setupProperty(id, wrapper, permission));
     }
 
@@ -308,6 +340,16 @@ public:
         return iterator(this, this->setupProperty(id, wrapper, permission));
     }
 
+    iterator addPropertyReal(const __FlashStringHelper* id, ERaDataJson& value, PermissionT const permission) {
+        WrapperBase* wrapper = new WrapperObject(value);
+        return iterator(this, this->setupProperty(id, wrapper, permission));
+    }
+
+    iterator addPropertyReal(const __FlashStringHelper* id, ERaString& value, PermissionT const permission) {
+        WrapperBase* wrapper = new WrapperString(value);
+        return iterator(this, this->setupProperty(id, wrapper, permission));
+    }
+
     iterator addPropertyReal(const __FlashStringHelper* id, WrapperBase& value, PermissionT const permission) {
         return iterator(this, this->setupProperty(id, &value, permission));
     }
@@ -341,8 +383,18 @@ protected:
             pProp->report.updateReport(value, false, false);
             return;
         }
-        T* wrapper = new T(value);
-        this->addPropertyVirtualT(pin, *wrapper, PermissionT::PERMISSION_READ_WRITE).publishOnChange(0, this->writeTimeout).publish();
+        T* pValue = (T*)malloc(sizeof(T));
+        if (pValue == nullptr) {
+            return;
+        }
+        memcpy(pValue, &value, sizeof(T));
+        WrapperBase* wrapper = new WrapperNumber<T>(*pValue);
+        if (wrapper == nullptr) {
+            free(pValue);
+            pValue = nullptr;
+            return;
+        }
+        this->addPropertyVirtual(pin, *wrapper, PermissionT::PERMISSION_CLOUD_READ_WRITE).publishOnChange(0, this->writeTimeout).publish().allocatorPointer(pValue);
     }
 
     void virtualWriteProperty(uint8_t pin, const ERaParam& value) {
@@ -354,7 +406,11 @@ protected:
         }
     }
 
-    void virtualWriteProperty(uint8_t pin, const WrapperString& value) {
+    void virtualWriteProperty(uint8_t pin, ERaDataJson& value) {
+        this->virtualWriteProperty(pin, value.getString());
+    }
+
+    void virtualWriteProperty(uint8_t pin, const ERaString& value) {
         this->virtualWriteProperty(pin, value.getString());
     }
 
@@ -364,8 +420,21 @@ protected:
             (*pProp->value) = value;
             return;
         }
-        WrapperString* wrapper = new WrapperString(value);
-        this->addPropertyVirtual(pin, *wrapper, PermissionT::PERMISSION_READ_WRITE).publishOnChange(0, this->writeTimeout);
+        ERaString* pValue = (ERaString*)malloc(sizeof(ERaString));
+        if (pValue == nullptr) {
+            return;
+        }
+        memset(pValue, 0, sizeof(ERaString));
+        (*pValue) = value;
+        WrapperBase* wrapper = new WrapperString(*pValue);
+        if (wrapper == nullptr) {
+            pValue->~ERaString();
+            free(pValue);
+            pValue = nullptr;
+            return;
+        }
+        wrapper->setOptions(0x01);
+        this->addPropertyVirtual(pin, *wrapper, PermissionT::PERMISSION_CLOUD_READ_WRITE).publishOnChange(0, this->writeTimeout).allocatorPointer(pValue);
     }
 
     void virtualWriteProperty(uint8_t pin, char* value) {
@@ -388,6 +457,7 @@ private:
     bool publishOnChange(Property_t* pProp, float minChange = 1.0f,
                         unsigned long minInterval = 1000UL,
                         unsigned long maxInterval = 60000UL);
+    bool allocatorPointer(Property_t* pProp, void* ptr);
     bool isPropertyFree();
     int findVirtualPin();
 
@@ -501,7 +571,7 @@ void ERaProperty<Api>::updateValue(const Property_t* pProp) {
             pProp->report.updateReport(pProp->value->getFloat(), false, false);
             break;
         case WrapperTypeT::WRAPPER_TYPE_STRING:
-            if (pProp->value->isUpdated()) {
+            if (pProp->value->updated()) {
                 pProp->report();
             }
             break;
@@ -539,10 +609,10 @@ void ERaProperty<Api>::handler(uint8_t pin, const ERaParam& param) {
         pProp = this->isPropertyIdExist(pin);
         if ((pProp != nullptr) &&
             (pProp->value != nullptr)) {
-            pProp->value->isUpdated();
+            pProp->value->updated();
         }
-    }
 #endif
+    }
 #endif
 }
 
@@ -584,22 +654,36 @@ void ERaProperty<Api>::handler(const char* id, const ERaParam& param) {
             if (!this->isValidProperty(pProp)) {
                 continue;
             }
+            if (!this->getFlag(pProp->permission, PermissionT::PERMISSION_CLOUD)) {
+                return;
+            }
             if (!pProp->id.isNumber()) {
                 continue;
             }
-            if (pin.isVPinExist(pProp->id.getInt())) {
+            if (pin.isVPinExist(pProp->id.getInt(), pProp->value)) {
                 if (pProp->report) {
                     pProp->report.executeNow();
                 }
                 continue;
             }
             else {
+                if (pProp->allocPointer != nullptr) {
+                    free(pProp->allocPointer);
+                    pProp->allocPointer = nullptr;
+                }
+                if (pProp->value != nullptr) {
+                    delete pProp->value;
+                    pProp->value = nullptr;
+                }
+                pProp->report.deleteReport();
                 delete pProp;
                 pProp = nullptr;
                 it->get() = nullptr;
                 this->ERaProp.remove(it);
             }
         }
+
+        this->ERaPropRp.run();
     }
 #endif
 
@@ -639,7 +723,7 @@ void ERaProperty<Api>::getValue(Property_t* pProp, const ERaParam& param) {
         case WrapperTypeT::WRAPPER_TYPE_STRING:
             if (param.isString()) {
                 (*pProp->value) = param.getString();
-                if (pProp->value->isUpdated()) {
+                if (pProp->value->updated()) {
 #if defined(ERA_STRING_REPORT_ON_WRITE)
                     pProp->report();
 #endif
@@ -672,6 +756,7 @@ typename ERaProperty<Api>::Property_t* ERaProperty<Api>::setupProperty(uint8_t p
     pProp->id = pin;
     pProp->value = value;
     pProp->callback = nullptr;
+    pProp->allocPointer = nullptr;
     pProp->prevMillis = ERaMillis();
     pProp->permission = permission;
     pProp->report = ERaReport::iterator();
@@ -703,6 +788,7 @@ typename ERaProperty<Api>::Property_t* ERaProperty<Api>::setupProperty(const cha
     pProp->id = id;
     pProp->value = value;
     pProp->callback = nullptr;
+    pProp->allocPointer = nullptr;
     pProp->prevMillis = ERaMillis();
     pProp->permission = permission;
     pProp->report = ERaReport::iterator();
@@ -796,6 +882,16 @@ bool ERaProperty<Api>::publishOnChange(Property_t* pProp, float minChange,
     else {
         this->updateValue(pProp);
     }
+    return true;
+}
+
+template <class Api>
+bool ERaProperty<Api>::allocatorPointer(Property_t* pProp, void* ptr) {
+    if (pProp == nullptr) {
+        return false;
+    }
+
+    pProp->allocPointer = ptr;
     return true;
 }
 

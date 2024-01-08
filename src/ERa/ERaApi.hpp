@@ -705,7 +705,10 @@ void ERaApi<Proto, Flash>::handleVirtualPin(cJSON* root) {
         else if (cJSON_IsString(item)) {
             pin.pin = ERA_DECODE_PIN_NAME(item->valuestring);
         }
-        item = cJSON_GetObjectItem(current, "value_type");
+        item = cJSON_GetObjectItem(current, "new_value_type");
+        if (item == nullptr) {
+            item = cJSON_GetObjectItem(current, "value_type");
+        }
         if (cJSON_IsString(item)) {
             if (ERaStrCmp(item->valuestring, "number")) {
                 this->ERaPinRp.setPinVirtual(pin.pin, pin.configId,

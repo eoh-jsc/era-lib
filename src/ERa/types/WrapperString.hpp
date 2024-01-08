@@ -7,790 +7,948 @@
 #include <stdarg.h>
 #include "WrapperBase.hpp"
 
-class WrapperStringHelper;
+class WrapperString;
+
+#if defined(ARDUINO) && \
+    defined(ERA_USE_ARDUINO_STRING)
+
+    #define ERA_ARDUINO_STRING
+
+    #include <Arduino.h>
+
+    class ERaString
+        : public String
+    {
+        friend class WrapperString;
+
+    public:
+        ERaString()
+            : String("")
+        {}
+        ERaString(const String& str)
+            : String(str)
+        {}
+        ERaString(const ERaParam& param)
+            : String("")
+        {
+            if (param.isNumber()) {
+                String::operator = (param.getFloat());
+            }
+            else if (param.isString()) {
+                String::operator = (param.getString());
+            }
+        }
+        ERaString(const char* cstr)
+            : String(cstr)
+        {}
+        ERaString(char* str)
+            : String(str)
+        {}
+        ERaString(char c)
+            : String(c)
+        {}
+        ERaString(unsigned char num)
+            : String(num)
+        {}
+        ERaString(int num)
+            : String(num)
+        {}
+        ERaString(unsigned int num)
+            : String(num)
+        {}
+        ERaString(long num)
+            : String(num)
+        {}
+        ERaString(unsigned long num)
+            : String(num)
+        {}
+        ERaString(long long num)
+            : String(num)
+        {}
+        ERaString(unsigned long long num)
+            : String(num)
+        {}
+        ERaString(float num)
+            : String(num)
+        {}
+        ERaString(double num)
+            : String(num)
+        {}
+
+        const char* getString() const {
+            return String::c_str();
+        }
+
+        void setString(const char* cstr) {
+            String::operator = (cstr);
+        }
+
+    protected:
+    private:
+        bool updated(String& str) {
+            if ((*this) == str) {
+                return false;
+            }
+            str = (*this);
+            return true;
+        }
+
+    };
+
+#else
+    class ERaStringHelper;
+
+    class ERaString
+    {
+        friend class WrapperString;
+
+    public:
+        ERaString()
+            : value(nullptr)
+            , valueCapacity(0UL)
+            , isUpdated(false)
+        {}
+        ERaString(const ERaString& estr)
+            : value(nullptr)
+            , valueCapacity(0UL)
+            , isUpdated(false)
+        {
+            this->concat(estr);
+        }
+        ERaString(const ERaParam& param)
+            : value(nullptr)
+            , valueCapacity(0UL)
+            , isUpdated(false)
+        {
+            this->concat(param);
+        }
+        ERaString(const char* cstr)
+            : value(nullptr)
+            , valueCapacity(0UL)
+            , isUpdated(false)
+        {
+            this->concat(cstr);
+        }
+        ERaString(char* str)
+            : value(nullptr)
+            , valueCapacity(0UL)
+            , isUpdated(false)
+        {
+            this->concat(str);
+        }
+        ERaString(char c)
+            : value(nullptr)
+            , valueCapacity(0UL)
+            , isUpdated(false)
+        {
+            this->concat(c);
+        }
+        ERaString(unsigned char num)
+            : value(nullptr)
+            , valueCapacity(0UL)
+            , isUpdated(false)
+        {
+            this->concat(num);
+        }
+        ERaString(int num)
+            : value(nullptr)
+            , valueCapacity(0UL)
+            , isUpdated(false)
+        {
+            this->concat(num);
+        }
+        ERaString(unsigned int num)
+            : value(nullptr)
+            , valueCapacity(0UL)
+            , isUpdated(false)
+        {
+            this->concat(num);
+        }
+        ERaString(long num)
+            : value(nullptr)
+            , valueCapacity(0UL)
+            , isUpdated(false)
+        {
+            this->concat(num);
+        }
+        ERaString(unsigned long num)
+            : value(nullptr)
+            , valueCapacity(0UL)
+            , isUpdated(false)
+        {
+            this->concat(num);
+        }
+        ERaString(long long num)
+            : value(nullptr)
+            , valueCapacity(0UL)
+            , isUpdated(false)
+        {
+            this->concat(num);
+        }
+        ERaString(unsigned long long num)
+            : value(nullptr)
+            , valueCapacity(0UL)
+            , isUpdated(false)
+        {
+            this->concat(num);
+        }
+        ERaString(float num)
+            : value(nullptr)
+            , valueCapacity(0UL)
+            , isUpdated(false)
+        {
+            this->concat(num);
+        }
+        ERaString(double num)
+            : value(nullptr)
+            , valueCapacity(0UL)
+            , isUpdated(false)
+        {
+            this->concat(num);
+        }
+        ~ERaString()
+        {
+            if (this->value != nullptr) {
+                free(this->value);
+            }
+            this->value = nullptr;
+            this->valueCapacity = 0UL;
+            this->isUpdated = false;
+        }
+
+        void reserve(size_t cap) {
+            if (cap <= this->valueCapacity) {
+                return;
+            }
+            if (this->value != nullptr) {
+                free(this->value);
+            }
+            this->value = (char*)malloc(cap);
+            if (this->value != nullptr) {
+                this->valueCapacity = cap;
+                memset(this->value, 0, cap);
+            }
+        }
+
+        const char* c_str() const {
+            return ((this->value != nullptr) ? this->value : "");
+        }
+
+        const char* getString() const {
+            return ((this->value != nullptr) ? this->value : "");
+        }
+
+        void printf(const char* format, ...) {
+            va_list arg;
+            va_list copy;
+            va_start(arg, format);
+            va_copy(copy, arg);
+            char locBuf[128] {0};
+            char* buf = locBuf;
+            int len = vsnprintf(buf, sizeof(locBuf), format, copy);
+            va_end(copy);
+            if (len < 0) {
+                va_end(arg);
+                return;
+            }
+            if (len >= (int)sizeof(locBuf)) {
+                buf = (char*)malloc(len + 1);
+                if (buf == nullptr) {
+                    va_end(arg);
+                    return;
+                }
+                len = vsnprintf(buf, len + 1, format, arg);
+            }
+            va_end(arg);
+            this->setString(buf);
+            if (buf != locBuf) {
+                free(buf);
+            }
+            buf = nullptr;
+        }
+
+        void print(const char* cstr) {
+            this->printf(cstr);
+        }
+
+        void println() {
+            this->print("\r\n");
+        }
+
+        void println(const char* cstr) {
+            this->printf("%s\r\n", cstr);
+        }
+
+        void concat(const ERaString& estr) {
+            this->concat((const char*)estr.value);
+        }
+
+        void concat(const ERaParam& param) {
+            if (param.isNumber()) {
+                this->concat(param.getFloat());
+            }
+            else if (param.isString()) {
+                this->concat(param.getString());
+            }
+        }
+
+        void concat(const char* cstr) {
+            if (cstr == nullptr) {
+                return;
+            }
+            if (this->value == nullptr) {
+                return this->setString(cstr);
+            }
+            if (!strlen(cstr)) {
+                return;
+            }
+            size_t oldLen = strlen(this->value);
+            size_t newLen = oldLen;
+            newLen += strlen(cstr);
+            if (newLen >= this->valueCapacity) {
+                char* copy = (char*)realloc(this->value, newLen + 1);
+                if (copy == nullptr) {
+                    return;
+                }
+                this->value = copy;
+                this->valueCapacity = newLen + 1;
+            }
+            snprintf(this->value + oldLen, newLen - oldLen + 1, cstr);
+            this->value[newLen] = '\0';
+            this->isUpdated = true;
+        }
+
+        void concat(char* str) {
+            this->concat((const char*)str);
+        }
+
+        void concat(char c) {
+            const char str[2] = { c, '\0' };
+            this->concat(str);
+        }
+
+    #if defined(__AVR__) || defined(ARDUINO_ARCH_ARC32)
+
+        void concat(unsigned char num) {
+            char str[1 + 8 * sizeof(unsigned char)] {0};
+            utoa(num, str, 10);
+            this->concat((const char*)str);
+        }
+
+        void concat(int num) {
+            char str[2 + 8 * sizeof(int)] {0};
+            itoa(num, str, 10);
+            this->concat((const char*)str);
+        }
+
+        void concat(unsigned int num) {
+            char str[1 + 8 * sizeof(unsigned int)] {0};
+            utoa(num, str, 10);
+            this->concat((const char*)str);
+        }
+
+        void concat(long num) {
+            char str[2 + 8 * sizeof(long)] {0};
+            ltoa(num, str, 10);
+            this->concat((const char*)str);
+        }
+
+        void concat(unsigned long num) {
+            char str[1 + 8 * sizeof(unsigned long)] {0};
+            ultoa(num, str, 10);
+            this->concat((const char*)str);
+        }
+
+        void concat(long long num) {
+            char str[2 + 8 * sizeof(long long)] {0};
+            ltoa(num, str, 10);
+            this->concat((const char*)str);
+        }
+
+        void concat(unsigned long long num) {
+            char str[1 + 8 * sizeof(unsigned long long)] {0};
+            ultoa(num, str, 10);
+            this->concat((const char*)str);
+        }
+
+        void concat(float num) {
+            char str[33] {0};
+            dtostrf(num, 5, 2, str);
+            this->concat((const char*)str);
+        }
+
+        void concat(double num) {
+            char str[33] {0};
+            dtostrf(num, 5, 5, str);
+            this->concat((const char*)str);
+        }
+
+    #else
+
+        void concat(unsigned char num) {
+            char str[20] {0};
+            snprintf(str, sizeof(str), "%u", num);
+            this->concat((const char*)str);
+        }
+
+        void concat(int num) {
+            char str[20] {0};
+            snprintf(str, sizeof(str), "%i", num);
+            this->concat((const char*)str);
+        }
+
+        void concat(unsigned int num) {
+            char str[20] {0};
+            snprintf(str, sizeof(str), "%u", num);
+            this->concat((const char*)str);
+        }
+
+        void concat(long num) {
+            char str[20] {0};
+            snprintf(str, sizeof(str), "%li", num);
+            this->concat((const char*)str);
+        }
+
+        void concat(unsigned long num) {
+            char str[20] {0};
+            snprintf(str, sizeof(str), "%lu", num);
+            this->concat((const char*)str);
+        }
+
+        void concat(long long num) {
+            char str[33] {0};
+            snprintf(str, sizeof(str), "%lli", num);
+            this->concat((const char*)str);
+        }
+
+        void concat(unsigned long long num) {
+            char str[33] {0};
+            snprintf(str, sizeof(str), "%llu", num);
+            this->concat((const char*)str);
+        }
+
+    #if defined(ERA_USE_ERA_DTOSTRF)
+
+        void concat(float num) {
+            char str[33] {0};
+            ERaDtostrf(num, 2, str);
+            this->concat((const char*)str);
+        }
+
+        void concat(double num) {
+            char str[33] {0};
+            ERaDtostrf(num, 5, str);
+            this->concat((const char*)str);
+        }
+
+    #else
+
+        void concat(float num) {
+            char str[33] {0};
+            snprintf(str, sizeof(str), "%.2f", num);
+            this->concat((const char*)str);
+        }
+
+        void concat(double num) {
+            char str[33] {0};
+            snprintf(str, sizeof(str), "%.5f", num);
+            this->concat((const char*)str);
+        }
+
+    #endif
+
+    #endif
+
+        size_t size() const {
+            if (this->value == nullptr) {
+                return 0;
+            }
+            return strlen(this->value);
+        }
+
+        size_t length() const {
+            if (this->value == nullptr) {
+                return 0;
+            }
+            return strlen(this->value);
+        }
+
+        char& at(size_t index) {
+            if (this->value == nullptr) {
+                static char c {0};
+                return c;
+            }
+            return this->value[index];
+        }
+
+        void toLowerCase() {
+            size_t len = this->length();
+            for (size_t i = 0; i < len; ++i) {
+                this->value[i] = ::tolower(this->value[i]);
+            }
+        }
+
+        void toUpperCase() {
+            size_t len = this->length();
+            for (size_t i = 0; i < len; ++i) {
+                this->value[i] = ::toupper(this->value[i]);
+            }
+        }
+
+        operator const char*() const {
+            if (this->value == nullptr) {
+                return "";
+            }
+            return this->value;
+        }
+
+        char& operator [] (int index) {
+            return this->at(index);
+        }
+
+        ERaString& operator = (const ERaString& res) {
+            if (this == &res) {
+                return (*this);
+            }
+            return operator = ((const char*)res.value);
+        }
+
+        ERaString& operator = (const ERaParam& param) {
+            if (param.isNumber()) {
+                (*this) = ERaString(param.getFloat());
+            }
+            else if (param.isString()) {
+                operator = (param.getString());
+            }
+            return (*this);
+        }
+
+        ERaString& operator = (const ERaDataJson& rjs) {
+            if (rjs.isValid()) {
+                operator = (const_cast<ERaDataJson&>(rjs).getString());
+            }
+            return (*this);
+        }
+
+        ERaString& operator = (const char* cstr) {
+            this->setString(cstr);
+            return (*this);
+        }
+
+        ERaString& operator = (char* str) {
+            return operator = ((const char*)str);
+        }
+
+        ERaString& operator += (const ERaString& res) {
+            this->concat(res);
+            return (*this);
+        }
+
+        ERaString& operator += (const ERaParam& param) {
+            this->concat(param);
+            return (*this);
+        }
+
+        ERaString& operator += (const char* cstr) {
+            this->concat(cstr);
+            return (*this);
+        }
+
+        ERaString& operator += (char* str) {
+            this->concat(str);
+            return (*this);
+        }
+
+        ERaString& operator += (char c) {
+            this->concat(c);
+            return (*this);
+        }
+
+        ERaString& operator += (unsigned char num) {
+            this->concat(num);
+            return (*this);
+        }
+
+        ERaString& operator += (int num) {
+            this->concat(num);
+            return (*this);
+        }
+
+        ERaString& operator += (unsigned int num) {
+            this->concat(num);
+            return (*this);
+        }
+
+        ERaString& operator += (long num) {
+            this->concat(num);
+            return (*this);
+        }
+
+        ERaString& operator += (unsigned long num) {
+            this->concat(num);
+            return (*this);
+        }
+
+        ERaString& operator += (long long num) {
+            this->concat(num);
+            return (*this);
+        }
+
+        ERaString& operator += (unsigned long long num) {
+            this->concat(num);
+            return (*this);
+        }
+
+        ERaString& operator += (float num) {
+            this->concat(num);
+            return (*this);
+        }
+
+        ERaString& operator += (double num) {
+            this->concat(num);
+            return (*this);
+        }
+
+        bool operator == (const ERaString& res) const {
+            if (this == &res) {
+                return true;
+            }
+            return operator == ((const char*)res.value);
+        }
+
+        bool operator == (const char* cstr) const {
+            return this->StringCompare(cstr);
+        }
+
+        bool operator == (char* str) const {
+            return operator == ((const char*)str);
+        }
+
+        bool operator != (const ERaString& res) const {
+            if (this == &res) {
+                return false;
+            }
+            return operator != ((const char*)res.value);
+        }
+
+        bool operator != (const char* cstr) const {
+            return !this->StringCompare(cstr);
+        }
+
+        bool operator != (char* str) const {
+            return operator != ((const char*)str);
+        }
+
+        friend ERaStringHelper& operator + (const ERaStringHelper& esh, const ERaString& res);
+        friend ERaStringHelper& operator + (const ERaStringHelper& esh, const ERaParam& param);
+        friend ERaStringHelper& operator + (const ERaStringHelper& esh, const char* cstr);
+        friend ERaStringHelper& operator + (const ERaStringHelper& esh, char* str);
+        friend ERaStringHelper& operator + (const ERaStringHelper& esh, char c);
+        friend ERaStringHelper& operator + (const ERaStringHelper& esh, unsigned char num);
+        friend ERaStringHelper& operator + (const ERaStringHelper& esh, int num);
+        friend ERaStringHelper& operator + (const ERaStringHelper& esh, unsigned int num);
+        friend ERaStringHelper& operator + (const ERaStringHelper& esh, long num);
+        friend ERaStringHelper& operator + (const ERaStringHelper& esh, unsigned long num);
+        friend ERaStringHelper& operator + (const ERaStringHelper& esh, long long num);
+        friend ERaStringHelper& operator + (const ERaStringHelper& esh, unsigned long long num);
+        friend ERaStringHelper& operator + (const ERaStringHelper& esh, float num);
+        friend ERaStringHelper& operator + (const ERaStringHelper& esh, double num);
+
+    protected:
+    private:
+        bool updated() {
+            bool ret = this->isUpdated;
+            this->isUpdated = false;
+            return ret;
+        }
+
+        void setString(const char* cstr) {
+            if (!this->isNewString(cstr)) {
+                return;
+            }
+            this->updateString(cstr);
+        }
+
+        void updateString(const char* cstr) {
+            if (cstr == nullptr) {
+                return;
+            }
+            if (this->value == nullptr) {
+                this->value = this->stringdup(cstr);
+                if (this->value != nullptr) {
+                    this->isUpdated = true;
+                    this->valueCapacity = strlen(this->value) + 1;
+                }
+                return;
+            }
+            size_t len = strlen(cstr);
+            if (len >= this->valueCapacity) {
+                char* copy = (char*)realloc(this->value, len + 1);
+                if (copy == nullptr) {
+                    return;
+                }
+                snprintf(copy, len + 1, cstr);
+                this->value = copy;
+                this->valueCapacity = len + 1;
+            }
+            else {
+                snprintf(this->value, this->valueCapacity, cstr);
+            }
+            this->value[len] = '\0';
+            this->isUpdated = true;
+        }
+
+        bool isNewString(const char* cstr) const {
+            if (cstr == nullptr) {
+                return false;
+            }
+            if (this->value == nullptr) {
+                return true;
+            }
+            return strcmp(this->value, cstr);
+        }
+
+        bool StringCompare(const char* cstr) const {
+            if (this->value == cstr) {
+                return true;
+            }
+            if (cstr == nullptr) {
+                return false;
+            }
+            if (this->value == nullptr) {
+                return false;
+            }
+            return !strcmp((const char*)this->value, cstr);
+        }
+
+        char* stringdup(const char* cstr) {
+            if (cstr == nullptr) {
+                return nullptr;
+            }
+
+            size_t length {0};
+            char* copy = nullptr;
+
+            length = strlen(cstr) + sizeof("");
+            copy = (char*)malloc(length);
+            if (copy == nullptr) {
+                return nullptr;
+            }
+            memcpy(copy, cstr, length);
+
+            return copy;
+        }
+
+        char* value;
+        size_t valueCapacity;
+        bool isUpdated;
+    };
+
+    class ERaStringHelper
+        : public ERaString
+    {
+    public:
+        ERaStringHelper()
+            : ERaString()
+        {}
+        ERaStringHelper(const ERaString& estr)
+            : ERaString(estr)
+        {}
+        ERaStringHelper(const char* cstr)
+            : ERaString(cstr)
+        {}
+        ERaStringHelper(char* str)
+            : ERaString(str)
+        {}
+        ERaStringHelper(int num)
+            : ERaString(num)
+        {}
+        ERaStringHelper(unsigned int num)
+            : ERaString(num)
+        {}
+        ERaStringHelper(long num)
+            : ERaString(num)
+        {}
+        ERaStringHelper(unsigned long num)
+            : ERaString(num)
+        {}
+        ERaStringHelper(long long num)
+            : ERaString(num)
+        {}
+        ERaStringHelper(unsigned long long num)
+            : ERaString(num)
+        {}
+        ERaStringHelper(float num)
+            : ERaString(num)
+        {}
+        ERaStringHelper(double num)
+            : ERaString(num)
+        {}
+    };
+
+    inline
+    ERaStringHelper& operator + (const ERaStringHelper& esh, const ERaString& res) {
+        ERaStringHelper& a = const_cast<ERaStringHelper&>(esh);
+        a.concat(res);
+        return a;
+    }
+
+    inline
+    ERaStringHelper& operator + (const ERaStringHelper& esh, const ERaParam& param) {
+        ERaStringHelper& a = const_cast<ERaStringHelper&>(esh);
+        a.concat(param);
+        return a;
+    }
+
+    inline
+    ERaStringHelper& operator + (const ERaStringHelper& esh, const char* cstr) {
+        ERaStringHelper& a = const_cast<ERaStringHelper&>(esh);
+        a.concat(cstr);
+        return a;
+    }
+
+    inline
+    ERaStringHelper& operator + (const ERaStringHelper& esh, char* str) {
+        ERaStringHelper& a = const_cast<ERaStringHelper&>(esh);
+        a.concat(str);
+        return a;
+    }
+
+    inline
+    ERaStringHelper& operator + (const ERaStringHelper& esh, char c) {
+        ERaStringHelper& a = const_cast<ERaStringHelper&>(esh);
+        a.concat(c);
+        return a;
+    }
+
+    inline
+    ERaStringHelper& operator + (const ERaStringHelper& esh, unsigned char num) {
+        ERaStringHelper& a = const_cast<ERaStringHelper&>(esh);
+        a.concat(num);
+        return a;
+    }
+
+    inline
+    ERaStringHelper& operator + (const ERaStringHelper& esh, int num) {
+        ERaStringHelper& a = const_cast<ERaStringHelper&>(esh);
+        a.concat(num);
+        return a;
+    }
+
+    inline
+    ERaStringHelper& operator + (const ERaStringHelper& esh, unsigned int num) {
+        ERaStringHelper& a = const_cast<ERaStringHelper&>(esh);
+        a.concat(num);
+        return a;
+    }
+
+    inline
+    ERaStringHelper& operator + (const ERaStringHelper& esh, long num) {
+        ERaStringHelper& a = const_cast<ERaStringHelper&>(esh);
+        a.concat(num);
+        return a;
+    }
+
+    inline
+    ERaStringHelper& operator + (const ERaStringHelper& esh, unsigned long num) {
+        ERaStringHelper& a = const_cast<ERaStringHelper&>(esh);
+        a.concat(num);
+        return a;
+    }
+
+    inline
+    ERaStringHelper& operator + (const ERaStringHelper& esh, long long num) {
+        ERaStringHelper& a = const_cast<ERaStringHelper&>(esh);
+        a.concat(num);
+        return a;
+    }
+
+    inline
+    ERaStringHelper& operator + (const ERaStringHelper& esh, unsigned long long num) {
+        ERaStringHelper& a = const_cast<ERaStringHelper&>(esh);
+        a.concat(num);
+        return a;
+    }
+
+    inline
+    ERaStringHelper& operator + (const ERaStringHelper& esh, float num) {
+        ERaStringHelper& a = const_cast<ERaStringHelper&>(esh);
+        a.concat(num);
+        return a;
+    }
+
+    inline
+    ERaStringHelper& operator + (const ERaStringHelper& esh, double num) {
+        ERaStringHelper& a = const_cast<ERaStringHelper&>(esh);
+        a.concat(num);
+        return a;
+    }
+
+#endif
 
 class WrapperString
     : public WrapperBase
 {
 public:
-    WrapperString()
-        : value(nullptr)
-        , valueCapacity(0UL)
+    WrapperString(ERaString& estr)
+        : value(estr)
+#if defined(ERA_ARDUINO_STRING)
+        , local(estr)
+#endif
+        , options(0)
     {
         this->type = WrapperTypeT::WRAPPER_TYPE_STRING;
     }
-    WrapperString(const WrapperString& _value)
-        : value(nullptr)
-        , valueCapacity(0UL)
+    ~WrapperString() override
     {
-        this->concat(_value);
-        this->type = WrapperTypeT::WRAPPER_TYPE_STRING;
-    }
-    WrapperString(const ERaParam& _value)
-        : value(nullptr)
-        , valueCapacity(0UL)
-    {
-        this->concat(_value);
-        this->type = WrapperTypeT::WRAPPER_TYPE_STRING;
-    }
-    WrapperString(const char* _value)
-        : value(nullptr)
-        , valueCapacity(0UL)
-    {
-        this->concat(_value);
-        this->type = WrapperTypeT::WRAPPER_TYPE_STRING;
-    }
-    WrapperString(char* _value)
-        : value(nullptr)
-        , valueCapacity(0UL)
-    {
-        this->concat(_value);
-        this->type = WrapperTypeT::WRAPPER_TYPE_STRING;
-    }
-    WrapperString(char _value)
-        : value(nullptr)
-        , valueCapacity(0UL)
-    {
-        this->concat(_value);
-        this->type = WrapperTypeT::WRAPPER_TYPE_STRING;
-    }
-    WrapperString(unsigned char _value)
-        : value(nullptr)
-        , valueCapacity(0UL)
-    {
-        this->concat(_value);
-        this->type = WrapperTypeT::WRAPPER_TYPE_STRING;
-    }
-    WrapperString(int _value)
-        : value(nullptr)
-        , valueCapacity(0UL)
-    {
-        this->concat(_value);
-        this->type = WrapperTypeT::WRAPPER_TYPE_STRING;
-    }
-    WrapperString(unsigned int _value)
-        : value(nullptr)
-        , valueCapacity(0UL)
-    {
-        this->concat(_value);
-        this->type = WrapperTypeT::WRAPPER_TYPE_STRING;
-    }
-    WrapperString(long _value)
-        : value(nullptr)
-        , valueCapacity(0UL)
-    {
-        this->concat(_value);
-        this->type = WrapperTypeT::WRAPPER_TYPE_STRING;
-    }
-    WrapperString(unsigned long _value)
-        : value(nullptr)
-        , valueCapacity(0UL)
-    {
-        this->concat(_value);
-        this->type = WrapperTypeT::WRAPPER_TYPE_STRING;
-    }
-    WrapperString(long long _value)
-        : value(nullptr)
-        , valueCapacity(0UL)
-    {
-        this->concat(_value);
-        this->type = WrapperTypeT::WRAPPER_TYPE_STRING;
-    }
-    WrapperString(unsigned long long _value)
-        : value(nullptr)
-        , valueCapacity(0UL)
-    {
-        this->concat(_value);
-        this->type = WrapperTypeT::WRAPPER_TYPE_STRING;
-    }
-    WrapperString(float _value)
-        : value(nullptr)
-        , valueCapacity(0UL)
-    {
-        this->concat(_value);
-        this->type = WrapperTypeT::WRAPPER_TYPE_STRING;
-    }
-    WrapperString(double _value)
-        : value(nullptr)
-        , valueCapacity(0UL)
-    {
-        this->concat(_value);
-        this->type = WrapperTypeT::WRAPPER_TYPE_STRING;
-    }
-    ~WrapperString()
-    {
-        free(this->value);
-        this->value = nullptr;
-        this->valueCapacity = 0UL;
-        this->type = WrapperTypeT::WRAPPER_TYPE_INVALID;
-    }
-
-    void reserve(size_t cap) {
-        if (cap <= this->valueCapacity) {
+        if (!this->options) {
             return;
         }
-        if (this->value != nullptr) {
-            free(this->value);
-        }
-        this->value = (char*)malloc(cap);
-        if (this->value != nullptr) {
-            this->valueCapacity = cap;
-            memset(this->value, 0, cap);
-        }
+        this->value.~ERaString();
     }
 
-    const char* c_str() const {
-        return ((this->value != nullptr) ? this->value : "");
+    WrapperString& operator = (const ERaString& estr) {
+        this->value = estr;
+        return (*this);
     }
 
-    const char* getString() const {
-        return ((this->value != nullptr) ? this->value : "");
+#if defined(ERA_ARDUINO_STRING)
+    bool updated() override {
+        return this->value.updated(this->local);
     }
-
-    void printf(const char* format, ...) {
-        va_list arg;
-        va_list copy;
-        va_start(arg, format);
-        va_copy(copy, arg);
-        char locBuf[128] {0};
-        char* buf = locBuf;
-        int len = vsnprintf(buf, sizeof(locBuf), format, copy);
-        va_end(copy);
-        if (len < 0) {
-            va_end(arg);
-            return;
-        }
-        if (len >= (int)sizeof(locBuf)) {
-            buf = (char*)malloc(len + 1);
-            if (buf == nullptr) {
-                va_end(arg);
-                return;
-            }
-            len = vsnprintf(buf, len + 1, format, arg);
-        }
-        va_end(arg);
-        this->setString(buf);
-        if (buf != locBuf) {
-            free(buf);
-        }
-        buf = nullptr;
-    }
-
-    void print(const char* _value) {
-        this->printf(_value);
-    }
-
-    void println() {
-        this->print("\r\n");
-    }
-
-    void println(const char* _value) {
-        this->printf("%s\r\n", _value);
-    }
-
-    void concat(const WrapperString& _value) {
-        this->concat((const char*)_value.value);
-    }
-
-    void concat(const ERaParam& _value) {
-        if (_value.isNumber()) {
-            this->concat(_value.getFloat());
-        }
-        else if (_value.isString()) {
-            this->concat(_value.getString());
-        }
-    }
-
-    void concat(const char* _value) {
-        if (_value == nullptr) {
-            return;
-        }
-        if (this->value == nullptr) {
-            return this->setString(_value);
-        }
-        if (!strlen(_value)) {
-            return;
-        }
-        size_t oldLen = strlen(this->value);
-        size_t newLen = oldLen;
-        newLen += strlen(_value);
-        if (newLen >= this->valueCapacity) {
-            char* copy = (char*)realloc(this->value, newLen + 1);
-            if (copy == nullptr) {
-                return;
-            }
-            this->value = copy;
-            this->valueCapacity = newLen + 1;
-        }
-        snprintf(this->value + oldLen, newLen - oldLen + 1, _value);
-        this->value[newLen] = '\0';
-        this->updated = true;
-    }
-
-    void concat(char* _value) {
-        this->concat((const char*)_value);
-    }
-
-    void concat(char _value) {
-        const char str[2] = { _value, '\0' };
-        this->concat(str);
-    }
-
-#if defined(__AVR__) || defined(ARDUINO_ARCH_ARC32)
-
-    void concat(unsigned char _value) {
-        char str[1 + 8 * sizeof(unsigned char)] {0};
-        utoa(_value, str, 10);
-        this->concat((const char*)str);
-    }
-
-    void concat(int _value) {
-        char str[2 + 8 * sizeof(int)] {0};
-        itoa(_value, str, 10);
-        this->concat((const char*)str);
-    }
-
-    void concat(unsigned int _value) {
-        char str[1 + 8 * sizeof(unsigned int)] {0};
-        utoa(_value, str, 10);
-        this->concat((const char*)str);
-    }
-
-    void concat(long _value) {
-        char str[2 + 8 * sizeof(long)] {0};
-        ltoa(_value, str, 10);
-        this->concat((const char*)str);
-    }
-
-    void concat(unsigned long _value) {
-        char str[1 + 8 * sizeof(unsigned long)] {0};
-        ultoa(_value, str, 10);
-        this->concat((const char*)str);
-    }
-
-    void concat(long long _value) {
-        char str[2 + 8 * sizeof(long long)] {0};
-        ltoa(_value, str, 10);
-        this->concat((const char*)str);
-    }
-
-    void concat(unsigned long long _value) {
-        char str[1 + 8 * sizeof(unsigned long long)] {0};
-        ultoa(_value, str, 10);
-        this->concat((const char*)str);
-    }
-
-    void concat(float _value) {
-        char str[33] {0};
-        dtostrf(_value, 5, 2, str);
-        this->concat((const char*)str);
-    }
-
-    void concat(double _value) {
-        char str[33] {0};
-        dtostrf(_value, 5, 5, str);
-        this->concat((const char*)str);
-    }
-
 #else
-
-    void concat(unsigned char _value) {
-        char str[20] {0};
-        snprintf(str, sizeof(str), "%u", _value);
-        this->concat((const char*)str);
+    bool updated() override {
+        return this->value.updated();
     }
-
-    void concat(int _value) {
-        char str[20] {0};
-        snprintf(str, sizeof(str), "%i", _value);
-        this->concat((const char*)str);
-    }
-
-    void concat(unsigned int _value) {
-        char str[20] {0};
-        snprintf(str, sizeof(str), "%u", _value);
-        this->concat((const char*)str);
-    }
-
-    void concat(long _value) {
-        char str[20] {0};
-        snprintf(str, sizeof(str), "%li", _value);
-        this->concat((const char*)str);
-    }
-
-    void concat(unsigned long _value) {
-        char str[20] {0};
-        snprintf(str, sizeof(str), "%lu", _value);
-        this->concat((const char*)str);
-    }
-
-    void concat(long long _value) {
-        char str[33] {0};
-        snprintf(str, sizeof(str), "%lli", _value);
-        this->concat((const char*)str);
-    }
-
-    void concat(unsigned long long _value) {
-        char str[33] {0};
-        snprintf(str, sizeof(str), "%llu", _value);
-        this->concat((const char*)str);
-    }
-
-#if defined(ERA_USE_ERA_DTOSTRF)
-
-    void concat(float _value) {
-        char str[33] {0};
-        ERaDtostrf(_value, 2, str);
-        this->concat((const char*)str);
-    }
-
-    void concat(double _value) {
-        char str[33] {0};
-        ERaDtostrf(_value, 5, str);
-        this->concat((const char*)str);
-    }
-
-#else
-
-    void concat(float _value) {
-        char str[33] {0};
-        snprintf(str, sizeof(str), "%.2f", _value);
-        this->concat((const char*)str);
-    }
-
-    void concat(double _value) {
-        char str[33] {0};
-        snprintf(str, sizeof(str), "%.5f", _value);
-        this->concat((const char*)str);
-    }
-
 #endif
 
-#endif
-
-    size_t size() const {
-        if (this->value == nullptr) {
-            return 0;
-        }
-        return strlen(this->value);
+    void setOptions(int option) override {
+        this->options = option;
     }
-
-    size_t length() const {
-        if (this->value == nullptr) {
-            return 0;
-        }
-        return strlen(this->value);
-    }
-
-    char& at(size_t index) {
-        return this->value[index];
-    }
-
-    void toLowerCase() {
-        size_t len = this->length();
-        for (size_t i = 0; i < len; ++i) {
-            this->value[i] = ::tolower(this->value[i]);
-        }
-    }
-
-    void toUpperCase() {
-        size_t len = this->length();
-        for (size_t i = 0; i < len; ++i) {
-            this->value[i] = ::toupper(this->value[i]);
-        }
-    }
-
-    char& operator [] (int index) {
-        return this->value[index];
-    }
-
-    WrapperString& operator = (const WrapperString& _value) {
-        if (this == &_value) {
-            return (*this);
-        }
-        return operator = ((const char*)_value.value);
-    }
-
-    WrapperString& operator = (const ERaParam& _value) {
-        if (_value.isNumber()) {
-            (*this) = WrapperString(_value.getFloat());
-        }
-        else if (_value.isString()) {
-            operator = (_value.getString());
-        }
-        return (*this);
-    }
-
-    WrapperString& operator = (const ERaDataJson& _value) {
-        if (_value.isValid()) {
-            operator = (const_cast<ERaDataJson&>(_value).getString());
-        }
-        return (*this);
-    }
-
-    WrapperString& operator = (const char* _value) {
-        this->setString(_value);
-        return (*this);
-    }
-
-    WrapperString& operator = (char* _value) {
-        return operator = ((const char*)_value);
-    }
-
-    WrapperString& operator += (const WrapperString& _value) {
-        this->concat(_value);
-        return (*this);
-    }
-
-    WrapperString& operator += (const ERaParam& _value) {
-        this->concat(_value);
-        return (*this);
-    }
-
-    WrapperString& operator += (const char* _value) {
-        this->concat(_value);
-        return (*this);
-    }
-
-    WrapperString& operator += (char* _value) {
-        this->concat(_value);
-        return (*this);
-    }
-
-    WrapperString& operator += (char _value) {
-        this->concat(_value);
-        return (*this);
-    }
-
-    WrapperString& operator += (unsigned char _value) {
-        this->concat(_value);
-        return (*this);
-    }
-
-    WrapperString& operator += (int _value) {
-        this->concat(_value);
-        return (*this);
-    }
-
-    WrapperString& operator += (unsigned int _value) {
-        this->concat(_value);
-        return (*this);
-    }
-
-    WrapperString& operator += (long _value) {
-        this->concat(_value);
-        return (*this);
-    }
-
-    WrapperString& operator += (unsigned long _value) {
-        this->concat(_value);
-        return (*this);
-    }
-
-    WrapperString& operator += (long long _value) {
-        this->concat(_value);
-        return (*this);
-    }
-
-    WrapperString& operator += (unsigned long long _value) {
-        this->concat(_value);
-        return (*this);
-    }
-
-    WrapperString& operator += (float _value) {
-        this->concat(_value);
-        return (*this);
-    }
-
-    WrapperString& operator += (double _value) {
-        this->concat(_value);
-        return (*this);
-    }
-
-    bool operator == (const WrapperString& _value) const {
-        if (this == &_value) {
-            return true;
-        }
-        return operator == ((const char*)_value.value);
-    }
-
-    bool operator == (const char* _value) const {
-        return this->StringCompare(_value);
-    }
-
-    bool operator == (char* _value) const {
-        return operator == ((const char*)_value);
-    }
-
-    bool operator != (const WrapperString& _value) const {
-        if (this == &_value) {
-            return false;
-        }
-        return operator != ((const char*)_value.value);
-    }
-
-    bool operator != (const char* _value) const {
-        return !this->StringCompare(_value);
-    }
-
-    bool operator != (char* _value) const {
-        return operator != ((const char*)_value);
-    }
-
-    friend WrapperStringHelper& operator + (const WrapperStringHelper& wsh, const WrapperString& _value);
-    friend WrapperStringHelper& operator + (const WrapperStringHelper& wsh, const ERaParam& _value);
-    friend WrapperStringHelper& operator + (const WrapperStringHelper& wsh, const char* _value);
-    friend WrapperStringHelper& operator + (const WrapperStringHelper& wsh, char* _value);
-    friend WrapperStringHelper& operator + (const WrapperStringHelper& wsh, char _value);
-    friend WrapperStringHelper& operator + (const WrapperStringHelper& wsh, unsigned char _value);
-    friend WrapperStringHelper& operator + (const WrapperStringHelper& wsh, int _value);
-    friend WrapperStringHelper& operator + (const WrapperStringHelper& wsh, unsigned int _value);
-    friend WrapperStringHelper& operator + (const WrapperStringHelper& wsh, long _value);
-    friend WrapperStringHelper& operator + (const WrapperStringHelper& wsh, unsigned long _value);
-    friend WrapperStringHelper& operator + (const WrapperStringHelper& wsh, long long _value);
-    friend WrapperStringHelper& operator + (const WrapperStringHelper& wsh, unsigned long long _value);
-    friend WrapperStringHelper& operator + (const WrapperStringHelper& wsh, float _value);
-    friend WrapperStringHelper& operator + (const WrapperStringHelper& wsh, double _value);
 
 protected:
     float get() const override {
         return 0.0f;
     }
 
-    void set(float _value) override {
-        (void)_value;
+    void set(float num) override {
+        (void)num;
     }
 
-    void* getPointer() const override {
-        return (void*)this->getString();
+    const void* getPointer() const override {
+        return (const void*)this->value.getString();
     }
 
-    void setPointer(const void* _value) override {
-        this->setString((const char*)_value);
+    void setPointer(const void* cptr) override {
+        this->value.setString((const char*)cptr);
     }
 
 private:
-    void setString(const char* _value) {
-        if (!this->isNewString(_value)) {
-            return;
-        }
-        this->updateString(_value);
-    }
-
-    void updateString(const char* _value) {
-        if (_value == nullptr) {
-            return;
-        }
-        if (this->value == nullptr) {
-            this->value = this->stringdup(_value);
-            if (this->value != nullptr) {
-                this->updated = true;
-                this->valueCapacity = strlen(this->value) + 1;
-            }
-            return;
-        }
-        size_t len = strlen(_value);
-        if (len >= this->valueCapacity) {
-            char* copy = (char*)realloc(this->value, len + 1);
-            if (copy == nullptr) {
-                return;
-            }
-            snprintf(copy, len + 1, _value);
-            this->value = copy;
-            this->valueCapacity = len + 1;
-        }
-        else {
-            snprintf(this->value, this->valueCapacity, _value);
-        }
-        this->value[len] = '\0';
-        this->updated = true;
-    }
-
-    bool isNewString(const char* _value) const {
-        if (_value == nullptr) {
-            return false;
-        }
-        if (this->value == nullptr) {
-            return true;
-        }
-        return strcmp(this->value, _value);
-    }
-
-    bool StringCompare(const char* _value) const {
-        if (this->value == _value) {
-            return true;
-        }
-        if (_value == nullptr) {
-            return false;
-        }
-        if (this->value == nullptr) {
-            return false;
-        }
-        return !strcmp((const char*)this->value, _value);
-    }
-
-    char* stringdup(const char* str) {
-        if (str == nullptr) {
-            return nullptr;
-        }
-
-        size_t length {0};
-        char* copy = nullptr;
-
-        length = strlen(str) + sizeof("");
-        copy = (char*)malloc(length);
-        if (copy == nullptr) {
-            return nullptr;
-        }
-        memcpy(copy, str, length);
-
-        return copy;
-    }
-
-    char* value;
-    size_t valueCapacity;
+    ERaString& value;
+#if defined(ERA_ARDUINO_STRING)
+    ERaString  local;
+#endif
+    int options;
 };
-
-typedef WrapperString ERaString;
-
-class WrapperStringHelper
-    : public WrapperString
-{
-public:
-    WrapperStringHelper()
-        : WrapperString()
-    {}
-    WrapperStringHelper(const WrapperString& _value)
-        : WrapperString(_value)
-    {}
-    WrapperStringHelper(const char* _value)
-        : WrapperString(_value)
-    {}
-    WrapperStringHelper(char* _value)
-        : WrapperString(_value)
-    {}
-    WrapperStringHelper(int _value)
-        : WrapperString(_value)
-    {}
-    WrapperStringHelper(unsigned int _value)
-        : WrapperString(_value)
-    {}
-    WrapperStringHelper(long _value)
-        : WrapperString(_value)
-    {}
-    WrapperStringHelper(unsigned long _value)
-        : WrapperString(_value)
-    {}
-    WrapperStringHelper(long long _value)
-        : WrapperString(_value)
-    {}
-    WrapperStringHelper(unsigned long long _value)
-        : WrapperString(_value)
-    {}
-    WrapperStringHelper(float _value)
-        : WrapperString(_value)
-    {}
-    WrapperStringHelper(double _value)
-        : WrapperString(_value)
-    {}
-};
-
-inline
-WrapperStringHelper& operator + (const WrapperStringHelper& wsh, const WrapperString& _value) {
-    WrapperStringHelper& a = const_cast<WrapperStringHelper&>(wsh);
-    a.concat(_value);
-    return a;
-}
-
-inline
-WrapperStringHelper& operator + (const WrapperStringHelper& wsh, const ERaParam& _value) {
-    WrapperStringHelper& a = const_cast<WrapperStringHelper&>(wsh);
-    a.concat(_value);
-    return a;
-}
-
-inline
-WrapperStringHelper& operator + (const WrapperStringHelper& wsh, const char* _value) {
-    WrapperStringHelper& a = const_cast<WrapperStringHelper&>(wsh);
-    a.concat(_value);
-    return a;
-}
-
-inline
-WrapperStringHelper& operator + (const WrapperStringHelper& wsh, char* _value) {
-    WrapperStringHelper& a = const_cast<WrapperStringHelper&>(wsh);
-    a.concat(_value);
-    return a;
-}
-
-inline
-WrapperStringHelper& operator + (const WrapperStringHelper& wsh, char _value) {
-    WrapperStringHelper& a = const_cast<WrapperStringHelper&>(wsh);
-    a.concat(_value);
-    return a;
-}
-
-inline
-WrapperStringHelper& operator + (const WrapperStringHelper& wsh, unsigned char _value) {
-    WrapperStringHelper& a = const_cast<WrapperStringHelper&>(wsh);
-    a.concat(_value);
-    return a;
-}
-
-inline
-WrapperStringHelper& operator + (const WrapperStringHelper& wsh, int _value) {
-    WrapperStringHelper& a = const_cast<WrapperStringHelper&>(wsh);
-    a.concat(_value);
-    return a;
-}
-
-inline
-WrapperStringHelper& operator + (const WrapperStringHelper& wsh, unsigned int _value) {
-    WrapperStringHelper& a = const_cast<WrapperStringHelper&>(wsh);
-    a.concat(_value);
-    return a;
-}
-
-inline
-WrapperStringHelper& operator + (const WrapperStringHelper& wsh, long _value) {
-    WrapperStringHelper& a = const_cast<WrapperStringHelper&>(wsh);
-    a.concat(_value);
-    return a;
-}
-
-inline
-WrapperStringHelper& operator + (const WrapperStringHelper& wsh, unsigned long _value) {
-    WrapperStringHelper& a = const_cast<WrapperStringHelper&>(wsh);
-    a.concat(_value);
-    return a;
-}
-
-inline
-WrapperStringHelper& operator + (const WrapperStringHelper& wsh, long long _value) {
-    WrapperStringHelper& a = const_cast<WrapperStringHelper&>(wsh);
-    a.concat(_value);
-    return a;
-}
-
-inline
-WrapperStringHelper& operator + (const WrapperStringHelper& wsh, unsigned long long _value) {
-    WrapperStringHelper& a = const_cast<WrapperStringHelper&>(wsh);
-    a.concat(_value);
-    return a;
-}
-
-inline
-WrapperStringHelper& operator + (const WrapperStringHelper& wsh, float _value) {
-    WrapperStringHelper& a = const_cast<WrapperStringHelper&>(wsh);
-    a.concat(_value);
-    return a;
-}
-
-inline
-WrapperStringHelper& operator + (const WrapperStringHelper& wsh, double _value) {
-    WrapperStringHelper& a = const_cast<WrapperStringHelper&>(wsh);
-    a.concat(_value);
-    return a;
-}
 
 #endif /* INC_WRAPPER_STRING_HPP_ */

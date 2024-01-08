@@ -14,17 +14,17 @@ public:
         : WrapperUnsignedLong(value)
         , value(0)
     {}
-    CloudColor(unsigned long _value)
+    CloudColor(unsigned long num)
         : WrapperUnsignedLong(value)
-        , value(_value)
+        , value(num)
     {}
 
-    void setColor(unsigned long _value) {
-        operator = (_value);
+    void setColor(unsigned long num) {
+        operator = (num);
     }
 
-    void setColor(const char* _value) {
-        operator = (_value);
+    void setColor(const char* cstr) {
+        operator = (cstr);
     }
 
     void setColor(uint8_t red, uint8_t green, uint8_t blue) {
@@ -47,63 +47,63 @@ public:
         return this->value;
     }
 
-    CloudColor& operator = (const CloudColor& _value) {
-        if (this == &_value) {
+    CloudColor& operator = (const CloudColor& rcc) {
+        if (this == &rcc) {
             return (*this);
         }
-        return operator = (_value.value);
+        return operator = (rcc.value);
     }
 
-    CloudColor& operator = (unsigned long _value) {
-        this->value = _value;
+    CloudColor& operator = (unsigned long num) {
+        this->value = num;
         return (*this);
     }
 
-    CloudColor& operator = (const char* _value) {
-        if (_value == nullptr) {
+    CloudColor& operator = (const char* cstr) {
+        if (cstr == nullptr) {
             this->value = 0;
         }
-        else if ((*_value == '#') &&
-                (strlen(_value) == 7)) {
-            this->value = strtoul(_value + 1, nullptr, 16);
+        else if ((*cstr == '#') &&
+                (strlen(cstr) == 7)) {
+            this->value = strtoul(cstr + 1, nullptr, 16);
         }
         return (*this);
     }
 
-    bool operator == (const CloudColor& _value) const {
-        if (this == &_value) {
+    bool operator == (const CloudColor& rcc) const {
+        if (this == &rcc) {
             return true;
         }
-        return (this->value == _value.value);
+        return (this->value == rcc.value);
     }
 
-    bool operator == (unsigned long _value) const {
-        return (this->value == _value);
+    bool operator == (unsigned long num) const {
+        return (this->value == num);
     }
 
-    bool operator == (const char* _value) const {
+    bool operator == (const char* cstr) const {
         unsigned long color {0};
-        if ((_value != nullptr) &&
-            (*_value == '#') &&
-            (strlen(_value) == 7)) {
-            color = strtoul(_value + 1, nullptr, 16);
+        if ((cstr != nullptr) &&
+            (*cstr == '#') &&
+            (strlen(cstr) == 7)) {
+            color = strtoul(cstr + 1, nullptr, 16);
         }
         return (this->value == color);
     }
 
-    bool operator != (const CloudColor& _value) const {
-        if (this == &_value) {
+    bool operator != (const CloudColor& rcc) const {
+        if (this == &rcc) {
             return false;
         }
-        return (this->value != _value.value);
+        return (this->value != rcc.value);
     }
 
-    bool operator != (unsigned long _value) const {
-        return (this->value != _value);
+    bool operator != (unsigned long num) const {
+        return (this->value != num);
     }
 
-    bool operator != (const char* _value) const {
-        return !(operator == (_value));
+    bool operator != (const char* cstr) const {
+        return !(operator == (cstr));
     }
 
 protected:

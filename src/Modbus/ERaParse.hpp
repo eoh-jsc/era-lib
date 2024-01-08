@@ -114,7 +114,7 @@ public:
         : id(0)
         , prevId(0)
         , baudSpeed(DEFAULT_MODBUS_BAUD_SPEED)
-        , isWifi(false)
+        , isWiFi(false)
         , ssid {}
         , pass {}
         , hashID {}
@@ -147,9 +147,9 @@ public:
     bool updateHashID(const char* hash, bool skip = false);
     bool equals(const char* hash);
     bool updated() {
-        bool _updated = this->isUpdated;
+        bool ret = this->isUpdated;
         this->isUpdated = false;
-        return _updated;
+        return ret;
     }
     void deleteAll();
     void resize();
@@ -160,7 +160,7 @@ public:
     unsigned int id;
     unsigned int prevId;
     unsigned int baudSpeed;
-    bool isWifi;
+    bool isWiFi;
     char ssid[64];
     char pass[64];
     char hashID[37];
@@ -217,8 +217,8 @@ private:
     void parseOneConfigLocalAlarm(const char* ptr, size_t len);
     void processParseStationContactPhone(const char* ptr, size_t len);
     void parseOneConfigPhoneNumber(const char* ptr, size_t len);
-    void processParseIsWifi(const char* ptr, size_t len);
-    void processParseConfigWifi(const char* ptr, size_t len);
+    void processParseIsWiFi(const char* ptr, size_t len);
+    void processParseConfigWiFi(const char* ptr, size_t len);
     void processParseConfigAliasTotalRow(const char* ptr, size_t len);
     void processParseConfigAliasData(const char* ptr, size_t len);
     void processOneConfigAlias(const char* ptr, size_t len, ModbusConfigAlias_t& config);
@@ -283,6 +283,7 @@ void ERaModbusEntry::parseConfig(const char* ptr) {
         return;
     }
 
+    this->isWiFi = false;
     this->sensorCount = 0;
     this->readConfigCount = 0;
     this->readConfigAliasCount = 0;
@@ -334,7 +335,7 @@ void ERaModbusEntry::deleteAll() {
     this->clear(this->sensorDelay);
     this->clear(this->modbusConfigParam);
     this->clear(this->modbusConfigAliasParam);
-    *this = {};
+    (*this) = {};
 }
 
 inline
@@ -385,10 +386,10 @@ void ERaModbusEntry::processParseConfig(int part, const char* ptr, size_t len) {
             this->processParseStationContactPhone(ptr, len);
             break;
         case ParseConfigT::PARSE_IS_WIFI:
-            this->processParseIsWifi(ptr, len);
+            this->processParseIsWiFi(ptr, len);
             break;
         case ParseConfigT::PARSE_CONFIG_WIFI:
-            this->processParseConfigWifi(ptr, len);
+            this->processParseConfigWiFi(ptr, len);
             break;
         case ParseConfigT::PARSE_CONFIG_ALIAS_TOTAL_ROW:
             this->processParseConfigAliasTotalRow(ptr, len);
@@ -639,15 +640,15 @@ void ERaModbusEntry::parseOneConfigPhoneNumber(const char* ptr, size_t len) {
 }
 
 inline
-void ERaModbusEntry::processParseIsWifi(const char* ptr, size_t len) {
+void ERaModbusEntry::processParseIsWiFi(const char* ptr, size_t len) {
     if (!len) {
         return;
     }
-    this->isWifi = ((ptr[0] == '1') ? true : false);
+    this->isWiFi = ((ptr[0] == '1') ? true : false);
 }
 
 inline
-void ERaModbusEntry::processParseConfigWifi(const char* ptr, size_t len) {
+void ERaModbusEntry::processParseConfigWiFi(const char* ptr, size_t len) {
     bool isSsid {true};
 
     memset(this->ssid, 0, sizeof(this->ssid));

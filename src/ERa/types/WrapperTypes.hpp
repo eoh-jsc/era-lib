@@ -12,6 +12,7 @@
 #include "WrapperDouble.hpp"
 #include "WrapperNumber.hpp"
 #include "WrapperString.hpp"
+#include "WrapperObject.hpp"
 #include "CloudColor.hpp"
 
 typedef bool CloudContact;
@@ -32,5 +33,6 @@ typedef float CloudLuminousLux;
 typedef float CloudPercentage;
 typedef unsigned int CloudDimmed;
 typedef unsigned int CloudFrequency;
+typedef ERaString CloudMessage;
 
 #endif /* INC_WRAPPER_TYPES_HPP_ */

@@ -1024,6 +1024,9 @@ bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
     else if (rsp.param.isNumber()) {
         cJSON_AddNumberWithDecimalToObject(root, name, rsp.param.getDouble(), 5);
     }
+    else if (rsp.param.isObject()) {
+        cJSON_AddStringToObject(root, name, rsp.param.getObject()->getString());
+    }
     payload = cJSON_PrintUnformatted(root);
     if (payload != nullptr) {
         status = this->transp.publishData(topicName, payload, rsp.retained);
@@ -1066,6 +1069,9 @@ bool ERaProto<Transp, Flash>::sendConfigIdData(ERaRsp_t& rsp) {
     }
     else if (rsp.param.isNumber()) {
         cJSON_AddNumberWithDecimalToObject(root, "v", rsp.param.getDouble(), 5);
+    }
+    else if (rsp.param.isObject()) {
+        cJSON_AddStringToObject(root, "v", rsp.param.getObject()->getString());
     }
     payload = cJSON_PrintUnformatted(root);
     if (payload != nullptr) {
@@ -1212,6 +1218,9 @@ void ERaProto<Transp, Flash>::sendCommand(const char* auth, ERaRsp_t& rsp, ApiDa
     }
     else if (rsp.param.isNumber()) {
         cJSON_AddNumberWithDecimalToObject(root, "value", rsp.param.getDouble(), 5);
+    }
+    else if (rsp.param.isObject()) {
+        cJSON_AddStringToObject(root, "value", rsp.param.getObject()->getString());
     }
     payload = cJSON_PrintUnformatted(root);
     if (payload != nullptr) {

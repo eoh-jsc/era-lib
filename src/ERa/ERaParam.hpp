@@ -10,7 +10,7 @@
 #include <Utility/ERaUtility.hpp>
 #include <ERa/ERaData.hpp>
 
-class WrapperString;
+class ERaString;
 
 class ERaParam
 {
@@ -58,7 +58,7 @@ public:
     {
         this->add(value);
     }
-    ERaParam(const WrapperString& value)
+    ERaParam(const ERaString& value)
         : type(0)
         , valueint(0)
         , valuedouble(0)
@@ -126,12 +126,12 @@ public:
         return 0;
     }
 
-    int parseInt(int _base) const {
+    int parseInt(int base) const {
         if (this->isNumber()) {
             return this->valueint;
         }
         else if (this->isString()) {
-            return strtol(this->valuestring, nullptr, _base);
+            return strtol(this->valuestring, nullptr, base);
         }
         return 0;
     }
@@ -176,7 +176,7 @@ public:
         this->addParam(value);
     }
 
-    void add(const WrapperString& value) {
+    void add(const ERaString& value) {
         this->addParam(value);
     }
 
@@ -208,7 +208,7 @@ public:
         return (*this);
     }
 
-    ERaParam& operator = (const WrapperString& value) {
+    ERaParam& operator = (const ERaString& value) {
         this->addParam(value);
         return (*this);
     }
@@ -385,7 +385,7 @@ private:
         this->valueobject = value.valueobject;
     }
 
-    void addParam(const WrapperString& value);
+    void addParam(const ERaString& value);
 
     void addParam(char* value) {
         this->free();
@@ -459,7 +459,7 @@ void ERaDataJson::add(const char* name, ERaParam& value) {
 #include "types/WrapperString.hpp"
 
 inline
-void ERaParam::addParam(const WrapperString& value) {
+void ERaParam::addParam(const ERaString& value) {
     this->addParam(value.getString());
 }
 

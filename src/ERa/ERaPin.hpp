@@ -261,7 +261,7 @@ public:
     int findVPinConfigId(uint8_t p, const ERaParam& param) const;
     int findVPinConfigId(uint8_t p, const ERaDataJson::iterator& param) const;
     int findChannelFree() const;
-    bool isVPinExist(uint8_t p) const;
+    bool isVPinExist(uint8_t p, const WrapperBase* param) const;
 
 protected:
 private:
@@ -981,12 +981,12 @@ int ERaPin<Report>::findVPinConfigId(uint8_t p, const ERaParam& param) const {
                 if (param.isNumber()) {
                     return pVPin->configId;
                 }
-                return -1;
+                break;
             case VirtualTypeT::VIRTUAL_STRING:
-                if (param.isString()) {
+                if (param.isString() || param.isObject()) {
                     return pVPin->configId;
                 }
-                return -1;
+                break;
             case VirtualTypeT::VIRTUAL_BASE:
             default:
                 return pVPin->configId;
@@ -1013,12 +1013,12 @@ int ERaPin<Report>::findVPinConfigId(uint8_t p, const ERaDataJson::iterator& par
                 if (param.isNumber() || param.isBool()) {
                     return pVPin->configId;
                 }
-                return -1;
+                break;
             case VirtualTypeT::VIRTUAL_STRING:
                 if (param.isString() || param.isNull()) {
                     return pVPin->configId;
                 }
-                return -1;
+                break;
             case VirtualTypeT::VIRTUAL_BASE:
             default:
                 return pVPin->configId;
@@ -1040,9 +1040,32 @@ int ERaPin<Report>::findChannelFree() const {
 }
 
 template <class Report>
-bool ERaPin<Report>::isVPinExist(uint8_t p) const {
+bool ERaPin<Report>::isVPinExist(uint8_t p, const WrapperBase* param) const {
     VPin_t* pVPin = this->findVPinExist(p);
-    return (pVPin != nullptr);
+    if (pVPin == nullptr) {
+        return false;
+    }
+    if (param == nullptr) {
+        return true;
+    }
+
+    switch (pVPin->type) {
+        case VirtualTypeT::VIRTUAL_NUMBER:
+            if (param->isNumber()) {
+                return true;
+            }
+            break;
+        case VirtualTypeT::VIRTUAL_STRING:
+            if (param->isString()) {
+                return true;
+            }
+            break;
+        case VirtualTypeT::VIRTUAL_BASE:
+        default:
+            return true;
+    }
+
+    return false;
 }
 
 template <class Report>

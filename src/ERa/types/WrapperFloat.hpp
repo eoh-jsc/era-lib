@@ -7,14 +7,14 @@ class WrapperFloat
     : public WrapperBase
 {
 public:
-    WrapperFloat(float& _value)
-        : value(_value)
+    WrapperFloat(float& num)
+        : value(num)
     {
         this->type = WrapperTypeT::WRAPPER_TYPE_FLOAT;
     }
 
-    WrapperFloat& operator = (float _value) {
-        this->value = _value;
+    WrapperFloat& operator = (float num) {
+        this->value = num;
         return (*this);
     }
 
@@ -23,16 +23,16 @@ protected:
         return this->value;
     }
 
-    void set(float _value) override {
-        this->value = _value;
+    void set(float num) override {
+        this->value = num;
     }
 
-    void* getPointer() const override {
+    const void* getPointer() const override {
         return nullptr;
     }
 
-    void setPointer(const void* _value) override {
-        (void)_value;
+    void setPointer(const void* cptr) override {
+        (void)cptr;
     }
 
 private:

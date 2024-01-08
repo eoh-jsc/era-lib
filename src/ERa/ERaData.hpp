@@ -21,9 +21,9 @@ public:
             : ptr(nullptr)
             , limit(nullptr)
         {}
-        iterator(char* _ptr, char* _limit)
-            : ptr(_ptr)
-            , limit(_limit)
+        iterator(char* str, char* estr)
+            : ptr(str)
+            , limit(estr)
         {}
         ~iterator()
         {}
@@ -43,8 +43,8 @@ public:
             return atoi(this->ptr);
         }
 
-        int getInt(int _base) const {
-            return (int)this->getLong(_base);
+        int getInt(int base) const {
+            return (int)this->getLong(base);
         }
 
         long getLong() const {
@@ -54,11 +54,11 @@ public:
             return atol(this->ptr);
         }
 
-        long getLong(int _base) const {
+        long getLong(int base) const {
             if (!this->isValid()) {
                 return 0;
             }
-            return strtol(this->ptr, nullptr, _base);
+            return strtol(this->ptr, nullptr, base);
         }
 
 #if defined(ERA_USE_ERA_ATOLL)
@@ -76,11 +76,11 @@ public:
             return atoll(this->ptr);
         }
 
-        long long getLongLong(int _base) const {
+        long long getLongLong(int base) const {
             if (!this->isValid()) {
                 return 0;
             }
-            return strtoll(this->ptr, nullptr, _base);
+            return strtoll(this->ptr, nullptr, base);
         }
 #endif
 
@@ -123,24 +123,24 @@ public:
             return this->ptr >= it.ptr;
         }
 
-        bool operator == (const char* _ptr) {
+        bool operator == (const char* cstr) {
             if (!this->isValid()) {
                 return false;
             }
-            if (_ptr == nullptr) {
+            if (cstr == nullptr) {
                 return false;
             }
-            return !strcmp(this->ptr, _ptr);
+            return !strcmp(this->ptr, cstr);
         }
 
-        bool operator != (const char* _ptr) {
+        bool operator != (const char* cstr) {
             if (!this->isValid()) {
                 return false;
             }
-            if (_ptr == nullptr) {
+            if (cstr == nullptr) {
                 return true;
             }
-            return strcmp(this->ptr, _ptr);
+            return strcmp(this->ptr, cstr);
         }
 
         iterator& operator ++ () {
@@ -155,18 +155,18 @@ public:
         const char* limit;
     };
 
-    ERaDataBuff(const void* _buff, size_t _len)
-        : buff((char*)_buff)
-        , len(_len)
-        , buffSize(_len)
-        , dataLen(_len)
+    ERaDataBuff(const void* cptr, size_t length)
+        : buff((char*)cptr)
+        , len(length)
+        , buffSize(length)
+        , dataLen(length)
         , changed(false)
     {}
-    ERaDataBuff(void* _buff, size_t _len, size_t _size)
-        : buff((char*)_buff)
-        , len(_len)
-        , buffSize(_size)
-        , dataLen(_len)
+    ERaDataBuff(void* ptr, size_t length, size_t bsize)
+        : buff((char*)ptr)
+        , len(length)
+        , buffSize(bsize)
+        , dataLen(length)
         , changed(false)
     {}
     ~ERaDataBuff()
@@ -185,9 +185,9 @@ public:
     }
 
     bool isChange() {
-        bool _changed = this->changed;
+        bool ret = this->changed;
         this->changed = false;
-        return _changed;
+        return ret;
     }
 
     void clear() {
@@ -651,12 +651,12 @@ ERaDataBuff::iterator ERaDataBuff::at(const char* key) const {
 
 inline
 size_t ERaDataBuff::size() const {
-    size_t _size {0};
+    size_t itSize {0};
     const iterator e = this->end();
     for (iterator it = this->begin(); it < e; ++it) {
-        ++_size;
+        ++itSize;
     }
-    return _size;
+    return itSize;
 }
 
 inline
@@ -734,10 +734,10 @@ public:
         iterator()
             : item(nullptr)
         {}
-        iterator(cJSON* _item,
-                cJSON* _parent = nullptr)
-            : item(_item)
-            , parent(_parent)
+        iterator(cJSON* pItem,
+                cJSON* pParent = nullptr)
+            : item(pItem)
+            , parent(pParent)
         {}
         ~iterator()
         {}
@@ -841,12 +841,12 @@ public:
             return 0;
         }
 
-        int parseInt(int _base) const {
+        int parseInt(int base) const {
             if (this->isNumber()) {
                 return this->item->valueint;
             }
             else if (this->isString()) {
-                return strtol(this->item->valuestring, nullptr, _base);
+                return strtol(this->item->valuestring, nullptr, base);
             }
             return 0;
         }
@@ -928,8 +928,8 @@ public:
                 cJSON_ReplaceItem(this->parent, this->item, array);
                 this->item = array;
             }
-            cJSON* _item = cJSON_GetArrayIndex(this->item, index);
-            return iterator(_item, this->item);
+            cJSON* subItem = cJSON_GetArrayIndex(this->item, index);
+            return iterator(subItem, this->item);
         }
 
         iterator operator [] (const char* key) {
@@ -938,11 +938,11 @@ public:
                 cJSON_ReplaceItem(this->parent, this->item, object);
                 this->item = object;
             }
-            cJSON* _item = cJSON_GetObjectItem(this->item, key);
-            if (_item == nullptr) {
-                _item = cJSON_AddNullToObject(this->item, key);
+            cJSON* subItem = cJSON_GetObjectItem(this->item, key);
+            if (subItem == nullptr) {
+                subItem = cJSON_AddNullToObject(this->item, key);
             }
-            return iterator(_item, this->item);
+            return iterator(subItem, this->item);
         }
 
         template <typename T>
@@ -1114,9 +1114,8 @@ public:
     }
 
     void parse(const char* str) {
-        if (this->root != nullptr) {
-            cJSON_Delete(this->root);
-        }
+        this->clear();
+        this->clearObject();
         this->root = cJSON_Parse(str);
     }
 
@@ -1163,6 +1162,9 @@ public:
     }
 
     void clearObject() {
+        if (this->root == nullptr) {
+            return;
+        }
         cJSON_Delete(this->root);
         this->root = nullptr;
     }
@@ -1257,6 +1259,7 @@ public:
     bool operator != (const ERaDataJson& value) const;
     bool operator != (nullptr_t) const;
 
+    ERaDataJson& operator = (const char* value);
     ERaDataJson& operator = (const ERaDataJson& value);
 
 protected:
@@ -1540,6 +1543,14 @@ bool ERaDataJson::operator != (const ERaDataJson& value) const {
 inline
 bool ERaDataJson::operator != (nullptr_t) const {
     return !this->isEmpty();
+}
+
+inline
+ERaDataJson& ERaDataJson::operator = (const char* value) {
+    this->clear();
+    this->clearObject();
+    this->root = cJSON_Parse(value);
+    return (*this);
 }
 
 inline

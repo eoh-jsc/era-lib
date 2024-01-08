@@ -54,6 +54,8 @@
     #else
         #include <ERaSimpleMBMbedGsm.hpp>
     #endif
+#elif defined(LINUX)
+    #include <ERaLinux.hpp>
 #else
     #warning "Please include a board-specific header file!"
 #endif

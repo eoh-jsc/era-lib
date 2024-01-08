@@ -7,14 +7,14 @@ class WrapperDouble
     : public WrapperBase
 {
 public:
-    WrapperDouble(double& _value)
-        : value(_value)
+    WrapperDouble(double& num)
+        : value(num)
     {
         this->type = WrapperTypeT::WRAPPER_TYPE_DOUBLE;
     }
 
-    WrapperDouble& operator = (double _value) {
-        this->value = _value;
+    WrapperDouble& operator = (double num) {
+        this->value = num;
         return (*this);
     }
 
@@ -23,16 +23,16 @@ protected:
         return (float)this->value;
     }
 
-    void set(float _value) override {
-        this->value = (double)_value;
+    void set(float num) override {
+        this->value = (double)num;
     }
 
-    void* getPointer() const override {
+    const void* getPointer() const override {
         return nullptr;
     }
 
-    void setPointer(const void* _value) override {
-        (void)_value;
+    void setPointer(const void* cptr) override {
+        (void)cptr;
     }
 
 private:

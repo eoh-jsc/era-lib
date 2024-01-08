@@ -7,14 +7,14 @@ class WrapperUnsignedLong
     : public WrapperBase
 {
 public:
-    WrapperUnsignedLong(unsigned long& _value)
-        : value(_value)
+    WrapperUnsignedLong(unsigned long& num)
+        : value(num)
     {
         this->type = WrapperTypeT::WRAPPER_TYPE_UNSIGNED_LONG;
     }
 
-    WrapperUnsignedLong& operator = (unsigned long _value) {
-        this->value = _value;
+    WrapperUnsignedLong& operator = (unsigned long num) {
+        this->value = num;
         return (*this);
     }
 
@@ -23,16 +23,16 @@ protected:
         return (float)this->value;
     }
 
-    void set(float _value) override {
-        this->value = (unsigned long)_value;
+    void set(float num) override {
+        this->value = (unsigned long)num;
     }
 
-    void* getPointer() const override {
+    const void* getPointer() const override {
         return nullptr;
     }
 
-    void setPointer(const void* _value) override {
-        (void)_value;
+    void setPointer(const void* cptr) override {
+        (void)cptr;
     }
 
 private:

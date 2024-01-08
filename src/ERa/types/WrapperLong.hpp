@@ -7,14 +7,14 @@ class WrapperLong
     : public WrapperBase
 {
 public:
-    WrapperLong(long& _value)
-        : value(_value)
+    WrapperLong(long& num)
+        : value(num)
     {
         this->type = WrapperTypeT::WRAPPER_TYPE_LONG;
     }
 
-    WrapperLong& operator = (long _value) {
-        this->value = _value;
+    WrapperLong& operator = (long num) {
+        this->value = num;
         return (*this);
     }
 
@@ -23,16 +23,16 @@ protected:
         return (float)this->value;
     }
 
-    void set(float _value) override {
-        this->value = (long)_value;
+    void set(float num) override {
+        this->value = (long)num;
     }
 
-    void* getPointer() const override {
+    const void* getPointer() const override {
         return nullptr;
     }
 
-    void setPointer(const void* _value) override {
-        (void)_value;
+    void setPointer(const void* cptr) override {
+        (void)cptr;
     }
 
 private:

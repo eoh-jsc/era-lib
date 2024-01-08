@@ -7,14 +7,14 @@ class WrapperBool
     : public WrapperBase
 {
 public:
-    WrapperBool(bool& _value)
-        : value(_value)
+    WrapperBool(bool& num)
+        : value(num)
     {
         this->type = WrapperTypeT::WRAPPER_TYPE_BOOL;
     }
 
-    WrapperBool& operator = (bool _value) {
-        this->value = _value;
+    WrapperBool& operator = (bool num) {
+        this->value = num;
         return (*this);
     }
 
@@ -23,16 +23,16 @@ protected:
         return (float)this->value;
     }
 
-    void set(float _value) override {
-        this->value = (bool)_value;
+    void set(float num) override {
+        this->value = (bool)num;
     }
 
-    void* getPointer() const override {
+    const void* getPointer() const override {
         return nullptr;
     }
 
-    void setPointer(const void* _value) override {
-        (void)_value;
+    void setPointer(const void* cptr) override {
+        (void)cptr;
     }
 
 private:
