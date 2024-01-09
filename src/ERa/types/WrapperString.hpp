@@ -647,7 +647,6 @@ class WrapperString;
             }
             else if (diff < 0) {
                 char* writeTo = this->value;
-                size_t len = this->length();
                 while ((foundAt = strstr(readFrom, find.value)) != nullptr) {
                     size_t n = (foundAt - readFrom);
                     memmove(writeTo, readFrom, n);
