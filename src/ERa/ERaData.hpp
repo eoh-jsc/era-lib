@@ -1122,7 +1122,7 @@ public:
     const char* getString() {
         this->clear();
         this->ptr = cJSON_PrintUnformatted(this->root);
-        return this->ptr;
+        return ((this->ptr != nullptr) ? this->ptr : "");
     }
 
     bool isObject() const {

@@ -38,6 +38,14 @@ class WrapperString;
                 String::operator = (param.getString());
             }
         }
+        ERaString(const ERaDataJson& rjs)
+            : String("")
+        {
+            if (!rjs.isValid()) {
+                return;
+            }
+            String::operator = (const_cast<ERaDataJson&>(rjs).getString());
+        }
         ERaString(const char* cstr)
             : String(cstr)
         {}
@@ -121,6 +129,13 @@ class WrapperString;
             , isUpdated(false)
         {
             this->concat(param);
+        }
+        ERaString(const ERaDataJson& rjs)
+            : value(nullptr)
+            , valueCapacity(0UL)
+            , isUpdated(false)
+        {
+            this->concat(rjs);
         }
         ERaString(const char* cstr)
             : value(nullptr)
@@ -217,16 +232,20 @@ class WrapperString;
         }
 
         void reserve(size_t cap) {
-            if (cap <= this->valueCapacity) {
+            if (cap < this->valueCapacity) {
                 return;
             }
-            if (this->value != nullptr) {
-                free(this->value);
+            char* copy = (char*)realloc(this->value, cap + 1);
+            if (copy != nullptr) {
+                if (this->value == nullptr) {
+                    memset(copy, 0, cap + 1);
+                }
+                this->value = copy;
+                this->value[cap] = '\0';
+                this->valueCapacity = (cap + 1);
             }
-            this->value = (char*)malloc(cap);
-            if (this->value != nullptr) {
-                this->valueCapacity = cap;
-                memset(this->value, 0, cap);
+            else {
+                this->valueCapacity = 0;
             }
         }
 
@@ -290,6 +309,13 @@ class WrapperString;
             else if (param.isString()) {
                 this->concat(param.getString());
             }
+        }
+
+        void concat(const ERaDataJson& rjs) {
+            if (!rjs.isValid()) {
+                return;
+            }
+            this->concat(const_cast<ERaDataJson&>(rjs).getString());
         }
 
         void concat(const char* cstr) {
@@ -495,6 +521,217 @@ class WrapperString;
             }
         }
 
+        void trim() {
+            if (!this->length()) {
+                return;
+            }
+            char* begin = this->value;
+            while (isspace(*begin)) {
+                begin++;
+            }
+            char* end = (this->value + this->length() - 1);
+            while (isspace(*end) && (end >= begin)) {
+                end--;
+            }
+            unsigned int newLen = (end - begin + 1);
+            if (begin > this->value) {
+                this->isUpdated = true;
+                memmove(this->value, begin, newLen);
+            }
+            this->value[newLen] = '\0';
+        }
+
+        int indexOf(char c) const {
+            return this->indexOf(c, 0);
+        }
+
+        int indexOf(char c, size_t index) const {
+            if (index >= this->length()) {
+                return -1;
+            }
+            const char* ptr = strchr(this->value + index, c);
+            if (ptr == nullptr) {
+                return -1;
+            }
+            return (int)(ptr - this->value);
+        }
+
+        int indexOf(const ERaString& str) const {
+            return this->indexOf(str, 0);
+        }
+
+        int indexOf(const ERaString& str, size_t index) const {
+            if (!str.length()) {
+                return -1;
+            }
+            if (index >= this->length()) {
+                return -1;
+            }
+            const char* ptr = strstr(this->value + index, str.value);
+            if (ptr == nullptr) {
+                return -1;
+            }
+            return (int)(ptr - this->value);
+        }
+
+        int lastIndexOf(char c) const {
+            return this->lastIndexOf(c, this->length() - 1);
+        }
+
+        int lastIndexOf(char c, size_t index) const {
+            if (index >= this->length()) {
+                return -1;
+            }
+            const char temp = this->value[index + 1];
+            this->value[index + 1] = '\0';
+            const char* ptr = strrchr(this->value, c);
+            this->value[index + 1] = temp;
+            if (ptr == nullptr) {
+                return -1;
+            }
+            return (int)(ptr - this->value);
+        }
+
+        int lastIndexOf(const ERaString& str) const {
+            return this->lastIndexOf(str, this->length() - str.length());
+        }
+
+        int lastIndexOf(const ERaString& str, size_t index) const {
+            if (!this->length() || !str.length()) {
+                return -1;
+            }
+            if (str.length() > this->length()) {
+                return -1;
+            }
+            if (index >= this->length()) {
+                index = (this->length() - 1);
+            }
+            int found = -1;
+            for (char* ptr = this->value; ptr <= (this->value + index); ++ptr) {
+                ptr = strstr(ptr, str.value);
+                if (ptr == nullptr) {
+                    break;
+                }
+                if ((ptr - this->value) <= index) {
+                    found = (ptr - this->value);
+                }
+            }
+            return found;
+        }
+
+        void replace(char find, char replace) {
+            size_t len = this->length();
+            for (size_t i = 0; i < len; ++i) {
+                if (this->value[i] != find) {
+                    continue;
+                }
+                this->value[i] = replace;
+            }
+        }
+
+        void replace(const ERaString& find, const ERaString& replace) {
+            if (!find.length()) {
+                return;
+            }
+            if (!replace.length()) {
+                return;
+            }
+            int diff = (replace.length() - find.length());
+            char* foundAt = nullptr;
+            char* readFrom = this->value;
+            if (!diff) {
+                while ((foundAt = strstr(readFrom, find.value)) != nullptr) {
+                    memmove(foundAt, replace.value, replace.length());
+                    readFrom = (foundAt + find.length());
+                }
+            }
+            else if (diff < 0) {
+                char* writeTo = this->value;
+                size_t len = this->length();
+                while ((foundAt = strstr(readFrom, find.value)) != nullptr) {
+                    size_t n = (foundAt - readFrom);
+                    memmove(writeTo, readFrom, n);
+                    writeTo += n;
+                    memmove(writeTo, replace.value, replace.length());
+                    writeTo += replace.length();
+                    readFrom = (foundAt + find.length());
+                }
+                memmove(writeTo, readFrom, strlen(readFrom) + 1);
+            }
+            else {
+                size_t size = this->length();
+                while ((foundAt = strstr(readFrom, find.value)) != nullptr) {
+                    readFrom = (foundAt + find.length());
+                    size += diff;
+                }
+                if (size == this->length()) {
+                    return;
+                }
+                this->reserve(size);
+                if (this->value == nullptr) {
+                    return;
+                }
+                int index = (this->length() - 1);
+                while ((index >= 0) && ((index = this->lastIndexOf(find, index)) >= 0)) {
+                    size_t len = this->length();
+                    readFrom = (this->value + index + find.length());
+                    memmove(readFrom + diff, readFrom, len - (readFrom - this->value));
+                    size_t newLen = (len + diff);
+                    memmove(this->value + index, replace.value, replace.length());
+                    this->value[newLen] = '\0';
+                    index--;
+                }
+            }
+        }
+
+        void remove(size_t index) {
+            this->remove(index, (size_t)(-1));
+        }
+
+        void remove(size_t index, size_t count) {
+            if (index >= this->length()) {
+                return;
+            }
+            if (!count) {
+                return;
+            }
+            if (count > (this->length() - index)) {
+                count = (this->length() - index);
+            }
+            char* writeTo = (this->value + index);
+            size_t newLen = (this->length() - count);
+            memmove(writeTo, this->value + index + count, newLen - index);
+            this->value[newLen] = '\0';
+        }
+
+        int toInt() const {
+            if (this->value == nullptr) {
+                return 0;
+            }
+            return atol(this->value);
+        }
+
+        float toFloat() const {
+            if (this->value == nullptr) {
+                return 0.0f;
+            }
+            return (float)atof(this->value);
+        }
+
+        double toDouble() const {
+            if (this->value == nullptr) {
+                return 0.0;
+            }
+            return atof(this->value);
+        }
+
+        void clear() {
+            if (this->value == nullptr) {
+                return;
+            }
+            memset(this->value, 0, this->valueCapacity);
+        }
+
         operator const char*() const {
             if (this->value == nullptr) {
                 return "";
@@ -514,19 +751,14 @@ class WrapperString;
         }
 
         ERaString& operator = (const ERaParam& param) {
-            if (param.isNumber()) {
-                (*this) = ERaString(param.getFloat());
-            }
-            else if (param.isString()) {
-                operator = (param.getString());
-            }
+            this->clear();
+            this->concat(param);
             return (*this);
         }
 
         ERaString& operator = (const ERaDataJson& rjs) {
-            if (rjs.isValid()) {
-                operator = (const_cast<ERaDataJson&>(rjs).getString());
-            }
+            this->clear();
+            this->concat(rjs);
             return (*this);
         }
 
@@ -539,6 +771,66 @@ class WrapperString;
             return operator = ((const char*)str);
         }
 
+        ERaString& operator = (char c) {
+            this->clear();
+            this->concat(c);
+            return (*this);
+        }
+
+        ERaString& operator = (unsigned char num) {
+            this->clear();
+            this->concat(num);
+            return (*this);
+        }
+
+        ERaString& operator = (int num) {
+            this->clear();
+            this->concat(num);
+            return (*this);
+        }
+
+        ERaString& operator = (unsigned int num) {
+            this->clear();
+            this->concat(num);
+            return (*this);
+        }
+
+        ERaString& operator = (long num) {
+            this->clear();
+            this->concat(num);
+            return (*this);
+        }
+
+        ERaString& operator = (unsigned long num) {
+            this->clear();
+            this->concat(num);
+            return (*this);
+        }
+
+        ERaString& operator = (long long num) {
+            this->clear();
+            this->concat(num);
+            return (*this);
+        }
+
+        ERaString& operator = (unsigned long long num) {
+            this->clear();
+            this->concat(num);
+            return (*this);
+        }
+
+        ERaString& operator = (float num) {
+            this->clear();
+            this->concat(num);
+            return (*this);
+        }
+
+        ERaString& operator = (double num) {
+            this->clear();
+            this->concat(num);
+            return (*this);
+        }
+
         ERaString& operator += (const ERaString& res) {
             this->concat(res);
             return (*this);
@@ -546,6 +838,11 @@ class WrapperString;
 
         ERaString& operator += (const ERaParam& param) {
             this->concat(param);
+            return (*this);
+        }
+
+        ERaString& operator += (const ERaDataJson& rjs) {
+            this->concat(rjs);
             return (*this);
         }
 
@@ -641,6 +938,7 @@ class WrapperString;
 
         friend ERaStringHelper& operator + (const ERaStringHelper& esh, const ERaString& res);
         friend ERaStringHelper& operator + (const ERaStringHelper& esh, const ERaParam& param);
+        friend ERaStringHelper& operator + (const ERaStringHelper& esh, const ERaDataJson& rjs);
         friend ERaStringHelper& operator + (const ERaStringHelper& esh, const char* cstr);
         friend ERaStringHelper& operator + (const ERaStringHelper& esh, char* str);
         friend ERaStringHelper& operator + (const ERaStringHelper& esh, char c);
@@ -754,11 +1052,23 @@ class WrapperString;
         ERaStringHelper(const ERaString& estr)
             : ERaString(estr)
         {}
+        ERaStringHelper(const ERaParam& param)
+            : ERaString(param)
+        {}
+        ERaStringHelper(const ERaDataJson& rjs)
+            : ERaString(rjs)
+        {}
         ERaStringHelper(const char* cstr)
             : ERaString(cstr)
         {}
         ERaStringHelper(char* str)
             : ERaString(str)
+        {}
+        ERaStringHelper(char c)
+            : ERaString(c)
+        {}
+        ERaStringHelper(unsigned char num)
+            : ERaString(num)
         {}
         ERaStringHelper(int num)
             : ERaString(num)
@@ -797,6 +1107,13 @@ class WrapperString;
     ERaStringHelper& operator + (const ERaStringHelper& esh, const ERaParam& param) {
         ERaStringHelper& a = const_cast<ERaStringHelper&>(esh);
         a.concat(param);
+        return a;
+    }
+
+    inline
+    ERaStringHelper& operator + (const ERaStringHelper& esh, const ERaDataJson& rjs) {
+        ERaStringHelper& a = const_cast<ERaStringHelper&>(esh);
+        a.concat(rjs);
         return a;
     }
 
