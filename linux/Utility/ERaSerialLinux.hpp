@@ -23,11 +23,15 @@ public:
         : fd(-1)
         , hasPeek(false)
         , peekByte(0)
+        , baudrate(115200)
+        , deviceId(NULL)
     {}
     ERaSerialLinux(int _fd)
         : fd(_fd)
         , hasPeek(false)
         , peekByte(0)
+        , baudrate(115200)
+        , deviceId(NULL)
     {}
     ~ERaSerialLinux()
     {
@@ -35,12 +39,22 @@ public:
     }
 
     void begin(const char* device, const int baud) {
+        this->deviceId = device;
+        this->baudrate = baud;
+        this->connect();
+    }
+
+    bool connect() {
+        if (this->deviceId == NULL) {
+            return false;
+        }
         this->end();
-        this->fd = serialOpen(device, baud);
+        this->fd = serialOpen(this->deviceId, this->baudrate);
+        return (this->fd >= 0);
     }
 
     void end() {
-        if (!this->connected()) {
+        if (this->fd < 0) {
             return;
         }
         this->flush();
@@ -55,6 +69,7 @@ public:
         int result {0};
         result = serialDataAvail(this->fd);
         if (result < 0) {
+            this->connect();
             return (this->hasPeek ? 1 : 0);
         }
         if (this->hasPeek) {
@@ -121,12 +136,18 @@ public:
 
 private:
     bool connected() {
-        return (this->fd >= 0);
+        if (this->fd >= 0) {
+            return true;
+        }
+        return this->connect();
     }
 
     int fd;
     bool hasPeek;
     uint8_t peekByte;
+
+    int baudrate;
+    const char* deviceId;
 };
 
 typedef ERaSerialLinux ERaSerial;
