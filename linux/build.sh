@@ -12,7 +12,22 @@ raspberry)
     gpio -v
     cd ..
     make clean all target=raspberry
-    exit 0
+    exec bash
+    # exit 0
+    ;;
+raspberry_fork)
+    sudo apt-get update
+    sudo apt-get upgrade
+    sudo apt-get install build-essential git-core
+    git clone https://github.com/WiringPi/WiringPi.git
+    cd WiringPi
+    git pull origin
+    ./build
+    gpio -v
+    cd ..
+    make clean all target=raspberry
+    exec bash
+    # exit 0
     ;;
 tinker)
     sudo apt-get update
@@ -26,7 +41,8 @@ tinker)
     gpio -v
     cd ..
     make clean all target=tinker
-    exit 0
+    exec bash
+    # exit 0
     ;;
 orangepi)
     sudo apt-get update
@@ -39,13 +55,16 @@ orangepi)
     gpio -v
     cd ..
     make clean all target=orangepi
-    exit 0
+    exec bash
+    # exit 0
     ;;
 linux)
     make clean all
-    exit 0
+    exec bash
+    # exit 0
     ;;
 esac
 
 echo "Please specify platform: raspberry, tinker, orangepi, linux"
-exit 1
+exec bash
+# exit 1

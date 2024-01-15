@@ -31,6 +31,10 @@
 /*
 * Download the Micro-RTSP library at:
 * https://github.com/geeksville/Micro-RTSP.git#fc43f56
+* https://github.com/geeksville/Micro-RTSP/tree/fc43f56
+* 
+* Refer to the installation guide for the Arduino library zip file here:
+* https://docs.arduino.cc/software/ide-v1/tutorials/installing-libraries#importing-a-zip-library
 */
 
 const char ssid[] = "YOUR_SSID";

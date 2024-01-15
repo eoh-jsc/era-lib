@@ -15,13 +15,15 @@ mbedtls)
     rm mbedtls-3.3.0.tar.gz
     rm -r mbedtls-3.3.0
     echo "Mbed-TLS has been successfully installed with version mbedtls-3.3.0."
-    exit 0
+    exec bash
+    # exit 0
     ;;
 mbedtls_latest)
     latest_version=$(curl -s https://api.github.com/repos/Mbed-TLS/mbedtls/releases/latest | grep -oP '"tag_name": "\K(.*)(?=")')
     if [ -z "$latest_version" ]; then
         echo "Failed to retrieve the latest version of mbedtls. Please check your internet connection."
-        exit 1
+        exec bash
+        # exit 1
     fi
     download_url="https://github.com/Mbed-TLS/mbedtls/archive/refs/tags/${latest_version}.tar.gz"
     wget "$download_url" -O "mbedtls-${latest_version}.tar.gz"
@@ -37,9 +39,11 @@ mbedtls_latest)
     rm "mbedtls-${latest_version}.tar.gz"
     rm -r "$source_dir"
     echo "Mbed-TLS has been successfully updated to version ${latest_version}."
-    exit 0
+    exec bash
+    # exit 0
     ;;
 esac
 
 echo "Please specify tls library: mbedtls, mbedtls_latest"
-exit 1
+exec bash
+# exit 1

@@ -1575,4 +1575,8 @@ ERaDataJson ERaDataBuff::iterator::toJSON() const {
 using DataEntry = ERaDataBuff::iterator;
 using JsonEntry = ERaDataJson::iterator;
 
+typedef ERaDataJson ERaJson;
+typedef ERaDataBuff ERaBuff;
+typedef ERaDataBuffDynamic ERaBuffDynamic;
+
 #endif /* INC_ERA_DATA_HPP_ */
