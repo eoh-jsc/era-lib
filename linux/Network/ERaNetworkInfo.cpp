@@ -76,12 +76,18 @@ void GetNetworkInfo(void) {
     }
 
     wrq.u.essid.pointer = essid;
+    wrq.u.essid.length = IW_ESSID_MAX_SIZE;
     if (ioctl(fd, SIOCGIWESSID, &wrq) < 0) {
         perror("Can't open socket to obtain essid");
         close(fd);
         return;
     }
 
+    uint16_t length = wrq.u.essid.length;
+    if (length > IW_ESSID_MAX_SIZE) {
+        length = IW_ESSID_MAX_SIZE;
+    }
+    essid[length] = '\0';
     printf("ESSID is: %s\r\n", wrq.u.essid.pointer);
 
     memset(&iwstats, 0, sizeof(iwstats));
