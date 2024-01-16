@@ -144,6 +144,10 @@ SOURCES=main.cpp \
 	MQTT/MQTT/unix/unix.cpp \
 	MQTT/MQTT/MQTTLinux.cpp
 
+ifeq ($(target),linux)
+	SOURCES += Utility/Compat/SerialLinux.cpp
+endif
+
 ifndef target
 	SOURCES += Utility/Compat/SerialLinux.cpp
 endif

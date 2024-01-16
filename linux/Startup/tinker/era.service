@@ -1,0 +1,16 @@
+[Unit]
+Description=ERa
+After=network.target
+
+[Service]
+Environment=NODE_ENV=production
+ExecStart=/bin/bash start.sh tinker
+WorkingDirectory=/home/linaro/era-lib/linux/Startup
+StandardOutput=inherit
+StandardError=inherit
+Restart=always
+RestartSec=10s
+User=linaro
+
+[Install]
+WantedBy=multi-user.target
