@@ -3,6 +3,11 @@
 token="YourAuthToken"
 
 board_type=""
+token_file="./token.txt"
+
+if [ -f ${token_file} ]; then
+    token=$(cat "${token_file}")
+fi
 
 case "$1" in
 raspberry)
