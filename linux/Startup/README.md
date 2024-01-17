@@ -1,6 +1,6 @@
-Step 1: Input your token in start.sh file:
+Step 1: Input your token in token.txt file:
 ```bash
-TOKEN=YourAuthToken
+YourAuthToken
 ```
 
 Step 2: Running ERa with systemctl
