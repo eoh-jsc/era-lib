@@ -19,12 +19,12 @@ public:
     }
 
 protected:
-    float get() const override {
-        return (float)this->value;
+    double get() const override {
+        return this->value;
     }
 
-    void set(float num) override {
-        this->value = (double)num;
+    void set(double num) override {
+        this->value = num;
     }
 
     const void* getPointer() const override {

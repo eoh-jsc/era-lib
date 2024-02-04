@@ -19,11 +19,11 @@ public:
     }
 
 protected:
-    float get() const override {
-        return (float)this->value;
+    double get() const override {
+        return (double)this->value;
     }
 
-    void set(float num) override {
+    void set(double num) override {
         this->value = (bool)num;
     }
 

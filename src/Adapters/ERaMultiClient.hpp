@@ -16,20 +16,13 @@
 #include <ERa/ERaProtocol.hpp>
 #include <MQTT/ERaMqtt.hpp>
 
-#if defined(__has_include) &&       \
-    __has_include(<functional>) &&  \
-    !defined(ERA_IGNORE_STD_FUNCTIONAL_STRING)
-    #include <functional>
-    #define ADAPTER_HAS_FUNCTIONAL_H
-#endif
-
 class ERaFlash;
 
 template <class Transport>
 class ERaMulti
     : public ERaProto<Transport, ERaFlash>
 {
-#if defined(TIMER_HAS_FUNCTIONAL_H)
+#if defined(ERA_HAS_FUNCTIONAL_H)
     typedef std::function<int16_t(void)> ClientConnectCallback_t;
 #else
     typedef int16_t (*ClientConnectCallback_t)(void);

@@ -28,6 +28,10 @@
     // Active low (false), Active high (true)
     #define BUTTON_INVERT       false
     #define BUTTON_HOLD_TIMEOUT 5000UL
+
+    // This directive is used to specify whether the configuration should be erased.
+    // If it's set to true, the configuration will be erased.
+    #define ERA_ERASE_CONFIG    false
 #endif
 
 #include <Arduino.h>
@@ -48,12 +52,22 @@ const char pass[] = "YOUR_PASSWORD";
         button.run();
     }
 
+#if ERA_VERSION_NUMBER >= ERA_VERSION_VAL(1, 2, 0)
+    static void eventButton(uint8_t pin, ButtonEventT event) {
+        if (event != ButtonEventT::BUTTON_ON_HOLD) {
+            return;
+        }
+        ERa.switchToConfig(ERA_ERASE_CONFIG);
+        (void)pin;
+    }
+#else
     static void eventButton(ButtonEventT event) {
         if (event != ButtonEventT::BUTTON_ON_HOLD) {
             return;
         }
-        ERa.switchToConfig();
+        ERa.switchToConfig(ERA_ERASE_CONFIG);
     }
+#endif
 
     void initButton() {
         pinMode(BUTTON_PIN, INPUT);
@@ -93,6 +107,15 @@ void setup() {
 
     /* Set board id */
     // ERa.setBoardID("Board_1");
+
+    /* In some cases, it is necessary to disable
+    the Pull-Up mode of the RX GPIO */
+    /*
+    #if defined(SerialMB)
+        SerialMB.enableRxGPIOPullUp(false);
+    #endif
+    */
+
     /* Initializing the ERa library. */
     ERa.begin(ssid, pass);
 

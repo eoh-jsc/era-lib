@@ -8,6 +8,7 @@ Topic format:
 
 #define ERA_BASE_TOPIC                              "eoh/chip/%s"
 
+/* LWT topic: Used to indicate whether it is currently online or not */
 #define ERA_PREFIX_LWT_TOPIC                        "/is_online"
 
 /* Subscribe topic */
@@ -26,7 +27,7 @@ Topic format:
 /* Publish topic */
 #define ERA_PUB_PREFIX_INFO_TOPIC                   "/info"
 #define ERA_PUB_PREFIX_MODBUS_DATA_TOPIC            "/data"
-#define ERA_PUB_PREFIX_CONFIG_DATA_TOPIC            "/config/%d/value"
+#define ERA_PUB_PREFIX_CONFIG_DATA_TOPIC            "/config/" ERA_INTEGER_C_TYPE "/value"
 #define ERA_PUB_PREFIX_MULTI_CONFIG_DATA_TOPIC      "/config_value"
 
 /* For debug */
@@ -42,8 +43,8 @@ Topic format:
 #define ERA_PUB_PREFIX_PIN_DOWN_TOPIC               ERA_DEBUG_PREFIX "/pin/down"
 
 #define ERA_PUB_PREFIX_DOWN_TOPIC                   "/down"
-#define ERA_PUB_PREFIX_ARDUINO_DOWN_TOPIC           "/arduino_pin/%d"
-#define ERA_PUB_PREFIX_VIRTUAL_DOWN_TOPIC           "/virtual_pin/%d"
+#define ERA_PUB_PREFIX_ARDUINO_DOWN_TOPIC           "/arduino_pin/" ERA_INTEGER_C_TYPE
+#define ERA_PUB_PREFIX_VIRTUAL_DOWN_TOPIC           "/virtual_pin/" ERA_INTEGER_C_TYPE
 
 #if defined(ERA_ZIGBEE) ||  \
     defined(ERA_SPECIFIC)

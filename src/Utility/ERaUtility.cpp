@@ -1207,6 +1207,24 @@ char* ERaDtostrf(double number, int decimal, char* str) {
     return str;
 }
 
+bool IsHexString(const char* buf) {
+    if (buf == nullptr) {
+        return false;
+    }
+
+    size_t len = strlen(buf);
+    if (!len) {
+        return false;
+    }
+
+    for (size_t i = 0; i < len; ++i) {
+        if (!isxdigit(buf[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool ERaFloatCompare(float a, float b) {
     float maxVal = (fabs(a) > fabs(b)) ? fabs(a) : fabs(b);
     return (fabs(a - b) <= (maxVal * FLT_EPSILON));

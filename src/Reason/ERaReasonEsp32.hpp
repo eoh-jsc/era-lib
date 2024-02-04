@@ -11,11 +11,20 @@
     #elif CONFIG_IDF_TARGET_ESP32S2
         #include <esp32s2/rom/rtc.h>
         #define ERA_RESET_REASON
+    #elif CONFIG_IDF_TARGET_ESP32C2
+        #include <esp32c2/rom/rtc.h>
+        #define ERA_RESET_REASON
     #elif CONFIG_IDF_TARGET_ESP32C3
         #include <esp32c3/rom/rtc.h>
         #define ERA_RESET_REASON
     #elif CONFIG_IDF_TARGET_ESP32S3
         #include <esp32s3/rom/rtc.h>
+        #define ERA_RESET_REASON
+    #elif CONFIG_IDF_TARGET_ESP32C6
+        #include <esp32c6/rom/rtc.h>
+        #define ERA_RESET_REASON
+    #elif CONFIG_IDF_TARGET_ESP32H2
+        #include <esp32h2/rom/rtc.h>
         #define ERA_RESET_REASON
     #endif
 #endif

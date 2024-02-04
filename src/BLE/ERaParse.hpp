@@ -3,7 +3,7 @@
 
 #include <string.h>
 #include <ERa/ERaDebug.hpp>
-#include <ERa/ERaHelperDef.hpp>
+#include <ERa/ERaHelpersDef.hpp>
 #include <Utility/ERaQueue.hpp>
 
 #define LENGTH_SECRET_KEY   16

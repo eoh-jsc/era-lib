@@ -261,8 +261,8 @@ private:
     template <typename T>
     bool isElementExist(const std::vector<T>& elementList, const T element);
 
-    void publishZigbeeData(const IdentDeviceAddr_t* deviceInfo, bool specific = false, bool retained = true);
-    void publishZigbeeData(const char* topic, cJSON* payload, bool specific = true, bool retained = true);
+    void publishZigbeeData(const IdentDeviceAddr_t* deviceInfo, bool specific = false, bool retained = ZIGBEE_PUBLISH_RETAINED);
+    void publishZigbeeData(const char* topic, cJSON* payload, bool specific = true, bool retained = ZIGBEE_PUBLISH_RETAINED);
     bool actionZigbee(const ZigbeeActionT type, const char* ieeeAddr, const cJSON* const payload);
     void getZigbeeAction();
     void zigbeeTimerCallback(void* args);
@@ -337,9 +337,9 @@ private:
         return static_cast<Api&>(*this);
     }
 
-    ERaQueue<ZigbeeAction_t, 20> queue;
-    ERaQueue<Response_t, 20> queueRsp;
-    ERaQueue<DefaultRsp_t, 20> queueDefaultRsp;
+    ERaQueue<ZigbeeAction_t, ZIGBEE_MAX_ACTION> queue;
+    ERaQueue<Response_t, ZIGBEE_MAX_RESPONSE> queueRsp;
+    ERaQueue<DefaultRsp_t, ZIGBEE_MAX_DEFAULT_RESPONSE> queueDefaultRsp;
     QueueMessage_t messageHandle;
     bool initialized;
 

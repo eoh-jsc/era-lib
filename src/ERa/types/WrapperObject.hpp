@@ -9,7 +9,7 @@ class WrapperObject
 public:
     WrapperObject(ERaDataJson& js)
         : value(js)
-        , local(js)
+        , local()
     {
         this->type = WrapperTypeT::WRAPPER_TYPE_STRING;
     }
@@ -20,6 +20,10 @@ public:
     }
 
     bool updated() override {
+        if ((this->value == nullptr) &&
+            (this->local == nullptr)) {
+            return false;
+        }
         if (this->value == this->local) {
             return false;
         }
@@ -28,11 +32,11 @@ public:
     }
 
 protected:
-    float get() const override {
+    double get() const override {
         return 0.0f;
     }
 
-    void set(float num) override {
+    void set(double num) override {
         (void)num;
     }
 

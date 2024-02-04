@@ -6,7 +6,9 @@
 #endif
 
 #ifndef MODBUS_RXD_Pin
-    #if defined(ARDUINO_ESP32C3_DEV)
+    #if defined(ARDUINO_ESP32C2_DEV)
+        #define MODBUS_RXD_Pin          10
+    #elif defined(ARDUINO_ESP32C3_DEV)
         #define MODBUS_RXD_Pin          6
     #elif defined(ARDUINO_ESP32C6_DEV)
         #define MODBUS_RXD_Pin          6
@@ -16,6 +18,8 @@
         #define MODBUS_RXD_Pin          18
     #elif defined(ARDUINO_ESP32_S3_BOX)
         #define MODBUS_RXD_Pin          18
+    #elif defined(ARDUINO_ESP32H2_DEV)
+        #define MODBUS_RXD_Pin          0
     #elif defined(ARDUINO_ARCH_ESP32)
         #if defined(BOARD_HAS_PSRAM)
             #define MODBUS_RXD_Pin      15
@@ -28,7 +32,9 @@
 #endif
 
 #ifndef MODBUS_TXD_Pin
-    #if defined(ARDUINO_ESP32C3_DEV)
+    #if defined(ARDUINO_ESP32C2_DEV)
+        #define MODBUS_TXD_Pin          18
+    #elif defined(ARDUINO_ESP32C3_DEV)
         #define MODBUS_TXD_Pin          7
     #elif defined(ARDUINO_ESP32C6_DEV)
         #define MODBUS_TXD_Pin          7
@@ -38,6 +44,8 @@
         #define MODBUS_TXD_Pin          17
     #elif defined(ARDUINO_ESP32_S3_BOX)
         #define MODBUS_TXD_Pin          17
+    #elif defined(ARDUINO_ESP32H2_DEV)
+        #define MODBUS_TXD_Pin          1
     #elif defined(ARDUINO_ARCH_ESP32)
         #if defined(BOARD_HAS_PSRAM)
             #define MODBUS_TXD_Pin      13

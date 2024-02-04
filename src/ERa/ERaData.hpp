@@ -172,6 +172,10 @@ public:
     ~ERaDataBuff()
     {}
 
+    const char* c_str() const {
+        return this->buff;
+    }
+
     const char* getString() const {
         return this->buff;
     }
@@ -278,6 +282,7 @@ public:
     iterator at(const char* key) const;
 
     size_t size() const;
+    size_t split(const char* delims);
 
     operator char* () const;
 
@@ -297,6 +302,8 @@ protected:
     void onChange(const char* value);
     void onChangeHex(uint8_t value);
     void onChangeHex(const uint8_t* ptr, size_t size);
+
+    size_t unescape();
 
     char* buff;
     size_t len;
@@ -651,12 +658,88 @@ ERaDataBuff::iterator ERaDataBuff::at(const char* key) const {
 
 inline
 size_t ERaDataBuff::size() const {
-    size_t itSize {0};
+    size_t retSize {0};
     const iterator e = this->end();
     for (iterator it = this->begin(); it < e; ++it) {
-        ++itSize;
+        ++retSize;
     }
-    return itSize;
+    return retSize;
+}
+
+inline
+size_t ERaDataBuff::split(const char* delims) {
+    if ((this->buff == nullptr) ||
+        (delims == nullptr)) {
+        return 0;
+    }
+    if (!strlen(this->buff)) {
+        return 0;
+    }
+    if (!strlen(delims)) {
+        return 0;
+    }
+    char* foundAt = nullptr;
+    char* readFrom = this->buff;
+    const char replace[2] { '\0', '\0' };
+    const size_t replaceLen {1};
+    const size_t findLen = strlen(delims);
+    int diff = (1 - findLen);
+    if (!diff) {
+        while ((foundAt = strstr(readFrom, delims)) != nullptr) {
+            memmove(foundAt, replace, replaceLen);
+            readFrom = (foundAt + findLen);
+        }
+    }
+    else {
+        size_t l = this->len;
+        char* writeTo = this->buff;
+        while ((foundAt = strstr(readFrom, delims)) != nullptr) {
+            size_t n = (foundAt - readFrom);
+            memmove(writeTo, readFrom, n);
+            writeTo += n;
+            memmove(writeTo, replace, replaceLen);
+            writeTo += replaceLen;
+            readFrom = (foundAt + findLen);
+            l += diff;
+        }
+        memmove(writeTo, readFrom, strlen(readFrom) + 1);
+        this->len = l;
+        this->dataLen = l;
+    }
+    return this->unescape();
+}
+
+inline
+size_t ERaDataBuff::unescape() {
+    if (!this->len) {
+        return 0;
+    }
+    size_t ret {1};
+    char* buf = this->buff;
+    char* pOut = this->buff;
+    size_t l = (this->len - 1);
+    while (l--) {
+        if (*buf == '\0') {
+            switch (*(buf + 1)) {
+                case '\0':
+                    buf++;
+                    this->len--;
+                    break;
+                default:
+                    *(pOut++) = *(buf++);
+                    ret++;
+                    break;
+            }
+        }
+        else {
+            *(pOut++) = *(buf++);
+        }
+    }
+    if (this->dataLen != this->len) {
+        this->dataLen = this->len;
+    }
+    *pOut = '\0';
+    return ret;
 }
 
 inline
@@ -743,7 +826,7 @@ public:
         {}
 
         static iterator invalid() {
-            return iterator(nullptr);
+            return iterator(nullptr, nullptr);
         }
 
         bool isBool() const {
@@ -792,7 +875,7 @@ public:
             return this->item;
         }
 
-        int getInt() const {
+        ERaInt_t getInt() const {
             if (!this->isValid()) {
                 return 0;
             }
@@ -831,17 +914,53 @@ public:
             return this->item;
         }
 
-        int parseInt() const {
+#if defined(ERA_USE_LONG_LONG)
+
+    #if defined(ERA_USE_ERA_ATOLL)
+        ERaInt_t parseInt() const {
             if (this->isNumber()) {
                 return this->item->valueint;
             }
             else if (this->isString()) {
-                return atoi(this->item->valuestring);
+                return ERaAtoll(this->item->valuestring);
+            }
+            return 0;
+        }
+    #else
+        ERaInt_t parseInt() const {
+            if (this->isNumber()) {
+                return this->item->valueint;
+            }
+            else if (this->isString()) {
+                return atoll(this->item->valuestring);
+            }
+            return 0;
+        }
+    #endif
+
+        ERaInt_t parseInt(int base) const {
+            if (this->isNumber()) {
+                return this->item->valueint;
+            }
+            else if (this->isString()) {
+                return strtoll(this->item->valuestring, nullptr, base);
             }
             return 0;
         }
 
-        int parseInt(int base) const {
+#else
+
+        ERaInt_t parseInt() const {
+            if (this->isNumber()) {
+                return this->item->valueint;
+            }
+            else if (this->isString()) {
+                return atol(this->item->valuestring);
+            }
+            return 0;
+        }
+
+        ERaInt_t parseInt(int base) const {
             if (this->isNumber()) {
                 return this->item->valueint;
             }
@@ -850,6 +969,8 @@ public:
             }
             return 0;
         }
+
+#endif
 
         float parseFloat() const {
             if (this->isNumber()) {
@@ -991,7 +1112,7 @@ public:
             if (!this->isNumber()) {
                 return false;
             }
-            return (this->item->valueint == (int)value);
+            return (this->item->valueint == (ERaInt_t)value);
         }
 
         bool operator == (bool value) const {
@@ -1119,6 +1240,10 @@ public:
         this->root = cJSON_Parse(str);
     }
 
+    const char* c_str() {
+        return this->getString();
+    }
+
     const char* getString() {
         this->clear();
         this->ptr = cJSON_PrintUnformatted(this->root);
@@ -1155,9 +1280,10 @@ public:
     }
 
     void clear() {
-        if (this->ptr != nullptr) {
-            free(this->ptr);
+        if (this->ptr == nullptr) {
+            return;
         }
+        free(this->ptr);
         this->ptr = nullptr;
     }
 
@@ -1209,16 +1335,16 @@ public:
     }
 
     template <typename T> 
-    void add_multi(int id, const T last) {
-        char name[2 + 8 * sizeof(id)] {0};
-        snprintf(name, sizeof(name), "%i", id);
+    void add_multi(ERaInt_t id, const T last) {
+        char name[2 + 8 * sizeof(ERaInt_t)] {0};
+        snprintf(name, sizeof(name), ERA_INT_FORMAT, id);
         this->add_multi(name, last);
     }
 
     template <typename T, typename... Args> 
-    void add_multi(int id, const T head, Args... tail) {
-        char name[2 + 8 * sizeof(id)] {0};
-        snprintf(name, sizeof(name), "%i", id);
+    void add_multi(ERaInt_t id, const T head, Args... tail) {
+        char name[2 + 8 * sizeof(ERaInt_t)] {0};
+        snprintf(name, sizeof(name), ERA_INT_FORMAT, id);
         this->add_multi(name, head, tail...);
     }
 
@@ -1261,6 +1387,7 @@ public:
 
     ERaDataJson& operator = (const char* value);
     ERaDataJson& operator = (const ERaDataJson& value);
+    ERaDataJson& operator = (nullptr_t);
 
 protected:
     void create() {
@@ -1561,6 +1688,13 @@ ERaDataJson& ERaDataJson::operator = (const ERaDataJson& value) {
     this->clear();
     this->clearObject();
     this->root = cJSON_Duplicate(value.getObject(), true);
+    return (*this);
+}
+
+inline
+ERaDataJson& ERaDataJson::operator = (nullptr_t) {
+    this->clear();
+    this->clearObject();
     return (*this);
 }
 

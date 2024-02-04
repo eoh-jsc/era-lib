@@ -5,7 +5,7 @@
 
 class ERaTranspHandler
 {
-#if defined(TRANSP_HAS_FUNCTIONAL_H)
+#if defined(ERA_HAS_FUNCTIONAL_H)
     typedef std::function<void(const char*, const char*)> MessageCallback_t;
 #else
     typedef void (*MessageCallback_t)(const char*, const char*);

@@ -249,17 +249,17 @@ CJSON_PUBLIC(cJSON *) cJSON_CreateRawNumber(const char *raw)
         item->valuedouble = num;
 
         /* use saturation in case of overflow */
-        if (num >= INT_MAX)
+        if (num >= ERA_INT_MAX)
         {
-            item->valueint = INT_MAX;
+            item->valueint = ERA_INT_MAX;
         }
-        else if (num <= (double)INT_MIN)
+        else if (num <= (double)ERA_INT_MIN)
         {
-            item->valueint = INT_MIN;
+            item->valueint = ERA_INT_MIN;
         }
         else
         {
-            item->valueint = (int)num;
+            item->valueint = (cJSON_Int_t)num;
         }
     }
 
@@ -344,7 +344,7 @@ CJSON_PUBLIC(double) cJSON_GetNumberValue(const cJSON * const item)
 }
 
 /* This is a safeguard to prevent copy-pasters from using incompatible C and header files */
-#if (CJSON_VERSION_MAJOR != 1) || (CJSON_VERSION_MINOR != 7) || (CJSON_VERSION_PATCH != 16)
+#if (CJSON_VERSION_MAJOR != 1) || (CJSON_VERSION_MINOR != 7) || (CJSON_VERSION_PATCH != 17)
     #error "cJSON.hpp and cJSON.cpp have different versions. Make sure that both have the same".
 #endif
 
@@ -589,17 +589,17 @@ loop_end:
     item->valuedouble = number;
 
     /* use saturation in case of overflow */
-    if (number >= INT_MAX)
+    if (number >= ERA_INT_MAX)
     {
-        item->valueint = INT_MAX;
+        item->valueint = ERA_INT_MAX;
     }
-    else if (number <= (double)INT_MIN)
+    else if (number <= (double)ERA_INT_MIN)
     {
-        item->valueint = INT_MIN;
+        item->valueint = ERA_INT_MIN;
     }
     else
     {
-        item->valueint = (int)number;
+        item->valueint = (cJSON_Int_t)number;
     }
 
     item->type = cJSON_Number;
@@ -611,17 +611,17 @@ loop_end:
 /* don't ask me, but the original cJSON_SetNumberValue returns an integer or double */
 CJSON_PUBLIC(double) cJSON_SetNumberHelper(cJSON *object, double number)
 {
-    if (number >= INT_MAX)
+    if (number >= ERA_INT_MAX)
     {
-        object->valueint = INT_MAX;
+        object->valueint = ERA_INT_MAX;
     }
-    else if (number <= (double)INT_MIN)
+    else if (number <= (double)ERA_INT_MIN)
     {
-        object->valueint = INT_MIN;
+        object->valueint = ERA_INT_MIN;
     }
     else
     {
-        object->valueint = (int)number;
+        object->valueint = (cJSON_Int_t)number;
     }
 
     return object->valuedouble = number;
@@ -631,7 +631,12 @@ CJSON_PUBLIC(char*) cJSON_SetValuestring(cJSON *object, const char *valuestring)
 {
     char *copy = NULL;
     /* if object's type is not cJSON_String or is cJSON_IsReference, it should not set valuestring */
-    if (!(object->type & cJSON_String) || (object->type & cJSON_IsReference))
+    if ((object == NULL) || !(object->type & cJSON_String) || (object->type & cJSON_IsReference))
+    {
+        return NULL;
+    }
+    /* return NULL if the object is corrupted */
+    if (object->valuestring == NULL)
     {
         return NULL;
     }
@@ -794,7 +799,7 @@ static cJSON_bool print_number(const cJSON * const item, printbuffer * const out
     }
     else if(d == (double)item->valueint)
     {
-        length = sprintf((char*)number_buffer, "%d", item->valueint);
+        length = sprintf((char*)number_buffer, CJSON_INT_FORMAT, item->valueint);
     }
     else
     {
@@ -2539,7 +2544,7 @@ CJSON_PUBLIC(cJSON_bool) cJSON_InsertItemInArray(cJSON *array, int which, cJSON 
 {
     cJSON *after_inserted = NULL;
 
-    if (which < 0)
+    if (which < 0 || newitem == NULL)
     {
         return false;
     }
@@ -2548,6 +2553,11 @@ CJSON_PUBLIC(cJSON_bool) cJSON_InsertItemInArray(cJSON *array, int which, cJSON 
     if (after_inserted == NULL)
     {
         return add_item_to_array(array, newitem);
+    }
+
+    if (after_inserted != array->child && after_inserted->prev == NULL) {
+        /* return false if after_inserted is a corrupted array item */
+        return false;
     }
 
     newitem->next = after_inserted;
@@ -2716,17 +2726,17 @@ CJSON_PUBLIC(cJSON *) cJSON_CreateNumber(double num)
         item->valuedouble = num;
 
         /* use saturation in case of overflow */
-        if (num >= INT_MAX)
+        if (num >= ERA_INT_MAX)
         {
-            item->valueint = INT_MAX;
+            item->valueint = ERA_INT_MAX;
         }
-        else if (num <= (double)INT_MIN)
+        else if (num <= (double)ERA_INT_MIN)
         {
-            item->valueint = INT_MIN;
+            item->valueint = ERA_INT_MIN;
         }
         else
         {
-            item->valueint = (int)num;
+            item->valueint = (cJSON_Int_t)num;
         }
     }
 
@@ -2810,17 +2820,17 @@ CJSON_PUBLIC(cJSON *) cJSON_CreateRawNumber(const char *raw)
         item->valuedouble = num;
 
         /* use saturation in case of overflow */
-        if (num >= INT_MAX)
+        if (num >= ERA_INT_MAX)
         {
-            item->valueint = INT_MAX;
+            item->valueint = ERA_INT_MAX;
         }
-        else if (num <= (double)INT_MIN)
+        else if (num <= (double)ERA_INT_MIN)
         {
-            item->valueint = INT_MIN;
+            item->valueint = ERA_INT_MIN;
         }
         else
         {
-            item->valueint = (int)num;
+            item->valueint = (cJSON_Int_t)num;
         }
     }
 

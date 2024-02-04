@@ -1,5 +1,5 @@
-#ifndef INC_ERA_HELPER_HPP_
-#define INC_ERA_HELPER_HPP_
+#ifndef INC_ERA_HELPERS_HPP_
+#define INC_ERA_HELPERS_HPP_
 
 template <class S, typename... Args>
 class StaticHelper {
@@ -45,4 +45,4 @@ private:
     S& stream;
 };
 
-#endif /* INC_ERA_HELPER_HPP_ */
+#endif /* INC_ERA_HELPERS_HPP_ */

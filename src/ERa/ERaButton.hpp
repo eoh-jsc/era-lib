@@ -7,13 +7,6 @@
 #include <ERa/ERaDetect.hpp>
 #include <Utility/ERaQueue.hpp>
 
-#if defined(__has_include) &&       \
-    __has_include(<functional>) &&  \
-    !defined(ERA_IGNORE_STD_FUNCTIONAL_STRING)
-    #include <functional>
-    #define BUTTON_HAS_FUNCTIONAL_H
-#endif
-
 enum ButtonEventT {
     BUTTON_ON_CHANGE = 0x01,
     BUTTON_ON_FALLING = 0x02,
@@ -25,13 +18,13 @@ enum ButtonEventT {
 
 class ERaButton
 {
-#if defined(BUTTON_HAS_FUNCTIONAL_H)
-    typedef std::function<void(ButtonEventT)> ButtonCallback_t;
-    typedef std::function<void(ButtonEventT, void*)> ButtonCallback_p_t;
+#if defined(ERA_HAS_FUNCTIONAL_H)
+    typedef std::function<void(uint8_t, ButtonEventT)> ButtonCallback_t;
+    typedef std::function<void(uint8_t, ButtonEventT, void*)> ButtonCallback_p_t;
     typedef std::function<int(uint8_t)> ReadPinHandler_t;
 #else
-    typedef void (*ButtonCallback_t)(ButtonEventT);
-    typedef void (*ButtonCallback_p_t)(ButtonEventT, void*);
+    typedef void (*ButtonCallback_t)(uint8_t, ButtonEventT);
+    typedef void (*ButtonCallback_p_t)(uint8_t, ButtonEventT, void*);
     typedef int (*ReadPinHandler_t)(uint8_t);
 #endif
 
@@ -184,8 +177,8 @@ public:
     }
 
     iterator setButton(uint8_t pin, ERaButton::ReadPinHandler_t readPin,
-                        ERaButton::ButtonCallback_p_t cb, void* arg, bool invert = false) {
-        return iterator(this, this->setupButton(pin, readPin, cb, arg, invert));
+                        ERaButton::ButtonCallback_p_t cb, void* args, bool invert = false) {
+        return iterator(this, this->setupButton(pin, readPin, cb, args, invert));
     }
 
     void setBounceTime(unsigned long _timeout = 50UL) {
@@ -217,7 +210,7 @@ private:
     Button_t* setupButton(uint8_t pin, ERaButton::ReadPinHandler_t readPin,
                         ERaButton::ButtonCallback_t cb, bool invert = false);
     Button_t* setupButton(uint8_t pin, ERaButton::ReadPinHandler_t readPin,
-                        ERaButton::ButtonCallback_p_t cb, void* arg, bool invert = false);
+                        ERaButton::ButtonCallback_p_t cb, void* args, bool invert = false);
     bool isButtonFree();
 
     bool isValidButton(const Button_t* pButton) const {

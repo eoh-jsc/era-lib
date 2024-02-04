@@ -28,11 +28,25 @@
         #define ERA_MCU_CORE            1
     #endif
 
+#if !defined(ERA_STRING_CAPACITY_MAX)
+    #if defined(BOARD_HAS_PSRAM)
+        #define ERA_STRING_CAPACITY_MAX 3145728
+    #else
+        #define ERA_STRING_CAPACITY_MAX 65535
+    #endif
+#endif
+
     #define ERA_BT
     #define ERA_OTA
 
     #if !defined(ERA_BOARD_TYPE)
-        #if defined(ARDUINO_ESP32C3_DEV) ||                             \
+        #if defined(ARDUINO_ESP32C2_DEV) ||                             \
+            defined(CONFIG_IDF_TARGET_ESP32C2)
+            #if !defined(ARDUINO_ESP32C2_DEV)
+                #define ARDUINO_ESP32C2_DEV
+            #endif
+            #define ERA_BOARD_TYPE      "ESP32C2"
+        #elif defined(ARDUINO_ESP32C3_DEV) ||                           \
             defined(ARDUINO_ADAFRUIT_QTPY_ESP32C3) ||                   \
             defined(ARDUINO_AirM2M_CORE_ESP32C3) ||                     \
             defined(ARDUINO_LOLIN_C3_MINI) ||                           \
@@ -91,8 +105,14 @@
             #define ERA_BOARD_TYPE      "ESP32S3"
         #elif defined(ARDUINO_ESP32_S3_BOX)
             #define ERA_BOARD_TYPE      "ESP32S3-BOX"
+        #elif defined(ARDUINO_ESP32H2_DEV) ||                           \
+            defined(CONFIG_IDF_TARGET_ESP32H2)
+            #if !defined(ARDUINO_ESP32H2_DEV)
+                #define ARDUINO_ESP32H2_DEV
+            #endif
+            #define ERA_BOARD_TYPE      "ESP32H2"
         #elif defined(ARDUINO_ESP32_PICO)
-            #define ERA_BOARD_TYPE      "ESP32S3-PICO"
+            #define ERA_BOARD_TYPE      "ESP32-PICO"
         #elif defined(ARDUINO_ARCH_ESP32) ||                            \
             defined(CONFIG_IDF_TARGET_ESP32)
             #define ERA_BOARD_TYPE      "ESP32"
@@ -126,6 +146,16 @@
             #define ERA_BOARD_TYPE      "NodeMCU"
         #elif defined(ARDUINO_ESP8266_NODEMCU_ESP12E)
             #define ERA_BOARD_TYPE      "NodeMCUv2"
+        #elif defined(ARDUINO_ESP8266_ESP01)
+            #define ERA_BOARD_TYPE      "ESP01"
+        #elif defined(ARDUINO_ESP8266_ESP07)
+            #define ERA_BOARD_TYPE      "ESP07"
+        #elif defined(ARDUINO_ESP8266_ESP12)
+            #define ERA_BOARD_TYPE      "ESP12"
+        #elif defined(ARDUINO_ESP8266_ESP13)
+            #define ERA_BOARD_TYPE      "ESP13"
+        #elif defined(ARDUINO_ESP8266_ESP210)
+            #define ERA_BOARD_TYPE      "ESP210"
         #elif defined(ARDUINO_ARCH_ESP8266)
             #define ERA_BOARD_TYPE      "ESP8266"
         #else
@@ -862,6 +892,10 @@
 
     #define ERA_100_PINS
 
+#if !defined(ERA_STRING_CAPACITY_MAX)
+    #define ERA_STRING_CAPACITY_MAX     3145728
+#endif
+
     #define ERA_OTA
 
     #if !defined(ERA_BOARD_TYPE)
@@ -932,11 +966,52 @@
     #define ERA_WATCHDOG_TIMEOUT        60000UL
 #endif
 
+#if !defined(ERA_STRING_CAPACITY_MAX)
+    #define ERA_STRING_CAPACITY_MAX     16384UL
+#endif
+
 #if !defined(ERA_GET_SIGNAL_TIMEOUT)
     #define ERA_GET_SIGNAL_TIMEOUT      60000UL
 #endif
 
 #define ERA_FATALITY_TIMEOUT            10000UL
 #define ERA_HEARTBEAT_INTERVAL          3600000UL
+
+#define ERA_STRING_REPORT_ON_WRITE
+
+#include <limits.h>
+
+#if defined(ERA_USE_LONG_LONG)
+    typedef long long                   ERaInt_t;
+    typedef unsigned long long          ERaUInt_t;
+
+    #define ERA_INT_MAX                 LONG_LONG_MAX
+    #define ERA_INT_MIN                 LONG_LONG_MIN
+    #define ERA_INT_FORMAT              "%lli"
+#else
+    typedef long                        ERaInt_t;
+    typedef unsigned long               ERaUInt_t;
+
+    #define ERA_INT_MAX                 LONG_MAX
+    #define ERA_INT_MIN                 LONG_MIN
+    #define ERA_INT_FORMAT              "%li"
+#endif
+
+#if !defined(ERA_INTEGER_C_TYPE)
+    #if defined(ERA_INT_FORMAT)
+        #define ERA_INTEGER_C_TYPE      ERA_INT_FORMAT
+    #else
+        #define ERA_INTEGER_C_TYPE      "%d"
+    #endif
+#endif
+
+#if defined(ERA_IGNORE_STD_FUNCTIONAL_STRING)
+    /* OK, ignore the std functional */
+#elif defined(__has_include)
+    #if __has_include(<functional>)
+        #include <functional>
+        #define ERA_HAS_FUNCTIONAL_H
+    #endif
+#endif
 
 #endif /* INC_ERA_DETECT_HPP_ */

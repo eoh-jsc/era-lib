@@ -37,6 +37,9 @@ class WrapperString;
             else if (param.isString()) {
                 String::operator = (param.getString());
             }
+            else if (param.isObject()) {
+                String::operator = (param.getObject()->getString());
+            }
         }
         ERaString(const ERaDataJson& rjs)
             : String("")
@@ -91,13 +94,17 @@ class WrapperString;
             String::operator = (cstr);
         }
 
+        ERaDataJson toJSON() const {
+            return ERaDataJson(String::c_str());
+        }
+
     protected:
     private:
-        bool updated(String& str) {
-            if ((*this) == str) {
+        bool updated(String& estr) {
+            if ((*this) == estr) {
                 return false;
             }
-            str = (*this);
+            estr = (*this);
             return true;
         }
 
@@ -109,6 +116,7 @@ class WrapperString;
     class ERaString
     {
         friend class WrapperString;
+        const static size_t CapacityMax = ERA_STRING_CAPACITY_MAX;
 
     public:
         ERaString()
@@ -223,6 +231,10 @@ class WrapperString;
         }
         ~ERaString()
         {
+            this->invalidate();
+        }
+
+        void invalidate() {
             if (this->value != nullptr) {
                 free(this->value);
             }
@@ -232,6 +244,9 @@ class WrapperString;
         }
 
         void reserve(size_t cap) {
+            if (cap > CapacityMax) {
+                return;
+            }
             if (cap < this->valueCapacity) {
                 return;
             }
@@ -266,7 +281,7 @@ class WrapperString;
             char* buf = locBuf;
             int len = vsnprintf(buf, sizeof(locBuf), format, copy);
             va_end(copy);
-            if (len < 0) {
+            if ((len < 0) || (len > (int)CapacityMax)) {
                 va_end(arg);
                 return;
             }
@@ -309,6 +324,9 @@ class WrapperString;
             else if (param.isString()) {
                 this->concat(param.getString());
             }
+            else if (param.isObject()) {
+                this->concat(param.getObject());
+            }
         }
 
         void concat(const ERaDataJson& rjs) {
@@ -316,6 +334,13 @@ class WrapperString;
                 return;
             }
             this->concat(const_cast<ERaDataJson&>(rjs).getString());
+        }
+
+        void concat(const ERaDataJson* rjs) {
+            if (rjs == nullptr) {
+                return;
+            }
+            this->concat(*rjs);
         }
 
         void concat(const char* cstr) {
@@ -331,6 +356,9 @@ class WrapperString;
             size_t oldLen = strlen(this->value);
             size_t newLen = oldLen;
             newLen += strlen(cstr);
+            if (newLen > CapacityMax) {
+                return;
+            }
             if (newLen >= this->valueCapacity) {
                 char* copy = (char*)realloc(this->value, newLen + 1);
                 if (copy == nullptr) {
@@ -612,9 +640,12 @@ class WrapperString;
                 if (ptr == nullptr) {
                     break;
                 }
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsign-compare"
                 if ((ptr - this->value) <= index) {
                     found = (ptr - this->value);
                 }
+#pragma GCC diagnostic pop
             }
             return found;
         }
@@ -664,6 +695,9 @@ class WrapperString;
                     size += diff;
                 }
                 if (size == this->length()) {
+                    return;
+                }
+                if (size > CapacityMax) {
                     return;
                 }
                 this->reserve(size);
@@ -724,6 +758,10 @@ class WrapperString;
             return atof(this->value);
         }
 
+        ERaDataJson toJSON() const {
+            return ERaDataJson(this->c_str());
+        }
+
         void clear() {
             if (this->value == nullptr) {
                 return;
@@ -746,87 +784,77 @@ class WrapperString;
             if (this == &res) {
                 return (*this);
             }
-            return operator = ((const char*)res.value);
+            this->assign(res);
+            return (*this);
         }
 
         ERaString& operator = (const ERaParam& param) {
-            this->clear();
-            this->concat(param);
+            this->assign(param);
             return (*this);
         }
 
         ERaString& operator = (const ERaDataJson& rjs) {
-            this->clear();
-            this->concat(rjs);
+            this->assign(rjs);
             return (*this);
         }
 
         ERaString& operator = (const char* cstr) {
-            this->setString(cstr);
+            this->assign(cstr);
             return (*this);
         }
 
         ERaString& operator = (char* str) {
-            return operator = ((const char*)str);
+            this->assign(str);
+            return (*this);
         }
 
         ERaString& operator = (char c) {
-            this->clear();
-            this->concat(c);
+            this->assign(c);
             return (*this);
         }
 
         ERaString& operator = (unsigned char num) {
-            this->clear();
-            this->concat(num);
+            this->assign(num);
             return (*this);
         }
 
         ERaString& operator = (int num) {
-            this->clear();
-            this->concat(num);
+            this->assign(num);
             return (*this);
         }
 
         ERaString& operator = (unsigned int num) {
-            this->clear();
-            this->concat(num);
+            this->assign(num);
             return (*this);
         }
 
         ERaString& operator = (long num) {
-            this->clear();
-            this->concat(num);
+            this->assign(num);
             return (*this);
         }
 
         ERaString& operator = (unsigned long num) {
-            this->clear();
-            this->concat(num);
+            this->assign(num);
             return (*this);
         }
 
         ERaString& operator = (long long num) {
-            this->clear();
-            this->concat(num);
+            this->assign(num);
             return (*this);
         }
 
         ERaString& operator = (unsigned long long num) {
-            this->clear();
-            this->concat(num);
+            this->assign(num);
             return (*this);
         }
 
         ERaString& operator = (float num) {
-            this->clear();
-            this->concat(num);
+            this->assign(num);
             return (*this);
         }
 
         ERaString& operator = (double num) {
-            this->clear();
-            this->concat(num);
+            this->assign(num);
             return (*this);
         }
 
@@ -953,6 +981,186 @@ class WrapperString;
 
     protected:
     private:
+        void assign(const ERaString& estr) {
+            this->assign((const char*)estr.value);
+        }
+
+        void assign(const ERaParam& param) {
+            if (param.isNumber()) {
+                this->assign(param.getFloat());
+            }
+            else if (param.isString()) {
+                this->assign(param.getString());
+            }
+            else if (param.isObject()) {
+                this->assign(param.getObject());
+            }
+        }
+
+        void assign(const ERaDataJson& rjs) {
+            if (!rjs.isValid()) {
+                return;
+            }
+            this->assign(const_cast<ERaDataJson&>(rjs).getString());
+        }
+
+        void assign(const ERaDataJson* rjs) {
+            if (rjs == nullptr) {
+                return;
+            }
+            this->assign(*rjs);
+        }
+
+        void assign(const char* cstr) {
+            bool changed {false};
+            changed =  this->isNewString(cstr);
+            changed |= this->isUpdated;
+            this->clear();
+            this->concat(cstr);
+            this->isUpdated = changed;
+        }
+
+        void assign(char* str) {
+            this->assign((const char*)str);
+        }
+
+        void assign(char c) {
+            const char str[2] = { c, '\0' };
+            this->assign(str);
+        }
+
+    #if defined(__AVR__) || defined(ARDUINO_ARCH_ARC32)
+
+        void assign(unsigned char num) {
+            char str[1 + 8 * sizeof(unsigned char)] {0};
+            utoa(num, str, 10);
+            this->assign((const char*)str);
+        }
+
+        void assign(int num) {
+            char str[2 + 8 * sizeof(int)] {0};
+            itoa(num, str, 10);
+            this->assign((const char*)str);
+        }
+
+        void assign(unsigned int num) {
+            char str[1 + 8 * sizeof(unsigned int)] {0};
+            utoa(num, str, 10);
+            this->assign((const char*)str);
+        }
+
+        void assign(long num) {
+            char str[2 + 8 * sizeof(long)] {0};
+            ltoa(num, str, 10);
+            this->assign((const char*)str);
+        }
+
+        void assign(unsigned long num) {
+            char str[1 + 8 * sizeof(unsigned long)] {0};
+            ultoa(num, str, 10);
+            this->assign((const char*)str);
+        }
+
+        void assign(long long num) {
+            char str[2 + 8 * sizeof(long long)] {0};
+            ltoa(num, str, 10);
+            this->assign((const char*)str);
+        }
+
+        void assign(unsigned long long num) {
+            char str[1 + 8 * sizeof(unsigned long long)] {0};
+            ultoa(num, str, 10);
+            this->assign((const char*)str);
+        }
+
+        void assign(float num) {
+            char str[33] {0};
+            dtostrf(num, 5, 2, str);
+            this->assign((const char*)str);
+        }
+
+        void assign(double num) {
+            char str[33] {0};
+            dtostrf(num, 5, 5, str);
+            this->assign((const char*)str);
+        }
+
+    #else
+
+        void assign(unsigned char num) {
+            char str[20] {0};
+            snprintf(str, sizeof(str), "%u", num);
+            this->assign((const char*)str);
+        }
+
+        void assign(int num) {
+            char str[20] {0};
+            snprintf(str, sizeof(str), "%i", num);
+            this->assign((const char*)str);
+        }
+
+        void assign(unsigned int num) {
+            char str[20] {0};
+            snprintf(str, sizeof(str), "%u", num);
+            this->assign((const char*)str);
+        }
+
+        void assign(long num) {
+            char str[20] {0};
+            snprintf(str, sizeof(str), "%li", num);
+            this->assign((const char*)str);
+        }
+
+        void assign(unsigned long num) {
+            char str[20] {0};
+            snprintf(str, sizeof(str), "%lu", num);
+            this->assign((const char*)str);
+        }
+
+        void assign(long long num) {
+            char str[33] {0};
+            snprintf(str, sizeof(str), "%lli", num);
+            this->assign((const char*)str);
+        }
+
+        void assign(unsigned long long num) {
+            char str[33] {0};
+            snprintf(str, sizeof(str), "%llu", num);
+            this->assign((const char*)str);
+        }
+
+    #if defined(ERA_USE_ERA_DTOSTRF)
+
+        void assign(float num) {
+            char str[33] {0};
+            ERaDtostrf(num, 2, str);
+            this->assign((const char*)str);
+        }
+
+        void assign(double num) {
+            char str[33] {0};
+            ERaDtostrf(num, 5, str);
+            this->assign((const char*)str);
+        }
+
+    #else
+
+        void assign(float num) {
+            char str[33] {0};
+            snprintf(str, sizeof(str), "%.2f", num);
+            this->assign((const char*)str);
+        }
+
+        void assign(double num) {
+            char str[33] {0};
+            snprintf(str, sizeof(str), "%.5f", num);
+            this->assign((const char*)str);
+        }
+
+    #endif
+
+    #endif
+
         bool updated() {
             bool ret = this->isUpdated;
             this->isUpdated = false;
@@ -979,6 +1187,9 @@ class WrapperString;
                 return;
             }
             size_t len = strlen(cstr);
+            if (len > CapacityMax) {
+                return;
+            }
             if (len >= this->valueCapacity) {
                 char* copy = (char*)realloc(this->value, len + 1);
                 if (copy == nullptr) {
@@ -1027,6 +1238,9 @@ class WrapperString;
             char* copy = nullptr;
 
             length = strlen(cstr) + sizeof("");
+            if (length > CapacityMax) {
+                return nullptr;
+            }
             copy = (char*)malloc(length);
             if (copy == nullptr) {
                 return nullptr;
@@ -1209,7 +1423,7 @@ public:
     WrapperString(ERaString& estr)
         : value(estr)
 #if defined(ERA_ARDUINO_STRING)
-        , local(estr)
+        , local()
 #endif
         , options(0)
     {
@@ -1243,11 +1457,11 @@ public:
     }
 
 protected:
-    float get() const override {
+    double get() const override {
         return 0.0f;
     }
 
-    void set(float num) override {
+    void set(double num) override {
         (void)num;
     }
 

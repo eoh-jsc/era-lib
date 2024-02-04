@@ -8,18 +8,11 @@
 #include <Modbus/ERaModbusTransp.hpp>
 #include <Utility/ERaUtility.hpp>
 
-#if defined(__has_include) &&       \
-    __has_include(<functional>) &&  \
-    !defined(ERA_IGNORE_STD_FUNCTIONAL_STRING)
-    #include <functional>
-    #define MODBUS_HAS_FUNCTIONAL_H
-#endif
-
 #define addRegister(...)    addModbusRegister(__VA_ARGS__)
 
 class ERaModbusInternal
 {
-#if defined(MODBUS_HAS_FUNCTIONAL_H)
+#if defined(ERA_HAS_FUNCTIONAL_H)
     typedef std::function<bool(int32_t&)> ReadCallback_t;
     typedef std::function<bool(int32_t)> WriteCallback_t;
 #else

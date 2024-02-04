@@ -89,7 +89,7 @@ public:
         return this->getType(ERaParamTypeT::ERA_PARAM_TYPE_OBJECT);
     }
 
-    int getInt() const {
+    ERaInt_t getInt() const {
         return this->valueint;
     }
 
@@ -116,17 +116,53 @@ public:
         return this->valueobject;
     }
 
-    int parseInt() const {
+#if defined(ERA_USE_LONG_LONG)
+
+#if defined(ERA_USE_ERA_ATOLL)
+    ERaInt_t parseInt() const {
         if (this->isNumber()) {
             return this->valueint;
         }
         else if (this->isString()) {
-            return atoi(this->valuestring);
+            return ERaAtoll(this->valuestring);
+        }
+        return 0;
+    }
+#else
+    ERaInt_t parseInt() const {
+        if (this->isNumber()) {
+            return this->valueint;
+        }
+        else if (this->isString()) {
+            return atoll(this->valuestring);
+        }
+        return 0;
+    }
+#endif
+
+    ERaInt_t parseInt(int base) const {
+        if (this->isNumber()) {
+            return this->valueint;
+        }
+        else if (this->isString()) {
+            return strtoll(this->valuestring, nullptr, base);
         }
         return 0;
     }
 
-    int parseInt(int base) const {
+#else
+
+    ERaInt_t parseInt() const {
+        if (this->isNumber()) {
+            return this->valueint;
+        }
+        else if (this->isString()) {
+            return atol(this->valuestring);
+        }
+        return 0;
+    }
+
+    ERaInt_t parseInt(int base) const {
         if (this->isNumber()) {
             return this->valueint;
         }
@@ -135,6 +171,8 @@ public:
         }
         return 0;
     }
+
+#endif
 
     float parseFloat() const {
         if (this->isNumber()) {
@@ -180,6 +218,12 @@ public:
         this->addParam(value);
     }
 
+    void add_dynamic(char* value) {
+        this->free();
+        this->valuestring = value;
+        this->setType(ERaParamTypeT::ERA_PARAM_TYPE_STRING, true);
+    }
+
     void add_static(char* value) {
         this->free();
         this->valuestring = value;
@@ -218,7 +262,7 @@ public:
         if (!this->isNumber()) {
             return false;
         }
-        return (this->valueint == (int)value);
+        return (this->valueint == (ERaInt_t)value);
     }
 
     bool operator == (float value) const {
@@ -363,8 +407,17 @@ protected:
 private:
     template <typename T>
     void addParam(T value) {
-        this->valueint = (int)value;
-        this->valuedouble = (double)value;
+        double number = (double)value;
+        if (number >= ERA_INT_MAX) {
+            this->valueint = ERA_INT_MAX;
+        }
+        else if (number <= (double)ERA_INT_MIN) {
+            this->valueint = ERA_INT_MIN;
+        }
+        else {
+            this->valueint = (ERaInt_t)number;
+        }
+        this->valuedouble = number;
         this->setType(ERaParamTypeT::ERA_PARAM_TYPE_NUMBER, true);
     }
 
@@ -440,7 +493,7 @@ private:
     }
 
     uint8_t type;
-    int valueint;
+    ERaInt_t valueint;
     double valuedouble;
     char* valuestring;
     ERaDataJson* valueobject;

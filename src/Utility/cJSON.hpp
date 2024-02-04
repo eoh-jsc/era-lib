@@ -23,6 +23,9 @@
 #ifndef cJSON__hpp
 #define cJSON__hpp
 
+#include <stddef.h>
+#include <ERa/ERaDetect.hpp>
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -81,9 +84,7 @@ then using the CJSON_API_VISIBILITY flag to "export" the same symbols the way CJ
 /* project version */
 #define CJSON_VERSION_MAJOR 1
 #define CJSON_VERSION_MINOR 7
-#define CJSON_VERSION_PATCH 16
-
-#include <stddef.h>
+#define CJSON_VERSION_PATCH 17
 
 /* cJSON Types: */
 #define cJSON_Invalid (0)
@@ -99,6 +100,13 @@ then using the CJSON_API_VISIBILITY flag to "export" the same symbols the way CJ
 #define cJSON_IsReference 256
 #define cJSON_StringIsConst 512
 
+typedef ERaInt_t cJSON_Int_t;
+typedef ERaUInt_t cJSON_UInt_t;
+
+#define CJSON_INT_MAX ERA_INT_MAX
+#define CJSON_INT_MIN ERA_INT_MIN
+#define CJSON_INT_FORMAT ERA_INT_FORMAT
+
 /* The cJSON structure: */
 typedef struct cJSON
 {
@@ -111,15 +119,15 @@ typedef struct cJSON
     /* The type of the item, as above. */
     int type;
 
+    /* The item's name string, if this item is the child of, or is in the list of subitems of an object. */
+    char *string;
+
     /* The item's string, if type==cJSON_String  and type == cJSON_Raw */
     char *valuestring;
     /* writing to valueint is DEPRECATED, use cJSON_SetNumberValue instead */
-    int valueint;
+    cJSON_Int_t valueint;
     /* The item's number, if type==cJSON_Number */
     double valuedouble;
-
-    /* The item's name string, if this item is the child of, or is in the list of subitems of an object. */
-    char *string;
 } cJSON;
 
 typedef struct cJSON_Hooks

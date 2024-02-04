@@ -180,6 +180,8 @@ void FormatString(char(&buf)[size], const char* format, ...) {
     va_end(args);
 }
 
+bool IsHexString(const char* buf);
+
 bool ERaFloatCompare(float a, float b);
 double ERaDoubleCompare(double a, double b);
 

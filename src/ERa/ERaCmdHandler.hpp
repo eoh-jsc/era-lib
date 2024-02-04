@@ -4,14 +4,7 @@
 #include <ERa/ERaDetect.hpp>
 #include <Utility/ERacJSON.hpp>
 
-#if defined(__has_include) &&       \
-    __has_include(<functional>) &&  \
-    !defined(ERA_IGNORE_STD_FUNCTIONAL_STRING)
-    #include <functional>
-    #define CMD_HAS_FUNCTIONAL_H
-#endif
-
-#if defined(CMD_HAS_FUNCTIONAL_H)
+#if defined(ERA_HAS_FUNCTIONAL_H)
     typedef std::function<void(void)> HandlerSimple_t;
 #else
     typedef void (*HandlerSimple_t)(void);

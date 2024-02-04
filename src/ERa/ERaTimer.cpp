@@ -90,7 +90,7 @@ ERaTimer::Timer_t* ERaTimer::setupTimer(unsigned long interval, TimerCallback_t 
     return pTimer;
 }
 
-ERaTimer::Timer_t* ERaTimer::setupTimer(unsigned long interval, TimerCallback_p_t cb, void* arg, unsigned int limit) {
+ERaTimer::Timer_t* ERaTimer::setupTimer(unsigned long interval, TimerCallback_p_t cb, void* args, unsigned int limit) {
     if (!this->isTimerFree()) {
         return nullptr;
     }
@@ -106,7 +106,7 @@ ERaTimer::Timer_t* ERaTimer::setupTimer(unsigned long interval, TimerCallback_p_
     pTimer->delay = interval;
     pTimer->callback = nullptr;
     pTimer->callback_p = cb;
-    pTimer->param = arg;
+    pTimer->param = args;
     pTimer->limit = limit;
     pTimer->count = 0;
     pTimer->enable = true;

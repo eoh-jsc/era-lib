@@ -7,13 +7,6 @@
 #include <ERa/ERaData.hpp>
 #include <ERa/ERaParam.hpp>
 
-#if defined(__has_include) &&       \
-    __has_include(<functional>) &&  \
-    !defined(ERA_IGNORE_STD_FUNCTIONAL_STRING)
-    #include <functional>
-    #define PIN_HAS_FUNCTIONAL_H
-#endif
-
 #if !defined(TOGGLE)
     #define TOGGLE              0x2
 #endif
@@ -31,7 +24,7 @@
 template <class Report>
 class ERaPin
 {
-#if defined(PIN_HAS_FUNCTIONAL_H)
+#if defined(ERA_HAS_FUNCTIONAL_H)
     typedef std::function<int(uint8_t)> ReadPinHandler_t;
     typedef std::function<void(void*)> ReportPinCallback_t;
 #else
@@ -49,9 +42,9 @@ class ERaPin
     typedef struct __Pin_t {
         unsigned long prevMillis;
         unsigned long delay;
+        ERaUInt_t configId;
         ERaPin::ReadPinHandler_t readPin;
         typename Report::iterator report;
-        unsigned int configId;
         uint8_t pin;
         uint8_t pinMode;
         uint8_t channel; /* for pwm mode */
@@ -60,7 +53,7 @@ class ERaPin
     } Pin_t;
 
 public:
-#if defined(PIN_HAS_FUNCTIONAL_H)
+#if defined(ERA_HAS_FUNCTIONAL_H)
     typedef std::function<void(uint8_t, uint32_t)> WritePinHandler_t;
 #else
     typedef void (*WritePinHandler_t)(uint8_t, uint32_t);
@@ -76,7 +69,7 @@ private:
     typedef struct __VPin_t {
         uint8_t pin;
         VirtualTypeT type;
-        unsigned int configId;
+        ERaUInt_t configId;
     } VPin_t;
 
 public:
@@ -207,15 +200,15 @@ public:
                         unsigned long interval, unsigned long minInterval,
                         unsigned long maxInterval, float minChange,
                         ERaPin::ReportPinCallback_t cb,
-                        unsigned int configId) {
+                        ERaUInt_t configId) {
         return iterator(this, this->setupPinReport(p, pMode, readPin, interval, minInterval, maxInterval, minChange, cb, configId));
     }
 
-    iterator setPinRaw(uint8_t p, unsigned int configId) {
+    iterator setPinRaw(uint8_t p, ERaUInt_t configId) {
         return iterator(this, this->setupPinRaw(p, configId));
     }
 
-    VPin_t* setPinVirtual(uint8_t p, unsigned int configId,
+    VPin_t* setPinVirtual(uint8_t p, ERaUInt_t configId,
                         VirtualTypeT type = VirtualTypeT::VIRTUAL_BASE) {
         return this->setupPinVirtual(p, configId, type);
     }
@@ -231,7 +224,7 @@ public:
                             ERaPin::ReadPinHandler_t readPin, unsigned long interval,
                             unsigned long minInterval, unsigned long maxInterval,
                             float minChange, ERaPin::ReportPinCallback_t cb,
-                            unsigned int configId) {
+                            ERaUInt_t configId) {
         return iterator(this, this->setupPWMPinReport(p, pMode, channel, readPin, interval, minInterval, maxInterval, minChange, cb, configId));
     }
 
@@ -257,9 +250,9 @@ public:
     typename Report::iterator* getReport(uint8_t p) const;
     int findPinMode(uint8_t p) const;
     int findChannelPWM(uint8_t p) const;
-    int findConfigId(uint8_t p, const ERaParam& param) const;
-    int findVPinConfigId(uint8_t p, const ERaParam& param) const;
-    int findVPinConfigId(uint8_t p, const ERaDataJson::iterator& param) const;
+    ERaInt_t findConfigId(uint8_t p, const ERaParam& param) const;
+    ERaInt_t findVPinConfigId(uint8_t p, const ERaParam& param) const;
+    ERaInt_t findVPinConfigId(uint8_t p, const ERaDataJson::iterator& param) const;
     int findChannelFree() const;
     bool isVPinExist(uint8_t p, const WrapperBase* param) const;
 
@@ -272,9 +265,9 @@ private:
     Pin_t* setupPinReport(uint8_t p, uint8_t pMode, ERaPin::ReadPinHandler_t readPin,
                         unsigned long interval, unsigned long minInterval,
                         unsigned long maxInterval, float minChange,
-                        ERaPin::ReportPinCallback_t cb, unsigned int configId);
-    Pin_t* setupPinRaw(uint8_t p, unsigned int configId);
-    VPin_t* setupPinVirtual(uint8_t p, unsigned int configId,
+                        ERaPin::ReportPinCallback_t cb, ERaUInt_t configId);
+    Pin_t* setupPinRaw(uint8_t p, ERaUInt_t configId);
+    VPin_t* setupPinVirtual(uint8_t p, ERaUInt_t configId,
                             VirtualTypeT type = VirtualTypeT::VIRTUAL_BASE);
     Pin_t* setupPWMPinReport(uint8_t p, uint8_t pMode, uint8_t channel,
                             ERaPin::ReadPinHandler_t readPin, unsigned long interval,
@@ -284,7 +277,7 @@ private:
                             ERaPin::ReadPinHandler_t readPin, unsigned long interval,
                             unsigned long minInterval, unsigned long maxInterval,
                             float minChange, ERaPin::ReportPinCallback_t cb,
-                            unsigned int configId);
+                            ERaUInt_t configId);
 
     bool isPinFree() const;
     bool isVPinFree() const;
@@ -453,7 +446,7 @@ template <class Report>
 typename ERaPin<Report>::Pin_t* ERaPin<Report>::setupPinReport(uint8_t p, uint8_t pMode, ERaPin::ReadPinHandler_t readPin,
                                                             unsigned long interval, unsigned long minInterval,
                                                             unsigned long maxInterval, float minChange,
-                                                            ERaPin::ReportPinCallback_t cb, unsigned int configId) {
+                                                            ERaPin::ReportPinCallback_t cb, ERaUInt_t configId) {
     if (!interval) {
         interval = 1;
     }
@@ -497,7 +490,7 @@ typename ERaPin<Report>::Pin_t* ERaPin<Report>::setupPinReport(uint8_t p, uint8_
 }
 
 template <class Report>
-typename ERaPin<Report>::Pin_t* ERaPin<Report>::setupPinRaw(uint8_t p, unsigned int configId) {
+typename ERaPin<Report>::Pin_t* ERaPin<Report>::setupPinRaw(uint8_t p, ERaUInt_t configId) {
     Pin_t* pPin = this->findPinExist(p);
     if (pPin == nullptr) {
         if (!this->isPinFree()) {
@@ -525,7 +518,7 @@ typename ERaPin<Report>::Pin_t* ERaPin<Report>::setupPinRaw(uint8_t p, unsigned 
 }
 
 template <class Report>
-typename ERaPin<Report>::VPin_t* ERaPin<Report>::setupPinVirtual(uint8_t p, unsigned int configId, VirtualTypeT type) {
+typename ERaPin<Report>::VPin_t* ERaPin<Report>::setupPinVirtual(uint8_t p, ERaUInt_t configId, VirtualTypeT type) {
     VPin_t* pVPin = this->findVPinExist(p);
     if (pVPin == nullptr) {
         if (!this->isVPinFree()) {
@@ -597,7 +590,7 @@ typename ERaPin<Report>::Pin_t* ERaPin<Report>::setupPWMPinReport(uint8_t p, uin
                                                                 ERaPin::ReadPinHandler_t readPin, unsigned long interval,
                                                                 unsigned long minInterval, unsigned long maxInterval,
                                                                 float minChange, ERaPin::ReportPinCallback_t cb,
-                                                                unsigned int configId) {
+                                                                ERaUInt_t configId) {
     if (!interval) {
         interval = 1;
     }
@@ -942,7 +935,7 @@ int ERaPin<Report>::findChannelPWM(uint8_t p) const {
 }
 
 template <class Report>
-int ERaPin<Report>::findConfigId(uint8_t p, const ERaParam& param) const {
+ERaInt_t ERaPin<Report>::findConfigId(uint8_t p, const ERaParam& param) const {
     const PinIterator* e = this->pin.end();
     for (PinIterator* it = this->pin.begin(); it != e; it = it->getNext()) {
         Pin_t* pPin = it->get();
@@ -965,7 +958,7 @@ int ERaPin<Report>::findConfigId(uint8_t p, const ERaParam& param) const {
 }
 
 template <class Report>
-int ERaPin<Report>::findVPinConfigId(uint8_t p, const ERaParam& param) const {
+ERaInt_t ERaPin<Report>::findVPinConfigId(uint8_t p, const ERaParam& param) const {
     const VPinIterator* e = this->vPin.end();
     for (VPinIterator* it = this->vPin.begin(); it != e; it = it->getNext()) {
         VPin_t* pVPin = it->get();
@@ -997,7 +990,7 @@ int ERaPin<Report>::findVPinConfigId(uint8_t p, const ERaParam& param) const {
 }
 
 template <class Report>
-int ERaPin<Report>::findVPinConfigId(uint8_t p, const ERaDataJson::iterator& param) const {
+ERaInt_t ERaPin<Report>::findVPinConfigId(uint8_t p, const ERaDataJson::iterator& param) const {
     const VPinIterator* e = this->vPin.end();
     for (VPinIterator* it = this->vPin.begin(); it != e; it = it->getNext()) {
         VPin_t* pVPin = it->get();

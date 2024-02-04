@@ -36,6 +36,11 @@
 #define MODBUS_SINGLE_COIL_ON           (uint16_t)0xFF00
 #define MODBUS_SINGLE_COIL_OFF          (uint16_t)0x0000
 
+#define MODBUS_STRING_SCAN              "scan"
+#define MODBUS_STRING_TOTAL             "total"
+#define MODBUS_STRING_FAIL_READ         "fail_read"
+#define MODBUS_STRING_FAIL_WRITE        "fail_write"
+
 #if !defined(ERA_MAX_REGISTER)
     #define ERA_MAX_REGISTER            ERA_MAX_VIRTUAL_PIN
 #endif

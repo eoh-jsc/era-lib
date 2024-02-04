@@ -22,65 +22,15 @@
 // You should get Auth Token in the ERa App or ERa Dashboard
 #define ERA_AUTH_TOKEN "ERA2706"
 
-/* Define setting button */
-// #define BUTTON_PIN              0
-
-#if defined(BUTTON_PIN)
-    // Active low (false), Active high (true)
-    #define BUTTON_INVERT       false
-    #define BUTTON_HOLD_TIMEOUT 5000UL
-
-    // This directive is used to specify whether the configuration should be erased.
-    // If it's set to true, the configuration will be erased.
-    #define ERA_ERASE_CONFIG    false
-#endif
-
 #include <Arduino.h>
 #include <ERa.hpp>
-#if defined(BUTTON_PIN)
-    #include <pthread.h>
-    #include <ERa/ERaButton.hpp>
-#endif
+#include <Widgets/ERaWidgets.hpp>
 
 const char ssid[] = "YOUR_SSID";
 const char pass[] = "YOUR_PASSWORD";
 
-#if defined(BUTTON_PIN)
-    ERaButton button;
-    pthread_t pthreadButton;
-
-    static void* handlerButton(void* args) {
-        for (;;) {
-            button.run();
-            ERaDelay(10);
-        }
-        pthread_exit(NULL);
-    }
-
-#if ERA_VERSION_NUMBER >= ERA_VERSION_VAL(1, 2, 0)
-    static void eventButton(uint8_t pin, ButtonEventT event) {
-        if (event != ButtonEventT::BUTTON_ON_HOLD) {
-            return;
-        }
-        ERa.switchToConfig(ERA_ERASE_CONFIG);
-        (void)pin;
-    }
-#else
-    static void eventButton(ButtonEventT event) {
-        if (event != ButtonEventT::BUTTON_ON_HOLD) {
-            return;
-        }
-        ERa.switchToConfig(ERA_ERASE_CONFIG);
-    }
-#endif
-
-    void initButton() {
-        pinMode(BUTTON_PIN, INPUT);
-        button.setButton(BUTTON_PIN, digitalRead, eventButton,
-                        BUTTON_INVERT).onHold(BUTTON_HOLD_TIMEOUT);
-        pthread_create(&pthreadButton, NULL, handlerButton, NULL);
-    }
-#endif
+ERaString estr;
+ERaWidgetTerminalBox terminal(estr, V1, V2);
 
 /* This function will run every time ERa is connected */
 ERA_CONNECTED() {
@@ -97,21 +47,27 @@ void timerEvent() {
     ERA_LOG("Timer", "Uptime: %d", ERaMillis() / 1000L);
 }
 
+/* This function will execute each time from the Terminal to your chip */
+void terminalCallback() {
+    if (estr == "Hi") {
+        terminal.print("Hello! ");
+    }
+    terminal.print("Thank you for using ERa.");
+    terminal.flush();
+}
+
 void setup() {
     /* Setup debug console */
 #if defined(ERA_DEBUG)
     Serial.begin(115200);
 #endif
 
-#if defined(BUTTON_PIN)
-    /* Initializing button. */
-    initButton();
-    /* Enable read/write WiFi credentials */
-    ERa.setPersistent(true);
-#endif
-
     /* Set board id */
     // ERa.setBoardID("Board_1");
+
+    /* Setup the Terminal callback */
+    terminal.begin(terminalCallback);
+
     /* Initializing the ERa library. */
     ERa.begin(ssid, pass);
 

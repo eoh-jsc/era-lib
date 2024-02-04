@@ -42,7 +42,7 @@ void setup() {
     ERa.setAppLoop(false);
     ERa.setBoardID(boardID);
     ERa.begin(auth, host, port, user, pass);
-    ERa.addInterval(1000L, []() {
+    ERa.addInterval(1000L, [](void) {
         printf("Uptime: %d\r\n", ERaMillis() / 1000L);
     });
 }

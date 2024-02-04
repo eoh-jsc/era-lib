@@ -8,13 +8,6 @@
 #include <ERa/ERaDetect.hpp>
 #include <Utility/ERaQueue.hpp>
 
-#if defined(__has_include) &&       \
-    __has_include(<functional>) &&  \
-    !defined(ERA_IGNORE_STD_FUNCTIONAL_STRING)
-    #include <functional>
-    #define REPORT_HAS_FUNCTIONAL_H
-#endif
-
 #define REPORT_MAX_INTERVAL (unsigned long)0xFFFFFFFF
 #define WaitForever         REPORT_MAX_INTERVAL
 
@@ -30,16 +23,16 @@ public:
     } ScaleData_t;
 
     typedef struct __ReportData_t {
-        float prevValue;
-        float value;
+        double prevValue;
+        double value;
+        ERaUInt_t configId;
         ERaReport::ScaleData_t scale;
-        unsigned int configId;
         uint8_t pin;
         uint8_t pinMode;
     } ReportData_t;
 
 private:
-#if defined(REPORT_HAS_FUNCTIONAL_H)
+#if defined(ERA_HAS_FUNCTIONAL_H)
     typedef std::function<void(void)> ReportCallback_t;
     typedef std::function<void(void*)> ReportCallback_p_t;
 #else
@@ -116,7 +109,7 @@ public:
             this->rp->executeNow(this->pRp);
         }
 
-        void updateReport(float value, bool isRound = false, bool execute = true) const {
+        void updateReport(double value, bool isRound = false, bool execute = true) const {
             if (!this->isValid()) {
                 return;
             }
@@ -132,7 +125,7 @@ public:
 
         bool changeReportableChange(unsigned long minInterval, unsigned long maxInterval, float minChange,
                                     ERaReport::ReportCallback_p_t cb, uint8_t pin, uint8_t pinMode,
-                                    unsigned int configId) const {
+                                    ERaUInt_t configId) const {
             if (!this->isValid()) {
                 return false;
             }
@@ -175,16 +168,16 @@ public:
             return this->rp->isCalled(this->pRp);
         }
 
-        float getValue() const {
+        double getValue() const {
             if (!this->isValid()) {
-                return 0.0f;
+                return 0.0;
             }
             return this->rp->getValue(this->pRp);
         }
 
-        float getPreviousValue() const {
+        double getPreviousValue() const {
             if (!this->isValid()) {
-                return 0.0f;
+                return 0.0;
             }
             return this->rp->getPreviousValue(this->pRp);
         }
@@ -270,13 +263,13 @@ public:
 
     iterator setReporting(unsigned long minInterval, unsigned long maxInterval,
                         float minChange, ERaReport::ReportCallback_p_t cb,
-                        void* arg) {
-        return iterator(this, this->setupReport(minInterval, maxInterval, minChange, cb, arg));
+                        void* args) {
+        return iterator(this, this->setupReport(minInterval, maxInterval, minChange, cb, args));
     }
 
     iterator setReporting(unsigned long minInterval, unsigned long maxInterval,
                         float minChange, ERaReport::ReportCallback_p_t cb,
-                        uint8_t pin, uint8_t pinMode, unsigned int configId) {
+                        uint8_t pin, uint8_t pinMode, ERaUInt_t configId) {
         return iterator(this, this->setupReport(minInterval, maxInterval, minChange, cb, pin, pinMode, configId));
     }
 
@@ -286,13 +279,13 @@ public:
         return iterator(this, this->setupReport(minInterval, maxInterval, minChange, cb, pin, pinMode));
     }
 
-    void updateReport(Report_t* pReport, float value, bool isRound = false, bool execute = true);
+    void updateReport(Report_t* pReport, double value, bool isRound = false, bool execute = true);
     bool changeReportableChange(Report_t* pReport, unsigned long minInterval,
                                 unsigned long maxInterval, float minChange);
     bool changeReportableChange(Report_t* pReport, unsigned long minInterval,
                                 unsigned long maxInterval, float minChange,
                                 ERaReport::ReportCallback_p_t cb, uint8_t pin,
-                                uint8_t pinMode, unsigned int configId);
+                                uint8_t pinMode, ERaUInt_t configId);
 
     bool changeReportableChange(Report_t* pReport, unsigned long minInterval,
                                 unsigned long maxInterval, float minChange,
@@ -305,8 +298,8 @@ public:
     bool isUpdated(Report_t* pReport);
     bool isReported(Report_t* pReport);
     bool isCalled(Report_t* pReport);
-    float getValue(Report_t* pReport);
-    float getPreviousValue(Report_t* pReport);
+    double getValue(Report_t* pReport);
+    double getPreviousValue(Report_t* pReport);
     void skipReport(Report_t* pReport);
     void restartReport(Report_t* pReport);
     void executeReport(Report_t* pReport);
@@ -327,10 +320,10 @@ private:
                         float minChange, ERaReport::ReportCallback_t cb);
     Report_t* setupReport(unsigned long minInterval, unsigned long maxInterval,
                         float minChange, ERaReport::ReportCallback_p_t cb,
-                        void* arg);
+                        void* args);
     Report_t* setupReport(unsigned long minInterval, unsigned long maxInterval,
                         float minChange, ERaReport::ReportCallback_p_t cb,
-                        uint8_t pin, uint8_t pinMode, unsigned int configId);
+                        uint8_t pin, uint8_t pinMode, ERaUInt_t configId);
 
     Report_t* setupReport(unsigned long minInterval, unsigned long maxInterval,
                         float minChange, ERaReport::ReportCallback_p_t cb,

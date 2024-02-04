@@ -3,7 +3,7 @@
 
 #include <string.h>
 #include <ERa/ERaDebug.hpp>
-#include <ERa/ERaHelperDef.hpp>
+#include <ERa/ERaHelpersDef.hpp>
 #include <Utility/ERaQueue.hpp>
 
 #ifndef MAX_DEVICE_MODBUS

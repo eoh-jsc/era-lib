@@ -6,7 +6,7 @@
 typedef struct __PinConfig_t {
     uint8_t pin;
     uint8_t pinMode;
-    unsigned int configId;
+    ERaUInt_t configId;
     struct __PWMConfig_t {
         __PWMConfig_t()
             : channel(0)

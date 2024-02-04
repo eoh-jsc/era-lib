@@ -62,7 +62,7 @@ void setup() {
     // ERa.setBoardID("Board_1");
 
     /* Setup property virtual pin associate with variable */
-    ERa.addPropertyVirtual(V0, state, PermissionT::PERMISSION_READ_WRITE).onUpdate([]() {
+    ERa.addPropertyVirtual(V0, state, PermissionT::PERMISSION_READ_WRITE).onUpdate([](void) {
         digitalWrite(LED_PIN, state);
     });
     ERa.addPropertyVirtual(V1, timeUp, PermissionT::PERMISSION_READ).publishOnChange(1);

@@ -1,5 +1,5 @@
-#ifndef INC_ERA_HELPER_DEFINE_HPP_
-#define INC_ERA_HELPER_DEFINE_HPP_
+#ifndef INC_ERA_HELPERS_DEFINE_HPP_
+#define INC_ERA_HELPERS_DEFINE_HPP_
 
 #define LOC_BUFFER_PARSE                \
     char locBuf[32] {0};                \
@@ -19,4 +19,4 @@
     }                                   \
     buf = nullptr;
 
-#endif /* INC_ERA_HELPER_DEFINE_HPP_ */
+#endif /* INC_ERA_HELPERS_DEFINE_HPP_ */

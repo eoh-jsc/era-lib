@@ -578,7 +578,9 @@ void ERaModbus<Api>::readModbusConfig() {
         return;
     }
 #endif
-    this->dataBuff.add_multi(ERA_F("fail_read"), this->failRead, ERA_F("fail_write"), this->failWrite, ERA_F("total"), this->total);
+    this->dataBuff.add_multi(ERA_F(MODBUS_STRING_FAIL_READ), this->failRead,
+                            ERA_F(MODBUS_STRING_FAIL_WRITE), this->failWrite,
+                            ERA_F(MODBUS_STRING_TOTAL), this->total);
     this->addScanData();
     this->dataBuff.done();
     this->thisApi().modbusDataWrite(&this->dataBuff);
@@ -682,12 +684,12 @@ void ERaModbus<Api>::addScanData() {
     }
 
     if (this->modbusScan->numberDevice) {
-        this->dataBuff.add(ERA_F("scan"));
+        this->dataBuff.add(ERA_F(MODBUS_STRING_SCAN));
         this->dataBuff.add_hex_array(this->modbusScan->addr,
                             this->modbusScan->numberDevice);
     }
     else {
-        this->dataBuff.add_multi(ERA_F("scan"), ERA_F("None"));
+        this->dataBuff.add_multi(ERA_F(MODBUS_STRING_SCAN), ERA_F("None"));
     }
 }
 
@@ -1016,7 +1018,9 @@ void ERaModbus<Api>::onData(ERaModbusRequest* request, ERaModbusResponse* respon
             this->dataBuff.add_hex_array(response->getData(), response->getBytes());
             break;
     }
-    this->dataBuff.add_on_change("1");
+    if (response->getBytes()) {
+        this->dataBuff.add_on_change("1");
+    }
 
     if (this->pModbusCallbacks != nullptr) {
         this->pModbusCallbacks->onData(request, response,
@@ -1052,7 +1056,9 @@ void ERaModbus<Api>::onError(ERaModbusRequest* request, bool skip) {
             }
             break;
     }
-    this->dataBuff.add_on_change("0");
+    if (request->getLength()) {
+        this->dataBuff.add_on_change("0");
+    }
 
     if (this->pModbusCallbacks != nullptr) {
         this->pModbusCallbacks->onError(request);

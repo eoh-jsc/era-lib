@@ -5,16 +5,9 @@
 #include <ERa/ERaDetect.hpp>
 #include <Utility/ERaQueue.hpp>
 
-#if defined(__has_include) &&       \
-    __has_include(<functional>) &&  \
-    !defined(ERA_IGNORE_STD_FUNCTIONAL_STRING)
-    #include <functional>
-    #define TIMER_HAS_FUNCTIONAL_H
-#endif
-
 class ERaTimer
 {
-#if defined(TIMER_HAS_FUNCTIONAL_H)
+#if defined(ERA_HAS_FUNCTIONAL_H)
     typedef std::function<void(void)> TimerCallback_t;
     typedef std::function<void(void*)> TimerCallback_p_t;
 #else
@@ -141,24 +134,24 @@ public:
         return iterator(this, this->setupTimer(interval, cb, 0));
     }
 
-    iterator setInterval(unsigned long interval, ERaTimer::TimerCallback_p_t cb, void* arg) {
-        return iterator(this, this->setupTimer(interval, cb, arg, 0));
+    iterator setInterval(unsigned long interval, ERaTimer::TimerCallback_p_t cb, void* args) {
+        return iterator(this, this->setupTimer(interval, cb, args, 0));
     }
 
     iterator setTimeout(unsigned long interval, ERaTimer::TimerCallback_t cb) {
         return iterator(this, this->setupTimer(interval, cb, 1));
     }
 
-    iterator setTimeout(unsigned long interval, ERaTimer::TimerCallback_p_t cb, void* arg) {
-        return iterator(this, this->setupTimer(interval, cb, arg, 1));
+    iterator setTimeout(unsigned long interval, ERaTimer::TimerCallback_p_t cb, void* args) {
+        return iterator(this, this->setupTimer(interval, cb, args, 1));
     }
 
     iterator setTimer(unsigned long interval, ERaTimer::TimerCallback_t cb, unsigned int limit) {
         return iterator(this, this->setupTimer(interval, cb, limit));
     }
 
-    iterator setTimer(unsigned long interval, ERaTimer::TimerCallback_p_t cb, void* arg, unsigned int limit) {
-        return iterator(this, this->setupTimer(interval, cb, arg, limit));
+    iterator setTimer(unsigned long interval, ERaTimer::TimerCallback_p_t cb, void* args, unsigned int limit) {
+        return iterator(this, this->setupTimer(interval, cb, args, limit));
     }
 
     bool changeInterval(Timer_t* pTimer, unsigned long interval);
@@ -174,7 +167,7 @@ public:
 protected:
 private:
     Timer_t* setupTimer(unsigned long interval, ERaTimer::TimerCallback_t cb, unsigned int limit);
-    Timer_t* setupTimer(unsigned long interval, ERaTimer::TimerCallback_p_t cb, void* arg, unsigned int limit);
+    Timer_t* setupTimer(unsigned long interval, ERaTimer::TimerCallback_p_t cb, void* args, unsigned int limit);
     bool isTimerFree();
 
     bool isValidTimer(const Timer_t* pTimer) const {

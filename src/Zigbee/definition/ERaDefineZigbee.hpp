@@ -31,6 +31,14 @@
     #define ENABLE_SCALE_ZIGBEE_DATA
 #endif
 
+#if defined(ZIGBEE_PUBLISH_RETAINED)
+    /* OK, use the specified value */
+#elif defined(ERA_MQTT_PUBLISH_RETAINED)
+    #define ZIGBEE_PUBLISH_RETAINED     ERA_MQTT_PUBLISH_RETAINED
+#else
+    #define ZIGBEE_PUBLISH_RETAINED     true
+#endif
+
 #define NO_NWK_ADDR                     (uint16_t)0x0000
 #define NO_LOAD_ENDPOINT                (uint8_t)0xFF
 #define ZCL_DATA_MIN                    3
@@ -616,9 +624,9 @@ namespace ZigbeeNamespace {
 #include <Zigbee/zCluster/ERaZclZigbee.hpp>
 
 #define TOPIC_ZIGBEE_BRIDGE_INFO                "/zigbee/bridge/info"
-#define TOPIC_ZIGBEE_BRIDGE_EVENT                "/zigbee/bridge/event"
+#define TOPIC_ZIGBEE_BRIDGE_EVENT               "/zigbee/bridge/event"
 #define TOPIC_ZIGBEE_BRIDGE_RESPONSE            "/zigbee/bridge/response/%s"
-#define TOPIC_ZIGBEE_DEVICE_EVENT                "/zigbee/device"
+#define TOPIC_ZIGBEE_DEVICE_EVENT               "/zigbee/device"
 
 using namespace ZigbeeNamespace;
 

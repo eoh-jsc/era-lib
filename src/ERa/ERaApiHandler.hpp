@@ -30,7 +30,8 @@ public:
     }
 
     virtual void specificDataWrite(const char* id, cJSON* value,
-                                bool specific = false, bool retained = true) {
+                                   bool specific = false,
+                                   bool retained = ERA_MQTT_PUBLISH_RETAINED) {
         ERA_LOG(TAG, ERA_PSTR("specificDataWrite default."));
         ERA_FORCE_UNUSED(id);
         ERA_FORCE_UNUSED(value);
@@ -39,7 +40,8 @@ public:
     }
 
     virtual void specificDataWrite(const char* id, const char* value,
-                                bool specific = false, bool retained = true) {
+                                   bool specific = false,
+                                   bool retained = ERA_MQTT_PUBLISH_RETAINED) {
         ERA_LOG(TAG, ERA_PSTR("specificDataWrite default."));
         ERA_FORCE_UNUSED(id);
         ERA_FORCE_UNUSED(value);

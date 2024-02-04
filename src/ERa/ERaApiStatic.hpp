@@ -3,7 +3,7 @@
 
 #include <ERa/ERaApi.hpp>
 
-#if !defined(API_HAS_FUNCTIONAL_H)
+#if !defined(ERA_HAS_FUNCTIONAL_H)
     template <class Proto, class Flash>
     inline
     void ERaApi<Proto, Flash>::_appLoop() {

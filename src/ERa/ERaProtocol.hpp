@@ -23,13 +23,6 @@
 #include <OTA/ERaOTA.hpp>
 #include <Utility/ERaInfo.hpp>
 
-#if defined(__has_include) &&       \
-    __has_include(<functional>) &&  \
-    !defined(ERA_IGNORE_STD_FUNCTIONAL_STRING)
-    #include <functional>
-    #define PROTO_HAS_FUNCTIONAL_H
-#endif
-
 template <class Transp, class Flash>
 class ERaProto
     : public ERaApi< ERaProto<Transp, Flash>, Flash >
@@ -50,7 +43,7 @@ class ERaProto
         CHIP_OTA = 7
     };
     typedef void* ApiData_t;
-#if defined(PROTO_HAS_FUNCTIONAL_H)
+#if defined(ERA_HAS_FUNCTIONAL_H)
     typedef std::function<void(void)> StateCallback_t;
     typedef std::function<void(void)> FunctionCallback_t;
     typedef std::function<void(const char*, const char*)> MessageCallback_t;
@@ -287,7 +280,7 @@ private:
 #endif
 
     void processRequest(const char* topic, const char* payload);
-#if !defined(PROTO_HAS_FUNCTIONAL_H)
+#if !defined(ERA_HAS_FUNCTIONAL_H)
     static void _onConnected();
     static void _onDisconnected();
     static void _processRequest(const char* topic, const char* payload);
@@ -303,7 +296,7 @@ private:
         this->processRequest(topic, payload);
     }
 
-#if defined(PROTO_HAS_FUNCTIONAL_H)
+#if defined(ERA_HAS_FUNCTIONAL_H)
     StateCallback_t connectedCb = [&, this](void) {
         this->onConnected();
     };
@@ -340,8 +333,8 @@ template <class Transp, class Flash>
 void ERaProto<Transp, Flash>::printBanner() {
     ERA_LOG(TAG, ERA_PSTR(ERA_NEWLINE
         "  ____  ____              " ERA_NEWLINE
-        " / _   / _  \\  _          " ERA_NEWLINE
-        "/____ / / __/ /.\\         " ERA_NEWLINE
+        " / _   / _  \\  _         " ERA_NEWLINE
+        "/____ / / __/ /.\\        " ERA_NEWLINE
         " / _ /  _ \\  / _ \\      " ERA_NEWLINE
         "/___/__//_/`/_/ \\_\\     " ERA_NEWLINE
         "           (v" ERA_VERSION " for " ERA_BOARD_TYPE ")"
@@ -928,7 +921,7 @@ bool ERaProto<Transp, Flash>::sendData(ERaRsp_t& rsp) {
 
 template <class Transp, class Flash>
 bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
-    int configId = rsp.id;
+    ERaInt_t configId = rsp.id;
     int pMode = Base::getPinRp().findPinMode(rsp.id.getInt());
     switch (rsp.type) {
         case ERaTypeWriteT::ERA_WRITE_VIRTUAL_PIN: {
@@ -999,30 +992,30 @@ bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
     }
     switch (rsp.type) {
     case ERaTypeWriteT::ERA_WRITE_VIRTUAL_PIN:
-        FormatString(name, "virtual_pin_%d", rsp.id.getInt());
+        FormatString(name, "virtual_pin_" ERA_INTEGER_C_TYPE, rsp.id.getInt());
         break;
     case ERaTypeWriteT::ERA_WRITE_DIGITAL_PIN:
-        FormatString(name, "digital_pin_%d", rsp.id.getInt());
+        FormatString(name, "digital_pin_" ERA_INTEGER_C_TYPE, rsp.id.getInt());
         break;
     case ERaTypeWriteT::ERA_WRITE_ANALOG_PIN:
-        FormatString(name, "analog_pin_%d", rsp.id.getInt());
+        FormatString(name, "analog_pin_" ERA_INTEGER_C_TYPE, rsp.id.getInt());
         break;
     case ERaTypeWriteT::ERA_WRITE_PWM_PIN:
-        FormatString(name, "pwm_pin_%d", rsp.id.getInt());
+        FormatString(name, "pwm_pin_" ERA_INTEGER_C_TYPE, rsp.id.getInt());
         break;
     case ERaTypeWriteT::ERA_WRITE_PIN:
-        FormatString(name, "pin_%d", rsp.id.getInt());
+        FormatString(name, "pin_" ERA_INTEGER_C_TYPE, rsp.id.getInt());
         break;
     default:
         cJSON_Delete(root);
         root = nullptr;
         return false;
     }
-    if (rsp.param.isString()) {
-        cJSON_AddStringToObject(root, name, rsp.param.getString());
-    }
-    else if (rsp.param.isNumber()) {
+    if (rsp.param.isNumber()) {
         cJSON_AddNumberWithDecimalToObject(root, name, rsp.param.getDouble(), 5);
+    }
+    else if (rsp.param.isString()) {
+        cJSON_AddStringToObject(root, name, rsp.param.getString());
     }
     else if (rsp.param.isObject()) {
         cJSON_AddStringToObject(root, name, rsp.param.getObject()->getString());
@@ -1064,11 +1057,11 @@ bool ERaProto<Transp, Flash>::sendConfigIdData(ERaRsp_t& rsp) {
     if (root == nullptr) {
         return false;
     }
-    if (rsp.param.isString()) {
-        cJSON_AddStringToObject(root, "v", rsp.param.getString());
-    }
-    else if (rsp.param.isNumber()) {
+    if (rsp.param.isNumber()) {
         cJSON_AddNumberWithDecimalToObject(root, "v", rsp.param.getDouble(), 5);
+    }
+    else if (rsp.param.isString()) {
+        cJSON_AddStringToObject(root, "v", rsp.param.getString());
     }
     else if (rsp.param.isObject()) {
         cJSON_AddStringToObject(root, "v", rsp.param.getObject()->getString());
@@ -1213,11 +1206,11 @@ void ERaProto<Transp, Flash>::sendCommand(const char* auth, ERaRsp_t& rsp, ApiDa
     if (root == nullptr) {
         return;
     }
-    if (rsp.param.isString()) {
-        cJSON_AddStringToObject(root, "value", rsp.param.getString());
-    }
-    else if (rsp.param.isNumber()) {
+    if (rsp.param.isNumber()) {
         cJSON_AddNumberWithDecimalToObject(root, "value", rsp.param.getDouble(), 5);
+    }
+    else if (rsp.param.isString()) {
+        cJSON_AddStringToObject(root, "value", rsp.param.getString());
     }
     else if (rsp.param.isObject()) {
         cJSON_AddStringToObject(root, "value", rsp.param.getObject()->getString());
@@ -1315,8 +1308,8 @@ void ERaProto<Transp, Flash>::sendCommandVirtual(ERaRsp_t& rsp, ERaDataJson* dat
         if (it.getName() == nullptr) {
             continue;
         }
-        char name[2 + 8 * sizeof(int)] {0};
-        int configId = Base::getPinRp().findVPinConfigId(atoi(it.getName()), it);
+        char name[2 + 8 * sizeof(ERaInt_t)] {0};
+        ERaInt_t configId = Base::getPinRp().findVPinConfigId(atoi(it.getName()), it);
         if (configId == -1) {
             cJSON* item = data->detach(it);
             FormatString(name, "virtual_pin_%s", it.getName());
@@ -1335,7 +1328,7 @@ void ERaProto<Transp, Flash>::sendCommandVirtual(ERaRsp_t& rsp, ERaDataJson* dat
             }
             continue;
         }
-        FormatString(name, "%d", configId);
+        FormatString(name, ERA_INTEGER_C_TYPE, configId);
         it.rename(name);
         current = it;
         ++it;
@@ -1380,28 +1373,28 @@ void ERaProto<Transp, Flash>::sendCommandVirtual(ERaRsp_t& rsp, ERaDataJson* dat
         const char* mbScan = nullptr;
         const ERaDataBuff::iterator e = data->end(data->getDataLen());
         for (ERaDataBuff::iterator it = data->begin(data->getDataLen()); it < e; ++it) {
-            if (it == "fail_read") {
+            if (it == MODBUS_STRING_FAIL_READ) {
                 ++it;
                 mbFailed = it.getInt();
             }
-            else if (it == "fail_write") {
+            else if (it == MODBUS_STRING_FAIL_WRITE) {
                 ++it;
                 mbWriteFailed = it.getInt();
             }
-            else if (it == "total") {
+            else if (it == MODBUS_STRING_TOTAL) {
                 ++it;
                 mbTotal = it.getInt();
             }
-            else if (it == "scan") {
+            else if (it == MODBUS_STRING_SCAN) {
                 ++it;
                 mbScan = it.getString();
             }
-            else {
+            else if (IsHexString(it.getString())) {
                 if (index++ % 2 == 0) {
-                    FormatString(mbData, dataLen, it);
+                    FormatString(mbData, dataLen, it.getString());
                 }
                 else {
-                    FormatString(mbAck, dataLen, it);
+                    FormatString(mbAck, dataLen, it.getString());
                 }
             }
         }
@@ -1418,7 +1411,9 @@ void ERaProto<Transp, Flash>::sendCommandVirtual(ERaRsp_t& rsp, ERaDataJson* dat
         free(mbAck);
         mbData = nullptr;
         mbAck = nullptr;
-        rsp.param = root;
+        if (index && ((index % 2) == 0)) {
+            rsp.param = root;
+        }
         cJSON_Delete(root);
         root = nullptr;
     }

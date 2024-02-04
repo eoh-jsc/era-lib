@@ -9,13 +9,6 @@
 #include "MQTT/MQTT.h"
 #include "ERaMqttHelper.hpp"
 
-#if defined(__has_include) &&       \
-    __has_include(<functional>) &&  \
-    !defined(ERA_IGNORE_STD_FUNCTIONAL_STRING)
-    #include <functional>
-    #define MQTT_HAS_FUNCTIONAL_H
-#endif
-
 #define ERA_MQTT_PUB_LOG(status, errorCode)                                                                                             \
     if (status) {                                                                                                                       \
         ERA_LOG(TAG, ERA_PSTR("Publish (ok #%d) %s: %s"), this->mqtt.lastPacketID(), topic, payload);                                   \
@@ -46,7 +39,7 @@ template <class Client, class MQTT>
 class ERaMqtt
     : public ERaMqttHelper
 {
-#if defined(MQTT_HAS_FUNCTIONAL_H)
+#if defined(ERA_HAS_FUNCTIONAL_H)
     typedef std::function<void(void)> StateCallback_t;
     typedef std::function<void(void)> FunctionCallback_t;
     typedef std::function<void(const char*, const char*)> MessageCallback_t;

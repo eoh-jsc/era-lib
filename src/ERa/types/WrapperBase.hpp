@@ -7,7 +7,8 @@
 #include <string.h>
 #include <ERa/ERaData.hpp>
 
-enum WrapperTypeT : uint8_t {
+enum WrapperTypeT
+    : uint8_t {
     WRAPPER_TYPE_INVALID = 0,
     WRAPPER_TYPE_BOOL = 1,
     WRAPPER_TYPE_INT = 2,
@@ -116,14 +117,14 @@ public:
     }
 
     float getFloat() const {
-        return this->get();
+        return (float)this->get();
     }
 
     double getDouble() const {
-        return (double)this->get();
+        return this->get();
     }
 
-    float getNumber() const {
+    double getNumber() const {
         return this->get();
     }
 
@@ -138,7 +139,7 @@ public:
         return ERaDataJson((const char*)this->getPointer());
     }
 
-    operator float() const {
+    operator double() const {
         return this->get();
     }
 
@@ -162,50 +163,50 @@ public:
             return operator = ((const char*)rwb.getPointer());
         }
         else {
-            return operator = ((float)rwb.get());
+            return operator = (rwb.get());
         }
     }
 
     WrapperBase& operator = (float num) {
+        return operator = ((double)num);
+    }
+
+    WrapperBase& operator = (bool num) {
+        return operator = ((double)num);
+    }
+
+    WrapperBase& operator = (int num) {
+        return operator = ((double)num);
+    }
+
+    WrapperBase& operator = (unsigned int num) {
+        return operator = ((double)num);
+    }
+
+    WrapperBase& operator = (long num) {
+        return operator = ((double)num);
+    }
+
+    WrapperBase& operator = (unsigned long num) {
+        return operator = ((double)num);
+    }
+
+    WrapperBase& operator = (long long num) {
+        return operator = ((double)num);
+    }
+
+    WrapperBase& operator = (unsigned long long num) {
+        return operator = ((double)num);
+    }
+
+    WrapperBase& operator = (double num) {
         this->set(num);
         return (*this);
     }
 
-    WrapperBase& operator = (bool num) {
-        return operator = ((float)num);
-    }
-
-    WrapperBase& operator = (int num) {
-        return operator = ((float)num);
-    }
-
-    WrapperBase& operator = (unsigned int num) {
-        return operator = ((float)num);
-    }
-
-    WrapperBase& operator = (long num) {
-        return operator = ((float)num);
-    }
-
-    WrapperBase& operator = (unsigned long num) {
-        return operator = ((float)num);
-    }
-
-    WrapperBase& operator = (long long num) {
-        return operator = ((float)num);
-    }
-
-    WrapperBase& operator = (unsigned long long num) {
-        return operator = ((float)num);
-    }
-
-    WrapperBase& operator = (double num) {
-        return operator = ((float)num);
-    }
-
     template <typename T>
     WrapperBase& operator = (T rt) {
-        return operator = ((float)rt);
+        return operator = ((double)rt);
     }
 
     WrapperBase& operator = (const char* cstr) {
@@ -225,49 +226,49 @@ public:
             return operator == ((const char*)rwb.getPointer());
         }
         else {
-            return operator == ((float)rwb.get());
+            return operator == (rwb.get());
         }
     }
 
     bool operator == (float num) const {
-        return this->FloatCompare(num);
+        return operator == ((double)num);
     }
 
     bool operator == (bool num) const {
-        return operator == ((float)num);
+        return operator == ((double)num);
     }
 
     bool operator == (int num) const {
-        return operator == ((float)num);
+        return operator == ((double)num);
     }
 
     bool operator == (unsigned int num) const {
-        return operator == ((float)num);
+        return operator == ((double)num);
     }
 
     bool operator == (long num) const {
-        return operator == ((float)num);
+        return operator == ((double)num);
     }
 
     bool operator == (unsigned long num) const {
-        return operator == ((float)num);
+        return operator == ((double)num);
     }
 
     bool operator == (long long num) const {
-        return operator == ((float)num);
+        return operator == ((double)num);
     }
 
     bool operator == (unsigned long long num) const {
-        return operator == ((float)num);
+        return operator == ((double)num);
     }
 
     bool operator == (double num) const {
-        return operator == ((float)num);
+        return this->DoubleCompare(num);
     }
 
     template <typename T>
     bool operator == (T rt) const {
-        return operator == ((float)rt);
+        return operator == ((double)rt);
     }
 
     bool operator == (const char* cstr) const {
@@ -286,49 +287,49 @@ public:
             return operator != ((const char*)rwb.getPointer());
         }
         else {
-            return operator != ((float)rwb.get());
+            return operator != (rwb.get());
         }
     }
 
     bool operator != (float num) const {
-        return !this->FloatCompare(num);
+        return operator != ((double)num);
     }
 
     bool operator != (bool num) const {
-        return operator != ((float)num);
+        return operator != ((double)num);
     }
 
     bool operator != (int num) const {
-        return operator != ((float)num);
+        return operator != ((double)num);
     }
 
     bool operator != (unsigned int num) const {
-        return operator != ((float)num);
+        return operator != ((double)num);
     }
 
     bool operator != (long num) const {
-        return operator != ((float)num);
+        return operator != ((double)num);
     }
 
     bool operator != (unsigned long num) const {
-        return operator != ((float)num);
+        return operator != ((double)num);
     }
 
     bool operator != (long long num) const {
-        return operator != ((float)num);
+        return operator != ((double)num);
     }
 
     bool operator != (unsigned long long num) const {
-        return operator != ((float)num);
+        return operator != ((double)num);
     }
 
     bool operator != (double num) const {
-        return operator != ((float)num);
+        return !this->DoubleCompare(num);
     }
 
     template <typename T>
     bool operator != (T rt) const {
-        return operator != ((float)rt);
+        return operator != ((double)rt);
     }
 
     bool operator != (const char* cstr) const {
@@ -340,8 +341,8 @@ public:
     }
 
 protected:
-    virtual float get() const = 0;
-    virtual void set(float) = 0;
+    virtual double get() const = 0;
+    virtual void set(double) = 0;
     virtual const void* getPointer() const = 0;
     virtual void setPointer(const void*) = 0;
 
@@ -354,6 +355,14 @@ private:
         }
         float maxVal = (fabs(this->get()) > fabs(num)) ? fabs(this->get()) : fabs(num);
         return (fabs(this->get() - num) <= (maxVal * FLT_EPSILON));
+    }
+
+    bool DoubleCompare(double num) const {
+        if (this->type == WrapperTypeT::WRAPPER_TYPE_STRING) {
+            return false;
+        }
+        double maxVal = (fabs(this->get()) > fabs(num)) ? fabs(this->get()) : fabs(num);
+        return (fabs(this->get() - num) <= (maxVal * DBL_EPSILON));
     }
 
     bool StringCompare(const char* cstr) const {

@@ -26,6 +26,10 @@
     // Active low (false), Active high (true)
     #define BUTTON_INVERT       false
     #define BUTTON_HOLD_TIMEOUT 5000UL
+
+    // This directive is used to specify whether the configuration should be erased.
+    // If it's set to true, the configuration will be erased.
+    #define ERA_ERASE_CONFIG    true
 #endif
 
 #include <Arduino.h>
@@ -39,7 +43,7 @@
     ERaButton button;
     pthread_t pthreadButton;
 
-    static void* handlerButton(void* arg) {
+    static void* handlerButton(void* args) {
         for (;;) {
             button.run();
             ERaDelay(10);
@@ -47,12 +51,22 @@
         pthread_exit(NULL);
     }
 
+#if ERA_VERSION_NUMBER >= ERA_VERSION_VAL(1, 2, 0)
+    static void eventButton(uint8_t pin, ButtonEventT event) {
+        if (event != ButtonEventT::BUTTON_ON_HOLD) {
+            return;
+        }
+        ERa.switchToConfig(ERA_ERASE_CONFIG);
+        (void)pin;
+    }
+#else
     static void eventButton(ButtonEventT event) {
         if (event != ButtonEventT::BUTTON_ON_HOLD) {
             return;
         }
-        ERa.switchToConfig(true);
+        ERa.switchToConfig(ERA_ERASE_CONFIG);
     }
+#endif
 
     void initButton() {
         pinMode(BUTTON_PIN, INPUT);

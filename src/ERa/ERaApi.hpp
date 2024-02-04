@@ -8,7 +8,7 @@
 #include <ERa/ERaParam.hpp>
 #include <ERa/ERaHooks.hpp>
 #include <ERa/ERaProperty.hpp>
-#include <ERa/ERaHelper.hpp>
+#include <ERa/ERaHelpers.hpp>
 #include <ERa/ERaTransp.hpp>
 #include <ERa/ERaTimer.hpp>
 #include <ERa/ERaApiHandler.hpp>
@@ -16,14 +16,6 @@
 #include <Modbus/ERaModbusSimple.hpp>
 #include <Zigbee/ERaZigbeeSimple.hpp>
 #include <Reason/ERaReason.hpp>
-
-#if defined(__has_include) &&       \
-    __has_include(<functional>) &&  \
-    !defined(ERA_IGNORE_STD_FUNCTIONAL_STRING)
-    #include <functional>
-    #define API_HAS_FUNCTIONAL_H
-#endif
-
 #include <ERa/ERaApiDef.hpp>
 
 template <class Proto, class Flash>
@@ -37,7 +29,7 @@ class ERaApi
     , public ERaZigbee< ERaApi<Proto, Flash> >
 #endif
 {
-#if defined(API_HAS_FUNCTIONAL_H)
+#if defined(ERA_HAS_FUNCTIONAL_H)
     typedef std::function<void(void)> FunctionCallback_t;
     typedef std::function<void(void*)> ReportPinCallback_t;
 #else
@@ -86,12 +78,7 @@ public:
         this->virtualWriteSingle(pin, value);
         ERA_FORCE_UNUSED(send);
 #else
-        if (send) {
-            this->virtualWriteSingle(pin, value);
-        }
-        else {
-            Property::virtualWriteProperty(pin, value);
-        }
+        Property::virtualWriteProperty(pin, value, send);
 #endif
     }
 
@@ -113,7 +100,7 @@ public:
     void virtualWriteObject(ERaDataJson& value) {
         ERaRsp_t rsp;
         rsp.type = ERaTypeWriteT::ERA_WRITE_VIRTUAL_PIN_MULTI;
-        rsp.retained = true;
+        rsp.retained = ERA_MQTT_PUBLISH_RETAINED;
         rsp.id = 0;
         rsp.param = 0;
         this->thisProto().sendCommand(rsp, &value);
@@ -122,7 +109,7 @@ public:
     void digitalWrite(int pin, bool value) {
         ERaRsp_t rsp;
         rsp.type = ERaTypeWriteT::ERA_WRITE_DIGITAL_PIN;
-        rsp.retained = true;
+        rsp.retained = ERA_MQTT_PUBLISH_RETAINED;
         rsp.id = pin;
         rsp.param = value;
         this->thisProto().sendCommand(rsp);
@@ -131,7 +118,7 @@ public:
     void analogWrite(int pin, int value) {
         ERaRsp_t rsp;
         rsp.type = ERaTypeWriteT::ERA_WRITE_ANALOG_PIN;
-        rsp.retained = true;
+        rsp.retained = ERA_MQTT_PUBLISH_RETAINED;
         rsp.id = pin;
         rsp.param = value;
         this->thisProto().sendCommand(rsp);
@@ -140,7 +127,7 @@ public:
     void pwmWrite(int pin, int value) {
         ERaRsp_t rsp;
         rsp.type = ERaTypeWriteT::ERA_WRITE_PWM_PIN;
-        rsp.retained = true;
+        rsp.retained = ERA_MQTT_PUBLISH_RETAINED;
         rsp.id = pin;
         rsp.param = value;
         this->thisProto().sendCommand(rsp);
@@ -149,24 +136,24 @@ public:
     void pinWrite(int pin, int value) {
         ERaRsp_t rsp;
         rsp.type = ERaTypeWriteT::ERA_WRITE_PIN;
-        rsp.retained = true;
+        rsp.retained = ERA_MQTT_PUBLISH_RETAINED;
         rsp.id = pin;
         rsp.param = value;
         this->thisProto().sendCommand(rsp);
     }
 
     template <typename T>
-    void configIdWrite(int configId, T value) {
+    void configIdWrite(ERaInt_t configId, T value) {
         ERaRsp_t rsp;
         rsp.type = ERaTypeWriteT::ERA_WRITE_CONFIG_ID;
-        rsp.retained = true;
+        rsp.retained = ERA_MQTT_PUBLISH_RETAINED;
         rsp.id = configId;
         rsp.param = value;
         this->thisProto().sendCommand(rsp);
     }
 
     template <typename T, typename... Args>
-    void configIdWrite(int configId, T value, Args... tail) {
+    void configIdWrite(ERaInt_t configId, T value, Args... tail) {
         this->configIdMultiWrite(configId, value, tail...);
     }
 
@@ -180,7 +167,8 @@ public:
     }
 
     void specificDataWrite(const char* id, cJSON* value,
-                        bool specific = false, bool retained = true) override {
+                           bool specific = false,
+                           bool retained = ERA_MQTT_PUBLISH_RETAINED) override {
 #if ERA_MAX_EVENTS
         this->eventSpecificAdd(id, value, specific, retained);
 #else
@@ -195,7 +183,8 @@ public:
     }
 
     void specificDataWrite(const char* id, const char* value,
-                        bool specific = false, bool retained = true) override {
+                           bool specific = false,
+                           bool retained = ERA_MQTT_PUBLISH_RETAINED) override {
 #if ERA_MAX_EVENTS
         this->eventSpecificAdd(id, value, specific, retained);
 #else
@@ -410,7 +399,7 @@ protected:
 #else
         ERaRsp_t rsp;
         rsp.type = ERaTypeWriteT::ERA_WRITE_MODBUS_DATA;
-        rsp.retained = true;
+        rsp.retained = ERA_MQTT_PUBLISH_RETAINED;
         rsp.id = 0;
         rsp.param = 0;
         this->thisProto().sendCommand(rsp, value);
@@ -420,7 +409,8 @@ protected:
 
 #if defined(ERA_ZIGBEE)
     void zigbeeDataWrite(const char* id, cJSON* value,
-                        bool specific = false, bool retained = true) {
+                         bool specific = false,
+                         bool retained = ERA_MQTT_PUBLISH_RETAINED) {
 #if ERA_MAX_EVENTS
         this->eventZigbeeAdd(id, value, specific, retained);
 #else
@@ -524,7 +514,7 @@ protected:
     }
 
     void appLoop();
-#if defined(API_HAS_FUNCTIONAL_H)
+#if defined(ERA_HAS_FUNCTIONAL_H)
     FunctionCallback_t appCb = [&, this]() {
         this->appLoop();
     };
@@ -540,7 +530,7 @@ private:
     void virtualWriteSingle(int pin, T value) {
         ERaRsp_t rsp;
         rsp.type = ERaTypeWriteT::ERA_WRITE_VIRTUAL_PIN;
-        rsp.retained = true;
+        rsp.retained = ERA_MQTT_PUBLISH_RETAINED;
         rsp.id = pin;
         rsp.param = value;
         this->thisProto().sendCommand(rsp);
@@ -552,7 +542,7 @@ private:
         ERaDataJson data;
         data.add_multi(tail...);
         rsp.type = ERaTypeWriteT::ERA_WRITE_VIRTUAL_PIN_MULTI;
-        rsp.retained = true;
+        rsp.retained = ERA_MQTT_PUBLISH_RETAINED;
         rsp.id = 0;
         rsp.param = 0;
         this->thisProto().sendCommand(rsp, &data);
@@ -564,7 +554,7 @@ private:
         ERaDataJson data;
         data.add_multi(tail...);
         rsp.type = ERaTypeWriteT::ERA_WRITE_CONFIG_ID_MULTI;
-        rsp.retained = true;
+        rsp.retained = ERA_MQTT_PUBLISH_RETAINED;
         rsp.id = 0;
         rsp.param = data.getObject();
         this->thisProto().sendCommand(rsp);
@@ -582,7 +572,7 @@ private:
 
     void sendPinEvent(void* args);
     void sendPinConfigEvent(void* args);
-#if !defined(API_HAS_FUNCTIONAL_H)
+#if !defined(ERA_HAS_FUNCTIONAL_H)
     static void _sendPinEvent(void* args);
     static void _sendPinConfigEvent(void* args);
 #endif
@@ -607,7 +597,7 @@ private:
         return static_cast<Proto&>(*this);
     }
 
-#if defined(API_HAS_FUNCTIONAL_H)
+#if defined(ERA_HAS_FUNCTIONAL_H)
     ReportPinCallback_t reportPinCb = [&, this](void* args) {
         this->sendPinEvent(args);
     };
@@ -634,14 +624,17 @@ private:
 #endif
 #if defined(ERA_ZIGBEE)
     void eventZigbeeAdd(const char* id, cJSON* value,
-                        bool specific = false, bool retained = true);
+                        bool specific = false,
+                        bool retained = ERA_MQTT_PUBLISH_RETAINED);
     void eventZigbeeWrite(ERaEvent_t& event);
 #endif
 #if defined(ERA_SPECIFIC)
     void eventSpecificAdd(const char* id, cJSON* value,
-                        bool specific = false, bool retained = true);
+                        bool specific = false,
+                        bool retained = ERA_MQTT_PUBLISH_RETAINED);
     void eventSpecificAdd(const char* id, const char* value,
-                        bool specific = false, bool retained = true);
+                        bool specific = false,
+                        bool retained = ERA_MQTT_PUBLISH_RETAINED);
     void eventSpecificWrite(ERaEvent_t& event);
 #endif
 
@@ -751,6 +744,9 @@ void ERaApi<Proto, Flash>::processVirtualPinRequest(const ERaDataBuff& arrayTopi
     }
     else if (cJSON_IsString(item)) {
         param.add_static(item->valuestring);
+    }
+    else if (item != nullptr) {
+        param.add(item);
     }
     this->callERaWriteHandler(pin, param);
 
@@ -1079,8 +1075,8 @@ void ERaApi<Proto, Flash>::sendPinConfigEvent(void* args) {
     ERaParam raw(rp->value);
     ERaParam param(rp->value);
     if (rp->scale.enable) {
-        raw = ERaMapNumberRange(rp->value, rp->scale.min, rp->scale.max,
-                                        rp->scale.rawMin, rp->scale.rawMax);
+        raw = ERaMapNumberRange(rp->value, (double)rp->scale.min, (double)rp->scale.max,
+                                           (double)rp->scale.rawMin, (double)rp->scale.rawMax);
     }
     this->configIdWrite(rp->configId, rp->value);
     this->callERaPinReadHandler(rp->pin, param, raw);
@@ -1198,7 +1194,7 @@ void ERaApi<Proto, Flash>::callERaProHandler(const char* deviceId, const cJSON* 
         ERaEvent_t event;
         event.type = ERaTypeWriteT::ERA_WRITE_MODBUS_DATA;
         event.specific = false;
-        event.retained = true;
+        event.retained = ERA_MQTT_PUBLISH_RETAINED;
         event.id = nullptr;
         event.data = value;
         this->queue += event;
@@ -1214,7 +1210,7 @@ void ERaApi<Proto, Flash>::callERaProHandler(const char* deviceId, const cJSON* 
         ERaRsp_t rsp;
         ERaDataBuff* data = (ERaDataBuff*)event.data;
         rsp.type = ERaTypeWriteT::ERA_WRITE_MODBUS_DATA;
-        rsp.retained = true;
+        rsp.retained = ERA_MQTT_PUBLISH_RETAINED;
         rsp.id = 0;
         rsp.param = 0;
         this->thisProto().sendCommand(rsp, data);

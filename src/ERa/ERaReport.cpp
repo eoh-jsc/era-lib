@@ -18,8 +18,8 @@ void ERaReport::run() {
         if ((currentMillis - pReport->prevMillis) < pReport->minInterval) {
             continue;
         }
-        if (ERaFloatCompare(pReport->data.value, pReport->data.prevValue) ||
-            abs(pReport->data.value - pReport->data.prevValue) < pReport->reportableChange) {
+        if (ERaDoubleCompare(pReport->data.value, pReport->data.prevValue) ||
+            abs(pReport->data.value - pReport->data.prevValue) < (double)pReport->reportableChange) {
             if (((currentMillis - pReport->prevMillis) < pReport->maxInterval) ||
                 (pReport->maxInterval == REPORT_MAX_INTERVAL)) {
                 continue;
@@ -115,7 +115,7 @@ ERaReport::Report_t* ERaReport::setupReport(unsigned long minInterval, unsigned 
 
 ERaReport::Report_t* ERaReport::setupReport(unsigned long minInterval, unsigned long maxInterval,
                                             float minChange, ReportCallback_p_t cb,
-                                            void* arg) {
+                                            void* args) {
     if (!this->isReportFree()) {
         return nullptr;
     }
@@ -147,7 +147,7 @@ ERaReport::Report_t* ERaReport::setupReport(unsigned long minInterval, unsigned 
     pReport->prevMillis = ERaMillis();
     pReport->callback = nullptr;
     pReport->callback_p = cb;
-    pReport->param = arg;
+    pReport->param = args;
     pReport->enable = true;
     pReport->updated = false;
     pReport->reported = false;
@@ -159,7 +159,7 @@ ERaReport::Report_t* ERaReport::setupReport(unsigned long minInterval, unsigned 
 
 ERaReport::Report_t* ERaReport::setupReport(unsigned long minInterval, unsigned long maxInterval,
                                             float minChange, ReportCallback_p_t cb,
-                                            uint8_t pin, uint8_t pinMode, unsigned int configId) {
+                                            uint8_t pin, uint8_t pinMode, ERaUInt_t configId) {
     if (!this->isReportFree()) {
         return nullptr;
     }
@@ -222,7 +222,7 @@ bool ERaReport::changeReportableChange(Report_t* pReport, unsigned long minInter
 bool ERaReport::changeReportableChange(Report_t* pReport, unsigned long minInterval,
                                         unsigned long maxInterval, float minChange,
                                         ReportCallback_p_t cb, uint8_t pin, uint8_t pinMode,
-                                        unsigned int configId) {
+                                        ERaUInt_t configId) {
     if (!this->isValidReport(pReport)) {
         return false;
     }
@@ -244,16 +244,16 @@ bool ERaReport::changeReportableChange(Report_t* pReport, unsigned long minInter
     return true;
 }
 
-void ERaReport::updateReport(Report_t* pReport, float value, bool isRound, bool execute) {
+void ERaReport::updateReport(Report_t* pReport, double value, bool isRound, bool execute) {
     if (!this->isValidReport(pReport)) {
         return;
     }
 
     if (pReport->data.scale.enable) {
-        value = ERaMapNumberRange(value, pReport->data.scale.rawMin,
-                                    pReport->data.scale.rawMax,
-                                    pReport->data.scale.min,
-                                    pReport->data.scale.max);
+        value = ERaMapNumberRange(value, (double)pReport->data.scale.rawMin,
+                                         (double)pReport->data.scale.rawMax,
+                                         (double)pReport->data.scale.min,
+                                         (double)pReport->data.scale.max);
         if (isRound) {
             value = round(value);
         }
@@ -305,17 +305,17 @@ bool ERaReport::isCalled(Report_t* pReport) {
     return this->getFlag(pReport->called, ReportFlagT::REPORT_ON_CALLED);
 }
 
-float ERaReport::getValue(Report_t* pReport) {
+double ERaReport::getValue(Report_t* pReport) {
     if (!this->isValidReport(pReport)) {
-        return 0.0f;
+        return 0.0;
     }
 
     return pReport->data.value;
 }
 
-float ERaReport::getPreviousValue(Report_t* pReport) {
+double ERaReport::getPreviousValue(Report_t* pReport) {
     if (!this->isValidReport(pReport)) {
-        return 0.0f;
+        return 0.0;
     }
 
     return pReport->data.prevValue;

@@ -48,6 +48,9 @@ void ERaModbus<Api>::configModbus() {
         return;
     }
 
+#if defined(ERA_MODBUS_DISABLE_RX_PULLUP)
+    SerialMB.enableRxGPIOPullUp(false);
+#endif
     this->streamRTU = &SerialMB;
     SerialMB.begin(MODBUS_BAUDRATE);
     this->_streamDefault = true;
