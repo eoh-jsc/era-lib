@@ -206,34 +206,35 @@ uint32_t ERaOs::osMessageQueueGetCountIRQ(QueueHandle_t mq_id) {
 }
 
 uint32_t ERaOs::osMessageQueueGetSpace(QueueHandle_t mq_id) {
-    StaticQueue_t *mq = (StaticQueue_t *)mq_id;
-    uint32_t space;
+    UBaseType_t space;
 
-    if (mq == NULL) {
+    if (mq_id == NULL) {
         space = 0U;
     }
     else {
-        space = (uint32_t)uxQueueSpacesAvailable((QueueHandle_t)mq);
+        space = uxQueueSpacesAvailable(mq_id);
     }
 
-    return (space);
+    return ((uint32_t)space);
 }
 
-IRAM_ATTR
-uint32_t ERaOs::osMessageQueueGetSpaceIRQ(QueueHandle_t mq_id) {
-    StaticQueue_t *mq = (StaticQueue_t *)mq_id;
-    uint32_t space;
+#if (configSUPPORT_STATIC_ALLOCATION == 1)
+    IRAM_ATTR
+    uint32_t ERaOs::osMessageQueueGetSpaceIRQ(QueueHandle_t mq_id) {
+        StaticQueue_t *mq = (StaticQueue_t *)mq_id;
+        uint32_t space;
 
-    if (mq == NULL) {
-        space = 0U;
-    }
-    else {
-        /* space = pxQueue->uxLength - pxQueue->uxMessagesWaiting; */
-        space = mq->uxDummy4[1] - mq->uxDummy4[0];
-    }
+        if (mq == NULL) {
+            space = 0U;
+        }
+        else {
+            /* space = pxQueue->uxLength - pxQueue->uxMessagesWaiting; */
+            space = mq->uxDummy4[1] - mq->uxDummy4[0];
+        }
 
-    return (space);
-}
+        return (space);
+    }
+#endif
 
 void ERaOs::waitMessageQueueSpace(QueueHandle_t mq_id, uint32_t timeout) {
     unsigned long tick = millis();

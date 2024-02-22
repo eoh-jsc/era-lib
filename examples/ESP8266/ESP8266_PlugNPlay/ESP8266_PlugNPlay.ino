@@ -108,6 +108,10 @@ void setup() {
     #endif
     */
 
+    /* White labeling App (use this ONLY if you have a branded ERa App) */
+    // ERa.setVendorName("MyORG");
+    // ERa.setVendorPrefix("MyPrefix");
+
     /* Initializing the ERa library. */
     ERa.begin();
 

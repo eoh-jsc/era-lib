@@ -1079,6 +1079,13 @@ void ERaFatality() {
     }
 #endif
 
+#ifndef isinf
+    #define isinf(d) (isnan((d - d)) && !isnan(d))
+#endif
+#ifndef isnan
+    #define isnan(d) (d != d)
+#endif
+
 char* ERaStrdup(const char* str) {
     if (str == nullptr) {
         return nullptr;
@@ -1142,6 +1149,18 @@ uint8_t SignalToPercentage(int16_t value) {
         percentage = RSSIToPercentage(value);
     }
     return percentage;
+}
+
+bool ERaIsNaN(double value) {
+    return isnan(value);
+}
+
+bool ERaIsInf(double value) {
+    return isinf(value);
+}
+
+bool ERaIsSpN(double value) {
+    return (isnan(value) || isinf(value));
 }
 
 long long ERaAtoll(const char* str) {

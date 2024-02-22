@@ -248,6 +248,9 @@ void ERaReport::updateReport(Report_t* pReport, double value, bool isRound, bool
     if (!this->isValidReport(pReport)) {
         return;
     }
+    if (ERaIsSpN(value)) {
+        return;
+    }
 
     if (pReport->data.scale.enable) {
         value = ERaMapNumberRange(value, (double)pReport->data.scale.rawMin,

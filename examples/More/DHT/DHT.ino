@@ -8,6 +8,15 @@
     ERa blog:                   https://iotasia.org
     ERa forum:                  https://forum.eoh.io
     Follow us:                  https://www.fb.com/EoHPlatform
+ *************************************************************
+  Dashboard setup:
+    Virtual Pin setup:
+        V0, type: number
+        V1, type: number
+
+    This example need Adafruit DHT sensor libraries:
+        https://github.com/adafruit/Adafruit_Sensor
+        https://github.com/adafruit/DHT-sensor-library
  *************************************************************/
 
 // Enable debug console
@@ -24,19 +33,20 @@
 
 #include <Arduino.h>
 #include <ERa.hpp>
+#include <DHT.h>
 
-#define LED_PIN  2
+/* Digital pin connected to sensor */
+#define DHT_PIN 2
+
+/* Uncomment type using! */
+#define DHT_TYPE DHT11
+// #define DHT_TYPE DHT21
+// #define DHT_TYPE DHT22
 
 const char ssid[] = "YOUR_SSID";
 const char pass[] = "YOUR_PASSWORD";
 
-/* This function is called every time the Virtual Pin 0 state change */
-ERA_WRITE(V0) {
-    /* Get value from Virtual Pin 0 and write Pin 2 */
-    uint8_t value = param.getInt();
-    digitalWrite(LED_PIN, value ? HIGH : LOW);
-    ERa.virtualWrite(V0, digitalRead(LED_PIN));
-}
+DHT dht(DHT_PIN, DHT_TYPE);
 
 /* This function will run every time ERa is connected */
 ERA_CONNECTED() {
@@ -48,9 +58,21 @@ ERA_DISCONNECTED() {
     ERA_LOG("ERa", "ERa disconnected!");
 }
 
-/* This function send uptime every second to Virtual Pin 1 */
+/* This function print uptime every second */
 void timerEvent() {
-    ERa.virtualWrite(V1, ERaMillis() / 1000L);
+    // Read humidity and temperature
+    float humidity = dht.readHumidity();
+    float temperature = dht.readTemperature();
+
+    if (isnan(humidity) || isnan(temperature)) {
+        ERA_LOG("DHT", "Failed to read DHT!");
+        return;
+    }
+
+    // Send the humidity and temperature value to ERa
+    ERa.virtualWrite(V0, humidity);
+    ERa.virtualWrite(V1, temperature);
+
     ERA_LOG("Timer", "Uptime: %d", ERaMillis() / 1000L);
 }
 
@@ -60,11 +82,12 @@ void setup() {
     Serial.begin(115200);
 #endif
 
-    /* Setup pin mode led pin */
-    pinMode(LED_PIN, OUTPUT);
-
     /* Set board id */
     // ERa.setBoardID("Board_1");
+
+    /* Initialize DHT */
+    dht.begin();
+
     /* Initializing the ERa library. */
     ERa.begin(ssid, pass);
 

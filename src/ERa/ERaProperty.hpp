@@ -937,40 +937,44 @@ bool ERaProperty<Api>::allocatorPointer(Property_t* pProp, void* ptr) {
 
 template <class Api>
 void ERaProperty<Api>::onCallbackVirtual(const Property_t* const pProp) {
+    if (pProp->value->isNumber() && ERaIsSpN(pProp->value->getDouble())) {
+        return;
+    }
+
     switch (pProp->value->getType()) {
         case WrapperTypeT::WRAPPER_TYPE_BOOL:
-            this->thisApi().virtualWriteSingle(pProp->id, pProp->value->getBool());
+            this->thisApi().virtualWriteSingle(pProp->id.getInt(), pProp->value->getBool());
             break;
         case WrapperTypeT::WRAPPER_TYPE_INT:
-            this->thisApi().virtualWriteSingle(pProp->id, pProp->value->getInt());
+            this->thisApi().virtualWriteSingle(pProp->id.getInt(), pProp->value->getInt());
             break;
         case WrapperTypeT::WRAPPER_TYPE_UNSIGNED_INT:
-            this->thisApi().virtualWriteSingle(pProp->id, pProp->value->getUnsignedInt());
+            this->thisApi().virtualWriteSingle(pProp->id.getInt(), pProp->value->getUnsignedInt());
             break;
         case WrapperTypeT::WRAPPER_TYPE_LONG:
-            this->thisApi().virtualWriteSingle(pProp->id, pProp->value->getLong());
+            this->thisApi().virtualWriteSingle(pProp->id.getInt(), pProp->value->getLong());
             break;
         case WrapperTypeT::WRAPPER_TYPE_UNSIGNED_LONG:
-            this->thisApi().virtualWriteSingle(pProp->id, pProp->value->getUnsignedLong());
+            this->thisApi().virtualWriteSingle(pProp->id.getInt(), pProp->value->getUnsignedLong());
             break;
         case WrapperTypeT::WRAPPER_TYPE_LONG_LONG:
-            this->thisApi().virtualWriteSingle(pProp->id, pProp->value->getLongLong());
+            this->thisApi().virtualWriteSingle(pProp->id.getInt(), pProp->value->getLongLong());
             break;
         case WrapperTypeT::WRAPPER_TYPE_UNSIGNED_LONG_LONG:
-            this->thisApi().virtualWriteSingle(pProp->id, pProp->value->getUnsignedLongLong());
+            this->thisApi().virtualWriteSingle(pProp->id.getInt(), pProp->value->getUnsignedLongLong());
             break;
         case WrapperTypeT::WRAPPER_TYPE_FLOAT:
-            this->thisApi().virtualWriteSingle(pProp->id, pProp->value->getFloat());
+            this->thisApi().virtualWriteSingle(pProp->id.getInt(), pProp->value->getFloat());
             break;
         case WrapperTypeT::WRAPPER_TYPE_DOUBLE:
-            this->thisApi().virtualWriteSingle(pProp->id, pProp->value->getDouble());
+            this->thisApi().virtualWriteSingle(pProp->id.getInt(), pProp->value->getDouble());
             break;
         case WrapperTypeT::WRAPPER_TYPE_NUMBER:
-            this->thisApi().virtualWriteSingle(pProp->id, pProp->value->getNumber());
+            this->thisApi().virtualWriteSingle(pProp->id.getInt(), pProp->value->getNumber());
             break;
         case WrapperTypeT::WRAPPER_TYPE_STRING:
             if (pProp->value->getString() != nullptr) {
-                this->thisApi().virtualWriteSingle(pProp->id, pProp->value->getString());
+                this->thisApi().virtualWriteSingle(pProp->id.getInt(), pProp->value->getString());
             }
             break;
         default:

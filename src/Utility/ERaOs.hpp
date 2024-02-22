@@ -50,11 +50,15 @@
     #endif
 #endif
 
+#ifndef configSUPPORT_STATIC_ALLOCATION
+    #define configSUPPORT_STATIC_ALLOCATION         0
+#endif
+
 #ifndef portEND_SWITCHING_ISR
-    #define portEND_SWITCHING_ISR(xSwitchRequired) if(xSwitchRequired != pdFALSE) portYIELD()
+    #define portEND_SWITCHING_ISR(xSwitchRequired)  if (xSwitchRequired != pdFALSE) portYIELD()
 #endif
 #ifndef osPortYIELD_FROM_ISR
-    #define osPortYIELD_FROM_ISR(x) portEND_SWITCHING_ISR(x)
+    #define osPortYIELD_FROM_ISR(x)                 portEND_SWITCHING_ISR(x)
 #endif
 
 /// Timeout value.
@@ -97,7 +101,9 @@ namespace ERaOs {
     uint32_t osMessageQueueGetCount(QueueHandle_t mq_id);
     uint32_t osMessageQueueGetCountIRQ(QueueHandle_t mq_id);
     uint32_t osMessageQueueGetSpace(QueueHandle_t mq_id);
+#if (configSUPPORT_STATIC_ALLOCATION == 1)
     uint32_t osMessageQueueGetSpaceIRQ(QueueHandle_t mq_id);
+#endif
     void waitMessageQueueSpace(QueueHandle_t mq_id, uint32_t timeout);
     osStatus_t osMessageQueueReset(QueueHandle_t mq_id);
     SemaphoreHandle_t osSemaphoreNew();

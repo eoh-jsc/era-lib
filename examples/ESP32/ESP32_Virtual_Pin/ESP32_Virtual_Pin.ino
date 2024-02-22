@@ -11,12 +11,16 @@
  *************************************************************
   Dashboard setup:
     Virtual Pin setup:
+        V0, type: number
         V1, type: string
-        V2, type: string
 
-    Terminal Box widget setup:
-        From datastream: V1
-        To datastream:   V2
+    Button widget setup:
+        Datastream: V0
+        Action on: the action of turning on V0
+        Action off: the action of turning off V0
+
+    Text Box widget setup:
+        Datastream: V1
         Action: the action of V1
  *************************************************************/
 
@@ -34,13 +38,41 @@
 
 #include <Arduino.h>
 #include <ERa.hpp>
-#include <Widgets/ERaWidgets.hpp>
+
+#define LED_PIN  2
 
 const char ssid[] = "YOUR_SSID";
 const char pass[] = "YOUR_PASSWORD";
 
-ERaString estr;
-ERaWidgetTerminalBox terminal(estr, V1, V2);
+/* This function is called every time the Virtual Pin 0 state change */
+ERA_WRITE(V0) {
+    /* Get value from Virtual Pin 0 and write LED */
+    uint8_t value = param.getInt();
+    digitalWrite(LED_PIN, value ? HIGH : LOW);
+
+    // Send the LED status back
+    ERa.virtualWrite(V0, digitalRead(LED_PIN));
+}
+
+/* This function will execute each time from the Text Box to your chip */
+ERA_WRITE(V1) {
+    /* Get value from Virtual Pin 1 */
+    ERaString estr = param.getString();
+
+    // If you type "on", turn on LED
+    // If you type "off", turn off LED
+    if (estr == "on") {
+        digitalWrite(LED_PIN, HIGH);
+    }
+    else if (estr == "off") {
+        digitalWrite(LED_PIN, LOW);
+    }
+
+    // Send it back
+    ERa.virtualWrite(V1, estr);
+    // Send the LED status back
+    ERa.virtualWrite(V0, digitalRead(LED_PIN));
+}
 
 /* This function will run every time ERa is connected */
 ERA_CONNECTED() {
@@ -52,22 +84,10 @@ ERA_DISCONNECTED() {
     ERA_LOG("ERa", "ERa disconnected!");
 }
 
-/* This function print uptime every second */
+/* This function send uptime every second to Virtual Pin 1 */
 void timerEvent() {
+    ERa.virtualWrite(V1, ERaMillis() / 1000L);
     ERA_LOG("Timer", "Uptime: %d", ERaMillis() / 1000L);
-}
-
-/* This function will execute each time from the Terminal Box to your chip */
-void terminalCallback() {
-    // If you type "Hi"
-    // it will response "Hello! Thank you for using ERa."
-    if (estr == "Hi") {
-        terminal.print("Hello! ");
-    }
-    terminal.print("Thank you for using ERa.");
-
-    // Send everything into Terminal Box widget
-    terminal.flush();
 }
 
 void setup() {
@@ -76,12 +96,11 @@ void setup() {
     Serial.begin(115200);
 #endif
 
+    /* Setup pin mode led pin */
+    pinMode(LED_PIN, OUTPUT);
+
     /* Set board id */
     // ERa.setBoardID("Board_1");
-
-    /* Setup the Terminal callback */
-    terminal.begin(terminalCallback);
-
     /* Initializing the ERa library. */
     ERa.begin(ssid, pass);
 

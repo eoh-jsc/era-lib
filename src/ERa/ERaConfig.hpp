@@ -118,11 +118,15 @@
     #define ERA_ASK_CONFIG_WHEN_RESTART
 #endif
 
-#if !defined(ERA_ORG_NAME)
+#if defined(ERA_VENDOR_NAME)
+    #define ERA_ORG_NAME                ERA_VENDOR_NAME
+#elif !defined(ERA_ORG_NAME)
     #define ERA_ORG_NAME                "eoh"
 #endif
 
-#if defined(ERA_PREFIX_NAME)
+#if defined(ERA_VENDOR_PREFIX)
+    #define ERA_MODEL_NAME              ERA_VENDOR_PREFIX
+#elif defined(ERA_PREFIX_NAME)
     #define ERA_MODEL_NAME              ERA_PREFIX_NAME
 #elif !defined(ERA_MODEL_NAME)
     #define ERA_MODEL_NAME              "era"

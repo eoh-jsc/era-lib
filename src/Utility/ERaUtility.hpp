@@ -61,6 +61,9 @@ int16_t GSMToRSSI(uint8_t value);
 uint8_t GSMToPercentage(uint8_t value);
 uint8_t SignalToPercentage(int16_t value);
 
+bool ERaIsNaN(double value);
+bool ERaIsInf(double value);
+bool ERaIsSpN(double value);
 long long ERaAtoll(const char* str);
 char* ERaDtostrf(double number, int decimal, char* str);
 

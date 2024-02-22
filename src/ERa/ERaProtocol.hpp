@@ -131,6 +131,14 @@ public:
         return this->pModel;
     }
 
+    void setVendorName(const char* name) {
+        this->setERaORG(name);
+    }
+
+    void setVendorPrefix(const char* prefix) {
+        this->setERaModel(prefix);
+    }
+
     void sendCommand(const char* auth, ERaRsp_t& rsp, ApiData_t data = nullptr);
 
     void setServerCallbacks(ERaServerCallbacks& callbacks) override {

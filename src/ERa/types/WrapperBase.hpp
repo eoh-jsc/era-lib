@@ -200,7 +200,9 @@ public:
     }
 
     WrapperBase& operator = (double num) {
-        this->set(num);
+        if (!ERaIsSpN(num)) {
+            this->set(num);
+        }
         return (*this);
     }
 
