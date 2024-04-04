@@ -293,7 +293,7 @@ CJSON_PUBLIC(cJSON_bool) cJSON_Rename(cJSON * const object, const char * const n
 CJSON_PUBLIC(double) cJSON_SetNumberHelper(cJSON *object, double number);
 #define cJSON_SetNumberValue(object, number) ((object != NULL) ? cJSON_SetNumberHelper(object, (double)number) : (number))
 /* Change the valuestring of a cJSON_String object, only takes effect when type of object is cJSON_String */
-CJSON_PUBLIC(char*) cJSON_SetValuestring(cJSON *object, const char *valuestring);
+CJSON_PUBLIC(char*) cJSON_SetValueString(cJSON *object, const char *valuestring);
 
 /* If the object is not a boolean type this does nothing and returns cJSON_Invalid else it returns the new type */
 #define cJSON_SetBoolValue(object, boolean) ( \
