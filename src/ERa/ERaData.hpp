@@ -839,6 +839,7 @@ public:
     public:
         iterator()
             : item(nullptr)
+            , parent(nullptr)
         {}
         iterator(cJSON* pItem,
                 cJSON* pParent = nullptr)

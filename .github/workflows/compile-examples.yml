@@ -168,7 +168,7 @@ jobs:
               - name: TinyGSM
               - name: STM32duino FreeRTOS
           - name: "STMicroelectronics-F4"
-            fqbn: "STMicroelectronics:stm32:GenF4"
+            fqbn: "STMicroelectronics:stm32:GenF4:pnum=GENERIC_F407VGTX"
             platform-name: STMicroelectronics:stm32
             sketch-paths: examples/STM32
             libraries: |
@@ -176,7 +176,7 @@ jobs:
               - name: TinyGSM
               - name: STM32duino FreeRTOS
           - name: "STMicroelectronics-F7"
-            fqbn: "STMicroelectronics:stm32:GenF7"
+            fqbn: "STMicroelectronics:stm32:GenF7:pnum=GENERIC_F769NIHX"
             platform-name: STMicroelectronics:stm32
             sketch-paths: examples/STM32
             libraries: |
