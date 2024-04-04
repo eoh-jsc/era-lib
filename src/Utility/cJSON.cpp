@@ -239,6 +239,63 @@ static cJSON *cJSON_New_Item(const internal_hooks * const hooks)
     return node;
 }
 
+CJSON_PUBLIC(cJSON_Int_t) cJSON_SetIntHelper(cJSON *object, cJSON_Int_t number)
+{
+    /* return CJSON_INT_MIN if the object is corrupted */
+    if (object == NULL)
+    {
+        return CJSON_INT_MIN;
+    }
+
+    object->valuedouble = (double)number;
+    return object->valueint = number;
+}
+
+CJSON_PUBLIC(char*) cJSON_SetValueString(cJSON *object, const char *valuestring)
+{
+    char *copy = NULL;
+    /* if object's type is not cJSON_String or is cJSON_IsReference, it should not set valuestring */
+    if ((object == NULL) || !(object->type & cJSON_String) || (object->type & cJSON_IsReference))
+    {
+        return NULL;
+    }
+    /* return NULL if the object is corrupted */
+    if (object->valuestring == NULL)
+    {
+        return NULL;
+    }
+    if (strlen(valuestring) <= strlen(object->valuestring))
+    {
+        strcpy(object->valuestring, valuestring);
+        return object->valuestring;
+    }
+    copy = (char*) cJSON_strdup((const unsigned char*)valuestring, &global_hooks);
+    if (copy == NULL)
+    {
+        return NULL;
+    }
+    if (object->valuestring != NULL)
+    {
+        cJSON_free(object->valuestring);
+    }
+    object->valuestring = copy;
+
+    return copy;
+}
+
+CJSON_PUBLIC(int) cJSON_SetBoolHelper(cJSON *object, const cJSON_bool boolean)
+{
+    /* if object's type is not cJSON_False or is cJSON_True, it should not set type, valueint and valuedouble */
+    if ((object == NULL) || !(object->type & (cJSON_False | cJSON_True)))
+    {
+        return cJSON_Invalid;
+    }
+
+    object->valueint = boolean ? 1 : 0;
+    object->valuedouble = boolean ? 1 : 0;
+    return object->type = ((object->type & (~(cJSON_False | cJSON_True))) | (boolean ? cJSON_True : cJSON_False));
+}
+
 CJSON_PUBLIC(cJSON *) cJSON_CreateRawNumber(const char *raw)
 {
     cJSON *item = cJSON_New_Item(&global_hooks);
@@ -249,13 +306,13 @@ CJSON_PUBLIC(cJSON *) cJSON_CreateRawNumber(const char *raw)
         item->valuedouble = num;
 
         /* use saturation in case of overflow */
-        if (num >= ERA_INT_MAX)
+        if (num >= CJSON_INT_MAX)
         {
-            item->valueint = ERA_INT_MAX;
+            item->valueint = CJSON_INT_MAX;
         }
-        else if (num <= (double)ERA_INT_MIN)
+        else if (num <= (double)CJSON_INT_MIN)
         {
-            item->valueint = ERA_INT_MIN;
+            item->valueint = CJSON_INT_MIN;
         }
         else
         {
@@ -589,13 +646,13 @@ loop_end:
     item->valuedouble = number;
 
     /* use saturation in case of overflow */
-    if (number >= ERA_INT_MAX)
+    if (number >= CJSON_INT_MAX)
     {
-        item->valueint = ERA_INT_MAX;
+        item->valueint = CJSON_INT_MAX;
     }
-    else if (number <= (double)ERA_INT_MIN)
+    else if (number <= (double)CJSON_INT_MIN)
     {
-        item->valueint = ERA_INT_MIN;
+        item->valueint = CJSON_INT_MIN;
     }
     else
     {
@@ -608,16 +665,34 @@ loop_end:
     return true;
 }
 
+CJSON_PUBLIC(cJSON_Int_t) cJSON_SetIntHelper(cJSON *object, cJSON_Int_t number)
+{
+    /* return CJSON_INT_MIN if the object is corrupted */
+    if (object == NULL)
+    {
+        return CJSON_INT_MIN;
+    }
+
+    object->valuedouble = (double)number;
+    return object->valueint = number;
+}
+
 /* don't ask me, but the original cJSON_SetNumberValue returns an integer or double */
 CJSON_PUBLIC(double) cJSON_SetNumberHelper(cJSON *object, double number)
 {
-    if (number >= ERA_INT_MAX)
+    /* return NAN if the object is corrupted */
+    if (object == NULL)
     {
-        object->valueint = ERA_INT_MAX;
+        return NAN;
     }
-    else if (number <= (double)ERA_INT_MIN)
+
+    if (number >= CJSON_INT_MAX)
     {
-        object->valueint = ERA_INT_MIN;
+        object->valueint = CJSON_INT_MAX;
+    }
+    else if (number <= (double)CJSON_INT_MIN)
+    {
+        object->valueint = CJSON_INT_MIN;
     }
     else
     {
@@ -657,6 +732,19 @@ CJSON_PUBLIC(char*) cJSON_SetValueString(cJSON *object, const char *valuestring)
     object->valuestring = copy;
 
     return copy;
+}
+
+CJSON_PUBLIC(int) cJSON_SetBoolHelper(cJSON *object, const cJSON_bool boolean)
+{
+    /* if object's type is not cJSON_False or is cJSON_True, it should not set type, valueint and valuedouble */
+    if ((object == NULL) || !(object->type & (cJSON_False | cJSON_True)))
+    {
+        return cJSON_Invalid;
+    }
+
+    object->valueint = boolean ? 1 : 0;
+    object->valuedouble = boolean ? 1 : 0;
+    return object->type = ((object->type & (~(cJSON_False | cJSON_True))) | (boolean ? cJSON_True : cJSON_False));
 }
 
 typedef struct
@@ -2726,13 +2814,13 @@ CJSON_PUBLIC(cJSON *) cJSON_CreateNumber(double num)
         item->valuedouble = num;
 
         /* use saturation in case of overflow */
-        if (num >= ERA_INT_MAX)
+        if (num >= CJSON_INT_MAX)
         {
-            item->valueint = ERA_INT_MAX;
+            item->valueint = CJSON_INT_MAX;
         }
-        else if (num <= (double)ERA_INT_MIN)
+        else if (num <= (double)CJSON_INT_MIN)
         {
-            item->valueint = ERA_INT_MIN;
+            item->valueint = CJSON_INT_MIN;
         }
         else
         {
@@ -2820,13 +2908,13 @@ CJSON_PUBLIC(cJSON *) cJSON_CreateRawNumber(const char *raw)
         item->valuedouble = num;
 
         /* use saturation in case of overflow */
-        if (num >= ERA_INT_MAX)
+        if (num >= CJSON_INT_MAX)
         {
-            item->valueint = ERA_INT_MAX;
+            item->valueint = CJSON_INT_MAX;
         }
-        else if (num <= (double)ERA_INT_MIN)
+        else if (num <= (double)CJSON_INT_MIN)
         {
-            item->valueint = ERA_INT_MIN;
+            item->valueint = CJSON_INT_MIN;
         }
         else
         {

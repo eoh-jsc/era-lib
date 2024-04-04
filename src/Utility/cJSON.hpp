@@ -288,19 +288,19 @@ CJSON_PUBLIC(cJSON*) cJSON_AddArrayToObject(cJSON * const object, const char * c
 CJSON_PUBLIC(cJSON_bool) cJSON_Rename(cJSON * const object, const char * const name);
 
 /* When assigning an integer value, it needs to be propagated to valuedouble too. */
-#define cJSON_SetIntValue(object, number) ((object) ? (object)->valueint = (object)->valuedouble = (number) : (number))
-/* helper for the cJSON_SetNumberValue macro */
+/* Helper for the cJSON_SetIntValue macro */
+CJSON_PUBLIC(cJSON_Int_t) cJSON_SetIntHelper(cJSON *object, cJSON_Int_t number);
+#define cJSON_SetIntValue(object, number) cJSON_SetIntHelper(object, cJSON_Int_t(number))
+/* Helper for the cJSON_SetNumberValue macro */
 CJSON_PUBLIC(double) cJSON_SetNumberHelper(cJSON *object, double number);
-#define cJSON_SetNumberValue(object, number) ((object != NULL) ? cJSON_SetNumberHelper(object, (double)number) : (number))
+#define cJSON_SetNumberValue(object, number) cJSON_SetNumberHelper(object, (double)number)
 /* Change the valuestring of a cJSON_String object, only takes effect when type of object is cJSON_String */
 CJSON_PUBLIC(char*) cJSON_SetValueString(cJSON *object, const char *valuestring);
 
 /* If the object is not a boolean type this does nothing and returns cJSON_Invalid else it returns the new type */
-#define cJSON_SetBoolValue(object, boolean) ( \
-    (object != NULL && ((object)->type & (cJSON_False|cJSON_True))) ? \
-    (object)->type=((object)->type &(~(cJSON_False|cJSON_True)))|((boolean)?cJSON_True:cJSON_False) : \
-    cJSON_Invalid\
-)
+/* Helper for the cJSON_SetBoolValue macro */
+CJSON_PUBLIC(int) cJSON_SetBoolHelper(cJSON *object, const cJSON_bool boolean);
+#define cJSON_SetBoolValue(object, boolean) cJSON_SetBoolHelper(object, (cJSON_bool)boolean)
 
 /* Macro for iterating over an array or object */
 #define cJSON_ArrayForEach(element, array) for(element = (array != NULL) ? (array)->child : NULL; element != NULL; element = element->next)
