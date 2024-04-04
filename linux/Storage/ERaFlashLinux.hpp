@@ -9,7 +9,7 @@ class ERaFlashLinux
     const char* TAG = "Flash";
 public:
     ERaFlashLinux()
-        : file(nullptr)
+        : mFile(nullptr)
     {}
     ~ERaFlashLinux()
     {}
@@ -31,7 +31,7 @@ protected:
 private:
     void mkdir(const char* path);
 
-    FILE* file;
+    FILE* mFile;
 };
 
 inline
@@ -45,12 +45,12 @@ void ERaFlashLinux::end() {
 inline
 void ERaFlashLinux::beginRead(const char* filename) {
     this->endRead();
-    this->file = fopen(filename, "r");
+    this->mFile = fopen(filename, "r");
 }
 
 inline
 char* ERaFlashLinux::readLine() {
-    if (this->file == nullptr) {
+    if (this->mFile == nullptr) {
         return nullptr;
     }
     int c {0};
@@ -61,7 +61,7 @@ char* ERaFlashLinux::readLine() {
         return nullptr;
     }
     do {
-        c = fgetc(this->file);
+        c = fgetc(this->mFile);
         if ((c != EOF) && (c != '\n')) {
             buffer[pos++] = (char)c;
         }
@@ -86,20 +86,20 @@ char* ERaFlashLinux::readLine() {
 
 inline
 void ERaFlashLinux::endRead() {
-    if (this->file == nullptr) {
+    if (this->mFile == nullptr) {
         return;
     }
-    fclose(this->file);
-    this->file = nullptr;
+    fclose(this->mFile);
+    this->mFile = nullptr;
 }
 
 inline
 void ERaFlashLinux::beginWrite(const char* filename) {
     this->endWrite();
-    this->file = fopen(filename, "w");
-    if (this->file == nullptr) {
+    this->mFile = fopen(filename, "w");
+    if (this->mFile == nullptr) {
         this->mkdir(filename);
-        this->file = fopen(filename, "w");
+        this->mFile = fopen(filename, "w");
     }
 }
 
@@ -108,42 +108,42 @@ void ERaFlashLinux::writeLine(const char* buf) {
     if (buf == nullptr) {
         return;
     }
-    if (this->file == nullptr) {
+    if (this->mFile == nullptr) {
         return;
     }
-    fprintf(this->file, "%s\n", buf);
+    fprintf(this->mFile, "%s\n", buf);
 }
 
 inline
 void ERaFlashLinux::endWrite() {
-    if (this->file == nullptr) {
+    if (this->mFile == nullptr) {
         return;
     }
-    fclose(this->file);
-    this->file = nullptr;
+    fclose(this->mFile);
+    this->mFile = nullptr;
 }
 
 inline
 char* ERaFlashLinux::readFlash(const char* filename) {
-    FILE* _file = fopen(filename, "r");
-    if (_file == nullptr) {
+    FILE* file = fopen(filename, "r");
+    if (file == nullptr) {
         return nullptr;
     }
-    fseek(_file, 0L, SEEK_END);
-    size_t size = ftell(_file);
-    fseek(_file, 0L, SEEK_SET);
+    fseek(file, 0L, SEEK_END);
+    size_t size = ftell(file);
+    fseek(file, 0L, SEEK_SET);
     if (!size) {
-        fclose(_file);
+        fclose(file);
         return nullptr;
     }
     char* buf = (char*)ERA_MALLOC(size + 1);
     if (buf == nullptr) {
-        fclose(_file);
+        fclose(file);
         return nullptr;
     }
     buf[size] = '\0';
-    fgets(buf, size + 1, _file);
-    fclose(_file);
+    fgets(buf, size + 1, file);
+    fclose(file);
     return buf;
 }
 
@@ -152,12 +152,12 @@ size_t ERaFlashLinux::readFlash(const char* key, void* buf, size_t maxLen) {
     if (buf == nullptr) {
         return 0;
     }
-    FILE* _file = fopen(key, "rb");
-    if (_file == nullptr) {
+    FILE* file = fopen(key, "rb");
+    if (file == nullptr) {
         return 0;
     }
-    fread(buf, maxLen, 1, _file);
-    fclose(_file);
+    fread(buf, maxLen, 1, file);
+    fclose(file);
     return maxLen;
 }
 
@@ -166,16 +166,16 @@ void ERaFlashLinux::writeFlash(const char *filename, const char* buf) {
     if (buf == nullptr) {
         return;
     }
-    FILE* _file = fopen(filename, "w");
-    if (_file == nullptr) {
+    FILE* file = fopen(filename, "w");
+    if (file == nullptr) {
         this->mkdir(filename);
-        _file = fopen(filename, "w");
-        if (_file == nullptr) {
+        file = fopen(filename, "w");
+        if (file == nullptr) {
             return;
         }
     }
-    fprintf(_file, "%s", buf);
-    fclose(_file);
+    fprintf(file, "%s", buf);
+    fclose(file);
 }
 
 inline
@@ -183,16 +183,16 @@ size_t ERaFlashLinux::writeFlash(const char* key, const void* value, size_t len)
     if (value == nullptr) {
         return 0;
     }
-    FILE* _file = fopen(key, "wb");
-    if (_file == nullptr) {
+    FILE* file = fopen(key, "wb");
+    if (file == nullptr) {
         this->mkdir(key);
-        _file = fopen(key, "wb");
-        if (_file == nullptr) {
+        file = fopen(key, "wb");
+        if (file == nullptr) {
             return 0;
         }
     }
-    fwrite(value, 1, len, _file);
-    fclose(_file);
+    fwrite(value, 1, len, file);
+    fclose(file);
     return len;
 }
 

@@ -37,7 +37,7 @@ namespace ZigbeeState {
     void set(ZigbeeStateT _state) {
         ZigbeeState::state() = _state;
     }
-};
+} /* namespace ZigbeeState */
 
 using namespace std;
 

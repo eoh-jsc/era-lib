@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <ERa/ERaDefine.hpp>
+#include <ERa/ERaConfig.hpp>
 #include <ERa/ERaDebug.hpp>
 #include <ERa/ERaTimer.hpp>
 #include <ERa/ERaCallbacksHelper.hpp>
@@ -32,7 +33,7 @@ public:
     virtual void specificDataWrite(const char* id, cJSON* value,
                                    bool specific = false,
                                    bool retained = ERA_MQTT_PUBLISH_RETAINED) {
-        ERA_LOG(TAG, ERA_PSTR("specificDataWrite default."));
+        ERA_LOG_WARNING(TAG, ERA_PSTR("specificDataWrite default."));
         ERA_FORCE_UNUSED(id);
         ERA_FORCE_UNUSED(value);
         ERA_FORCE_UNUSED(specific);
@@ -42,7 +43,7 @@ public:
     virtual void specificDataWrite(const char* id, const char* value,
                                    bool specific = false,
                                    bool retained = ERA_MQTT_PUBLISH_RETAINED) {
-        ERA_LOG(TAG, ERA_PSTR("specificDataWrite default."));
+        ERA_LOG_WARNING(TAG, ERA_PSTR("specificDataWrite default."));
         ERA_FORCE_UNUSED(id);
         ERA_FORCE_UNUSED(value);
         ERA_FORCE_UNUSED(specific);
@@ -51,7 +52,7 @@ public:
 #endif
 
     virtual char* readFromFlash(const char* filename, bool force = false) {
-        ERA_LOG(TAG, ERA_PSTR("readFromFlash default."));
+        ERA_LOG_WARNING(TAG, ERA_PSTR("readFromFlash default."));
         ERA_FORCE_UNUSED(filename);
         ERA_FORCE_UNUSED(force);
         return NULL;
@@ -59,10 +60,31 @@ public:
 
     virtual void writeToFlash(const char* filename, const char* buf,
                                                     bool force = false) {
-        ERA_LOG(TAG, ERA_PSTR("writeToFlash default."));
+        ERA_LOG_WARNING(TAG, ERA_PSTR("writeToFlash default."));
         ERA_FORCE_UNUSED(filename);
         ERA_FORCE_UNUSED(buf);
         ERA_FORCE_UNUSED(force);
+    }
+
+    virtual void callERaWriteHandler(uint8_t pin, const ERaParam& param) {
+        ERA_LOG_WARNING(TAG, ERA_PSTR("callERaWriteHandler default."));
+        ERA_FORCE_UNUSED(pin);
+        ERA_FORCE_UNUSED(param);
+    }
+
+    virtual void callERaPinReadHandler(uint8_t pin, const ERaParam& param, const ERaParam& raw) {
+        ERA_LOG_WARNING(TAG, ERA_PSTR("callERaPinReadHandler default."));
+        ERA_FORCE_UNUSED(pin);
+        ERA_FORCE_UNUSED(param);
+        ERA_FORCE_UNUSED(raw);
+    }
+
+    virtual bool callERaPinWriteHandler(uint8_t pin, const ERaParam& param, const ERaParam& raw) {
+        ERA_LOG_WARNING(TAG, ERA_PSTR("callERaPinWriteHandler default."));
+        ERA_FORCE_UNUSED(pin);
+        ERA_FORCE_UNUSED(param);
+        ERA_FORCE_UNUSED(raw);
+        return false;
     }
 
     template <typename... Args>
@@ -80,6 +102,10 @@ public:
         return this->ERaTm.setTimer(interval, tail...);
     }
 
+    void runTimer() {
+        this->ERaTm.run();
+    }
+
     virtual bool connected() = 0;
 
 protected:
@@ -88,7 +114,7 @@ protected:
     }
 
     virtual void connectNewWiFi(const char* ssid, const char* pass) {
-        ERA_LOG(TAG, ERA_PSTR("connectNewWiFi default."));
+        ERA_LOG_WARNING(TAG, ERA_PSTR("connectNewWiFi default."));
         ERA_FORCE_UNUSED(ssid);
         ERA_FORCE_UNUSED(pass);
     }

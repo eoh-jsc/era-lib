@@ -8,8 +8,8 @@ ERaButton::ERaButton()
 
 void ERaButton::run() {
     unsigned long currentMillis = ERaMillis();
-    const ERaList<Button_t*>::iterator* e = this->button.end();
-    for (ERaList<Button_t*>::iterator* it = this->button.begin(); it != e; it = it->getNext()) {
+    const ButtonIterator* e = this->button.end();
+    for (ButtonIterator* it = this->button.begin(); it != e; it = it->getNext()) {
         Button_t* pButton = it->get();
         if (!this->isValidButton(pButton)) {
             continue;
@@ -41,15 +41,27 @@ void ERaButton::run() {
             }
             else {
                 this->setFlag(pButton->called, ButtonEventT::BUTTON_ON_FALLING, true);
-                if ((currentMillis - pButton->prevMulti) > pButton->delayMulti) {
+                if (pButton->reload) {
+                    pButton->prevMulti = currentMillis;
+                }
+                else if ((currentMillis - pButton->prevMulti) > pButton->delayMulti) {
                     pButton->countMulti = 0;
                     pButton->prevMulti = currentMillis;
                 }
-                if (++pButton->countMulti >= pButton->numberMulti) {
-                    pButton->countMulti = 0;
+                if ((++pButton->countMulti >= pButton->numberMulti) && !pButton->reload) {
+                    // pButton->countMulti = 0;
                     pButton->prevMulti = currentMillis;
                     this->setFlag(pButton->called, ButtonEventT::BUTTON_ON_MULTI, true);
                 }
+            }
+        }
+        if (pButton->reload && pButton->countMulti &&
+            ((currentMillis - pButton->prevMulti) > pButton->delayMulti)) {
+            if (pButton->countMulti < pButton->numberMulti) {
+                pButton->countMulti = 0;
+            }
+            else {
+                this->setFlag(pButton->called, ButtonEventT::BUTTON_ON_MULTI, true);
             }
         }
         if (!pButton->state && !pButton->pressed) {
@@ -70,18 +82,18 @@ void ERaButton::run() {
         }
     }
 
-    ERaList<Button_t*>::iterator* next = nullptr;
-    for (ERaList<Button_t*>::iterator* it = this->button.begin(); it != e; it = next) {
-        next = it->getNext();
+    for (ButtonIterator* it = this->button.begin(); it != e; it = it->getNext()) {
         Button_t* pButton = it->get();
         if (!this->isValidButton(pButton)) {
+            continue;
+        }
+        if (this->getFlag(pButton->called, ButtonEventT::BUTTON_ON_DELETE)) {
             continue;
         }
         if (!pButton->called) {
             continue;
         }
-        if (this->getFlag(pButton->called, ButtonEventT::BUTTON_ON_CHANGE) &&
-            this->getFlag(pButton->flag, ButtonEventT::BUTTON_ON_CHANGE)) {
+        if (this->isCalledFlag(pButton, ButtonEventT::BUTTON_ON_CHANGE)) {
             if (pButton->callback_p == nullptr) {
                 if (pButton->callback != nullptr) {
                     pButton->callback(pButton->pin, ButtonEventT::BUTTON_ON_CHANGE);
@@ -91,8 +103,7 @@ void ERaButton::run() {
                 pButton->callback_p(pButton->pin, ButtonEventT::BUTTON_ON_CHANGE, pButton->param);
             }
         }
-        if (this->getFlag(pButton->called, ButtonEventT::BUTTON_ON_FALLING) &&
-            this->getFlag(pButton->flag, ButtonEventT::BUTTON_ON_FALLING)) {
+        if (this->isCalledFlag(pButton, ButtonEventT::BUTTON_ON_FALLING)) {
             if (pButton->callback_p == nullptr) {
                 if (pButton->callback != nullptr) {
                     pButton->callback(pButton->pin, ButtonEventT::BUTTON_ON_FALLING);
@@ -102,8 +113,7 @@ void ERaButton::run() {
                 pButton->callback_p(pButton->pin, ButtonEventT::BUTTON_ON_FALLING, pButton->param);
             }
         }
-        if (this->getFlag(pButton->called, ButtonEventT::BUTTON_ON_RISING) &&
-            this->getFlag(pButton->flag, ButtonEventT::BUTTON_ON_RISING)) {
+        if (this->isCalledFlag(pButton, ButtonEventT::BUTTON_ON_RISING)) {
             if (pButton->callback_p == nullptr) {
                 if (pButton->callback != nullptr) {
                     pButton->callback(pButton->pin, ButtonEventT::BUTTON_ON_RISING);
@@ -113,8 +123,7 @@ void ERaButton::run() {
                 pButton->callback_p(pButton->pin, ButtonEventT::BUTTON_ON_RISING, pButton->param);
             }
         }
-        if (this->getFlag(pButton->called, ButtonEventT::BUTTON_ON_HOLD) &&
-            this->getFlag(pButton->flag, ButtonEventT::BUTTON_ON_HOLD)) {
+        if (this->isCalledFlag(pButton, ButtonEventT::BUTTON_ON_HOLD)) {
             if (pButton->callback_p == nullptr) {
                 if (pButton->callback != nullptr) {
                     pButton->callback(pButton->pin, ButtonEventT::BUTTON_ON_HOLD);
@@ -124,8 +133,7 @@ void ERaButton::run() {
                 pButton->callback_p(pButton->pin, ButtonEventT::BUTTON_ON_HOLD, pButton->param);
             }
         }
-        if (this->getFlag(pButton->called, ButtonEventT::BUTTON_ON_MULTI) &&
-            this->getFlag(pButton->flag, ButtonEventT::BUTTON_ON_MULTI)) {
+        if (this->isCalledFlag(pButton, ButtonEventT::BUTTON_ON_MULTI)) {
             if (pButton->callback_p == nullptr) {
                 if (pButton->callback != nullptr) {
                     pButton->callback(pButton->pin, ButtonEventT::BUTTON_ON_MULTI);
@@ -134,17 +142,31 @@ void ERaButton::run() {
             else {
                 pButton->callback_p(pButton->pin, ButtonEventT::BUTTON_ON_MULTI, pButton->param);
             }
+            pButton->countMulti = 0;
         }
-        if (this->getFlag(pButton->called, ButtonEventT::BUTTON_ON_DELETE)) {
-            delete pButton;
-            pButton = nullptr;
-            it->get() = nullptr;
-            this->button.remove(it);
-            this->numButton--;
+    }
+
+    do {} while (this->deleteHandler());
+}
+
+bool ERaButton::deleteHandler() {
+    const ButtonIterator* e = this->button.end();
+    for (ButtonIterator* it = this->button.begin(); it != e; it = it->getNext()) {
+        Button_t*& pButton = it->get();
+        if (!this->isValidButton(pButton)) {
             continue;
         }
-        pButton->called = 0;
+        if (!this->isCalled(pButton, ButtonEventT::BUTTON_ON_DELETE)) {
+            continue;
+        }
+        delete pButton;
+        pButton = nullptr;
+        this->button.remove(it);
+        this->numButton--;
+        it = nullptr;
+        return true;
     }
+    return false;
 }
 
 ERaButton::Button_t* ERaButton::setupButton(uint8_t pin, ERaButton::ReadPinHandler_t readPin,
@@ -168,6 +190,7 @@ ERaButton::Button_t* ERaButton::setupButton(uint8_t pin, ERaButton::ReadPinHandl
     pButton->param = nullptr;
     pButton->enable = true;
     pButton->onHold = false;
+    pButton->reload = false;
     pButton->called = 0;
     pButton->prevMillis = ERaMillis();
     pButton->prevTimeout = ERaMillis();
@@ -209,6 +232,7 @@ ERaButton::Button_t* ERaButton::setupButton(uint8_t pin, ERaButton::ReadPinHandl
     pButton->param = args;
     pButton->enable = true;
     pButton->onHold = false;
+    pButton->reload = false;
     pButton->called = 0;
     pButton->countMulti = 0;
     pButton->numberMulti = 0;
@@ -274,12 +298,29 @@ void ERaButton::onMulti(Button_t* pButton, uint8_t num, unsigned long delay) {
     this->setFlag(pButton->flag, ButtonEventT::BUTTON_ON_MULTI, true);
 }
 
+void ERaButton::reload(Button_t* pButton, bool enable) {
+    if (pButton == nullptr) {
+        return;
+    }
+
+    pButton->reload = enable;
+}
+
+uint8_t ERaButton::getButtonPressCount(Button_t* pButton) {
+    if (pButton == nullptr) {
+        return 0;
+    }
+
+    return pButton->countMulti;
+}
+
 void ERaButton::deleteButton(Button_t* pButton) {
     if (!this->numButton) {
         return;
     }
 
     if (this->isValidButton(pButton)) {
+        pButton->enable = false;
         this->setFlag(pButton->called, ButtonEventT::BUTTON_ON_DELETE, true);
     }
 }
@@ -306,8 +347,8 @@ void ERaButton::disable(Button_t* pButton) {
 }
 
 void ERaButton::enableAll() {
-    const ERaList<Button_t*>::iterator* e = this->button.end();
-    for (ERaList<Button_t*>::iterator* it = this->button.begin(); it != e; it = it->getNext()) {
+    const ButtonIterator* e = this->button.end();
+    for (ButtonIterator* it = this->button.begin(); it != e; it = it->getNext()) {
         Button_t* pButton = it->get();
         if (this->isValidButton(pButton)) {
             pButton->enable = true;
@@ -316,8 +357,8 @@ void ERaButton::enableAll() {
 }
 
 void ERaButton::disableAll() {
-    const ERaList<Button_t*>::iterator* e = this->button.end();
-    for (ERaList<Button_t*>::iterator* it = this->button.begin(); it != e; it = it->getNext()) {
+    const ButtonIterator* e = this->button.end();
+    for (ButtonIterator* it = this->button.begin(); it != e; it = it->getNext()) {
         Button_t* pButton = it->get();
         if (this->isValidButton(pButton)) {
             pButton->enable = false;

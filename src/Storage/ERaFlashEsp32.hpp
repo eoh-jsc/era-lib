@@ -9,7 +9,7 @@ class ERaFlash
     const char* TAG = "Flash";
 public:
     ERaFlash()
-        : initialized(false)
+        : mInitialized(false)
     {}
     ~ERaFlash()
     {}
@@ -29,14 +29,14 @@ public:
 
 protected:
 private:
-    File file;
-    Preferences preferences;
-    bool initialized;
+    File mFile;
+    Preferences mPreferences;
+    bool mInitialized;
 };
 
 inline
 void ERaFlash::begin() {
-    if (this->initialized) {
+    if (this->mInitialized) {
         return;
     }
     this->end();
@@ -44,29 +44,37 @@ void ERaFlash::begin() {
         ERA_LOG_ERROR(TAG, ERA_PSTR("ERa flash init FAILED"));
         return;
     }
-    this->preferences.end();
-    if (!this->preferences.begin("era", false)) {
+    this->mPreferences.end();
+    if (!this->mPreferences.begin("era", false)) {
         ERA_LOG_ERROR(TAG, ERA_PSTR("ERa flash init FAILED"));
         return;
     }
-    this->initialized = true;
+    this->mInitialized = true;
 }
 
 inline
 void ERaFlash::end() {
     SPIFFS.end();
-    this->initialized = false;
+    this->mInitialized = false;
 }
 
 inline
 void ERaFlash::beginRead(const char* filename) {
+    if (!this->mInitialized) {
+        return;
+    }
+
     this->endRead();
-    this->file = SPIFFS.open(filename, FILE_READ);
+    this->mFile = SPIFFS.open(filename, FILE_READ);
 }
 
 inline
 char* ERaFlash::readLine() {
-    if (!this->file) {
+    if (!this->mInitialized) {
+        return nullptr;
+    }
+
+    if (!this->mFile) {
         return nullptr;
     }
     int c {0};
@@ -77,7 +85,7 @@ char* ERaFlash::readLine() {
         return nullptr;
     }
     do {
-        c = this->file.read();
+        c = this->mFile.read();
         if ((c != EOF) && (c != '\n')) {
             buffer[pos++] = (char)c;
         }
@@ -102,77 +110,109 @@ char* ERaFlash::readLine() {
 
 inline
 void ERaFlash::endRead() {
-    if (!this->file) {
+    if (!this->mInitialized) {
         return;
     }
-    this->file.close();
+
+    if (!this->mFile) {
+        return;
+    }
+    this->mFile.close();
 }
 
 inline
 void ERaFlash::beginWrite(const char* filename) {
+    if (!this->mInitialized) {
+        return;
+    }
+
     this->endWrite();
-    this->file = SPIFFS.open(filename, FILE_WRITE);
+    this->mFile = SPIFFS.open(filename, FILE_WRITE);
 }
 
 inline
 void ERaFlash::writeLine(const char* buf) {
-    if (!this->file) {
+    if (!this->mInitialized) {
         return;
     }
-    this->file.printf("%s\n", buf);
+
+    if (!this->mFile) {
+        return;
+    }
+    this->mFile.printf("%s\n", buf);
 }
 
 inline
 void ERaFlash::endWrite() {
-    if (!this->file) {
+    if (!this->mInitialized) {
         return;
     }
-    this->file.close();
+
+    if (!this->mFile) {
+        return;
+    }
+    this->mFile.close();
 }
 
 inline
 char* ERaFlash::readFlash(const char* filename) {
-    File _file = SPIFFS.open(filename, FILE_READ);
-    if (!_file) {
+    if (!this->mInitialized) {
         return nullptr;
     }
-    size_t size = _file.size();
+
+    File file = SPIFFS.open(filename, FILE_READ);
+    if (!file) {
+        return nullptr;
+    }
+    size_t size = file.size();
     if (!size) {
-        _file.close();
+        file.close();
         return nullptr;
     }
     char* buf = (char*)ERA_MALLOC(size + 1);
     if (buf == nullptr) {
-        _file.close();
+        file.close();
         return nullptr;
     }
     buf[size] = '\0';
-    _file.readBytes(buf, size);
-    _file.close();
+    file.readBytes(buf, size);
+    file.close();
     return buf;
 }
 
 inline
 size_t ERaFlash::readFlash(const char* key, void* buf, size_t maxLen) {
-    return preferences.getBytes(key, buf, maxLen);
+    if (!this->mInitialized) {
+        return 0;
+    }
+
+    return this->mPreferences.getBytes(key, buf, maxLen);
 }
 
 inline
 void ERaFlash::writeFlash(const char* filename, const char* buf) {
+    if (!this->mInitialized) {
+        return;
+    }
+
     if (buf == nullptr) {
         return;
     }
-    File _file = SPIFFS.open(filename, FILE_WRITE);
-    if (!_file) {
+    File file = SPIFFS.open(filename, FILE_WRITE);
+    if (!file) {
         return;
     }
-    _file.print(buf);
-    _file.close();
+    file.print(buf);
+    file.close();
 }
 
 inline
 size_t ERaFlash::writeFlash(const char* key, const void* value, size_t len) {
-    return preferences.putBytes(key, value, len);
+    if (!this->mInitialized) {
+        return 0;
+    }
+
+    return this->mPreferences.putBytes(key, value, len);
 }
 
 #endif /* INC_ERA_FLASH_ESP32_HPP_ */

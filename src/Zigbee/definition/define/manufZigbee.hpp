@@ -7,6 +7,6 @@ namespace ZigbeeNamespace {
         MANUF_CODE_NONE = 0x0000
     };
 
-};
+} /* namespace ZigbeeNamespace */
 
 #endif /* INC_DEFINE_MANUFACTURERS_ZIGBEE_HPP_ */

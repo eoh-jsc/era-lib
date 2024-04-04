@@ -27,6 +27,22 @@ protected:
         }
         return url;
     }
+
+    bool printURL(Client* client, const char* url) {
+        size_t written {0};
+        size_t toWrite {0};
+        size_t length = strlen(url);
+        while (length) {
+            toWrite = client->write((const uint8_t*)url, ERaMin(length, (size_t)256));
+            if (toWrite == 0) {
+                return false;
+            }
+            length -= toWrite;
+            url += toWrite;
+            written += toWrite;
+        }
+        return true;
+    }
 };
 
 #endif /* INC_ERA_OTA_HELPER_HPP_ */

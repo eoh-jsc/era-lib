@@ -38,7 +38,10 @@ CJSON_PUBLIC(cJSON*) cJSON_SetString(cJSON* const object, cJSON* const item, con
 CJSON_PUBLIC(cJSON*) cJSON_SetNull(cJSON* const object, cJSON* const item);
 CJSON_PUBLIC(cJSON*) cJSON_GetArrayIndex(cJSON* const object, int index);
 CJSON_PUBLIC(cJSON_bool) cJSON_ReplaceItem(cJSON* const parent, cJSON* const item, cJSON* replacement);
+CJSON_PUBLIC(cJSON_bool) cJSON_CompareObject(const cJSON* const a, const cJSON* const b, const cJSON_bool case_sensitive);
 CJSON_PUBLIC(cJSON_bool) cJSON_Empty(const cJSON* const object);
+
+CJSON_PUBLIC(const char*) cJSON_TypeOf(const cJSON* const object);
 
 CJSON_PUBLIC(cJSON*) cJSON_AddMultiItemToObject(cJSON* const object, const char* const name, const double number);
 CJSON_PUBLIC(cJSON*) cJSON_AddMultiItemToObject(cJSON* const object, const char* const name, const char* const string);

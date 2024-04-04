@@ -324,7 +324,15 @@ public:
             // If the modem doesn't have an internal buffer, or if we can't check how
             // many characters are in the buffer then the cascade won't happen.
             // We need to call modemGetConnected to check the sock state.
-            return this->at->modemGetConnected(mux);
+    #if defined(TINY_GSM_TCP_LEGACY)
+            return this->at->modemGetConnected(this->mux);
+    #else
+            if ((millis() - this->prev_check) > 500) {
+                this->sock_connected = this->at->modemGetConnected(this->mux);
+                this->prev_check     = millis();
+            }
+            return this->sock_connected;
+    #endif
 #else
             #error "Modem client has been incorrectly created"
 #endif
@@ -434,12 +442,29 @@ protected:
 #elif defined(TINY_GSM_NO_MODEM_BUFFER) ||      \
     defined(TINY_GSM_BUFFER_READ_NO_CHECK)
         // Just listen for any URC's
+    #if defined(TINY_GSM_TCP_LEGACY)
         this->thisModem().waitResponse(100, NULL, NULL);
+    #else
+        String data;
+        while (this->thisModem().stream.available()) {
+            this->thisModem().waitResponse(15, data, NULL, NULL);
+            if (!data.length() || !this->dataLength(data)) {
+                break;
+            }
+        }
+    #endif
 
 #else
         #error "Modem client has been incorrectly created"
 #endif
     }
+
+#if !defined(TINY_GSM_TCP_LEGACY)
+    unsigned int dataLength(String data) {
+        data.trim();
+        return data.length();
+    }
+#endif
 
     // Yields up to a time-out period and then reads a character from the stream
     // into the mux FIFO

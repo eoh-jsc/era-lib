@@ -33,8 +33,8 @@ class ERaPin
 #endif
 
     const static int MAX_CHANNELS = 16;
-    const static int MAX_PINS = ERA_MAX_GPIO_PIN;
-    const static int MAX_VPINS = ERA_MAX_VIRTUAL_PIN;
+    const static int MAX_PINS = ERA_MAX_GPIO_PINS;
+    const static int MAX_VPINS = ERA_MAX_VIRTUAL_PINS;
     enum PinFlagT
         : uint8_t {
         PIN_ON_DELETE = 0x80
@@ -279,6 +279,7 @@ private:
                             float minChange, ERaPin::ReportPinCallback_t cb,
                             ERaUInt_t configId);
 
+    bool deleteHandler();
     bool isPinFree() const;
     bool isVPinFree() const;
     Pin_t* findPinExist(uint8_t p) const;
@@ -293,6 +294,15 @@ private:
                 (pPin->pinMode == PWM) ||
                 (pPin->pinMode == RAW_PIN) ||
                 (pPin->pinMode == VIRTUAL));
+    }
+
+    bool isCalled(Pin_t* pPin, uint8_t mask) {
+        if (pPin == nullptr) {
+            return false;
+        }
+        bool ret = this->getFlag(pPin->called, mask);
+        this->setFlag(pPin->called, mask, false);
+        return ret;
     }
 
     void setFlag(uint8_t& flags, uint8_t mask, bool value) {
@@ -358,29 +368,31 @@ void ERaPin<Report>::run() {
         }
     }
 
-    PinIterator* next = nullptr;
-    for (PinIterator* it = this->pin.begin(); it != e; it = next) {
-        next = it->getNext();
-        Pin_t* pPin = it->get();
+    do {} while (this->deleteHandler());
+
+    this->report.run();
+}
+
+template <class Report>
+bool ERaPin<Report>::deleteHandler() {
+    const PinIterator* e = this->pin.end();
+    for (PinIterator* it = this->pin.begin(); it != e; it = it->getNext()) {
+        Pin_t*& pPin = it->get();
         if (!this->isValidPin(pPin)) {
             continue;
         }
-        if (!pPin->called) {
+        if (!this->isCalled(pPin, PinFlagT::PIN_ON_DELETE)) {
             continue;
         }
-        if (this->getFlag(pPin->called, PinFlagT::PIN_ON_DELETE)) {
-            pPin->report.deleteReport();
-            delete pPin;
-            pPin = nullptr;
-            it->get() = nullptr;
-            this->pin.remove(it);
-            this->numPin--;
-            continue;
-        }
-        pPin->called = 0;
+        pPin->report.deleteReport();
+        delete pPin;
+        pPin = nullptr;
+        this->pin.remove(it);
+        this->numPin--;
+        it = nullptr;
+        return true;
     }
-
-    this->report.run();
+    return false;
 }
 
 template <class Report>
@@ -682,6 +694,7 @@ void ERaPin<Report>::deletePin(Pin_t* pPin) {
     }
 
     if (this->isValidPin(pPin)) {
+        pPin->enable = false;
         this->setFlag(pPin->called, PinFlagT::PIN_ON_DELETE, true);
     }
 }

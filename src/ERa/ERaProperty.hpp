@@ -41,7 +41,7 @@ class ERaProperty
     typedef void (*ReportPropertyCallback_t)(void*);
 #endif
 
-    const static int MAX_PROPERTYS = ERA_MAX_PROPERTY;
+    const static int MAX_PROPERTIES = ERA_MAX_PROPERTIES;
     typedef struct __Property_t {
         ERaProperty::PropertyCallback_t callback;
         ERaProperty::PropertyCallback_p_t callback_p;
@@ -121,6 +121,13 @@ public:
         ERaReport::iterator* getReport() const {
             if (this->isValid()) {
                 return &this->pProp->report;
+            }
+            return nullptr;
+        }
+
+        WrapperBase* getValue() const {
+            if (this->isValid()) {
+                return this->pProp->value;
             }
             return nullptr;
         }
@@ -227,11 +234,13 @@ public:
         return iterator(this, this->setupProperty(pin, &value, permission));
     }
 
-    template <typename T>
-    iterator addPropertyVirtualT(uint8_t pin, T& value, PermissionT const permission) {
+#if defined(ERA_HAS_TYPE_TRAITS_H)
+    template <typename T, typename = enable_if_t<!std::is_base_of<WrapperBase, T>::value>>
+    iterator addPropertyVirtual(uint8_t pin, T& value, PermissionT const permission) {
         WrapperBase* wrapper = new WrapperNumber<T>(value);
         return iterator(this, this->setupProperty(pin, wrapper, permission));
     }
+#endif
 
     iterator addPropertyReal(const char* id, bool& value, PermissionT const permission) {
         WrapperBase* wrapper = new WrapperBool(value);
@@ -292,11 +301,13 @@ public:
         return iterator(this, this->setupProperty(id, &value, permission));
     }
 
-    template <typename T>
-    iterator addPropertyRealT(const char* id, T& value, PermissionT const permission) {
+#if defined(ERA_HAS_TYPE_TRAITS_H)
+    template <typename T, typename = enable_if_t<!std::is_base_of<WrapperBase, T>::value>>
+    iterator addPropertyReal(const char* id, T& value, PermissionT const permission) {
         WrapperBase* wrapper = new WrapperNumber<T>(value);
         return iterator(this, this->setupProperty(id, wrapper, permission));
     }
+#endif
 
 #if defined(ERA_HAS_PROGMEM)
     iterator addPropertyReal(const __FlashStringHelper* id, bool& value, PermissionT const permission) {
@@ -358,11 +369,13 @@ public:
         return iterator(this, this->setupProperty(id, &value, permission));
     }
 
-    template <typename T>
-    iterator addPropertyRealT(const __FlashStringHelper* id, T& value, PermissionT const permission) {
+#if defined(ERA_HAS_TYPE_TRAITS_H)
+    template <typename T, typename = enable_if_t<!std::is_base_of<WrapperBase, T>::value>>
+    iterator addPropertyReal(const __FlashStringHelper* id, T& value, PermissionT const permission) {
         WrapperBase* wrapper = new WrapperNumber<T>(value);
         return iterator(this, this->setupProperty(id, wrapper, permission));
     }
+#endif
 #endif
 
     void setPropertyTimeout(unsigned long _timeout) {
@@ -1162,7 +1175,7 @@ void ERaProperty<Api>::onCallback(void* args) {
 
 template <class Api>
 bool ERaProperty<Api>::isPropertyFree() {
-    if (this->numProperty >= MAX_PROPERTYS) {
+    if (this->numProperty >= MAX_PROPERTIES) {
         return false;
     }
 
@@ -1171,7 +1184,7 @@ bool ERaProperty<Api>::isPropertyFree() {
 
 template <class Api>
 int ERaProperty<Api>::findVirtualPin() {
-    if (this->numProperty >= MAX_PROPERTYS) {
+    if (this->numProperty >= MAX_PROPERTIES) {
         return -1;
     }
 

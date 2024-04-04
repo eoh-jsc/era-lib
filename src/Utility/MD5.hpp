@@ -105,7 +105,7 @@ public:
     static unsigned char* makeHash(char* arg);
     static unsigned char* makeHash(char* arg, size_t size);
     static char* makeDigest(const unsigned char* digest, int len, char* result = NULL);
-     static const void* body(void* ctxBuf, const void* data, size_t size);
+    static const void* body(void* ctxBuf, const void* data, size_t size);
     static void MD5Init(void* ctxBuf);
     static void MD5Final(unsigned char* result, void* ctxBuf);
     static void MD5Update(void* ctxBuf, const void* data, size_t size);

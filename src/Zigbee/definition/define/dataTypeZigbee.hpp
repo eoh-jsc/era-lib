@@ -65,6 +65,6 @@ namespace ZigbeeNamespace {
         zcl_semiPrec = 56
     };
 
-};
+} /* namespace ZigbeeNamespace */
 
 #endif /* INC_DEFINE_DATATYPE_ZIGBEE_HPP_ */

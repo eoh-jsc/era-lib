@@ -40,6 +40,6 @@ namespace ZigbeeNamespace {
         UTIL_ZCL_KEY_ESTABLISH_IND
     };
 
-};
+} /* namespace ZigbeeNamespace */
 
 #endif /* INC_DEFINE_UTIL_ZIGBEE_HPP_ */

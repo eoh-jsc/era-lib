@@ -1,6 +1,8 @@
 #ifndef INC_ERA_TIME_LIBRARY_HPP_
 #define INC_ERA_TIME_LIBRARY_HPP_
 
+#include <time.h>
+#include <stdio.h>
 #include <stdint.h>
 #include <stddef.h>
 #include <ERa/ERaDetect.hpp>
@@ -35,10 +37,20 @@ class ERaTime
 protected:
     typedef unsigned long time_t;
 
+#if defined(ERA_HAS_FUNCTIONAL_H)
+    typedef std::function<void(time_t)> SetTimeCallback_t;
+    typedef std::function<time_t(void)> GetTimeCallback_t;
+#else
+    typedef void (*SetTimeCallback_t)(time_t);
+    typedef time_t (*GetTimeCallback_t)(void);
+#endif
+
 public:
     ERaTime()
         : sysTime(0L)
         , prevMillis(0L)
+        , setTimeCb(NULL)
+        , getTimeCb(NULL)
     {}
     virtual ~ERaTime()
     {}
@@ -46,22 +58,33 @@ public:
     virtual void begin() = 0;
     virtual void run() = 0;
 
+    void setSetTimeCallback(SetTimeCallback_t cb) {
+        this->setTimeCb = cb;
+    }
+
+    void setGetTimeCallback(GetTimeCallback_t cb) {
+        this->getTimeCb = cb;
+    }
+
     time_t now() {
         this->run();
 
         unsigned long currentMillis = ERaMillis();
         if ((currentMillis - this->prevMillis) < 1000L) {
-            return this->sysTime;
+            return this->getSysTime();
         }
 
         unsigned long skipTimes = (currentMillis - this->prevMillis) / 1000L;
         this->prevMillis += (1000L * skipTimes);
         this->sysTime += skipTimes;
 
-        return this->sysTime;
+        return this->getSysTime();
     }
 
     void setTime(time_t _time) {
+        if (this->setTimeCb != NULL) {
+            this->setTimeCb(_time);
+        }
         this->sysTime = _time;
         this->prevMillis = ERaMillis();
     }
@@ -135,7 +158,7 @@ protected:
     time_t makeTime() {
         time_t seconds {0};
 
-        seconds = this->time.year * (SECS_PER_DAY * 365);
+        seconds = (this->time.year * (SECS_PER_DAY * 365));
         for (int i = 0; i < this->time.year; ++i) {
             if (this->leapYear(i)) {
                 seconds += SECS_PER_DAY;
@@ -164,10 +187,20 @@ protected:
                 (((1970 + (year)) % 100) || !((1970 + (year)) % 400)));
     }
 
+    time_t getSysTime() {
+        if (this->getTimeCb != NULL) {
+            return this->getTimeCb();
+        }
+        return this->sysTime;
+    }
+
     time_t sysTime;
     unsigned long prevMillis;
     TimeElement_t time;
     const uint8_t monthDays[12] {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+
+    SetTimeCallback_t setTimeCb;
+    GetTimeCallback_t getTimeCb;
 };
 
 #endif /* INC_ERA_TIME_LIBRARY_HPP_ */

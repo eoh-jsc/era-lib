@@ -122,6 +122,6 @@ namespace ZigbeeNamespace {
         NO_CLUSTER_ID = 0x2706
     };
 
-};
+} /* namespace ZigbeeNamespace */
 
 #endif /* INC_DEFINE_CLUSTER_ZIGBEE_HPP_ */

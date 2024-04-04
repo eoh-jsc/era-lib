@@ -16,6 +16,10 @@ public:
         ERaGuardUnlock(this->mutex);
     }
 
+    bool tryLock() const {
+        return ERaGuardTryLock(this->mutex);
+    }
+
 private:
     ERaMutex_t& mutex;
 };

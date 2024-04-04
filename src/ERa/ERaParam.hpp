@@ -10,8 +10,6 @@
 #include <Utility/ERaUtility.hpp>
 #include <ERa/ERaData.hpp>
 
-class ERaString;
-
 class ERaParam
 {
     enum ERaParamTypeT {
@@ -99,6 +97,10 @@ public:
 
     double getDouble() const {
         return this->valuedouble;
+    }
+
+    const char* c_str() const {
+        return this->valuestring;
     }
 
     const char* getString() const {
@@ -287,16 +289,7 @@ public:
         if (!this->isString()) {
             return false;
         }
-        if (this->valuestring == value) {
-            return true;
-        }
-        if (value == nullptr) {
-            return false;
-        }
-        if (this->valuestring == nullptr) {
-            return false;
-        }
-        return ERaStrCmp(this->valuestring, value);
+        return ERaStringCompare((const char*)this->valuestring, value);
     }
 
     bool operator == (ERaDataJson* value) const {
@@ -514,6 +507,30 @@ void ERaDataJson::add(const char* name, ERaParam& value) {
 inline
 void ERaParam::addParam(const ERaString& value) {
     this->addParam(value.getString());
+}
+
+inline
+ERaString ERaDataJson::iterator::type() {
+    return ERaString(cJSON_TypeOf(this->item));
+}
+
+inline
+ERaString ERaDataJson::iterator::operator | (const char* value) const {
+    if (this->isNumber()) {
+        return ERaString(this->item->valuedouble);
+    }
+    else if (this->isString()) {
+        return ERaString(this->item->valuestring);
+    }
+    else if (this->isNull()) {
+        return ERaString("null");
+    }
+    return ERaString(value);
+}
+
+inline
+ERaString ERaDataJson::typeOf(const ERaDataJson::iterator& value) {
+    return ERaString(cJSON_TypeOf(value.item));
 }
 
 #endif /* INC_ERA_PARAM_HPP_ */

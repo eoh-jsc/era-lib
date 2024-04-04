@@ -9,8 +9,8 @@ ERaTimer::ERaTimer()
 
 void ERaTimer::run() {
     unsigned long currentMillis = ERaMillis();
-    const ERaList<Timer_t*>::iterator* e = this->timer.end();
-    for (ERaList<Timer_t*>::iterator* it = this->timer.begin(); it != e; it = it->getNext()) {
+    const TimerIterator* e = this->timer.end();
+    for (TimerIterator* it = this->timer.begin(); it != e; it = it->getNext()) {
         Timer_t* pTimer = it->get();
         if (!this->isValidTimer(pTimer)) {
             continue;
@@ -28,39 +28,51 @@ void ERaTimer::run() {
         this->setFlag(pTimer->called, TimerFlagT::TIMER_ON_CALLED, true);
     }
 
-    ERaList<Timer_t*>::iterator* next = nullptr;
-    for (ERaList<Timer_t*>::iterator* it = this->timer.begin(); it != e; it = next) {
-        next = it->getNext();
+    for (TimerIterator* it = this->timer.begin(); it != e; it = it->getNext()) {
         Timer_t* pTimer = it->get();
         if (!this->isValidTimer(pTimer)) {
             continue;
         }
-        if (!pTimer->called) {
-            continue;
-        }
-        if (this->getFlag(pTimer->called, TimerFlagT::TIMER_ON_CALLED)) {
-            if (pTimer->callback_p == nullptr) {
-                pTimer->callback();
-            }
-            else {
-                pTimer->callback_p(pTimer->param);
-            }
-            if (pTimer->limit) {
-                if (++pTimer->count >= pTimer->limit) {
-                    this->deleteTimer(pTimer);
-                }
-            }
-        }
         if (this->getFlag(pTimer->called, TimerFlagT::TIMER_ON_DELETE)) {
-            delete pTimer;
-            pTimer = nullptr;
-            it->get() = nullptr;
-            this->timer.remove(it);
-            this->numTimer--;
             continue;
         }
-        pTimer->called = 0;
+        if (!this->isCalled(pTimer, TimerFlagT::TIMER_ON_CALLED)) {
+            continue;
+        }
+        if (pTimer->callback_p == nullptr) {
+            pTimer->callback();
+        }
+        else {
+            pTimer->callback_p(pTimer->param);
+        }
+        if (pTimer->limit) {
+            if (++pTimer->count >= pTimer->limit) {
+                this->deleteTimer(pTimer);
+            }
+        }
     }
+
+    do {} while (this->deleteHandler());
+}
+
+bool ERaTimer::deleteHandler() {
+    const TimerIterator* e = this->timer.end();
+    for (TimerIterator* it = this->timer.begin(); it != e; it = it->getNext()) {
+        Timer_t*& pTimer = it->get();
+        if (!this->isValidTimer(pTimer)) {
+            continue;
+        }
+        if (!this->isCalled(pTimer, TimerFlagT::TIMER_ON_DELETE)) {
+            continue;
+        }
+        delete pTimer;
+        pTimer = nullptr;
+        this->timer.remove(it);
+        this->numTimer--;
+        it = nullptr;
+        return true;
+    }
+    return false;
 }
 
 ERaTimer::Timer_t* ERaTimer::setupTimer(unsigned long interval, TimerCallback_t cb, unsigned int limit) {
@@ -148,6 +160,7 @@ void ERaTimer::deleteTimer(Timer_t* pTimer) {
     }
 
     if (this->isValidTimer(pTimer)) {
+        pTimer->enable = false;
         this->setFlag(pTimer->called, TimerFlagT::TIMER_ON_DELETE, true);
     }
 }
@@ -174,8 +187,8 @@ void ERaTimer::disable(Timer_t* pTimer) {
 }
 
 void ERaTimer::enableAll() {
-    const ERaList<Timer_t*>::iterator* e = this->timer.end();
-    for (ERaList<Timer_t*>::iterator* it = this->timer.begin(); it != e; it = it->getNext()) {
+    const TimerIterator* e = this->timer.end();
+    for (TimerIterator* it = this->timer.begin(); it != e; it = it->getNext()) {
         Timer_t* pTimer = it->get();
         if (this->isValidTimer(pTimer)) {
             pTimer->enable = true;
@@ -184,8 +197,8 @@ void ERaTimer::enableAll() {
 }
 
 void ERaTimer::disableAll() {
-    const ERaList<Timer_t*>::iterator* e = this->timer.end();
-    for (ERaList<Timer_t*>::iterator* it = this->timer.begin(); it != e; it = it->getNext()) {
+    const TimerIterator* e = this->timer.end();
+    for (TimerIterator* it = this->timer.begin(); it != e; it = it->getNext()) {
         Timer_t* pTimer = it->get();
         if (this->isValidTimer(pTimer)) {
             pTimer->enable = false;

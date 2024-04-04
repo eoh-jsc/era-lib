@@ -18,6 +18,7 @@
 #include <Network/ERaSocketLinux.hpp>
 #include <Utility/ERaSerialLinux.hpp>
 #include <ERaLinuxClient.hpp>
+#include <Utility/ERaStreamLinux.hpp>
 #include <Modbus/ERaModbusLinux.hpp>
 #include <Zigbee/ERaZigbeeLinux.hpp>
 

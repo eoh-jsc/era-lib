@@ -9,6 +9,7 @@
 #include <ERa/ERaDefine.hpp>
 
 class ERaParam;
+class ERaString;
 class ERaDataJson;
 
 class ERaDataBuff
@@ -30,6 +31,10 @@ public:
 
         static iterator invalid() {
             return iterator(nullptr, nullptr);
+        }
+
+        const char* c_str() const {
+            return this->ptr;
         }
 
         const char* getString() const {
@@ -141,6 +146,22 @@ public:
                 return true;
             }
             return strcmp(this->ptr, cstr);
+        }
+
+        iterator const* operator -> () const {
+            return this;
+        }
+
+        iterator* operator -> () {
+            return this;
+        }
+
+        iterator const& operator * () const {
+            return (*this);
+        }
+
+        iterator& operator * () {
+            return (*this);
         }
 
         iterator& operator ++ () {
@@ -813,6 +834,8 @@ class ERaDataJson
 public:
     class iterator
     {
+        friend class ERaDataJson;
+
     public:
         iterator()
             : item(nullptr)
@@ -894,6 +917,10 @@ public:
                 return 0.0;
             }
             return this->item->valuedouble;
+        }
+
+        const char* c_str() const {
+            return this->getString();
         }
 
         const char* getString() const {
@@ -1026,14 +1053,10 @@ public:
             if (!this->isValid()) {
                 return false;
             }
-            if (name == nullptr) {
-                return false;
-            }
-            if (this->item->string == nullptr) {
-                return false;
-            }
-            return !strcmp(this->item->string, name);
+            return ERaStringCompare(this->item->string, name);
         }
+
+        ERaString type();
 
         operator const cJSON* () const {
             return this->getItem();
@@ -1097,13 +1120,20 @@ public:
             return (*this);
         }
 
+        iterator& operator = (const ERaDataJson& value) {
+            cJSON* object = cJSON_Duplicate(value.getObject(), true);
+            cJSON_ReplaceItem(this->parent, this->item, object);
+            return (*this);
+        }
+
         iterator& operator = (nullptr_t) {
             cJSON_SetNull(this->parent, this->item);
             return (*this);
         }
 
         iterator& operator = (const iterator& it) {
-            this->item = it.item;
+            cJSON* object = cJSON_Duplicate(it.item, true);
+            cJSON_ReplaceItem(this->parent, this->item, object);
             return (*this);
         }
 
@@ -1123,11 +1153,11 @@ public:
         }
 
         bool operator == (float value) const {
-            return this->FloatCompare(value);
+            return operator == ((double)value);
         }
 
         bool operator == (double value) const {
-            return operator == ((float)value);
+            return DoubleCompare(value);
         }
 
         bool operator == (char* value) const {
@@ -1138,21 +1168,19 @@ public:
             if (!this->isString()) {
                 return false;
             }
-            if (value == nullptr) {
-                return false;
-            }
-            if (this->item->valuestring == nullptr) {
-                return false;
-            }
-            return !strcmp(this->item->valuestring, value);
+            return ERaStringCompare(this->item->valuestring, value);
+        }
+
+        bool operator == (const ERaDataJson& value) const {
+            return cJSON_CompareObject(this->item, value.getObject(), true);
         }
 
         bool operator == (nullptr_t) const {
             return this->isNull();
         }
 
-        bool operator != (const iterator& it) const {
-            return (this->item != it.item);
+        bool operator == (const iterator& it) const {
+            return cJSON_CompareObject(this->item, it.item, true);
         }
 
         template <typename T>
@@ -1180,8 +1208,60 @@ public:
             return !(operator == (value));
         }
 
+        bool operator != (const ERaDataJson& value) const {
+            return !(operator == (value));
+        }
+
         bool operator != (nullptr_t) const {
             return !this->isNull();
+        }
+
+        bool operator != (const iterator& it) const {
+            return !(operator == (it));
+        }
+
+        template <typename T>
+        T operator | (T value) const {
+            if (!this->isNumber()) {
+                return value;
+            }
+            return T(this->item->valueint);
+        }
+
+        bool operator | (bool value) const {
+            if (!this->isBool() && !this->isNumber()) {
+                return value;
+            }
+            return bool(this->item->valueint);
+        }
+
+        float operator | (float value) const {
+            return (float)operator | ((double)value);
+        }
+
+        double operator | (double value) const {
+            if (!this->isNumber()) {
+                return value;
+            }
+            return this->item->valuedouble;
+        }
+
+        ERaString operator | (const char* value) const;
+
+        iterator const* operator -> () const {
+            return this;
+        }
+
+        iterator* operator -> () {
+            return this;
+        }
+
+        iterator const& operator * () const {
+            return (*this);
+        }
+
+        iterator& operator * () {
+            return (*this);
         }
 
         iterator& operator ++ () {
@@ -1192,9 +1272,11 @@ public:
         }
 
     private:
-        bool FloatCompare(float value) const {
-            float maxVal = (fabs(this->item->valuedouble) > fabs(value)) ? fabs(this->item->valuedouble) : fabs(value);
-            return (fabs(this->item->valuedouble - value) <= (maxVal * FLT_EPSILON));
+        bool DoubleCompare(float value) const {
+            if (!this->isNumber()) {
+                return false;
+            }
+            return ERaDoubleCompare(this->item->valuedouble, value);
         }
 
         cJSON* item;
@@ -1247,6 +1329,12 @@ public:
     const char* getString() {
         this->clear();
         this->ptr = cJSON_PrintUnformatted(this->root);
+        return ((this->ptr != nullptr) ? this->ptr : "");
+    }
+
+    const char* getStringPretty() {
+        this->clear();
+        this->ptr = cJSON_Print(this->root);
         return ((this->ptr != nullptr) ? this->ptr : "");
     }
 
@@ -1375,6 +1463,8 @@ public:
     operator const char* () {
         return this->getString();
     }
+
+    static ERaString typeOf(const iterator& value);
 
     iterator operator [] (int index);
     iterator operator [] (const char* key);
@@ -1600,6 +1690,7 @@ void ERaDataJson::remove(const ERaDataJson::iterator& it) {
 
 inline
 ERaDataJson::iterator ERaDataJson::at(int index) {
+    int position = index;
     const iterator e = this->end();
     for (iterator it = this->begin(); it != e; ++it) {
         if (!index--) {
@@ -1609,7 +1700,7 @@ ERaDataJson::iterator ERaDataJson::at(int index) {
     if (!this->isValid()) {
         this->createArray();
     }
-    cJSON* item = cJSON_GetArrayIndex(this->root, index);
+    cJSON* item = cJSON_GetArrayIndex(this->root, position);
     return iterator(item, this->root);
 }
 
@@ -1641,7 +1732,7 @@ bool ERaDataJson::operator == (ERaDataJson& value) const {
     if (this == &value) {
         return true;
     }
-    return cJSON_Compare(this->root, value.getObject(), true);
+    return cJSON_CompareObject(this->root, value.getObject(), true);
 }
 
 inline
@@ -1649,7 +1740,7 @@ bool ERaDataJson::operator == (const ERaDataJson& value) const {
     if (this == &value) {
         return true;
     }
-    return cJSON_Compare(this->root, value.getObject(), true);
+    return cJSON_CompareObject(this->root, value.getObject(), true);
 }
 
 inline
@@ -1706,8 +1797,8 @@ ERaDataJson ERaDataBuff::iterator::toJSON() const {
     return ERaDataJson(this->ptr);
 }
 
-using DataEntry = ERaDataBuff::iterator;
 using JsonEntry = ERaDataJson::iterator;
+using BuffEntry = ERaDataBuff::iterator;
 
 typedef ERaDataJson ERaJson;
 typedef ERaDataBuff ERaBuff;

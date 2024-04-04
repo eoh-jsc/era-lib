@@ -46,6 +46,6 @@ namespace ERaState {
     void set(StateT _state) {
         ERaState::state() = _state;
     }
-};
+} /* namespace ERaState */
 
 #endif /* INC_ERA_STATE_HPP_ */

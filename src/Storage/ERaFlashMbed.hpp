@@ -2,6 +2,7 @@
 #define INC_ERA_FLASH_MBED_HPP_
 
 #include <stddef.h>
+#include <sys/stat.h>
 #include <BlockDevice.h>
 #include <FlashIAPBlockDevice.h>
 #include <LittleFileSystem.h>
@@ -39,18 +40,18 @@ class ERaFlash
     const char* TAG = "Flash";
 public:
     ERaFlash()
-        : file(nullptr)
-        , fs("fs")
-        , bd(nullptr)
-        , removed(false)
-        , initialized(false)
+        : mFile(nullptr)
+        , mFs("fs")
+        , mBd(nullptr)
+        , mRemoved(false)
+        , mInitialized(false)
     {
-        this->bd = this->createBlockDevice();
+        this->mBd = this->createBlockDevice();
     }
     ~ERaFlash()
     {
 #if !defined(ERA_MBED_BLOCK_DEVICE_DEFAULT)
-        delete this->bd;
+        delete this->mBd;
 #endif
     }
 
@@ -67,14 +68,14 @@ public:
     void writeFlash(const char* filename, const char* buf);
     size_t writeFlash(const char* key, const void* value, size_t len);
 
-    void setBlockDevice(BlockDevice& _bd) {
+    void setBlockDevice(BlockDevice& bd) {
 #if !defined(ERA_MBED_BLOCK_DEVICE_DEFAULT)
-        if (!removed) {
-            removed = true;
-            delete this->bd;
+        if (!this->mRemoved) {
+            this->mRemoved = true;
+            delete this->mBd;
         }
 #endif
-        this->bd = &_bd;
+        this->mBd = &bd;
     }
 
 protected:
@@ -116,45 +117,53 @@ private:
 
     void mkdir(const char* path);
 
-    FILE* file;
-    LittleFileSystem fs;
-    BlockDevice* bd;
-    bool removed;
-    bool initialized;
+    FILE* mFile;
+    LittleFileSystem mFs;
+    BlockDevice* mBd;
+    bool mRemoved;
+    bool mInitialized;
 };
 
 inline
 void ERaFlash::begin() {
-    if (this->initialized) {
+    if (this->mInitialized) {
         return;
     }
     this->end();
-    int err = fs.mount(bd);
+    int err = this->mFs.mount(this->mBd);
     if (err) {
-        err = fs.reformat(bd);
+        err = this->mFs.reformat(this->mBd);
         if (err) {
             ERA_LOG_ERROR(TAG, ERA_PSTR("ERa flash init FAILED"));
             return;
         }
     }
-    this->initialized = true;
+    this->mInitialized = true;
 }
 
 inline
 void ERaFlash::end() {
-    fs.unmount();
-    this->initialized = false;
+    this->mFs.unmount();
+    this->mInitialized = false;
 }
 
 inline
 void ERaFlash::beginRead(const char* filename) {
+    if (!this->mInitialized) {
+        return;
+    }
+
     this->endRead();
-    this->file = fopen(filename, "r");
+    this->mFile = fopen(filename, "r");
 }
 
 inline
 char* ERaFlash::readLine() {
-    if (this->file == nullptr) {
+    if (!this->mInitialized) {
+        return nullptr;
+    }
+
+    if (this->mFile == nullptr) {
         return nullptr;
     }
     int c {0};
@@ -165,7 +174,7 @@ char* ERaFlash::readLine() {
         return nullptr;
     }
     do {
-        c = fgetc(this->file);
+        c = fgetc(this->mFile);
         if ((c != EOF) && (c != '\n')) {
             buffer[pos++] = (char)c;
         }
@@ -190,45 +199,65 @@ char* ERaFlash::readLine() {
 
 inline
 void ERaFlash::endRead() {
-    if (this->file == nullptr) {
+    if (!this->mInitialized) {
         return;
     }
-    fclose(this->file);
-    this->file = nullptr;
+
+    if (this->mFile == nullptr) {
+        return;
+    }
+    fclose(this->mFile);
+    this->mFile = nullptr;
 }
 
 inline
 void ERaFlash::beginWrite(const char* filename) {
+    if (!this->mInitialized) {
+        return;
+    }
+
     this->endWrite();
-    this->file = fopen(filename, "w");
-    if (this->file == nullptr) {
+    this->mFile = fopen(filename, "w");
+    if (this->mFile == nullptr) {
         this->mkdir(filename);
-        this->file = fopen(filename, "w");
+        this->mFile = fopen(filename, "w");
     }
 }
 
 inline
 void ERaFlash::writeLine(const char* buf) {
+    if (!this->mInitialized) {
+        return;
+    }
+
     if (buf == nullptr) {
         return;
     }
-    if (this->file == nullptr) {
+    if (this->mFile == nullptr) {
         return;
     }
-    fprintf(this->file, "%s\n", buf);
+    fprintf(this->mFile, "%s\n", buf);
 }
 
 inline
 void ERaFlash::endWrite() {
-    if (this->file == nullptr) {
+    if (!this->mInitialized) {
         return;
     }
-    fclose(this->file);
-    this->file = nullptr;
+
+    if (this->mFile == nullptr) {
+        return;
+    }
+    fclose(this->mFile);
+    this->mFile = nullptr;
 }
 
 inline
 char* ERaFlash::readFlash(const char* filename) {
+    if (!this->mInitialized) {
+        return nullptr;
+    }
+
     FILE* file = fopen(filename, "r");
     if (file == nullptr) {
         return nullptr;
@@ -253,6 +282,10 @@ char* ERaFlash::readFlash(const char* filename) {
 
 inline
 size_t ERaFlash::readFlash(const char* key, void* buf, size_t maxLen) {
+    if (!this->mInitialized) {
+        return 0;
+    }
+
     if (buf == nullptr) {
         return 0;
     }
@@ -267,6 +300,10 @@ size_t ERaFlash::readFlash(const char* key, void* buf, size_t maxLen) {
 
 inline
 void ERaFlash::writeFlash(const char* filename, const char* buf) {
+    if (!this->mInitialized) {
+        return;
+    }
+
     if (buf == nullptr) {
         return;
     }
@@ -284,6 +321,10 @@ void ERaFlash::writeFlash(const char* filename, const char* buf) {
 
 inline
 size_t ERaFlash::writeFlash(const char* key, const void* value, size_t len) {
+    if (!this->mInitialized) {
+        return 0;
+    }
+
     if (value == nullptr) {
         return 0;
     }

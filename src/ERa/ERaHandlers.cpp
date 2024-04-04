@@ -38,6 +38,7 @@ bool ERaWidgetPinWrite(uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param
 ERA_CONNECTED() __attribute__((weak, alias("ERaNoHandler")));
 ERA_DISCONNECTED() __attribute__((weak, alias("ERaNoHandler")));
 ERA_WAITING() __attribute__((weak, alias("ERaNoHandler")));
+ERA_APP_LOOP() __attribute__((weak, alias("ERaNoHandler")));
 ERA_OPTION_CONNECTED() __attribute__((weak, alias("ERaNoOptConnected")));
 ERA_MODBUS_BAUDRATE() __attribute__((weak, alias("ERaNoModbusBaudrate")));
 ERA_INFO() __attribute__((weak, alias("ERaNoInfo")));

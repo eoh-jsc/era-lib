@@ -60,21 +60,6 @@ else
 	LDFLAGS += -s
 endif
 
-ifeq ($(target),raspberry)
-	CXXFLAGS += -DRASPBERRY
-	LDFLAGS += -lwiringPi
-endif
-
-ifeq ($(target),tinker)
-	CXXFLAGS += -DTINKER_BOARD
-	LDFLAGS += -lwiringPi
-endif
-
-ifeq ($(target),orangepi)
-	CXXFLAGS += -DORANGE_PI
-	LDFLAGS += -lwiringPi
-endif
-
 ifeq ($(modbus),true)
 	CXXFLAGS += -DERA_MODBUS
 endif
@@ -141,20 +126,33 @@ SOURCES=main.cpp \
 	../src/Utility/CRC32.cpp \
 	../src/Utility/MD5.cpp \
 	Network/ERaNetworkInfo.cpp \
-	MQTT/MQTT/unix/unix.cpp \
+	MQTT/MQTT/posix/posix.cpp \
 	MQTT/MQTT/MQTTLinux.cpp
 
-ifeq ($(target),linux)
-	SOURCES += Utility/Compat/SerialLinux.cpp
-endif
-
-ifndef target
+ifeq ($(target),raspberry)
+	CXXFLAGS += -DRASPBERRY
+	LDFLAGS += -lwiringPi
+else ifeq ($(target),tinker)
+	CXXFLAGS += -DTINKER_BOARD
+	LDFLAGS += -lwiringPi
+else ifeq ($(target),orangepi)
+	CXXFLAGS += -DORANGE_PI
+	LDFLAGS += -lwiringPi
+else
 	SOURCES += Utility/Compat/SerialLinux.cpp
 endif
 
 ifeq ($(findstring true, $(ssl) $(tls)),true)
 	CXXFLAGS += -DERA_MQTT_SSL
-	SOURCES += MQTT/MQTT/unix/unix_tls.cpp
+	SOURCES += MQTT/MQTT/posix/posix_tls.cpp
+endif
+
+ifdef cxxflags
+	CXXFLAGS += $(cxxflags)
+endif
+
+ifdef ldflags
+	LDFLAGS += $(ldflags)
 endif
 
 SOURCES_C=../src/MQTT/MQTT/lwmqtt/client.c \

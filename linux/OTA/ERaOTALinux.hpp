@@ -74,7 +74,7 @@ protected:
         client->connect(this->getDomain(url).c_str(), this->getPort(url));
 
         client->print("GET ");
-        this->printURL(client, url);
+        ERaOTAHelper::printURL(client, url);
         client->print(" HTTP/1.1\r\n");
         client->print("Host: ");
         client->print(this->getDomain(url).c_str());
@@ -226,21 +226,6 @@ protected:
     }
 
 private:
-    void printURL(Client* client, const char* url) {
-        size_t sent {0};
-        size_t toSend {0};
-        size_t sendSize = strlen(url);
-        char buf[257] {0};
-        while (sendSize) {
-            toSend = ((sendSize > 256) ? 256 : sendSize);
-            strncpy(buf, url + sent, toSend);
-            buf[toSend] = 0;
-            client->print(buf);
-            sendSize -= toSend;
-            sent += toSend;
-        }
-    }
-
     void storeOTAConfig(const char* url,
                         const char* hash) {
         if (url == nullptr) {

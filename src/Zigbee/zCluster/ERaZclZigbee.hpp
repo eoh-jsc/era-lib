@@ -12,6 +12,6 @@ namespace ZigbeeNamespace {
     #include "zcl/zclPressMeas.hpp"
     #include "zcl/zclHumiMeas.hpp"
 
-};
+} /* namespace ZigbeeNamespace */
 
 #endif /* INC_ERA_ZCL_ZIGBEE_HPP_ */

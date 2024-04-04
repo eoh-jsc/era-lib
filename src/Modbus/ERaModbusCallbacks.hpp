@@ -19,14 +19,14 @@ public:
     virtual void onData(const ERaModbusRequest* request,
                         const ERaModbusResponse* response,
                         const ModbusBuffer_t* pData) {
-        ERA_LOG(TAG, ERA_PSTR("onData callback default."));
+        ERA_LOG_WARNING(TAG, ERA_PSTR("onData callback default."));
         ERA_FORCE_UNUSED(request);
         ERA_FORCE_UNUSED(response);
         ERA_FORCE_UNUSED(pData);
     }
 
     virtual void onError(const ERaModbusRequest* request) {
-        ERA_LOG(TAG, ERA_PSTR("onError callback default."));
+        ERA_LOG_WARNING(TAG, ERA_PSTR("onError callback default."));
         ERA_FORCE_UNUSED(request);
     }
 };

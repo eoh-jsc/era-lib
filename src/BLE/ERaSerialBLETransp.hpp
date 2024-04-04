@@ -24,7 +24,7 @@ public:
         , timeout(1000L)
         , _connected(false)
         , initialized(false)
-#if defined(ERA_RTOS)
+#if defined(ERA_HAS_RTOS)
         , _bleTask(NULL)
 #endif
     {
@@ -65,7 +65,7 @@ public:
         if (this->initialized) {
             return;
         }
-#if defined(ERA_RTOS) && !defined(ERA_NO_RTOS)
+#if defined(ERA_HAS_RTOS) && !defined(ERA_NO_RTOS)
         #if !defined(ERA_MCU_CORE)
             #define ERA_MCU_CORE            0
         #endif
@@ -84,7 +84,7 @@ public:
             return;
         }
 
-#if !defined(ERA_RTOS) || defined(ERA_NO_RTOS)
+#if !defined(ERA_HAS_RTOS) || defined(ERA_NO_RTOS)
         this->progressData();
 #endif
     }
@@ -198,7 +198,7 @@ public:
     }
 
 protected:
-#if defined(ERA_RTOS)
+#if defined(ERA_HAS_RTOS)
     static void bleTask(void* args) {
         if (args == NULL) {
             ERaOs::osThreadDelete(NULL);
@@ -439,7 +439,7 @@ private:
     unsigned long timeout;
     bool _connected;
     bool initialized;
-#if defined(ERA_RTOS)
+#if defined(ERA_HAS_RTOS)
     TaskHandle_t _bleTask;
 #endif
 };

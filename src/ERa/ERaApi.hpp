@@ -7,8 +7,8 @@
 #include <ERa/ERaData.hpp>
 #include <ERa/ERaParam.hpp>
 #include <ERa/ERaHooks.hpp>
-#include <ERa/ERaProperty.hpp>
 #include <ERa/ERaHelpers.hpp>
+#include <ERa/ERaProperty.hpp>
 #include <ERa/ERaTransp.hpp>
 #include <ERa/ERaTimer.hpp>
 #include <ERa/ERaApiHandler.hpp>
@@ -231,7 +231,7 @@ public:
     }
 
     void osStarts() {
-#if defined(ERA_RTOS) && !defined(ERA_NO_RTOS)
+#if defined(ERA_HAS_RTOS) && !defined(ERA_NO_RTOS)
         ERaOs::osStartsScheduler();
 #endif
     }
@@ -425,7 +425,7 @@ protected:
     }
 #endif
 
-    void callERaWriteHandler(uint8_t pin, const ERaParam& param) {
+    void callERaWriteHandler(uint8_t pin, const ERaParam& param) override {
         Property::handler(pin, param);
         ERaWriteHandler_t handle = getERaWriteHandler(pin);
         if ((handle != nullptr) &&
@@ -437,7 +437,7 @@ protected:
         }
     }
 
-    void callERaPinReadHandler(uint8_t pin, const ERaParam& param, const ERaParam& raw) {
+    void callERaPinReadHandler(uint8_t pin, const ERaParam& param, const ERaParam& raw) override {
         ERaPinReadHandler_t handle = getERaPinReadHandler(pin);
         if ((handle != nullptr) &&
             (handle != ERaWidgetPinRead)) {
@@ -448,7 +448,7 @@ protected:
         }
     }
 
-    bool callERaPinWriteHandler(uint8_t pin, const ERaParam& param, const ERaParam& raw) {
+    bool callERaPinWriteHandler(uint8_t pin, const ERaParam& param, const ERaParam& raw) override {
         ERaPinWriteHandler_t handle = getERaPinWriteHandler(pin);
         if ((handle != nullptr) &&
             (handle != ERaWidgetPinWrite)) {
@@ -1032,6 +1032,7 @@ void ERaApi<Proto, Flash>::appLoop() {
     if (!this->enableAppLoop) {
         return;
     }
+    ERaAppLoop();
     if (this->isTaskRunning()) {
         return;
     }

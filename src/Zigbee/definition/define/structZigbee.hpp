@@ -135,6 +135,6 @@ namespace ZigbeeNamespace {
         }
     } find_devicePayloadWithTopic_t;
 
-};
+} /* namespace ZigbeeNamespace */
 
 #endif /* INC_DEFINE_STRUCT_ZIGBEE_HPP_ */

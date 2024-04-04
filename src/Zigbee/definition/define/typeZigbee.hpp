@@ -43,6 +43,6 @@ namespace ZigbeeNamespace {
         ANNCE_ROUTERDEVICE = 1
     };
 
-};
+} /* namespace ZigbeeNamespace */
 
 #endif /* INC_DEFINE_TYPE_ZIGBEE_HPP_ */

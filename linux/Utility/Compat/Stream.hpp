@@ -5,6 +5,8 @@
 #include <sys/time.h>
 #include "Print.hpp"
 
+class ERaString;
+
 class Stream
     : public Print
 {
@@ -56,6 +58,23 @@ public:
         return -1;
     }
 
+    int peekNextDigit() {
+        int c {0};
+        while(true) {
+            c = this->timedPeek();
+            if (c < 0) {
+                return c;    // timeout
+            }
+            if (c == '-') {
+                return c;
+            }
+            if ((c >= '0') && (c <= '9')) {
+                return c;
+            }
+            this->read();  // discard non-numeric
+        }
+    }
+
     virtual size_t readBytes(uint8_t* buffer, size_t size) {
         if (buffer == NULL) {
             return 0;
@@ -100,6 +119,88 @@ public:
         return this->readBytesUntil(terminator, (uint8_t*)buffer, size);
     }
 
+    virtual ERaString readString();
+    ERaString readStringUntil(char terminator);
+
+    long parseInt() {
+        return this->parseInt(NO_SKIP_CHAR);
+    }
+
+    long parseInt(char skipChar) {
+        bool isNegative {false};
+        long value {0};
+        int c {0};
+
+        c = this->peekNextDigit();
+        if (c < 0) {
+            return 0;
+        }
+
+        do {
+            if (c == skipChar) {
+            }
+            else if (c == '-') {
+                isNegative = true;
+            }
+            else if ((c >= '0') && (c <= '9')) {
+                value = ((value * 10) + (c - '0'));
+            }
+            this->read();
+            c = this->timedPeek();
+        } while (((c >= '0') && (c <= '9')) || (c == skipChar));
+
+        if (isNegative) {
+            value = -value;
+        }
+        return value;
+    }
+
+    float parseFloat() {
+        return this->parseFloat(NO_SKIP_CHAR);
+    }
+
+    float parseFloat(char skipChar) {
+        bool isNegative {false};
+        bool isFraction {false};
+        long value {0};
+        int c;
+        float fraction {1.0f};
+
+        c = this->peekNextDigit();
+        if (c < 0) {
+            return 0;
+        }
+
+        do {
+            if (c == skipChar) {
+            }
+            else if (c == '-') {
+                isNegative = true;
+            }
+            else if (c == '.') {
+                isFraction = true;
+            }
+            else if ((c >= '0') && (c <= '9')) {
+                value = ((value * 10) + (c - '0'));
+                if (isFraction) {
+                    fraction *= 0.1f;
+                }
+            }
+            this->read();
+            c = this->timedPeek();
+        } while (((c >= '0') && (c <= '9')) || (c == '.') || (c == skipChar));
+
+        if (isNegative) {
+            value = -value;
+        }
+        if (isFraction) {
+            return (value * fraction);
+        }
+        else {
+            return value;
+        }
+    }
+
 protected:
     __attribute__((constructor))
     static inline
@@ -123,6 +224,8 @@ protected:
 
     unsigned long timeout;
     unsigned long startMillis;
+
+    const char NO_SKIP_CHAR = 1;
 };
 
 #endif /* INC_STREAM_HPP_ */

@@ -1,27 +1,27 @@
 #ifndef INC_ERA_OS_HPP_
 #define INC_ERA_OS_HPP_
 
-#if defined(ARDUINO_ARCH_RENESAS) &&    \
-    (defined(ARDUINO_MINIMA) ||         \
-    defined(ARDUINO_UNOWIFIR4) ||       \
+#if defined(ARDUINO_ARCH_RENESAS) &&            \
+    (defined(ARDUINO_MINIMA) ||                 \
+    defined(ARDUINO_UNOWIFIR4) ||               \
     defined(ARDUINO_PORTENTA_C33))
     #define ARDUINO_RTOS_RENESAS
-#elif defined(__has_include) &&         \
-    __has_include(<FreeRTOS.h>) &&      \
+#elif defined(__has_include) &&                 \
+    __has_include(<FreeRTOS.h>) &&              \
     defined(ARDUINO_ARCH_STM32)
     #define ARDUINO_RTOS_STM32
 #endif
 
-#if defined(ARDUINO) &&                 \
-    !defined(__MBED__) &&               \
-    (defined(ESP32) ||                  \
-    defined(RTL8722DM) ||               \
-    defined(ARDUINO_AMEBA) ||           \
-    defined(ARDUINO_RTOS_STM32) ||      \
-    defined(ARDUINO_RTOS_RENESAS) ||    \
+#if defined(ARDUINO) &&                         \
+    !defined(__MBED__) &&                       \
+    (defined(ESP32) ||                          \
+    defined(RTL8722DM) ||                       \
+    defined(ARDUINO_AMEBA) ||                   \
+    defined(ARDUINO_RTOS_STM32) ||              \
+    defined(ARDUINO_RTOS_RENESAS) ||            \
     defined(ARDUINO_ARCH_RP2040))
 
-#define ERA_RTOS
+#define ERA_HAS_RTOS
 
 #include <ERa/ERaDetect.hpp>
 
@@ -120,7 +120,7 @@ namespace ERaOs {
     uint32_t osTimerIsRunning(TimerHandle_t timer_id);
     osStatus_t osTimerDelete(TimerHandle_t timer_id);
 
-};
+} /* namespace ERaOs */
 
 #endif
 

@@ -191,6 +191,10 @@ public:
             this->next = nullptr;
         }
 
+        iterator* getPrev() const {
+            return this->prev;
+        }
+
         iterator* getNext() const {
             return this->next;
         }

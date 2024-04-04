@@ -475,7 +475,8 @@ void ERaPnP<Transport>::configApi() {
             ERaConfig.hasBackup = true;
             CopyToArray(backupSsid, ERaConfig.backupSSID);
             CopyToArray(backupPass, ERaConfig.backupPass);
-        } else {
+        }
+        else {
             ERaConfig.hasBackup = false;
         }
 
@@ -705,7 +706,8 @@ void ERaPnP<Transport>::configApi() {
             ERaConfig.hasBackup = true;
             CopyToArray(backupSsid, ERaConfig.backupSSID);
             CopyToArray(backupPass, ERaConfig.backupPass);
-        } else {
+        }
+        else {
             ERaConfig.hasBackup = false;
         }
 
@@ -1092,7 +1094,8 @@ void ERaPnP<Transport>::configApi() {
             ERaConfig.hasBackup = true;
             CopyToArray(backupSsid, ERaConfig.backupSSID);
             CopyToArray(backupPass, ERaConfig.backupPass);
-        } else {
+        }
+        else {
             ERaConfig.hasBackup = false;
         }
 
@@ -1290,7 +1293,7 @@ void ERaPnP<Transport>::configLoad() {
         return;
     }
     memset(&ERaConfig, 0, sizeof(ERaConfig));
-    Base::ERaApi::getFlash().readFlash("config", &ERaConfig, sizeof(ERaConfig));
+    Base::ERaApi::readBytesFromFlash("config", &ERaConfig, sizeof(ERaConfig));
     ERA_LOG(TAG, ERA_PSTR("Configuration loaded from flash"));
     if (ERaConfig.magic != ERaDefault.magic) {
         this->configLoadDefault();
@@ -1426,7 +1429,10 @@ int ERaPnP<Transport>::scanNetworks() {
                     WIFI_SCAN_CHANNEL_TIMEOUT);
     MillisTime_t tick = ERaMillis();
     while ((nets < 0) && ERaRemainingTime(tick, WIFI_SCAN_TIMEOUT)) {
-        ERaDelay(100);
+        ERaDelay(20);
+        ERaWatchdogFeed();
+        Base::appLoop();
+        ERaWatchdogFeed();
         nets = WiFi.scanComplete();
     }
     ERA_LOG(ERA_PSTR("WiFi"), ERA_PSTR("Found %d wifi"), nets);
@@ -1592,7 +1598,8 @@ void ERaPnP<Transport>::connectWiFi(const char* ssid, const char* pass) {
         ERA_LOG(TAG, ERA_PSTR("Connecting to %s..."), ssid);
         if (pass && strlen(pass)) {
             WiFi.begin(ssid, pass);
-        } else {
+        }
+        else {
             WiFi.begin(ssid);
         }
 
@@ -1600,7 +1607,7 @@ void ERaPnP<Transport>::connectWiFi(const char* ssid, const char* pass) {
 
         MillisTime_t startMillis = ERaMillis();
         while (status != WL_CONNECTED) {
-            ERaDelay(500);
+            ERaDelay(10);
             ERaWatchdogFeed();
             status = WiFi.status();
             Base::appLoop();

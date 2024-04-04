@@ -70,7 +70,7 @@ protected:
         ERaWatchdogFeed();
 
         client->print("GET ");
-        this->printURL(client, url);
+        ERaOTAHelper::printURL(client, url);
         client->print(" HTTP/1.1\r\n");
         client->print("Host: ");
         client->print(this->getDomain(url).c_str());
@@ -82,7 +82,7 @@ protected:
             ERaDelay(10);
             if (!ERaRemainingTime(timeout, OTA_RESPONSE_TIMEOUT)) {
                 ERA_LOG_ERROR(TAG, ERA_PSTR("Response timeout"));
-                return;
+                return client->stop();
             }
         }
 
@@ -106,7 +106,7 @@ protected:
 
         if (contentLength <= 0) {
             ERA_LOG_ERROR(TAG, ERA_PSTR("Content-Length not defined"));
-            return;
+            return client->stop();
         }
 
         ERaWatchdogFeed();
@@ -150,6 +150,7 @@ protected:
             while (client->connected() && !client->available()) {
                 ERaDelay(1);
                 if (!ERaRemainingTime(timeout, OTA_RESPONSE_TIMEOUT)) {
+                    ERaWatchdogFeed();
                     ERA_LOG_ERROR(TAG, ERA_PSTR("Response timeout"));
                     break;
                 }
@@ -207,21 +208,6 @@ protected:
     }
 
 private:
-    void printURL(Client* client, const char* url) {
-        size_t sent {0};
-        size_t toSend {0};
-        size_t sendSize = strlen(url);
-        char buf[257] {0};
-        while (sendSize) {
-            toSend = ((sendSize > 256) ? 256 : sendSize);
-            strncpy(buf, url + sent, toSend);
-            buf[toSend] = 0;
-            client->print(buf);
-            sendSize -= toSend;
-            sent += toSend;
-        }
-    }
-
     String getDomain(String url) {
         int index = url.indexOf(':');
         if (index > 0) {

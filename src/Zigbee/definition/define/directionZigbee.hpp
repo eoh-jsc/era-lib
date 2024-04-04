@@ -8,6 +8,6 @@ namespace ZigbeeNamespace {
         SERVER_TO_CLIENT = 1,
     };
 
-};
+} /* namespace ZigbeeNamespace */
 
 #endif /* INC_DEFINE_DIRECTION_ZIGBEE_HPP_ */

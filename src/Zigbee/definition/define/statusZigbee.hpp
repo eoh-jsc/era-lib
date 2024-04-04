@@ -41,6 +41,6 @@ namespace ZigbeeNamespace {
         UNSUPPORTED_CLUSTER = 195,
     };
 
-};
+} /* namespace ZigbeeNamespace */
 
 #endif /* INC_DEFINE_STATUS_ZIGBEE_HPP_ */

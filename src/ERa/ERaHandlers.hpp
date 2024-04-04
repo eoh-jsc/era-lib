@@ -110,6 +110,7 @@
 #define ERA_CONNECTED()             void ERaOnConnected()
 #define ERA_DISCONNECTED()          void ERaOnDisconnected()
 #define ERA_WAITING()               void ERaOnWaiting()
+#define ERA_APP_LOOP()              void ERaAppLoop()
 #define ERA_OPTION_CONNECTED()      void ERaOptConnected(void ERA_UNUSED *arg)
 #define ERA_MODBUS_BAUDRATE()       void ERaModbusBaudrate(uint32_t ERA_UNUSED &baudrate)
 #define ERA_INFO()                  void ERaInfo(cJSON ERA_UNUSED *root)
@@ -145,6 +146,7 @@ void ERaNoModbusBaudrate(uint32_t ERA_UNUSED &baudrate);
 ERA_CONNECTED();
 ERA_DISCONNECTED();
 ERA_WAITING();
+ERA_APP_LOOP();
 ERA_OPTION_CONNECTED();
 ERA_MODBUS_BAUDRATE();
 ERA_INFO();

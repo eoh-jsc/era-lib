@@ -66,6 +66,8 @@ public:
             }
         }
 
+        logicrom_fota_register("ERa_FW_0x2706", ERA_FIRMWARE_VERSION);
+
         ERA_LOG(TAG, ERA_PSTR("Update successfully. Rebooting!"));
         ERaDelay(1000);
         ERaRestart(true);

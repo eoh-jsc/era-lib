@@ -107,7 +107,7 @@ void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
     cJSON_AddNumberToObject(root, INFO_SIGNAL_STRENGTH, SignalToPercentage(signal));
     cJSON_AddStringToObject(root, INFO_MAC, GetMACAddress(NULL));
     cJSON_AddStringToObject(root, INFO_LOCAL_IP, GetLocalIP(NULL));
-    cJSON_AddNumberToObject(root, INFO_SSL, ERaInfoSSL());
+    cJSON_AddNumberToObject(root, INFO_SSL, ERaInfoSSL(this->thisProto().getTransp().getPort()));
     cJSON_AddNumberToObject(root, INFO_PING, this->thisProto().getTransp().getPing());
     cJSON_AddNumberToObject(root, INFO_FREE_RAM, ERaFreeRam());
     cJSON_AddStringToObject(root, INFO_RESET_REASON, "UNKNOWN");

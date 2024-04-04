@@ -102,6 +102,13 @@
         ERaOs::osSemaphoreRelease((SemaphoreHandle_t)mutex);
     }
 
+    bool ERaGuardTryLockFn(ERaMutex_t& mutex) {
+        if (mutex == nullptr) {
+            mutex = (ERaMutex_t)ERaOs::osSemaphoreNew();
+        }
+        return (ERaOs::osSemaphoreAcquire((SemaphoreHandle_t)mutex, 0U) == osStatus_t::osOK);
+    }
+
 #if (ESP_IDF_VERSION_MAJOR > 4)
     ERA_WEAK
     void ERaWatchdogEnable(unsigned long timeout) {
@@ -341,15 +348,12 @@
 
     extern "C" char *sbrk(int i);
 
-#if defined(ERA_NO_RTOS) ||     \
-    !defined(ARDUINO_RTOS_STM32)
-    void ERaDelay(MillisTime_t ms) {
-        delay(ms);
-    }
-#else
+#if defined(ERA_HAS_RTOS) && !defined(ERA_NO_RTOS)
     void ERaDelay(MillisTime_t ms) {
         ERaOs::osDelay(ms);
     }
+#else
+    #define ERA_USE_DEFAULT_DELAY
 #endif
 
     uint32_t ERaRandomNumber(uint32_t min, uint32_t max) {
@@ -361,13 +365,7 @@
         return (numRand % (max - min) + min);
     }
 
-#if defined(ERA_NO_RTOS) ||     \
-    !defined(ARDUINO_RTOS_STM32)
-    size_t ERaFreeRam() {
-        char stack_dummy = 0;
-        return &stack_dummy - sbrk(0);
-    }
-#else
+#if defined(ERA_HAS_RTOS) && !defined(ERA_NO_RTOS)
     size_t ERaFreeRam() {
         if (ERaOs::osStarted()) {
             return ERaOs::osFreeHeapSize();
@@ -377,6 +375,11 @@
             return &stack_dummy - sbrk(0);
         }
     }
+#else
+    size_t ERaFreeRam() {
+        char stack_dummy = 0;
+        return &stack_dummy - sbrk(0);
+    }
 #endif
 
     void ERaRestart(bool ERA_UNUSED async) {
@@ -384,10 +387,7 @@
         while (1) {}
     }
 
-#if defined(ERA_NO_RTOS) ||     \
-    !defined(ARDUINO_RTOS_STM32)
-    #define ERA_USE_DEFAULT_GUARD
-#else
+#if defined(ERA_HAS_RTOS) && !defined(ERA_NO_RTOS)
     void ERaGuardLockFn(ERaMutex_t& mutex) {
         if (mutex == nullptr) {
             mutex = (ERaMutex_t)ERaOs::osSemaphoreNew();
@@ -401,6 +401,15 @@
         }
         ERaOs::osSemaphoreRelease((SemaphoreHandle_t)mutex);
     }
+
+    bool ERaGuardTryLockFn(ERaMutex_t& mutex) {
+        if (mutex == nullptr) {
+            mutex = (ERaMutex_t)ERaOs::osSemaphoreNew();
+        }
+        return (ERaOs::osSemaphoreAcquire((SemaphoreHandle_t)mutex, 0U) == osStatus_t::osOK);
+    }
+#else
+    #define ERA_USE_DEFAULT_GUARD
 #endif
 
     ERA_WEAK
@@ -470,6 +479,13 @@
         ERaOs::osSemaphoreRelease((SemaphoreHandle_t)mutex);
     }
 
+    bool ERaGuardTryLockFn(ERaMutex_t& mutex) {
+        if (mutex == nullptr) {
+            mutex = (ERaMutex_t)ERaOs::osSemaphoreNew();
+        }
+        return (ERaOs::osSemaphoreAcquire((SemaphoreHandle_t)mutex, 0U) == osStatus_t::osOK);
+    }
+
     ERA_WEAK
     void ERaWatchdogEnable(unsigned long timeout) {
         if (isWatchdogEnable) {
@@ -502,9 +518,13 @@
 
     extern "C" char *sbrk(int i);
 
+#if defined(ERA_HAS_RTOS) && !defined(ERA_NO_RTOS)
     void ERaDelay(MillisTime_t ms) {
         ERaOs::osDelay(ms);
     }
+#else
+    #define ERA_USE_DEFAULT_DELAY
+#endif
 
     uint32_t ERaRandomNumber(uint32_t min, uint32_t max) {
         if (!max) {
@@ -515,20 +535,14 @@
         return (numRand % (max - min) + min);
     }
 
-#if defined(ERA_NO_RTOS)
+#if defined(ERA_HAS_RTOS) && !defined(ERA_NO_RTOS)
     size_t ERaFreeRam() {
-        char stack_dummy = 0;
-        return &stack_dummy - sbrk(0);
+        return ERaOs::osFreeHeapSize();
     }
 #else
     size_t ERaFreeRam() {
-        if (ERaOs::osStarted()) {
-            return ERaOs::osFreeHeapSize();
-        }
-        else {
-            char stack_dummy = 0;
-            return &stack_dummy - sbrk(0);
-        }
+        char stack_dummy = 0;
+        return &stack_dummy - sbrk(0);
     }
 #endif
 
@@ -537,6 +551,7 @@
         while (1) {}
     }
 
+#if defined(ERA_HAS_RTOS) && !defined(ERA_NO_RTOS)
     void ERaGuardLockFn(ERaMutex_t& mutex) {
         if (mutex == nullptr) {
             mutex = (ERaMutex_t)ERaOs::osSemaphoreNew();
@@ -550,6 +565,16 @@
         }
         ERaOs::osSemaphoreRelease((SemaphoreHandle_t)mutex);
     }
+
+    bool ERaGuardTryLockFn(ERaMutex_t& mutex) {
+        if (mutex == nullptr) {
+            mutex = (ERaMutex_t)ERaOs::osSemaphoreNew();
+        }
+        return (ERaOs::osSemaphoreAcquire((SemaphoreHandle_t)mutex, 0U) == osStatus_t::osOK);
+    }
+#else
+    #define ERA_USE_DEFAULT_GUARD
+#endif
 
     ERA_WEAK
     void ERaWatchdogEnable(unsigned long timeout) {
@@ -588,9 +613,13 @@
 
     extern "C" char *sbrk(int i);
 
+#if defined(ERA_HAS_RTOS) && !defined(ERA_NO_RTOS)
     void ERaDelay(MillisTime_t ms) {
         ERaOs::osDelay(ms);
     }
+#else
+    #define ERA_USE_DEFAULT_DELAY
+#endif
 
     uint32_t ERaRandomNumber(uint32_t min, uint32_t max) {
         if (!max) {
@@ -601,20 +630,14 @@
         return (numRand % (max - min) + min);
     }
 
-#if defined(ERA_NO_RTOS)
+#if defined(ERA_HAS_RTOS) && !defined(ERA_NO_RTOS)
     size_t ERaFreeRam() {
-        char stack_dummy = 0;
-        return &stack_dummy - sbrk(0);
+        return ERaOs::osFreeHeapSize();
     }
 #else
     size_t ERaFreeRam() {
-        if (ERaOs::osStarted()) {
-            return ERaOs::osFreeHeapSize();
-        }
-        else {
-            char stack_dummy = 0;
-            return &stack_dummy - sbrk(0);
-        }
+        char stack_dummy = 0;
+        return &stack_dummy - sbrk(0);
     }
 #endif
 
@@ -623,6 +646,7 @@
         while (1) {}
     }
 
+#if defined(ERA_HAS_RTOS) && !defined(ERA_NO_RTOS)
     void ERaGuardLockFn(ERaMutex_t& mutex) {
         if (mutex == nullptr) {
             mutex = (ERaMutex_t)ERaOs::osSemaphoreNew();
@@ -636,6 +660,16 @@
         }
         ERaOs::osSemaphoreRelease((SemaphoreHandle_t)mutex);
     }
+
+    bool ERaGuardTryLockFn(ERaMutex_t& mutex) {
+        if (mutex == nullptr) {
+            mutex = (ERaMutex_t)ERaOs::osSemaphoreNew();
+        }
+        return (ERaOs::osSemaphoreAcquire((SemaphoreHandle_t)mutex, 0U) == osStatus_t::osOK);
+    }
+#else
+    #define ERA_USE_DEFAULT_GUARD
+#endif
 
     ERA_WEAK
     void ERaWatchdogEnable(unsigned long timeout) {
@@ -696,16 +730,23 @@
 #else
     void ERaGuardLockFn(ERaMutex_t& mutex) {
         if (mutex == nullptr) {
-            mutex = new uint32_t;
+            mutex = new uint32_t(os_mutex_create());
         }
-        os_mutex_take(*((uint32_t*)(mutex)));
+        os_mutex_lock(*((uint32_t*)(mutex)));
     }
 
     void ERaGuardUnlockFn(ERaMutex_t& mutex) {
         if (mutex == nullptr) {
-            mutex = new uint32_t;
+            mutex = new uint32_t(os_mutex_create());
         }
-        os_mutex_give(*((uint32_t*)(mutex)));
+        os_mutex_unlock(*((uint32_t*)(mutex)));
+    }
+
+    bool ERaGuardTryLockFn(ERaMutex_t& mutex) {
+        if (mutex == nullptr) {
+            mutex = new uint32_t(os_mutex_create());
+        }
+        return (os_mutex_trylock(*((uint32_t*)(mutex)), 0U) == 0);
     }
 #endif
 
@@ -749,6 +790,13 @@
             mutex = new(std::nothrow) Semaphore(1);
         }
         ((Semaphore*)mutex)->release();
+    }
+
+    bool ERaGuardTryLockFn(ERaMutex_t& mutex) {
+        if (mutex == nullptr) {
+            mutex = new(std::nothrow) Semaphore(1);
+        }
+        return ((Semaphore*)mutex)->try_acquire();
     }
 #else
     #define ERA_USE_DEFAULT_GUARD
@@ -893,6 +941,13 @@
         }
         ((Semaphore*)mutex)->release();
     }
+
+    bool ERaGuardTryLockFn(ERaMutex_t& mutex) {
+        if (mutex == nullptr) {
+            mutex = new(std::nothrow) Semaphore(1);
+        }
+        return ((Semaphore*)mutex)->try_acquire();
+    }
 #else
     #define ERA_USE_DEFAULT_GUARD
 #endif
@@ -907,6 +962,7 @@
     #include <stdlib.h>
     #include <pthread.h>
     #include <wiringPi.h>
+    #include <sys/sysinfo.h>
 
     ERA_CONSTRUCTOR
     static void ERaSystemInit() {
@@ -916,6 +972,12 @@
         defined(ORANGE_PI)
         wiringPiSetupPhys();
 #endif
+    }
+
+    size_t ERaFreeRam() {
+        struct sysinfo info;
+        ::sysinfo(&info);
+        return info.freeram; 
     }
 
     void ERaRestart(bool ERA_UNUSED async) {
@@ -939,10 +1001,17 @@
         pthread_mutex_unlock((pthread_mutex_t*)mutex);
     }
 
+    bool ERaGuardTryLockFn(ERaMutex_t& mutex) {
+        if (mutex == nullptr) {
+            mutex = new(std::nothrow) pthread_mutex_t;
+            pthread_mutex_init((pthread_mutex_t*)mutex, NULL);
+        }
+        return (pthread_mutex_trylock((pthread_mutex_t*)mutex) == 0);
+    }
+
     #define ERA_USE_DEFAULT_DELAY
     #define ERA_USE_DEFAULT_MILLIS
     #define ERA_USE_DEFAULT_RANDOM
-    #define ERA_USE_DEFAULT_FREE_RAM
     #define ERA_USE_DEFAULT_WATCHDOG
 
 #elif defined(LINUX)
@@ -952,6 +1021,7 @@
     #include <time.h>
     #include <unistd.h>
     #include <pthread.h>
+    #include <sys/sysinfo.h>
 
     static MillisTime_t startupTime {0};
 
@@ -970,6 +1040,12 @@
         return (ts.tv_sec * 1000 + ts.tv_nsec / 1000000L) - startupTime;
     }
 
+    size_t ERaFreeRam() {
+        struct sysinfo info;
+        ::sysinfo(&info);
+        return info.freeram; 
+    }
+
     void ERaRestart(bool ERA_UNUSED async) {
         exit(1);
         while (1) {}
@@ -991,8 +1067,15 @@
         pthread_mutex_unlock((pthread_mutex_t*)mutex);
     }
 
+    bool ERaGuardTryLockFn(ERaMutex_t& mutex) {
+        if (mutex == nullptr) {
+            mutex = new(std::nothrow) pthread_mutex_t;
+            pthread_mutex_init((pthread_mutex_t*)mutex, NULL);
+        }
+        return (pthread_mutex_trylock((pthread_mutex_t*)mutex) == 0);
+    }
+
     #define ERA_USE_DEFAULT_RANDOM
-    #define ERA_USE_DEFAULT_FREE_RAM
     #define ERA_USE_DEFAULT_WATCHDOG
 
 #else
@@ -1021,6 +1104,14 @@
 
 MillisTime_t ERaSeconds() {
     return (ERaMillis() / 1000UL);
+}
+
+MillisTime_t ERaMinutes() {
+    return (ERaMillis() / 60000UL);
+}
+
+MillisTime_t ERaHours() {
+    return (ERaMillis() / 3600000UL);
 }
 
 #if defined(ERA_USE_DEFAULT_RANDOM)
@@ -1061,6 +1152,11 @@ void ERaFatality() {
 
     void ERaGuardUnlockFn(ERaMutex_t& mutex) {
         ERA_FORCE_UNUSED(mutex);
+    }
+
+    bool ERaGuardTryLockFn(ERaMutex_t& mutex) {
+        ERA_FORCE_UNUSED(mutex);
+        return true;
     }
 #endif
 
@@ -1249,9 +1345,20 @@ bool ERaFloatCompare(float a, float b) {
     return (fabs(a - b) <= (maxVal * FLT_EPSILON));
 }
 
-double ERaDoubleCompare(double a, double b) {
+bool ERaDoubleCompare(double a, double b) {
     double maxVal = (fabs(a) > fabs(b)) ? fabs(a) : fabs(b);
     return (fabs(a - b) <= (maxVal * DBL_EPSILON));
+}
+
+bool ERaStringCompare(const char* a, const char* b) {
+    if (a == b) {
+        return true;
+    }
+    if ((b == nullptr) ||
+        (a == nullptr)) {
+        return false;
+    }
+    return !strcmp(a, b);
 }
 
 char* ERaFindStr(const char* str, const char* str2) {

@@ -54,6 +54,6 @@ namespace ZigbeeNamespace {
         GP_DATA_CNF,
     };
 
-};
+} /* namespace ZigbeeNamespace */
 
 #endif /* INC_DEFINE_APP_ZIGBEE_HPP_ */

@@ -15,7 +15,7 @@ class ERaTimer
     typedef void (*TimerCallback_p_t)(void*);
 #endif
 
-    const static int MAX_TIMERS = 16;
+    const static int MAX_TIMERS = 32;
     enum TimerFlagT {
         TIMER_ON_CALLED = 0x01,
         TIMER_ON_DELETE = 0x80
@@ -168,6 +168,7 @@ protected:
 private:
     Timer_t* setupTimer(unsigned long interval, ERaTimer::TimerCallback_t cb, unsigned int limit);
     Timer_t* setupTimer(unsigned long interval, ERaTimer::TimerCallback_p_t cb, void* args, unsigned int limit);
+    bool deleteHandler();
     bool isTimerFree();
 
     bool isValidTimer(const Timer_t* pTimer) const {
@@ -175,6 +176,15 @@ private:
             return false;
         }
         return ((pTimer->callback != nullptr) || (pTimer->callback_p != nullptr));
+    }
+
+    bool isCalled(Timer_t* pTimer, uint8_t mask) {
+        if (pTimer == nullptr) {
+            return false;
+        }
+        bool ret = this->getFlag(pTimer->called, mask);
+        this->setFlag(pTimer->called, mask, false);
+        return ret;
     }
 
     void setFlag(uint8_t& flags, uint8_t mask, bool value) {
@@ -192,6 +202,8 @@ private:
 
     ERaList<Timer_t*> timer;
     unsigned int numTimer;
+
+    using TimerIterator = typename ERaList<Timer_t*>::iterator;
 };
 
 using TimerEntry = ERaTimer::iterator;

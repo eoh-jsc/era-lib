@@ -103,32 +103,23 @@ void MQTTLinuxClient::begin() {
   // set CA cert
 #if defined(ERA_MQTT_SSL)
   if (this->isTLS) {
-    lwmqtt_unix_tls_network_init(&this->networkTLS, false, nullptr, 0);
+    lwmqtt_posix_tls_network_init(&this->networkTLS, false, nullptr, 0);
   }
 #endif
 
   // set timers
-#if defined(ERA_MQTT_SSL)
-  if (this->isTLS) {
-    lwmqtt_set_timers(&this->client, &this->timer1TLS, &this->timer2TLS, lwmqtt_unix_tls_timer_set, lwmqtt_unix_tls_timer_get);
-  }
-  else {
-    lwmqtt_set_timers(&this->client, &this->timer1, &this->timer2, lwmqtt_unix_timer_set, lwmqtt_unix_timer_get);
-  }
-#else
-  lwmqtt_set_timers(&this->client, &this->timer1, &this->timer2, lwmqtt_unix_timer_set, lwmqtt_unix_timer_get);
-#endif
+  lwmqtt_set_timers(&this->client, &this->timer1, &this->timer2, lwmqtt_posix_timer_set, lwmqtt_posix_timer_get);
 
   // set network
 #if defined(ERA_MQTT_SSL)
   if (this->isTLS) {
-    lwmqtt_set_network(&this->client, &this->networkTLS, lwmqtt_unix_tls_network_read, lwmqtt_unix_tls_network_write);
+    lwmqtt_set_network(&this->client, &this->networkTLS, lwmqtt_posix_tls_network_read, lwmqtt_posix_tls_network_write);
   }
   else {
-    lwmqtt_set_network(&this->client, &this->network, lwmqtt_unix_network_read, lwmqtt_unix_network_write);
+    lwmqtt_set_network(&this->client, &this->network, lwmqtt_posix_network_read, lwmqtt_posix_network_write);
   }
 #else
-  lwmqtt_set_network(&this->client, &this->network, lwmqtt_unix_network_read, lwmqtt_unix_network_write);
+  lwmqtt_set_network(&this->client, &this->network, lwmqtt_posix_network_read, lwmqtt_posix_network_write);
 #endif
 
   // set callback
@@ -294,13 +285,13 @@ bool MQTTLinuxClient::connect(const char clientID[], const char username[], cons
     if (this->hostname != nullptr) {
 #if defined(ERA_MQTT_SSL)
       if (this->isTLS) {
-        this->_lastError = lwmqtt_unix_tls_network_connect(&this->networkTLS, (char*)this->hostname, (uint16_t)this->port);
+        this->_lastError = lwmqtt_posix_tls_network_connect(&this->networkTLS, (char*)this->hostname, (uint16_t)this->port);
       }
       else {
-        this->_lastError = lwmqtt_unix_network_connect(&this->network, (char*)this->hostname, (uint16_t)this->port);
+        this->_lastError = lwmqtt_posix_network_connect(&this->network, (char*)this->hostname, (uint16_t)this->port);
       }
 #else
-      this->_lastError = lwmqtt_unix_network_connect(&this->network, (char*)this->hostname, (uint16_t)this->port);
+      this->_lastError = lwmqtt_posix_network_connect(&this->network, (char*)this->hostname, (uint16_t)this->port);
 #endif
     } else {
       this->_lastError = LWMQTT_NETWORK_FAILED_CONNECT;
@@ -314,13 +305,13 @@ bool MQTTLinuxClient::connect(const char clientID[], const char username[], cons
   bool isConnected = false;
 #if defined(ERA_MQTT_SSL)
   if (this->isTLS) {
-    this->_lastError = lwmqtt_unix_tls_network_wait(&this->networkTLS, &isConnected, this->timeout);
+    this->_lastError = lwmqtt_posix_tls_network_wait(&this->networkTLS, &isConnected, this->timeout);
   }
   else {
-    this->_lastError = lwmqtt_unix_network_wait(&this->network, &isConnected, this->timeout);
+    this->_lastError = lwmqtt_posix_network_wait(&this->network, &isConnected, this->timeout);
   }
 #else
-  this->_lastError = lwmqtt_unix_network_wait(&this->network, &isConnected, this->timeout);
+  this->_lastError = lwmqtt_posix_network_wait(&this->network, &isConnected, this->timeout);
 #endif
   if (this->_lastError != LWMQTT_SUCCESS || !isConnected) {
     // close connection
@@ -376,13 +367,13 @@ bool MQTTLinuxClient::publish(const char topic[], const char payload[], int leng
   bool isConnected = false;
 #if defined(ERA_MQTT_SSL)
   if (this->isTLS) {
-    this->_lastError = lwmqtt_unix_tls_network_wait(&this->networkTLS, &isConnected, this->timeout);
+    this->_lastError = lwmqtt_posix_tls_network_wait(&this->networkTLS, &isConnected, this->timeout);
   }
   else {
-    this->_lastError = lwmqtt_unix_network_wait(&this->network, &isConnected, this->timeout);
+    this->_lastError = lwmqtt_posix_network_wait(&this->network, &isConnected, this->timeout);
   }
 #else
-  this->_lastError = lwmqtt_unix_network_wait(&this->network, &isConnected, this->timeout);
+  this->_lastError = lwmqtt_posix_network_wait(&this->network, &isConnected, this->timeout);
 #endif
   if (this->_lastError != LWMQTT_SUCCESS) {
     // close connection
@@ -408,6 +399,7 @@ bool MQTTLinuxClient::publish(const char topic[], const char payload[], int leng
   // set duplicate packet id if available
   if (this->nextDupPacketID > 0) {
     options.dup_id = &this->nextDupPacketID;
+    this->nextDupPacketID = 0;
   }
   options.skip_ack = this->skipACK;
 
@@ -443,13 +435,13 @@ bool MQTTLinuxClient::subscribe(const char topic[], int qos) {
   bool isConnected = false;
 #if defined(ERA_MQTT_SSL)
   if (this->isTLS) {
-    this->_lastError = lwmqtt_unix_tls_network_wait(&this->networkTLS, &isConnected, this->timeout);
+    this->_lastError = lwmqtt_posix_tls_network_wait(&this->networkTLS, &isConnected, this->timeout);
   }
   else {
-    this->_lastError = lwmqtt_unix_network_wait(&this->network, &isConnected, this->timeout);
+    this->_lastError = lwmqtt_posix_network_wait(&this->network, &isConnected, this->timeout);
   }
 #else
-  this->_lastError = lwmqtt_unix_network_wait(&this->network, &isConnected, this->timeout);
+  this->_lastError = lwmqtt_posix_network_wait(&this->network, &isConnected, this->timeout);
 #endif
   if (this->_lastError != LWMQTT_SUCCESS || !isConnected) {
     // close connection
@@ -480,13 +472,13 @@ bool MQTTLinuxClient::unsubscribe(const char topic[]) {
   bool isConnected = false;
 #if defined(ERA_MQTT_SSL)
   if (this->isTLS) {
-    this->_lastError = lwmqtt_unix_tls_network_wait(&this->networkTLS, &isConnected, this->timeout);
+    this->_lastError = lwmqtt_posix_tls_network_wait(&this->networkTLS, &isConnected, this->timeout);
   }
   else {
-    this->_lastError = lwmqtt_unix_network_wait(&this->network, &isConnected, this->timeout);
+    this->_lastError = lwmqtt_posix_network_wait(&this->network, &isConnected, this->timeout);
   }
 #else
-  this->_lastError = lwmqtt_unix_network_wait(&this->network, &isConnected, this->timeout);
+  this->_lastError = lwmqtt_posix_network_wait(&this->network, &isConnected, this->timeout);
 #endif
   if (this->_lastError != LWMQTT_SUCCESS || !isConnected) {
     // close connection
@@ -517,13 +509,13 @@ bool MQTTLinuxClient::loop() {
   bool isAvailable = false;
 #if defined(ERA_MQTT_SSL)
   if (this->isTLS) {
-    this->_lastError = lwmqtt_unix_tls_network_select(&this->networkTLS, &isAvailable, 0);
+    this->_lastError = lwmqtt_posix_tls_network_select(&this->networkTLS, &isAvailable, 0);
   }
   else {
-    this->_lastError = lwmqtt_unix_network_select(&this->network, &isAvailable, 0);
+    this->_lastError = lwmqtt_posix_network_select(&this->network, &isAvailable, 0);
   }
 #else
-  this->_lastError = lwmqtt_unix_network_select(&this->network, &isAvailable, 0);
+  this->_lastError = lwmqtt_posix_network_select(&this->network, &isAvailable, 0);
 #endif
   if (this->_lastError != LWMQTT_SUCCESS) {
     // close connection
@@ -537,13 +529,13 @@ bool MQTTLinuxClient::loop() {
     size_t available = 0;
 #if defined(ERA_MQTT_SSL)
     if (this->isTLS) {
-      this->_lastError = lwmqtt_unix_tls_network_peek(&this->networkTLS, &available, this->timeout);
+      this->_lastError = lwmqtt_posix_tls_network_peek(&this->networkTLS, &available, this->timeout);
     }
     else {
-      this->_lastError = lwmqtt_unix_network_peek(&this->network, &available, this->timeout);
+      this->_lastError = lwmqtt_posix_network_peek(&this->network, &available, this->timeout);
     }
 #else
-    this->_lastError = lwmqtt_unix_network_peek(&this->network, &available, this->timeout);
+    this->_lastError = lwmqtt_posix_network_peek(&this->network, &available, this->timeout);
 #endif
     if (this->_lastError != LWMQTT_SUCCESS) {
       // close connection
@@ -606,13 +598,13 @@ bool MQTTLinuxClient::disconnect() {
   // close network
 #if defined(ERA_MQTT_SSL)
   if (this->isTLS) {
-    lwmqtt_unix_tls_network_disconnect(&this->networkTLS);
+    lwmqtt_posix_tls_network_disconnect(&this->networkTLS);
   }
   else {
-    lwmqtt_unix_network_disconnect(&this->network);
+    lwmqtt_posix_network_disconnect(&this->network);
   }
 #else
-  lwmqtt_unix_network_disconnect(&this->network);
+  lwmqtt_posix_network_disconnect(&this->network);
 #endif
 
   return this->_lastError == LWMQTT_SUCCESS;

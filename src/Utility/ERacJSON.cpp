@@ -289,7 +289,7 @@ CJSON_PUBLIC(cJSON*) cJSON_SetStringToObject(cJSON* const object, const char* co
         return cJSON_AddStringToObject(object, name, string);
     }
     if (cJSON_IsString(string_item)) {
-        cJSON_SetValuestring(string_item, string);
+        cJSON_SetValueString(string_item, string);
     }
     else {
         string_item = cJSON_CreateString(string);
@@ -345,7 +345,7 @@ CJSON_PUBLIC(cJSON*) cJSON_SetNumberViaPointer(cJSON* const object, cJSON* const
 CJSON_PUBLIC(cJSON*) cJSON_SetStringViaPointer(cJSON* const object, cJSON* const item, const char* const string) {
     cJSON *string_item = item;
     if (cJSON_IsString(string_item)) {
-        cJSON_SetValuestring(string_item, string);
+        cJSON_SetValueString(string_item, string);
     }
     else {
         string_item = cJSON_CreateString(string);
@@ -431,8 +431,42 @@ CJSON_PUBLIC(cJSON_bool) cJSON_ReplaceItem(cJSON* const parent, cJSON* const ite
     }
 }
 
+CJSON_PUBLIC(cJSON_bool) cJSON_CompareObject(const cJSON* const a, const cJSON* const b, const cJSON_bool case_sensitive) {
+    if (a == b) {
+        return true;
+    }
+    return cJSON_Compare(a, b, case_sensitive);
+}
+
 CJSON_PUBLIC(cJSON_bool) cJSON_Empty(const cJSON * const object) {
     return (cJSON_IsNull(object) || (cJSON_IsString(object) && !strlen(object->valuestring)));
+}
+
+CJSON_PUBLIC(const char*) cJSON_TypeOf(const cJSON* const object) {
+    if ((object == NULL) || cJSON_IsInvalid(object)) {
+        return "undefined";
+    }
+    else if (cJSON_IsBool(object)) {
+        return "boolean";
+    }
+    else if (cJSON_IsNumber(object)) {
+        return "number";
+    }
+    else if (cJSON_IsString(object)) {
+        return "string";
+    }
+    else if (cJSON_IsObject(object)) {
+        return "object";
+    }
+    else if (cJSON_IsArray(object)) {
+        return "array";
+    }
+    else if (cJSON_IsNull(object)) {
+        return "null";
+    }
+    else {
+        return "unknown";
+    }
 }
 
 CJSON_PUBLIC(cJSON*) cJSON_AddMultiItemToObject(cJSON* const object, const char* const name, const double number) {

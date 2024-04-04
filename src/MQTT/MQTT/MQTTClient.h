@@ -61,12 +61,12 @@ extern "C" {
     #include <coredecls.h>
     #define mqtt_yield_fix() esp_yield()
   #else
-    #define mqtt_yield_fix() delay(1)
+    #define mqtt_yield_fix() ERaDelay(1)
   #endif
 #elif defined (PARTICLE) || defined(SPARK)
   #define mqtt_yield_fix()   Particle.process()
 #else
-  #define mqtt_yield_fix()   delay(1)
+  #define mqtt_yield_fix()   ERaDelay(1)
 #endif
 
 typedef uint32_t (*MQTTClientClockSource)();

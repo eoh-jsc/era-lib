@@ -261,6 +261,6 @@ namespace ZigbeeNamespace {
         MAC_SRC_MATCH_INVALID_INDEX = 0xff
     };
 
-};
+} /* namespace ZigbeeNamespace */
 
 #endif /* INC_DEFINE_COMMON_ZIGBEE_HPP_ */

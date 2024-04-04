@@ -9,8 +9,8 @@ ERaReport::ERaReport()
 
 void ERaReport::run() {
     unsigned long currentMillis = ERaMillis();
-    const ERaList<Report_t*>::iterator* e = this->report.end();
-    for (ERaList<Report_t*>::iterator* it = this->report.begin(); it != e; it = it->getNext()) {
+    const ReportIterator* e = this->report.end();
+    for (ReportIterator* it = this->report.begin(); it != e; it = it->getNext()) {
         Report_t* pReport = it->get();
         if (!this->isValidReport(pReport)) {
             continue;
@@ -40,34 +40,46 @@ void ERaReport::run() {
         this->setFlag(pReport->called, ReportFlagT::REPORT_ON_CALLED, true);
     }
 
-    ERaList<Report_t*>::iterator* next = nullptr;
-    for (ERaList<Report_t*>::iterator* it = this->report.begin(); it != e; it = next) {
-        next = it->getNext();
+    for (ReportIterator* it = this->report.begin(); it != e; it = it->getNext()) {
         Report_t* pReport = it->get();
         if (!this->isValidReport(pReport)) {
             continue;
         }
-        if (!pReport->called) {
-            continue;
-        }
-        if (this->getFlag(pReport->called, ReportFlagT::REPORT_ON_CALLED)) {
-            if (pReport->callback_p == nullptr) {
-                pReport->callback();
-            }
-            else {
-                pReport->callback_p(pReport->param);
-            }
-        }
         if (this->getFlag(pReport->called, ReportFlagT::REPORT_ON_DELETE)) {
-            delete pReport;
-            pReport = nullptr;
-            it->get() = nullptr;
-            this->report.remove(it);
-            this->numReport--;
             continue;
         }
-        pReport->called = 0;
+        if (!this->isCalled(pReport, ReportFlagT::REPORT_ON_CALLED)) {
+            continue;
+        }
+        if (pReport->callback_p == nullptr) {
+            pReport->callback();
+        }
+        else {
+            pReport->callback_p(pReport->param);
+        }
     }
+
+    do {} while (this->deleteHandler());
+}
+
+bool ERaReport::deleteHandler() {
+    const ReportIterator* e = this->report.end();
+    for (ReportIterator* it = this->report.begin(); it != e; it = it->getNext()) {
+        Report_t*& pReport = it->get();
+        if (!this->isValidReport(pReport)) {
+            continue;
+        }
+        if (!this->isCalled(pReport, ReportFlagT::REPORT_ON_DELETE)) {
+            continue;
+        }
+        delete pReport;
+        pReport = nullptr;
+        this->report.remove(it);
+        this->numReport--;
+        it = nullptr;
+        return true;
+    }
+    return false;
 }
 
 ERaReport::Report_t* ERaReport::setupReport(unsigned long minInterval, unsigned long maxInterval,
@@ -371,6 +383,7 @@ void ERaReport::deleteReport(Report_t* pReport) {
     }
 
     if (this->isValidReport(pReport)) {
+        pReport->enable = false;
         this->setFlag(pReport->called, ReportFlagT::REPORT_ON_DELETE, true);
     }
 }
@@ -416,8 +429,8 @@ void ERaReport::setScale(Report_t* pReport, float min, float max, float rawMin, 
 }
 
 void ERaReport::enableAll() {
-    const ERaList<Report_t*>::iterator* e = this->report.end();
-    for (ERaList<Report_t*>::iterator* it = this->report.begin(); it != e; it = it->getNext()) {
+    const ReportIterator* e = this->report.end();
+    for (ReportIterator* it = this->report.begin(); it != e; it = it->getNext()) {
         Report_t* pReport = it->get();
         if (this->isValidReport(pReport)) {
             pReport->enable = true;
@@ -426,8 +439,8 @@ void ERaReport::enableAll() {
 }
 
 void ERaReport::disableAll() {
-    const ERaList<Report_t*>::iterator* e = this->report.end();
-    for (ERaList<Report_t*>::iterator* it = this->report.begin(); it != e; it = it->getNext()) {
+    const ReportIterator* e = this->report.end();
+    for (ReportIterator* it = this->report.begin(); it != e; it = it->getNext()) {
         Report_t* pReport = it->get();
         if (this->isValidReport(pReport)) {
             pReport->enable = false;

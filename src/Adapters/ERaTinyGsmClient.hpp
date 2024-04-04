@@ -17,7 +17,7 @@
 #include <ERa/ERaProtocol.hpp>
 #include <MQTT/ERaMqtt.hpp>
 
-#define GSM_NET_CONNECT_TIMEOUT      3 * 60000
+#define GSM_NET_CONNECT_TIMEOUT       3 * 60000
 
 typedef struct __ERaConfig_t {
     char apn[64];

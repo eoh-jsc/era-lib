@@ -123,7 +123,8 @@ public:
             ERA_LOG(TAG, ERA_PSTR("Connecting to %s..."), ssid);
             if (pass && strlen(pass)) {
                 status = WiFi.begin((char*)ssid, (char*)pass);
-            } else {
+            }
+            else {
 #if defined(ARDUINO_MBED_HAS_WIFI)
                 status = WiFi.begin((char*)ssid, (char*)"");
 #else
@@ -254,7 +255,7 @@ void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
     cJSON_AddNumberToObject(root, INFO_RSSI, signal);
     cJSON_AddNumberToObject(root, INFO_SIGNAL_STRENGTH, SignalToPercentage(signal));
     cJSON_AddStringToObject(root, INFO_MAC, ::getMAC().c_str());
-    cJSON_AddStringToObject(root, INFO_LOCAL_IP,::getLocalIP().c_str());
+    cJSON_AddStringToObject(root, INFO_LOCAL_IP, ::getLocalIP().c_str());
     cJSON_AddNumberToObject(root, INFO_SSL, ERaInfoSSL());
     cJSON_AddNumberToObject(root, INFO_PING, this->thisProto().getTransp().getPing());
     cJSON_AddNumberToObject(root, INFO_FREE_RAM, ERaFreeRam());

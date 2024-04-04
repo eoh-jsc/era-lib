@@ -112,11 +112,20 @@ bool ERaModbus<Api>::waitResponse(ERaModbusResponse* response) {
             switch (event.type) {
                 case uart_event_type_t::UART_DATA: {
                     ESP_ERROR_CHECK(uart_get_buffered_data_len(UART_MODBUS, (size_t*)&length));
-                    uint8_t receive[length] {0};
-                    uart_read_bytes(UART_MODBUS, receive, length, MODBUS_STREAM_TIMEOUT);
-                    for (int i = 0; i < length; ++i) {
-                        response->add(receive[i]);
+
+                    while (length-- > 0) {
+                        uint8_t byte {0};
+                        if (uart_read_bytes(UART_MODBUS, &byte, 1, MODBUS_BYTE_TIMEOUT) <= 0) {
+                            ERA_LOG_ERROR(TAG, ERA_PSTR("Uart read error!!!"));
+                            break;
+                        }
+                        else if (!ERaRemainingTime(startMillis, MODBUS_STREAM_TIMEOUT)) {
+                            ERA_LOG_ERROR(TAG, ERA_PSTR("Uart read timeout!!!"));
+                            break;
+                        }
+                        response->add(byte);
                     }
+
                     if (response->isComplete()) {
                         ERaLogHex("MB <<", response->getMessage(), response->getPosition());
                         return response->isSuccess();

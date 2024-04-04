@@ -159,7 +159,7 @@ public:
         if (this == &rwb) {
             return (*this);
         }
-        if (this->type == WrapperTypeT::WRAPPER_TYPE_STRING) {
+        if (this->isString()) {
             return operator = ((const char*)rwb.getPointer());
         }
         else {
@@ -224,7 +224,7 @@ public:
         if (this == &rwb) {
             return true;
         }
-        if (this->type == WrapperTypeT::WRAPPER_TYPE_STRING) {
+        if (this->isString()) {
             return operator == ((const char*)rwb.getPointer());
         }
         else {
@@ -285,7 +285,7 @@ public:
         if (this == &rwb) {
             return false;
         }
-        if (this->type == WrapperTypeT::WRAPPER_TYPE_STRING) {
+        if (this->isString()) {
             return operator != ((const char*)rwb.getPointer());
         }
         else {
@@ -342,6 +342,274 @@ public:
         return operator != ((const char*)str);
     }
 
+    bool operator > (const WrapperBase& rwb) const {
+        if (this == &rwb) {
+            return false;
+        }
+        if (this->isString()) {
+            return operator > ((const char*)rwb.getPointer());
+        }
+        else {
+            return operator > (rwb.get());
+        }
+    }
+
+    bool operator > (float num) const {
+        return operator > ((double)num);
+    }
+
+    bool operator > (bool num) const {
+        return operator > ((double)num);
+    }
+
+    bool operator > (int num) const {
+        return operator > ((double)num);
+    }
+
+    bool operator > (unsigned int num) const {
+        return operator > ((double)num);
+    }
+
+    bool operator > (long num) const {
+        return operator > ((double)num);
+    }
+
+    bool operator > (unsigned long num) const {
+        return operator > ((double)num);
+    }
+
+    bool operator > (long long num) const {
+        return operator > ((double)num);
+    }
+
+    bool operator > (unsigned long long num) const {
+        return operator > ((double)num);
+    }
+
+    bool operator > (double num) const {
+        if (!this->isNumber()) {
+            return false;
+        }
+        return (this->CompareTo(num) > 0);
+    }
+
+    template <typename T>
+    bool operator > (T rt) const {
+        return operator > ((double)rt);
+    }
+
+    bool operator > (const char* cstr) const {
+        if (!this->isString()) {
+            return false;
+        }
+        return (this->CompareTo(cstr) > 0);
+    }
+
+    bool operator > (char* str) const {
+        return operator > ((const char*)str);
+    }
+
+    bool operator < (const WrapperBase& rwb) const {
+        if (this == &rwb) {
+            return false;
+        }
+        if (this->isString()) {
+            return operator < ((const char*)rwb.getPointer());
+        }
+        else {
+            return operator < (rwb.get());
+        }
+    }
+
+    bool operator < (float num) const {
+        return operator < ((double)num);
+    }
+
+    bool operator < (bool num) const {
+        return operator < ((double)num);
+    }
+
+    bool operator < (int num) const {
+        return operator < ((double)num);
+    }
+
+    bool operator < (unsigned int num) const {
+        return operator < ((double)num);
+    }
+
+    bool operator < (long num) const {
+        return operator < ((double)num);
+    }
+
+    bool operator < (unsigned long num) const {
+        return operator < ((double)num);
+    }
+
+    bool operator < (long long num) const {
+        return operator < ((double)num);
+    }
+
+    bool operator < (unsigned long long num) const {
+        return operator < ((double)num);
+    }
+
+    bool operator < (double num) const {
+        if (!this->isNumber()) {
+            return false;
+        }
+        return (this->CompareTo(num) < 0);
+    }
+
+    template <typename T>
+    bool operator < (T rt) const {
+        return operator < ((double)rt);
+    }
+
+    bool operator < (const char* cstr) const {
+        if (!this->isString()) {
+            return false;
+        }
+        return (this->CompareTo(cstr) < 0);
+    }
+
+    bool operator < (char* str) const {
+        return operator < ((const char*)str);
+    }
+
+    bool operator >= (const WrapperBase& rwb) const {
+        if (this == &rwb) {
+            return true;
+        }
+        if (this->isString()) {
+            return operator >= ((const char*)rwb.getPointer());
+        }
+        else {
+            return operator >= (rwb.get());
+        }
+    }
+
+    bool operator >= (float num) const {
+        return operator >= ((double)num);
+    }
+
+    bool operator >= (bool num) const {
+        return operator >= ((double)num);
+    }
+
+    bool operator >= (int num) const {
+        return operator >= ((double)num);
+    }
+
+    bool operator >= (unsigned int num) const {
+        return operator >= ((double)num);
+    }
+
+    bool operator >= (long num) const {
+        return operator >= ((double)num);
+    }
+
+    bool operator >= (unsigned long num) const {
+        return operator >= ((double)num);
+    }
+
+    bool operator >= (long long num) const {
+        return operator >= ((double)num);
+    }
+
+    bool operator >= (unsigned long long num) const {
+        return operator >= ((double)num);
+    }
+
+    bool operator >= (double num) const {
+        if (!this->isNumber()) {
+            return false;
+        }
+        return (this->CompareTo(num) >= 0);
+    }
+
+    template <typename T>
+    bool operator >= (T rt) const {
+        return operator >= ((double)rt);
+    }
+
+    bool operator >= (const char* cstr) const {
+        if (!this->isString()) {
+            return false;
+        }
+        return (this->CompareTo(cstr) >= 0);
+    }
+
+    bool operator >= (char* str) const {
+        return operator >= ((const char*)str);
+    }
+
+    bool operator <= (const WrapperBase& rwb) const {
+        if (this == &rwb) {
+            return true;
+        }
+        if (this->isString()) {
+            return operator <= ((const char*)rwb.getPointer());
+        }
+        else {
+            return operator <= (rwb.get());
+        }
+    }
+
+    bool operator <= (float num) const {
+        return operator <= ((double)num);
+    }
+
+    bool operator <= (bool num) const {
+        return operator <= ((double)num);
+    }
+
+    bool operator <= (int num) const {
+        return operator <= ((double)num);
+    }
+
+    bool operator <= (unsigned int num) const {
+        return operator <= ((double)num);
+    }
+
+    bool operator <= (long num) const {
+        return operator <= ((double)num);
+    }
+
+    bool operator <= (unsigned long num) const {
+        return operator <= ((double)num);
+    }
+
+    bool operator <= (long long num) const {
+        return operator <= ((double)num);
+    }
+
+    bool operator <= (unsigned long long num) const {
+        return operator <= ((double)num);
+    }
+
+    bool operator <= (double num) const {
+        if (!this->isNumber()) {
+            return false;
+        }
+        return (this->CompareTo(num) <= 0);
+    }
+
+    template <typename T>
+    bool operator <= (T rt) const {
+        return operator <= ((double)rt);
+    }
+
+    bool operator <= (const char* cstr) const {
+        if (!this->isString()) {
+            return false;
+        }
+        return (this->CompareTo(cstr) <= 0);
+    }
+
+    bool operator <= (char* str) const {
+        return operator <= ((const char*)str);
+    }
+
 protected:
     virtual double get() const = 0;
     virtual void set(double) = 0;
@@ -351,37 +619,28 @@ protected:
     WrapperTypeT type;
 
 private:
-    bool FloatCompare(float num) const {
-        if (this->type == WrapperTypeT::WRAPPER_TYPE_STRING) {
-            return false;
-        }
-        float maxVal = (fabs(this->get()) > fabs(num)) ? fabs(this->get()) : fabs(num);
-        return (fabs(this->get() - num) <= (maxVal * FLT_EPSILON));
-    }
-
     bool DoubleCompare(double num) const {
-        if (this->type == WrapperTypeT::WRAPPER_TYPE_STRING) {
+        if (!this->isNumber()) {
             return false;
         }
-        double maxVal = (fabs(this->get()) > fabs(num)) ? fabs(this->get()) : fabs(num);
-        return (fabs(this->get() - num) <= (maxVal * DBL_EPSILON));
+        return ERaDoubleCompare(this->get(), num);
     }
 
     bool StringCompare(const char* cstr) const {
-        if (this->type != WrapperTypeT::WRAPPER_TYPE_STRING) {
+        if (!this->isString()) {
             return false;
         }
-        if (this->getPointer() == cstr) {
-            return true;
-        }
-        if (cstr == nullptr) {
-            return false;
-        }
-        if (this->getPointer() == nullptr) {
-            return false;
-        }
-        return !strcmp((const char*)this->getPointer(), cstr);
+        return ERaStringCompare((const char*)this->getPointer(), cstr);
     }
+
+    int CompareTo(double num) const {
+        if (this->DoubleCompare(num)) {
+            return 0;
+        }
+        return (((this->get() - num) > 0.0) ? 1 : -1);
+    }
+
+    int CompareTo(const char* cstr) const;
 
 };
 

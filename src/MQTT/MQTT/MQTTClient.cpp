@@ -113,11 +113,24 @@ inline lwmqtt_err_t lwmqtt_arduino_network_write(void *ref, uint8_t *buffer, siz
   // cast network reference
   auto n = (lwmqtt_arduino_network_t *)ref;
 
+  // reset counter
+  *sent = 0;
+
   // write bytes
-  *sent = n->client->write(buffer, len);
-  if (*sent <= 0) {
-    return LWMQTT_NETWORK_FAILED_WRITE;
+  size_t written = 0;
+  size_t to_write = 0;
+  while (len) {
+    to_write = n->client->write(buffer, ERaMin(len, (size_t)1024));
+    if (to_write == 0) {
+      return LWMQTT_NETWORK_FAILED_WRITE;
+    }
+    len -= to_write;
+    buffer += to_write;
+    written += to_write;
   }
+
+  // set counter
+  *sent = written;
 
   return LWMQTT_SUCCESS;
 }
@@ -430,6 +443,7 @@ bool MQTTClient::publish(const char topic[], const char payload[], int length, b
   // set duplicate packet id if available
   if (this->nextDupPacketID > 0) {
     options.dup_id = &this->nextDupPacketID;
+    this->nextDupPacketID = 0;
   }
   options.skip_ack = this->skipACK;
 
@@ -498,7 +512,7 @@ bool MQTTClient::loop() {
   }
 
   // get available bytes on the network
-  auto available = (size_t)this->netClient->available();
+  int available = this->netClient->available();
 
   // yield if data is available
   if (available > 0) {

@@ -12,6 +12,6 @@ namespace ZigbeeNamespace {
         ENDPOINT_BROADCAST = 0xFF
     };
 
-};
+} /* namespace ZigbeeNamespace */
 
 #endif /* INC_DEFINE_ENDPOINT_ZIGBEE_HPP_ */

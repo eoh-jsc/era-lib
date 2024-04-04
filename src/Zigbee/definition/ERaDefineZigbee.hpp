@@ -618,7 +618,7 @@ namespace ZigbeeNamespace {
         GetValueAttr_t valueAttr;
     } InfoDevice_t;
 
-};
+} /* namespace ZigbeeNamespace */
 
 #include "define/structZigbee.hpp"
 #include <Zigbee/zCluster/ERaZclZigbee.hpp>

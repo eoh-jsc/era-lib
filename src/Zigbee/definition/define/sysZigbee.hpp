@@ -48,6 +48,6 @@ namespace ZigbeeNamespace {
         SYS_OSAL_NV_WRITE_EXT_CMD
     };
 
-};
+} /* namespace ZigbeeNamespace */
 
 #endif /* INC_DEFINE_SYSTEM_ZIGBEE_HPP_ */

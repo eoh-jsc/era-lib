@@ -17,13 +17,13 @@ public:
     {}
 
     virtual void onWrite(const char* topic, const char* payload) {
-        ERA_LOG(TAG, ERA_PSTR("onWrite callback default."));
+        ERA_LOG_WARNING(TAG, ERA_PSTR("onWrite callback default."));
         ERA_FORCE_UNUSED(topic);
         ERA_FORCE_UNUSED(payload);
     }
 
     virtual void onWrite(const ERaDataBuff& topic, const char* payload) {
-        ERA_LOG(TAG, ERA_PSTR("onWrite callback default."));
+        ERA_LOG_WARNING(TAG, ERA_PSTR("onWrite callback default."));
         ERA_FORCE_UNUSED(topic);
         ERA_FORCE_UNUSED(payload);
     }

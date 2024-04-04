@@ -19,10 +19,10 @@
   #define MQTT_HAS_FUNCTIONAL   0
 #endif
 
-#include "unix/unix.hpp"
+#include "posix/posix.hpp"
 
 #if defined(ERA_MQTT_SSL)
-  #include "unix/unix_tls.hpp"
+  #include "posix/posix_tls.hpp"
 #endif
 
 #include <ERa/ERaConfig.hpp>
@@ -67,16 +67,15 @@ class MQTTLinuxClient {
   lwmqtt_will_t *will = nullptr;
   MQTTLinuxClientCallback callback;
 
-  lwmqtt_unix_network_t network = {-1};
-  lwmqtt_unix_timer_t timer1 = {0};
-  lwmqtt_unix_timer_t timer2 = {0};
-#if defined(ERA_MQTT_SSL)
-  bool isTLS = false;
-  lwmqtt_unix_tls_network_t networkTLS = {0};
-  lwmqtt_unix_tls_timer_t timer1TLS = {0};
-  lwmqtt_unix_tls_timer_t timer2TLS = {0};
-#endif
+  lwmqtt_posix_network_t network = {-1};
+  lwmqtt_posix_timer_t timer1 = {0};
+  lwmqtt_posix_timer_t timer2 = {0};
   lwmqtt_client_t client = lwmqtt_client_t();
+
+#if defined(ERA_MQTT_SSL)
+  lwmqtt_posix_tls_network_t networkTLS = {0};
+  bool isTLS = false;
+#endif
 
   bool _connected = false;
   uint16_t nextDupPacketID = 0;

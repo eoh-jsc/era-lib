@@ -57,6 +57,10 @@
     #endif
 #endif
 
+#if !defined(MODBUS_BYTE_TIMEOUT)
+    #define MODBUS_BYTE_TIMEOUT         1000
+#endif
+
 #if !defined(MODBUS_STREAM_TIMEOUT)
     #define MODBUS_STREAM_TIMEOUT       5000
 #endif

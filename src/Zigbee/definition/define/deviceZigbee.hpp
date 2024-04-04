@@ -28,6 +28,6 @@ namespace ZigbeeNamespace {
         DEVICE_EVENT_LEAVE = 6
     };
 
-};
+} /* namespace ZigbeeNamespace */
 
 #endif /* INC_DEFINE_DEVICE_ZIGBEE_HPP_ */

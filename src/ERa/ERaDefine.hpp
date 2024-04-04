@@ -22,7 +22,7 @@
 #define ERA_STRINGIFY(x)        # x
 #define ERA_TOSTRING(x)         ERA_STRINGIFY(x)
 
-#define ERA_COUNT_OF(x)         ((sizeof(x)/sizeof(0[x])) / ((size_t)(!(sizeof(x) % sizeof(0[x])))))
+#define ERA_COUNT_OF(x)         ((sizeof(x) / sizeof(0[x])) / ((size_t)(!(sizeof(x) % sizeof(0[x])))))
 
 #define ERA_ATTR_PACKED         __attribute__((__packed__))
 #define ERA_NORETURN            __attribute__((noreturn))
@@ -52,6 +52,6 @@
     #include <stddef.h>
 #endif
 
-#include "../Utility/ERaLoc.hpp"
+#include <Utility/ERaLoc.hpp>
 
 #endif /* INC_ERA_DEFINE_HPP_ */

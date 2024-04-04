@@ -108,6 +108,12 @@
     #define ERA_MQTT_PUBLISH_RETAINED   true
 #endif
 
+#if defined(DEFAULT_INFO_PUBLISH_RETAINED)
+    #define ERA_INFO_PUBLISH_RETAINED   DEFAULT_INFO_PUBLISH_RETAINED
+#else
+    #define ERA_INFO_PUBLISH_RETAINED   false
+#endif
+
 #if defined(DEFAULT_SOCKET_TIMEOUT)
     #define ERA_SOCKET_TIMEOUT          DEFAULT_SOCKET_TIMEOUT
 #else
@@ -142,6 +148,7 @@
     #define LIMIT_CONNECT_BROKER_MQTT   5
 #endif
 
+#define INFO_ID                         "id"
 #define INFO_BOARD                      "board"
 #define INFO_MODEL                      "model"
 #define INFO_BOARD_ID                   "board_id"

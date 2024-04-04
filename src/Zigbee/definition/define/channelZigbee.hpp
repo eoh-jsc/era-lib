@@ -25,6 +25,6 @@ namespace ZigbeeNamespace {
         NO_LOAD_CHANNEL = 0xFFFFFFFF
     };
 
-};
+} /* namespace ZigbeeNamespace */
 
 #endif /* INC_DEFINE_CHANNEL_ZIGBEE_HPP_ */

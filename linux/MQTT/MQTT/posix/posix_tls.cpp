@@ -9,40 +9,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "unix_tls.hpp"
+#include "posix_tls.hpp"
 
-void lwmqtt_unix_tls_timer_set(void *ref, uint32_t timeout) {
-  // cast timer reference
-  lwmqtt_unix_tls_timer_t *t = (lwmqtt_unix_tls_timer_t *)ref;
-
-  // clear end time
-  timerclear(&t->end);
-
-  // get current time
-  struct timeval now;
-  gettimeofday(&now, NULL);
-
-  // set future end time
-  struct timeval interval = {timeout / 1000, (timeout % 1000) * 1000};
-  timeradd(&now, &interval, &t->end);
-}
-
-int32_t lwmqtt_unix_tls_timer_get(void *ref) {
-  // cast timer reference
-  lwmqtt_unix_tls_timer_t *t = (lwmqtt_unix_tls_timer_t *)ref;
-
-  // get current time
-  struct timeval now;
-  gettimeofday(&now, NULL);
-
-  // get difference to end time
-  struct timeval res;
-  timersub(&t->end, &now, &res);
-
-  return (int32_t)((res.tv_sec * 1000) + (res.tv_usec / 1000));
-}
-
-void lwmqtt_unix_tls_network_init(lwmqtt_unix_tls_network_t *network, bool verify, const uint8_t *ca_buf, size_t ca_len) {
+void lwmqtt_posix_tls_network_init(lwmqtt_posix_tls_network_t *network, bool verify, const uint8_t *ca_buf, size_t ca_len) {
   if (!network) {
     return;
   }
@@ -52,9 +21,9 @@ void lwmqtt_unix_tls_network_init(lwmqtt_unix_tls_network_t *network, bool verif
   network->ca_len = ca_len;
 }
 
-lwmqtt_err_t lwmqtt_unix_tls_network_connect(lwmqtt_unix_tls_network_t *network, char *host, int port) {
+lwmqtt_err_t lwmqtt_posix_tls_network_connect(lwmqtt_posix_tls_network_t *network, char *host, int port) {
   // close any open socket
-  lwmqtt_unix_tls_network_disconnect(network);
+  lwmqtt_posix_tls_network_disconnect(network);
 
   static char port_string[10] {0};
   memset(port_string, 0, sizeof(port_string));
@@ -139,7 +108,7 @@ lwmqtt_err_t lwmqtt_unix_tls_network_connect(lwmqtt_unix_tls_network_t *network,
   return LWMQTT_SUCCESS;
 }
 
-lwmqtt_err_t lwmqtt_unix_tls_network_wait(lwmqtt_unix_tls_network_t *network, bool *connected, uint32_t timeout) {
+lwmqtt_err_t lwmqtt_posix_tls_network_wait(lwmqtt_posix_tls_network_t *network, bool *connected, uint32_t timeout) {
   // prepare sets
   fd_set set;
   fd_set ex_set;
@@ -167,7 +136,7 @@ lwmqtt_err_t lwmqtt_unix_tls_network_wait(lwmqtt_unix_tls_network_t *network, bo
   return LWMQTT_SUCCESS;
 }
 
-void lwmqtt_unix_tls_network_disconnect(lwmqtt_unix_tls_network_t *network) {
+void lwmqtt_posix_tls_network_disconnect(lwmqtt_posix_tls_network_t *network) {
   // check if network is available
   if (!network) {
     return;
@@ -192,7 +161,7 @@ void lwmqtt_unix_tls_network_disconnect(lwmqtt_unix_tls_network_t *network) {
   network->socket.fd = -1;
 }
 
-lwmqtt_err_t lwmqtt_unix_tls_network_peek(lwmqtt_unix_tls_network_t *network, size_t *available, uint32_t timeout) {
+lwmqtt_err_t lwmqtt_posix_tls_network_peek(lwmqtt_posix_tls_network_t *network, size_t *available, uint32_t timeout) {
   // set timeout
   struct timeval t = {.tv_sec = timeout / 1000, .tv_usec = (timeout % 1000) * 1000};
   int rc = setsockopt(network->socket.fd, SOL_SOCKET, SO_RCVTIMEO, (char *)&t, sizeof(t));
@@ -226,7 +195,7 @@ lwmqtt_err_t lwmqtt_unix_tls_network_peek(lwmqtt_unix_tls_network_t *network, si
   return LWMQTT_SUCCESS;
 }
 
-lwmqtt_err_t lwmqtt_unix_tls_network_select(lwmqtt_unix_tls_network_t *network, bool *available, uint32_t timeout) {
+lwmqtt_err_t lwmqtt_posix_tls_network_select(lwmqtt_posix_tls_network_t *network, bool *available, uint32_t timeout) {
   // prepare set
   fd_set set;
   fd_set ex_set;
@@ -248,9 +217,9 @@ lwmqtt_err_t lwmqtt_unix_tls_network_select(lwmqtt_unix_tls_network_t *network, 
   return LWMQTT_SUCCESS;
 }
 
-lwmqtt_err_t lwmqtt_unix_tls_network_read(void *ref, uint8_t *buffer, size_t len, size_t *received, uint32_t timeout) {
+lwmqtt_err_t lwmqtt_posix_tls_network_read(void *ref, uint8_t *buffer, size_t len, size_t *received, uint32_t timeout) {
   // cast network reference
-  lwmqtt_unix_tls_network_t *n = (lwmqtt_unix_tls_network_t *)ref;
+  lwmqtt_posix_tls_network_t *n = (lwmqtt_posix_tls_network_t *)ref;
 
   // set timeout
   struct timeval t = {.tv_sec = timeout / 1000, .tv_usec = (timeout % 1000) * 1000};
@@ -273,9 +242,9 @@ lwmqtt_err_t lwmqtt_unix_tls_network_read(void *ref, uint8_t *buffer, size_t len
   return LWMQTT_SUCCESS;
 }
 
-lwmqtt_err_t lwmqtt_unix_tls_network_write(void *ref, uint8_t *buffer, size_t len, size_t *sent, uint32_t timeout) {
+lwmqtt_err_t lwmqtt_posix_tls_network_write(void *ref, uint8_t *buffer, size_t len, size_t *sent, uint32_t timeout) {
   // cast network reference
-  lwmqtt_unix_tls_network_t *n = (lwmqtt_unix_tls_network_t *)ref;
+  lwmqtt_posix_tls_network_t *n = (lwmqtt_posix_tls_network_t *)ref;
 
   // set timeout
   struct timeval t = {.tv_sec = timeout / 1000, .tv_usec = (timeout % 1000) * 1000};

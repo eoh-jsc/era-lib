@@ -273,9 +273,9 @@ void ERaUdp<Udp>::sendBoardInfo(unsigned long timeout) {
         cJSON_AddStringToObject(item, INFO_MAC, WiFi.macAddress().c_str());
         cJSON_AddStringToObject(item, INFO_LOCAL_IP, WiFi.softAPIP().toString().c_str());
 #else
-        cJSON_AddStringToObject(root, INFO_BSSID, ::getBSSID().c_str());
-        cJSON_AddStringToObject(root, INFO_MAC, ::getMAC().c_str());
-        cJSON_AddStringToObject(root, INFO_LOCAL_IP, ::getSoftAPIP().c_str());
+        cJSON_AddStringToObject(item, INFO_BSSID, ::getBSSID().c_str());
+        cJSON_AddStringToObject(item, INFO_MAC, ::getMAC().c_str());
+        cJSON_AddStringToObject(item, INFO_LOCAL_IP, ::getSoftAPIP().c_str());
 #endif
     }
     cJSON_AddItemToObject(root, "gateway", item);

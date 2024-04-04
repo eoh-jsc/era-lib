@@ -56,7 +56,7 @@ class ERaMqtt
     const char* ASK_CONFIG_INFO = R"json(,"ask_configuration":1)json";
     const char* LWT_TOPIC = ERA_PREFIX_LWT_TOPIC;
     const bool LWT_RETAINED = true;
-    const int LWT_QOS = QoST::QOS1;
+    const QoST LWT_QOS = QoST::QOS1;
 
 public:
     ERaMqtt()
@@ -180,6 +180,14 @@ public:
         return this->ERaAuth;
     }
 
+    const char* getHost() const {
+        return this->host;
+    }
+
+    uint16_t getPort() const {
+        return this->port;
+    }
+
     void setSSID(const char* _ssid) {
         this->ssid = _ssid;
     }
@@ -242,7 +250,9 @@ public:
 protected:
 private:
     void delays(MillisTime_t ms);
-    bool publishLWT(bool sync = false);
+    bool publishLWT(bool sync);
+    bool publishLWT(bool sync, bool retained);
+    bool publishLWT(bool sync, bool retained, QoST qos);
     void onConnected();
     void onDisconnected();
     void lockMQTT();
@@ -309,17 +319,17 @@ bool ERaMqtt<Client, MQTT>::connect(FunctionCallback_t fn) {
     ERaWatchdogFeed();
 
     while (this->mqtt.connect(_clientID, this->username, this->password) == false) {
-        ERaWatchdogFeed();
-
-        ERA_LOG_ERROR(TAG, ERA_PSTR("MQTT(%d): Connect failed (%d), retrying in 5 seconds"),
-                                    (count + 1), this->mqtt.lastError());
-        this->delays(5000);
-
-        ERaWatchdogFeed();
-
         if (++count >= LIMIT_CONNECT_BROKER_MQTT) {
             return false;
         }
+
+        ERaWatchdogFeed();
+
+        ERA_LOG_ERROR(TAG, ERA_PSTR("MQTT(%d): Connect failed (%d), retrying in 5 seconds"),
+                                    count, this->mqtt.lastError());
+        this->delays(5000);
+
+        ERaWatchdogFeed();
     }
 
     ERaWatchdogFeed();
@@ -345,12 +355,18 @@ bool ERaMqtt<Client, MQTT>::connect(FunctionCallback_t fn) {
 
     ERaWatchdogFeed();
 
+    if (!this->publishLWT(false)) {
+        return false;
+    }
+
+    this->delays(500);
+
 #if defined(ERA_ASK_CONFIG_WHEN_RESTART)
-    if (!this->publishLWT(true)) {
+    if (!this->publishLWT(true, false)) {
         return false;
     }
 #else
-    if (!this->publishLWT(this->getAskConfig())) {
+    if (this->askConfig && !this->publishLWT(this->askConfig, false)) {
         return false;
     }
 #endif
@@ -480,7 +496,7 @@ bool ERaMqtt<Client, MQTT>::publishState(bool online) {
 template <class Client, class MQTT>
 inline
 bool ERaMqtt<Client, MQTT>::syncConfig() {
-    return this->publishLWT(true);
+    return this->publishLWT(true, false);
 }
 
 template <class Client, class MQTT>
@@ -501,6 +517,18 @@ void ERaMqtt<Client, MQTT>::delays(MillisTime_t ms) {
 template <class Client, class MQTT>
 inline
 bool ERaMqtt<Client, MQTT>::publishLWT(bool sync) {
+    return this->publishLWT(sync, LWT_RETAINED);
+}
+
+template <class Client, class MQTT>
+inline
+bool ERaMqtt<Client, MQTT>::publishLWT(bool sync, bool retained) {
+    return this->publishLWT(sync, retained, LWT_QOS);
+}
+
+template <class Client, class MQTT>
+inline
+bool ERaMqtt<Client, MQTT>::publishLWT(bool sync, bool retained, QoST qos) {
     bool status {false};
     char wifiInfo[50] {0};
     char payload[100] {0};
@@ -515,7 +543,7 @@ bool ERaMqtt<Client, MQTT>::publishLWT(bool sync) {
     this->lockMQTT();
     if (this->connected()) {
         this->lastPublish = ERaMillis();
-        status = this->mqtt.publish(topic, payload, LWT_RETAINED, LWT_QOS);
+        status = this->mqtt.publish(topic, payload, retained, qos);
         this->ping = (ERaMillis() - this->lastPublish);
         ERA_MQTT_PUB_LOG(status, this->mqtt.lastError())
     }

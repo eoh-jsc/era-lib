@@ -45,6 +45,6 @@ namespace ZigbeeNamespace {
         ZIGBEE_ACTION_REMOVE_DEVICE = 0x04
     };
 
-};
+} /* namespace ZigbeeNamespace */
 
 #endif /* INC_DEFINE_OTHER_ZIGBEE_HPP_ */

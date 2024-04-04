@@ -8,6 +8,6 @@ namespace ZigbeeNamespace {
         SPECIFIC = 1,
     };
 
-};
+} /* namespace ZigbeeNamespace */
 
 #endif /* INC_DEFINE_FRAMETYPE_ZIGBEE_HPP_ */

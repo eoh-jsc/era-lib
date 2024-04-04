@@ -29,6 +29,6 @@ namespace ZigbeeNamespace {
         DISCO_ATTR_EXTEND_RSP
     };
 
-};
+} /* namespace ZigbeeNamespace */
 
 #endif /* INC_DEFINE_FOUNDATION_ZIGBEE_HPP_ */

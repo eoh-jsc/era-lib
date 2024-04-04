@@ -22,6 +22,6 @@ namespace ZigbeeNamespace {
         ZB_RECEIVE_DATA_INDICATION = 0x87
     };
 
-};
+} /* namespace ZigbeeNamespace */
 
 #endif /* INC_DEFINE_ZB_ZIGBEE_HPP_ */

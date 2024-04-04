@@ -116,6 +116,8 @@ private:
 
     ERaList<Register_t*> ERaReg;
     unsigned int numRegister;
+
+    using ModbusInternalIterator = typename ERaList<Register_t*>::iterator;
 };
 
 inline
@@ -146,8 +148,8 @@ inline
 bool ERaModbusInternal::handlerReadBits(ERaModbusRequest* request, ERaModbusResponse* response, bool& status) {
     status = true;
     bool found {false};
-    const ERaList<Register_t*>::iterator* e = this->ERaReg.end();
-    for (ERaList<Register_t*>::iterator* it = this->ERaReg.begin(); it != e; it = it->getNext()) {
+    const ModbusInternalIterator* e = this->ERaReg.end();
+    for (ModbusInternalIterator* it = this->ERaReg.begin(); it != e; it = it->getNext()) {
         Register_t* pReg = it->get();
         if (!this->isValidRegister(pReg)) {
             continue;
@@ -195,8 +197,8 @@ inline
 bool ERaModbusInternal::handlerReadBytes(ERaModbusRequest* request, ERaModbusResponse* response, bool& status) {
     status = true;
     bool found {false};
-    const ERaList<Register_t*>::iterator* e = this->ERaReg.end();
-    for (ERaList<Register_t*>::iterator* it = this->ERaReg.begin(); it != e; it = it->getNext()) {
+    const ModbusInternalIterator* e = this->ERaReg.end();
+    for (ModbusInternalIterator* it = this->ERaReg.begin(); it != e; it = it->getNext()) {
         Register_t* pReg = it->get();
         if (!this->isValidRegister(pReg)) {
             continue;
@@ -278,8 +280,8 @@ inline
 bool ERaModbusInternal::handlerWriteSingle(ERaModbusRequest* request, ERaModbusResponse* response, bool& status) {
     status = true;
     bool found {false};
-    const ERaList<Register_t*>::iterator* e = this->ERaReg.end();
-    for (ERaList<Register_t*>::iterator* it = this->ERaReg.begin(); it != e; it = it->getNext()) {
+    const ModbusInternalIterator* e = this->ERaReg.end();
+    for (ModbusInternalIterator* it = this->ERaReg.begin(); it != e; it = it->getNext()) {
         Register_t* pReg = it->get();
         if (!this->isValidRegister(pReg)) {
             continue;
@@ -327,8 +329,8 @@ inline
 bool ERaModbusInternal::handlerWriteMulti(ERaModbusRequest* request, ERaModbusResponse* response, bool& status) {
     status = true;
     bool found {false};
-    const ERaList<Register_t*>::iterator* e = this->ERaReg.end();
-    for (ERaList<Register_t*>::iterator* it = this->ERaReg.begin(); it != e; it = it->getNext()) {
+    const ModbusInternalIterator* e = this->ERaReg.end();
+    for (ModbusInternalIterator* it = this->ERaReg.begin(); it != e; it = it->getNext()) {
         Register_t* pReg = it->get();
         if (!this->isValidRegister(pReg)) {
             continue;

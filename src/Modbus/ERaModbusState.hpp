@@ -32,6 +32,6 @@ namespace ModbusState {
     void set(ModbusStateT _state) {
         ModbusState::state() = _state;
     }
-};
+} /* namespace ModbusState */
 
 #endif /* INC_ERA_MODBUS_STATE_HPP_ */

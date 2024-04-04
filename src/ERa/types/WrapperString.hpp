@@ -118,113 +118,164 @@ class WrapperString;
         friend class WrapperString;
         const static size_t CapacityMax = ERA_STRING_CAPACITY_MAX;
 
+        typedef void (ERaString::*ERaStringIfHelperType)(void) const;
+        void ERaStringIfHelper() const {}
+
     public:
         ERaString()
-            : value(nullptr)
-            , valueCapacity(0UL)
+            : value {
+                .buffer = nullptr,
+                .capacity = 0UL,
+                .length = 0UL
+            }
             , isUpdated(false)
         {}
         ERaString(const ERaString& estr)
-            : value(nullptr)
-            , valueCapacity(0UL)
+            : value {
+                .buffer = nullptr,
+                .capacity = 0UL,
+                .length = 0UL
+            }
             , isUpdated(false)
         {
             this->concat(estr);
         }
         ERaString(const ERaParam& param)
-            : value(nullptr)
-            , valueCapacity(0UL)
+            : value {
+                .buffer = nullptr,
+                .capacity = 0UL,
+                .length = 0UL
+            }
             , isUpdated(false)
         {
             this->concat(param);
         }
         ERaString(const ERaDataJson& rjs)
-            : value(nullptr)
-            , valueCapacity(0UL)
+            : value {
+                .buffer = nullptr,
+                .capacity = 0UL,
+                .length = 0UL
+            }
             , isUpdated(false)
         {
             this->concat(rjs);
         }
         ERaString(const char* cstr)
-            : value(nullptr)
-            , valueCapacity(0UL)
+            : value {
+                .buffer = nullptr,
+                .capacity = 0UL,
+                .length = 0UL
+            }
             , isUpdated(false)
         {
             this->concat(cstr);
         }
         ERaString(char* str)
-            : value(nullptr)
-            , valueCapacity(0UL)
+            : value {
+                .buffer = nullptr,
+                .capacity = 0UL,
+                .length = 0UL
+            }
             , isUpdated(false)
         {
             this->concat(str);
         }
         ERaString(char c)
-            : value(nullptr)
-            , valueCapacity(0UL)
+            : value {
+                .buffer = nullptr,
+                .capacity = 0UL,
+                .length = 0UL
+            }
             , isUpdated(false)
         {
             this->concat(c);
         }
         ERaString(unsigned char num)
-            : value(nullptr)
-            , valueCapacity(0UL)
+            : value {
+                .buffer = nullptr,
+                .capacity = 0UL,
+                .length = 0UL
+            }
             , isUpdated(false)
         {
             this->concat(num);
         }
         ERaString(int num)
-            : value(nullptr)
-            , valueCapacity(0UL)
+            : value {
+                .buffer = nullptr,
+                .capacity = 0UL,
+                .length = 0UL
+            }
             , isUpdated(false)
         {
             this->concat(num);
         }
         ERaString(unsigned int num)
-            : value(nullptr)
-            , valueCapacity(0UL)
+            : value {
+                .buffer = nullptr,
+                .capacity = 0UL,
+                .length = 0UL
+            }
             , isUpdated(false)
         {
             this->concat(num);
         }
         ERaString(long num)
-            : value(nullptr)
-            , valueCapacity(0UL)
+            : value {
+                .buffer = nullptr,
+                .capacity = 0UL,
+                .length = 0UL
+            }
             , isUpdated(false)
         {
             this->concat(num);
         }
         ERaString(unsigned long num)
-            : value(nullptr)
-            , valueCapacity(0UL)
+            : value {
+                .buffer = nullptr,
+                .capacity = 0UL,
+                .length = 0UL
+            }
             , isUpdated(false)
         {
             this->concat(num);
         }
         ERaString(long long num)
-            : value(nullptr)
-            , valueCapacity(0UL)
+            : value {
+                .buffer = nullptr,
+                .capacity = 0UL,
+                .length = 0UL
+            }
             , isUpdated(false)
         {
             this->concat(num);
         }
         ERaString(unsigned long long num)
-            : value(nullptr)
-            , valueCapacity(0UL)
+            : value {
+                .buffer = nullptr,
+                .capacity = 0UL,
+                .length = 0UL
+            }
             , isUpdated(false)
         {
             this->concat(num);
         }
         ERaString(float num)
-            : value(nullptr)
-            , valueCapacity(0UL)
+            : value {
+                .buffer = nullptr,
+                .capacity = 0UL,
+                .length = 0UL
+            }
             , isUpdated(false)
         {
             this->concat(num);
         }
         ERaString(double num)
-            : value(nullptr)
-            , valueCapacity(0UL)
+            : value {
+                .buffer = nullptr,
+                .capacity = 0UL,
+                .length = 0UL
+            }
             , isUpdated(false)
         {
             this->concat(num);
@@ -235,41 +286,44 @@ class WrapperString;
         }
 
         void invalidate() {
-            if (this->value != nullptr) {
-                free(this->value);
+            if (this->value.buffer != nullptr) {
+                free(this->value.buffer);
             }
-            this->value = nullptr;
-            this->valueCapacity = 0UL;
+            this->value.buffer = nullptr;
+            this->value.capacity = 0UL;
+            this->value.length = 0UL;
             this->isUpdated = false;
         }
 
-        void reserve(size_t cap) {
+        bool reserve(size_t cap) {
             if (cap > CapacityMax) {
-                return;
+                return false;
             }
-            if (cap < this->valueCapacity) {
-                return;
+            if (cap < this->value.capacity) {
+                return true;
             }
-            char* copy = (char*)realloc(this->value, cap + 1);
+            char* copy = (char*)realloc(this->value.buffer, cap + 1);
             if (copy != nullptr) {
-                if (this->value == nullptr) {
+                if (this->value.buffer == nullptr) {
                     memset(copy, 0, cap + 1);
                 }
-                this->value = copy;
-                this->value[cap] = '\0';
-                this->valueCapacity = (cap + 1);
+                this->value.buffer = copy;
+                this->value.buffer[cap] = '\0';
+                this->value.capacity = (cap + 1);
+                return true;
             }
             else {
-                this->valueCapacity = 0;
+                this->invalidate();
+                return false;
             }
         }
 
         const char* c_str() const {
-            return ((this->value != nullptr) ? this->value : "");
+            return ((this->value.buffer != nullptr) ? this->value.buffer : "");
         }
 
         const char* getString() const {
-            return ((this->value != nullptr) ? this->value : "");
+            return ((this->value.buffer != nullptr) ? this->value.buffer : "");
         }
 
         void printf(const char* format, ...) {
@@ -314,7 +368,7 @@ class WrapperString;
         }
 
         void concat(const ERaString& estr) {
-            this->concat((const char*)estr.value);
+            this->concat((const char*)estr.value.buffer);
         }
 
         void concat(const ERaParam& param) {
@@ -347,28 +401,29 @@ class WrapperString;
             if (cstr == nullptr) {
                 return;
             }
-            if (this->value == nullptr) {
+            if (this->value.buffer == nullptr) {
                 return this->setString(cstr);
             }
             if (!strlen(cstr)) {
                 return;
             }
-            size_t oldLen = strlen(this->value);
+            size_t oldLen = strlen(this->value.buffer);
             size_t newLen = oldLen;
             newLen += strlen(cstr);
             if (newLen > CapacityMax) {
                 return;
             }
-            if (newLen >= this->valueCapacity) {
-                char* copy = (char*)realloc(this->value, newLen + 1);
+            if (newLen >= this->value.capacity) {
+                char* copy = (char*)realloc(this->value.buffer, newLen + 1);
                 if (copy == nullptr) {
                     return;
                 }
-                this->value = copy;
-                this->valueCapacity = newLen + 1;
+                this->value.buffer = copy;
+                this->value.capacity = (newLen + 1);
             }
-            snprintf(this->value + oldLen, newLen - oldLen + 1, cstr);
-            this->value[newLen] = '\0';
+            snprintf(this->value.buffer + oldLen, newLen - oldLen + 1, cstr);
+            this->value.buffer[newLen] = '\0';
+            this->value.length = newLen;
             this->isUpdated = true;
         }
 
@@ -514,38 +569,32 @@ class WrapperString;
     #endif
 
         size_t size() const {
-            if (this->value == nullptr) {
-                return 0;
-            }
-            return strlen(this->value);
+            return this->value.length;
         }
 
         size_t length() const {
-            if (this->value == nullptr) {
-                return 0;
-            }
-            return strlen(this->value);
+            return this->value.length;
         }
 
         char& at(size_t index) {
-            if (this->value == nullptr) {
+            if (this->value.buffer == nullptr) {
                 static char c {0};
                 return c;
             }
-            return this->value[index];
+            return this->value.buffer[index];
         }
 
         void toLowerCase() {
             size_t len = this->length();
             for (size_t i = 0; i < len; ++i) {
-                this->value[i] = ::tolower(this->value[i]);
+                this->value.buffer[i] = ::tolower(this->value.buffer[i]);
             }
         }
 
         void toUpperCase() {
             size_t len = this->length();
             for (size_t i = 0; i < len; ++i) {
-                this->value[i] = ::toupper(this->value[i]);
+                this->value.buffer[i] = ::toupper(this->value.buffer[i]);
             }
         }
 
@@ -553,20 +602,21 @@ class WrapperString;
             if (!this->length()) {
                 return;
             }
-            char* begin = this->value;
+            char* begin = this->value.buffer;
             while (isspace(*begin)) {
                 begin++;
             }
-            char* end = (this->value + this->length() - 1);
+            char* end = (this->value.buffer + this->length() - 1);
             while (isspace(*end) && (end >= begin)) {
                 end--;
             }
             unsigned int newLen = (end - begin + 1);
-            if (begin > this->value) {
+            if (begin > this->value.buffer) {
                 this->isUpdated = true;
-                memmove(this->value, begin, newLen);
+                memmove(this->value.buffer, begin, newLen);
             }
-            this->value[newLen] = '\0';
+            this->value.buffer[newLen] = '\0';
+            this->value.length = newLen;
         }
 
         int indexOf(char c) const {
@@ -577,11 +627,11 @@ class WrapperString;
             if (index >= this->length()) {
                 return -1;
             }
-            const char* ptr = strchr(this->value + index, c);
+            const char* ptr = strchr(this->value.buffer + index, c);
             if (ptr == nullptr) {
                 return -1;
             }
-            return (int)(ptr - this->value);
+            return (int)(ptr - this->value.buffer);
         }
 
         int indexOf(const ERaString& str) const {
@@ -595,11 +645,11 @@ class WrapperString;
             if (index >= this->length()) {
                 return -1;
             }
-            const char* ptr = strstr(this->value + index, str.value);
+            const char* ptr = strstr(this->value.buffer + index, str.value.buffer);
             if (ptr == nullptr) {
                 return -1;
             }
-            return (int)(ptr - this->value);
+            return (int)(ptr - this->value.buffer);
         }
 
         int lastIndexOf(char c) const {
@@ -610,14 +660,14 @@ class WrapperString;
             if (index >= this->length()) {
                 return -1;
             }
-            const char temp = this->value[index + 1];
-            this->value[index + 1] = '\0';
-            const char* ptr = strrchr(this->value, c);
-            this->value[index + 1] = temp;
+            const char temp = this->value.buffer[index + 1];
+            this->value.buffer[index + 1] = '\0';
+            const char* ptr = strrchr(this->value.buffer, c);
+            this->value.buffer[index + 1] = temp;
             if (ptr == nullptr) {
                 return -1;
             }
-            return (int)(ptr - this->value);
+            return (int)(ptr - this->value.buffer);
         }
 
         int lastIndexOf(const ERaString& str) const {
@@ -635,15 +685,15 @@ class WrapperString;
                 index = (this->length() - 1);
             }
             int found = -1;
-            for (char* ptr = this->value; ptr <= (this->value + index); ++ptr) {
-                ptr = strstr(ptr, str.value);
+            for (char* ptr = this->value.buffer; ptr <= (this->value.buffer + index); ++ptr) {
+                ptr = strstr(ptr, str.value.buffer);
                 if (ptr == nullptr) {
                     break;
                 }
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsign-compare"
-                if ((ptr - this->value) <= index) {
-                    found = (ptr - this->value);
+                if ((ptr - this->value.buffer) <= index) {
+                    found = (ptr - this->value.buffer);
                 }
 #pragma GCC diagnostic pop
             }
@@ -653,10 +703,10 @@ class WrapperString;
         void replace(char find, char replace) {
             size_t len = this->length();
             for (size_t i = 0; i < len; ++i) {
-                if (this->value[i] != find) {
+                if (this->value.buffer[i] != find) {
                     continue;
                 }
-                this->value[i] = replace;
+                this->value.buffer[i] = replace;
             }
         }
 
@@ -669,28 +719,31 @@ class WrapperString;
             }
             int diff = (replace.length() - find.length());
             char* foundAt = nullptr;
-            char* readFrom = this->value;
+            char* readFrom = this->value.buffer;
             if (!diff) {
-                while ((foundAt = strstr(readFrom, find.value)) != nullptr) {
-                    memmove(foundAt, replace.value, replace.length());
+                while ((foundAt = strstr(readFrom, find.value.buffer)) != nullptr) {
+                    memmove(foundAt, replace.value.buffer, replace.length());
                     readFrom = (foundAt + find.length());
                 }
             }
             else if (diff < 0) {
-                char* writeTo = this->value;
-                while ((foundAt = strstr(readFrom, find.value)) != nullptr) {
+                size_t len = this->length();
+                char* writeTo = this->value.buffer;
+                while ((foundAt = strstr(readFrom, find.value.buffer)) != nullptr) {
                     size_t n = (foundAt - readFrom);
                     memmove(writeTo, readFrom, n);
                     writeTo += n;
-                    memmove(writeTo, replace.value, replace.length());
+                    memmove(writeTo, replace.value.buffer, replace.length());
                     writeTo += replace.length();
                     readFrom = (foundAt + find.length());
+                    len += diff;
                 }
                 memmove(writeTo, readFrom, strlen(readFrom) + 1);
+                this->value.length = len;
             }
             else {
                 size_t size = this->length();
-                while ((foundAt = strstr(readFrom, find.value)) != nullptr) {
+                while ((foundAt = strstr(readFrom, find.value.buffer)) != nullptr) {
                     readFrom = (foundAt + find.length());
                     size += diff;
                 }
@@ -701,17 +754,17 @@ class WrapperString;
                     return;
                 }
                 this->reserve(size);
-                if (this->value == nullptr) {
+                if (this->value.buffer == nullptr) {
                     return;
                 }
                 int index = (this->length() - 1);
                 while ((index >= 0) && ((index = this->lastIndexOf(find, index)) >= 0)) {
-                    size_t len = this->length();
-                    readFrom = (this->value + index + find.length());
-                    memmove(readFrom + diff, readFrom, len - (readFrom - this->value));
-                    size_t newLen = (len + diff);
-                    memmove(this->value + index, replace.value, replace.length());
-                    this->value[newLen] = '\0';
+                    readFrom = (this->value.buffer + index + find.length());
+                    memmove(readFrom + diff, readFrom, this->length() - (readFrom - this->value.buffer));
+                    size_t newLen = (this->length() + diff);
+                    memmove(this->value.buffer + index, replace.value.buffer, replace.length());
+                    this->value.buffer[newLen] = '\0';
+                    this->value.length = newLen;
                     index--;
                 }
             }
@@ -731,31 +784,54 @@ class WrapperString;
             if (count > (this->length() - index)) {
                 count = (this->length() - index);
             }
-            char* writeTo = (this->value + index);
+            char* writeTo = (this->value.buffer + index);
             size_t newLen = (this->length() - count);
-            memmove(writeTo, this->value + index + count, newLen - index);
-            this->value[newLen] = '\0';
+            memmove(writeTo, this->value.buffer + index + count, newLen - index);
+            this->value.buffer[newLen] = '\0';
+            this->value.length = newLen;
+        }
+
+        ERaString substring(size_t beginIndex) const {
+            return this->substring(beginIndex, this->length());
+        }
+
+        ERaString substring(size_t beginIndex, size_t endIndex) const {
+            ERaString out;
+            if (beginIndex >= endIndex) {
+                return out;
+            }
+            if (beginIndex >= this->length()) {
+                return out;
+            }
+            if (endIndex > this->length()) {
+                endIndex = this->length();
+            }
+            char temp = this->value.buffer[endIndex];
+            this->value.buffer[endIndex] = '\0';
+            out.assign(this->value.buffer + beginIndex);
+            this->value.buffer[endIndex] = temp;
+            return out;
         }
 
         int toInt() const {
-            if (this->value == nullptr) {
+            if (this->value.buffer == nullptr) {
                 return 0;
             }
-            return atol(this->value);
+            return atol(this->value.buffer);
         }
 
         float toFloat() const {
-            if (this->value == nullptr) {
+            if (this->value.buffer == nullptr) {
                 return 0.0f;
             }
-            return (float)atof(this->value);
+            return (float)atof(this->value.buffer);
         }
 
         double toDouble() const {
-            if (this->value == nullptr) {
+            if (this->value.buffer == nullptr) {
                 return 0.0;
             }
-            return atof(this->value);
+            return atof(this->value.buffer);
         }
 
         ERaDataJson toJSON() const {
@@ -763,22 +839,135 @@ class WrapperString;
         }
 
         void clear() {
-            if (this->value == nullptr) {
+            if (this->value.buffer == nullptr) {
                 return;
             }
-            memset(this->value, 0, this->valueCapacity);
+            memset(this->value.buffer, 0, this->value.capacity);
+            this->value.length = 0UL;
+        }
+
+        bool startsWith(const ERaString& res) const {
+            return this->startsWith((const char*)res.value.buffer);
+        }
+
+        bool startsWith(const ERaString& res, size_t offset) const {
+            return this->startsWith((const char*)res.value.buffer, offset);
+        }
+
+        bool startsWith(const char* cstr) const {
+            return this->startsWith(cstr, 0);
+        }
+
+        bool startsWith(const char* cstr, size_t offset) const {
+            if (cstr == nullptr) {
+                return false;
+            }
+            if (this->value.buffer == nullptr) {
+                return false;
+            }
+            if (offset > this->length()) {
+                return false;
+            }
+            if (offset > (this->length() - strlen(cstr))) {
+                return false;
+            }
+            return !strncmp(&this->value.buffer[offset], cstr, strlen(cstr));
+        }
+
+        bool endsWith(const ERaString& res) const {
+            return this->endsWith((const char*)res.value.buffer);
+        }
+
+        bool endsWith(const char* cstr) const {
+            if (cstr == nullptr) {
+                return false;
+            }
+            if (this->value.buffer == nullptr) {
+                return false;
+            }
+            if (this->length() < strlen(cstr)) {
+                return false;
+            }
+            size_t len = (this->length() - strlen(cstr));
+            return !strcmp(&this->value.buffer[len], cstr);
+        }
+
+        int compareTo(const ERaString& res) const {
+            if (this == &res) {
+                return true;
+            }
+            if ((this->value.buffer == nullptr) ||
+                (res.value.buffer == nullptr)) {
+                if ((this->value.buffer != nullptr) && (this->value.length > 0)) {
+                    return (*(unsigned char*)this->value.buffer);
+                }
+                if ((res.value.buffer != nullptr) && (res.value.length > 0)) {
+                    return (0 - (*(unsigned char*)res.value.buffer));
+                }
+                return 0;
+            }
+            return strcmp(this->value.buffer, res.value.buffer);
+        }
+
+        bool equals(const ERaString& res) const {
+            if (this == &res) {
+                return true;
+            }
+            return this->equals((const char*)res.value.buffer);
+        }
+
+        bool equals(const char* cstr) const {
+            return this->StringCompare(cstr);
+        }
+
+        bool equalsIgnoreCase(const ERaString& res) const  {
+            if (this == &res) {
+                return true;
+            }
+            if (this->length() != res.length()) {
+                return false;
+            }
+            if (!this->length()) {
+                return true;
+            }
+            const char* str1 = this->value.buffer;
+            const char* str2 = res.value.buffer;
+            while (*str1) {
+                if (::tolower(*str1++) != ::tolower(*str2++)) {
+                    return false;
+                }
+            }
+            return true;
         }
 
         operator const char*() const {
-            if (this->value == nullptr) {
+            if (this->value.buffer == nullptr) {
                 return "";
             }
-            return this->value;
+            return this->value.buffer;
+        }
+
+        ERaStringIfHelperType operator() (void) const {
+            if (this->value.buffer == nullptr) {
+                return nullptr;
+            }
+            return &ERaString::ERaStringIfHelper;
         }
 
         char& operator [] (int index) {
             return this->at(index);
         }
+
+    #if defined(__GXX_EXPERIMENTAL_CXX0X__)
+        ERaString& operator = (ERaString&& res) {
+            if (this != &res) {
+                this->move(res);
+            }
+            return (*this);
+        }
+
+        ERaString& operator = (ERaStringHelper&& res);
+    #endif
 
         ERaString& operator = (const ERaString& res) {
             if (this == &res) {
@@ -937,7 +1126,7 @@ class WrapperString;
             if (this == &res) {
                 return true;
             }
-            return operator == ((const char*)res.value);
+            return operator == ((const char*)res.value.buffer);
         }
 
         bool operator == (const char* cstr) const {
@@ -952,7 +1141,7 @@ class WrapperString;
             if (this == &res) {
                 return false;
             }
-            return operator != ((const char*)res.value);
+            return operator != ((const char*)res.value.buffer);
         }
 
         bool operator != (const char* cstr) const {
@@ -961,6 +1150,22 @@ class WrapperString;
 
         bool operator != (char* str) const {
             return operator != ((const char*)str);
+        }
+
+        bool operator < (const ERaString& res) const {
+            return (this->compareTo(res) < 0);
+        }
+
+        bool operator > (const ERaString& res) const {
+            return (this->compareTo(res) > 0);
+        }
+
+        bool operator <= (const ERaString& res) const {
+            return (this->compareTo(res) <= 0);
+        }
+
+        bool operator >= (const ERaString& res) const {
+            return (this->compareTo(res) >= 0);
         }
 
         friend ERaStringHelper& operator + (const ERaStringHelper& esh, const ERaString& res);
@@ -981,8 +1186,38 @@ class WrapperString;
 
     protected:
     private:
+    #if defined(__GXX_EXPERIMENTAL_CXX0X__)
+        void move(ERaString& estr) {
+            bool changed {false};
+            changed =  this->isNewString((const char*)estr.value.buffer);
+            changed |= this->isUpdated;
+
+            if (this->value.buffer != nullptr) {
+                if ((estr.value.buffer != nullptr) &&
+                    (this->value.capacity > estr.value.length)) {
+                    strcpy(this->value.buffer, estr.value.buffer);
+                    this->value.buffer[estr.value.length] = '\0';
+                    this->value.length = estr.value.length;
+                    estr.value.length = 0;
+                    this->isUpdated = changed;
+                    return;
+                }
+                else {
+                    this->invalidate();
+                }
+            }
+            this->value.buffer = estr.value.buffer;
+            this->value.capacity = estr.value.capacity;
+            this->value.length = estr.value.length;
+            estr.value.buffer = nullptr;
+            estr.value.capacity = 0UL;
+            estr.value.length = 0UL;
+            this->isUpdated = changed;
+        }
+    #endif
+
         void assign(const ERaString& estr) {
-            this->assign((const char*)estr.value);
+            this->assign((const char*)estr.value.buffer);
         }
 
         void assign(const ERaParam& param) {
@@ -1178,11 +1413,12 @@ class WrapperString;
             if (cstr == nullptr) {
                 return;
             }
-            if (this->value == nullptr) {
-                this->value = this->stringdup(cstr);
-                if (this->value != nullptr) {
+            if (this->value.buffer == nullptr) {
+                this->value.buffer = this->stringdup(cstr);
+                if (this->value.buffer != nullptr) {
                     this->isUpdated = true;
-                    this->valueCapacity = strlen(this->value) + 1;
+                    this->value.length = strlen(this->value.buffer);
+                    this->value.capacity = (this->value.length + 1);
                 }
                 return;
             }
@@ -1190,19 +1426,20 @@ class WrapperString;
             if (len > CapacityMax) {
                 return;
             }
-            if (len >= this->valueCapacity) {
-                char* copy = (char*)realloc(this->value, len + 1);
+            if (len >= this->value.capacity) {
+                char* copy = (char*)realloc(this->value.buffer, len + 1);
                 if (copy == nullptr) {
                     return;
                 }
                 snprintf(copy, len + 1, cstr);
-                this->value = copy;
-                this->valueCapacity = len + 1;
+                this->value.buffer = copy;
+                this->value.capacity = (len + 1);
             }
             else {
-                snprintf(this->value, this->valueCapacity, cstr);
+                snprintf(this->value.buffer, this->value.capacity, cstr);
             }
-            this->value[len] = '\0';
+            this->value.buffer[len] = '\0';
+            this->value.length = len;
             this->isUpdated = true;
         }
 
@@ -1210,23 +1447,14 @@ class WrapperString;
             if (cstr == nullptr) {
                 return false;
             }
-            if (this->value == nullptr) {
+            if (this->value.buffer == nullptr) {
                 return true;
             }
-            return strcmp(this->value, cstr);
+            return strcmp(this->value.buffer, cstr);
         }
 
         bool StringCompare(const char* cstr) const {
-            if (this->value == cstr) {
-                return true;
-            }
-            if (cstr == nullptr) {
-                return false;
-            }
-            if (this->value == nullptr) {
-                return false;
-            }
-            return !strcmp((const char*)this->value, cstr);
+            return ERaStringCompare((const char*)this->value.buffer, cstr);
         }
 
         char* stringdup(const char* cstr) {
@@ -1250,8 +1478,12 @@ class WrapperString;
             return copy;
         }
 
-        char* value;
-        size_t valueCapacity;
+        struct {
+            char* buffer;
+            size_t capacity;
+            size_t length;
+        } value;
+
         bool isUpdated;
     };
 
@@ -1414,7 +1646,22 @@ class WrapperString;
         return a;
     }
 
+#if defined(__GXX_EXPERIMENTAL_CXX0X__)
+    inline
+    ERaString& ERaString::operator = (ERaStringHelper&& res) {
+        if (this != &res) {
+            this->move(res);
+        }
+        return (*this);
+    }
 #endif
+
+#endif
+
+inline
+int WrapperBase::CompareTo(const char* cstr) const {
+    return ERaString(this->getString()).compareTo(cstr);
+}
 
 class WrapperString
     : public WrapperBase

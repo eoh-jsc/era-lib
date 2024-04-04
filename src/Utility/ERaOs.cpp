@@ -1,26 +1,19 @@
 #include <Arduino.h>
 #include <Utility/ERaOs.hpp>
 
-#if defined(ARDUINO) &&                 \
-    !defined(__MBED__) &&               \
-    (defined(ESP32) ||                  \
-    defined(RTL8722DM) ||               \
-    defined(ARDUINO_AMEBA) ||           \
-    defined(ARDUINO_RTOS_STM32) ||      \
-    defined(ARDUINO_RTOS_RENESAS) ||    \
-    defined(ARDUINO_ARCH_RP2040))
+#if defined(ERA_HAS_RTOS)
 
 #if defined(ARDUINO_RTOS_STM32)
-    static volatile bool _osStarted {false};
+    static volatile bool gOsStarted {false};
 #else
-    static volatile bool _osStarted {true};
+    static volatile bool gOsStarted {true};
 #endif
 
 void ERaOs::osStartsScheduler() {
-    if (_osStarted) {
+    if (gOsStarted) {
         return;
     }
-    _osStarted = true;
+    gOsStarted = true;
 #if defined(ARDUINO_RTOS_STM32)
     vTaskStartScheduler();
     while (1) { delay(1000); }
@@ -29,7 +22,7 @@ void ERaOs::osStartsScheduler() {
 
 void ERaOs::osDelay(uint32_t ticks) {
     if (ticks != 0U) {
-        if (_osStarted) {
+        if (gOsStarted) {
             vTaskDelay(ticks / portTICK_PERIOD_MS);
         }
         else {
@@ -39,7 +32,7 @@ void ERaOs::osDelay(uint32_t ticks) {
 }
 
 bool ERaOs::osStarted() {
-    return _osStarted;
+    return gOsStarted;
 }
 
 uint32_t ERaOs::osFreeHeapSize() {
@@ -96,7 +89,8 @@ osStatus_t ERaOs::osMessageQueueGet(QueueHandle_t mq_id, void *msg_ptr, uint8_t 
         if (xQueueReceive(mq_id, msg_ptr, (TickType_t)timeout) != pdPASS) {
             if (timeout != 0U) {
                 stat = osErrorTimeout;
-            } else {
+            }
+            else {
                 stat = osErrorResource;
             }
         }
@@ -122,7 +116,8 @@ osStatus_t ERaOs::osMessageQueueGetIRQ(QueueHandle_t mq_id, void *msg_ptr, uint8
 
         if (xQueueReceiveFromISR(mq_id, msg_ptr, &yield) != pdPASS) {
             stat = osErrorResource;
-        } else {
+        }
+        else {
             osPortYIELD_FROM_ISR(yield);
         }
     }
@@ -144,7 +139,8 @@ osStatus_t ERaOs::osMessageQueuePut(QueueHandle_t mq_id, const void *msg_ptr, ui
         if (xQueueSendToBack(mq_id, msg_ptr, (TickType_t)timeout) != pdPASS) {
             if (timeout != 0U) {
                 stat = osErrorTimeout;
-            } else {
+            }
+            else {
                 stat = osErrorResource;
             }
         }
@@ -170,7 +166,8 @@ osStatus_t ERaOs::osMessageQueuePutIRQ(QueueHandle_t mq_id, const void *msg_ptr,
 
         if (xQueueSendToBackFromISR(mq_id, msg_ptr, &yield) != pdTRUE) {
             stat = osErrorResource;
-        } else {
+        }
+        else {
             osPortYIELD_FROM_ISR(yield);
         }
     }
@@ -259,7 +256,7 @@ osStatus_t ERaOs::osMessageQueueReset(QueueHandle_t mq_id) {
 
 SemaphoreHandle_t ERaOs::osSemaphoreNew() {
 #if defined(ARDUINO_RTOS_STM32)
-    if (!_osStarted) {
+    if (!gOsStarted) {
         return NULL;
     }
 #endif
@@ -268,7 +265,7 @@ SemaphoreHandle_t ERaOs::osSemaphoreNew() {
 
 osStatus_t ERaOs::osSemaphoreRelease(SemaphoreHandle_t semaphore_id) {
 #if defined(ARDUINO_RTOS_STM32)
-    if (!_osStarted) {
+    if (!gOsStarted) {
         return osOK;
     }
 #endif
@@ -303,7 +300,8 @@ osStatus_t ERaOs::osSemaphoreReleaseIRQ(SemaphoreHandle_t semaphore_id) {
 
         if (xSemaphoreGiveFromISR(semaphore_id, &yield) != pdTRUE) {
             stat = osErrorResource;
-        } else {
+        }
+        else {
             osPortYIELD_FROM_ISR(yield);
         }
     }
@@ -313,7 +311,7 @@ osStatus_t ERaOs::osSemaphoreReleaseIRQ(SemaphoreHandle_t semaphore_id) {
 
 osStatus_t ERaOs::osSemaphoreAcquire(SemaphoreHandle_t semaphore_id, uint32_t timeout) {
 #if defined(ARDUINO_RTOS_STM32)
-    if (!_osStarted) {
+    if (!gOsStarted) {
         return osOK;
     }
 #endif
@@ -328,7 +326,8 @@ osStatus_t ERaOs::osSemaphoreAcquire(SemaphoreHandle_t semaphore_id, uint32_t ti
         if (xSemaphoreTake(semaphore_id, (TickType_t)timeout) != pdPASS) {
             if (timeout != 0U) {
                 stat = osErrorTimeout;
-            } else {
+            }
+            else {
                 stat = osErrorResource;
             }
         }
@@ -352,7 +351,8 @@ osStatus_t ERaOs::osSemaphoreAcquireIRQ(SemaphoreHandle_t semaphore_id, uint32_t
 
         if (xSemaphoreTakeFromISR(semaphore_id, &yield) != pdPASS) {
             stat = osErrorResource;
-        } else {
+        }
+        else {
             osPortYIELD_FROM_ISR(yield);
         }
     }
@@ -398,13 +398,15 @@ uint32_t ERaOs::osEventFlagsWait(EventGroupHandle_t ef_id, uint32_t flags, uint3
     else {
         if (options & osFlagsWaitAll) {
             wait_all = pdTRUE;
-        } else {
+        }
+        else {
             wait_all = pdFAIL;
         }
 
         if (options & osFlagsNoClear) {
             exit_clr = pdFAIL;
-        } else {
+        }
+        else {
             exit_clr = pdTRUE;
         }
 
@@ -421,12 +423,14 @@ TimerHandle_t ERaOs::osTimerNew(const char *name, osTimerType_t type, void *argu
     if (name != NULL && callback != NULL) {
         if (type == osTimerOnce) {
             reload = pdFALSE;
-        } else {
+        }
+        else {
             reload = pdTRUE;
         }
 
         hTimer = xTimerCreate(name, pdMS_TO_TICKS(1000), reload, argument, callback);
-    } else {
+    }
+    else {
         hTimer = NULL;
     }
 
@@ -442,7 +446,8 @@ osStatus_t ERaOs::osTimerStart(TimerHandle_t timer_id, uint32_t ticks) {
     else {
         if (xTimerChangePeriod(timer_id, ticks, 0) == pdPASS) {
             stat = osOK;
-        } else {
+        }
+        else {
             stat = osErrorResource;
         }
     }
@@ -463,7 +468,8 @@ osStatus_t ERaOs::osTimerStop(TimerHandle_t timer_id) {
         else {
             if (xTimerStop(timer_id, 0) == pdPASS) {
                 stat = osOK;
-            } else {
+            }
+            else {
                 stat = osError;
             }
         }
@@ -477,7 +483,8 @@ uint32_t ERaOs::osTimerIsRunning(TimerHandle_t timer_id) {
 
     if (timer_id == NULL) {
         running = 0U;
-    } else {
+    }
+    else {
         running = (uint32_t)xTimerIsTimerActive(timer_id);
     }
 
@@ -493,7 +500,8 @@ osStatus_t ERaOs::osTimerDelete(TimerHandle_t timer_id) {
     else {
         if (xTimerDelete(timer_id, 0) == pdPASS) {
             stat = osOK;
-        } else {
+        }
+        else {
             stat = osErrorResource;
         }
     }

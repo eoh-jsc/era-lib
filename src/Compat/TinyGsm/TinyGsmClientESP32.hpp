@@ -10,6 +10,8 @@
 
 // #define TINY_GSM_DEBUG Serial
 
+// #define TINY_GSM_TCP_LEGACY
+
 // #define TINY_GSM_GET_AVAILABLE
 
 #if !defined(TINY_GSM_DISABLE_CIP_INFO)
@@ -627,6 +629,11 @@ protected:
         if (!this->sockets[mux]) {
             return 0;
         }
+#if defined(TINY_GSM_PASSIVE_MODE_LEGACY)
+        if (size > 1024) {
+            size = 1024;
+        }
+#endif
         this->sendAT(GF("+CIPRECVDATA="), mux, ',', (uint16_t)size);
 #if defined(TINY_GSM_PASSIVE_MODE_LEGACY)
         if (this->waitResponse(GF("+CIPRECVDATA,")) != 1) {
@@ -907,6 +914,18 @@ public:
             }
         } while ((millis() - startMillis) < timeout_ms);
         finish:
+#if defined(TINY_GSM_NO_MODEM_BUFFER) ||      \
+    defined(TINY_GSM_BUFFER_READ_NO_CHECK)
+        if (data.length() < 64) {
+            if (!index && data.length()) {
+                DBG("### Unhandled:", data);
+            }
+            if (index && data.length()) {
+                DBG('<', index, '>', data);
+            }
+            return index;
+        }
+#endif
         if (!index) {
             data.trim();
             if (data.length()) {

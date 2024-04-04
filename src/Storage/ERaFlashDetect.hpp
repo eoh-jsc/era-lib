@@ -11,9 +11,8 @@
     defined(ERA_FLASH_STM32)
     #include <Storage/ERaFlashStm32.hpp>
 #elif !defined(__MBED__) &&             \
-    (defined(ARDUINO_ARCH_RP2040) ||    \
-    defined(ERA_FLASH_LITTLEFS))
-    #include <Storage/ERaFlashLittleFS.hpp>
+    defined(ARDUINO_ARCH_RP2040)
+    #include <Storage/ERaFlashRp2040.hpp>
 #elif defined(RTL8722DM) ||             \
     defined(ARDUINO_AMEBA)
     #include <Storage/ERaFlashRealtek.hpp>

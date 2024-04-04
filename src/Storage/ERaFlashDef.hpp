@@ -12,7 +12,16 @@
     #define FILENAME_ZIGBEE_NETWORK         "/zigbee/network.txt"
     #define FILENAME_ZIGBEE_MANAGER_TABLE   "/zigbee/manager_table.txt"
     #define FILENAME_ZIGBEE_OPTIONS         "/zigbee/options.txt"
-#elif defined(__MBED__)
+#elif defined(ARDUINO_ARCH_STM32)
+    #define FILENAME_BT_CONFIG              "bt/config.txt"
+    #define FILENAME_PIN_CONFIG             "pin/config.txt"
+    #define FILENAME_MODBUS_CONFIG          "modbus/config.txt"
+    #define FILENAME_MODBUS_CONTROL         "modbus/control.txt"
+    #define FILENAME_ZIGBEE_DEVICES         "zigbee/devices.txt"
+    #define FILENAME_ZIGBEE_NETWORK         "zigbee/network.txt"
+    #define FILENAME_ZIGBEE_MANAGER_TABLE   "zigbee/manager_table.txt"
+    #define FILENAME_ZIGBEE_OPTIONS         "zigbee/options.txt"
+#elif defined(__MBED__) || defined(ARDUINO_ARCH_ARM)
     #define FILENAME_BT_CONFIG              "/fs/bt/config.txt"
     #define FILENAME_PIN_CONFIG             "/fs/pin/config.txt"
     #define FILENAME_MODBUS_CONFIG          "/fs/modbus/config.txt"
@@ -30,15 +39,6 @@
     #define FILENAME_ZIGBEE_NETWORK         "database/zigbee/network.txt"
     #define FILENAME_ZIGBEE_MANAGER_TABLE   "database/zigbee/manager_table.txt"
     #define FILENAME_ZIGBEE_OPTIONS         "database/zigbee/options.txt"
-#elif defined(ARDUINO_ARCH_STM32)
-    #define FILENAME_BT_CONFIG              "bt/config.txt"
-    #define FILENAME_PIN_CONFIG             "pin/config.txt"
-    #define FILENAME_MODBUS_CONFIG          "modbus/config.txt"
-    #define FILENAME_MODBUS_CONTROL         "modbus/control.txt"
-    #define FILENAME_ZIGBEE_DEVICES         "zigbee/devices.txt"
-    #define FILENAME_ZIGBEE_NETWORK         "zigbee/network.txt"
-    #define FILENAME_ZIGBEE_MANAGER_TABLE   "zigbee/manager_table.txt"
-    #define FILENAME_ZIGBEE_OPTIONS         "zigbee/options.txt"
 #else
     #define FILENAME_BT_CONFIG              "bt/config.txt"
     #define FILENAME_PIN_CONFIG             "pin/config.txt"

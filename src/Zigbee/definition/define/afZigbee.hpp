@@ -41,6 +41,6 @@ namespace ZigbeeNamespace {
         AF_REFLECT_ERROR
     };
 
-};
+} /* namespace ZigbeeNamespace */
 
 #endif /* INC_DEFINE_AF_ZIGBEE_HPP_ */

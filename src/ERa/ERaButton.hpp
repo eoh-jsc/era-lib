@@ -46,6 +46,7 @@ class ERaButton
         bool prevState;
         bool pressed;
         bool onHold;
+        bool reload;
         bool enable;
         uint8_t called;
         uint8_t countMulti;
@@ -154,6 +155,21 @@ public:
             return (*this);
         }
 
+        iterator& reload(bool enable = true) {
+            if (this->isValid()) {
+                this->bt->reload(this->pBt, enable);
+            }
+            return (*this);
+        }
+
+        uint8_t getButtonPressCount() {
+            uint8_t count {0};
+            if (this->isValid()) {
+                count = this->bt->getButtonPressCount(this->pBt);
+            }
+            return count;
+        }
+
     protected:
     private:
         void invalidate() {
@@ -198,6 +214,8 @@ public:
     void onRising(Button_t* pButton);
     void onHold(Button_t* pButton, unsigned long delay);
     void onMulti(Button_t* pButton, uint8_t num, unsigned long delay);
+    void reload(Button_t* pButton, bool enable);
+    uint8_t getButtonPressCount(Button_t* pButton);
     void deleteButton(Button_t* pButton);
     bool isEnable(Button_t* pButton);
     void enable(Button_t* pButton);
@@ -211,6 +229,7 @@ private:
                         ERaButton::ButtonCallback_t cb, bool invert = false);
     Button_t* setupButton(uint8_t pin, ERaButton::ReadPinHandler_t readPin,
                         ERaButton::ButtonCallback_p_t cb, void* args, bool invert = false);
+    bool deleteHandler();
     bool isButtonFree();
 
     bool isValidButton(const Button_t* pButton) const {
@@ -218,6 +237,25 @@ private:
             return false;
         }
         return ((pButton->callback != nullptr) || (pButton->callback_p != nullptr));
+    }
+
+    bool isCalledFlag(Button_t* pButton, uint8_t mask) {
+        if (pButton == nullptr) {
+            return false;
+        }
+        bool ret = (this->getFlag(pButton->called, mask) &&
+                    this->getFlag(pButton->flag, mask));
+        this->setFlag(pButton->called, mask, false);
+        return ret;
+    }
+
+    bool isCalled(Button_t* pButton, uint8_t mask) {
+        if (pButton == nullptr) {
+            return false;
+        }
+        bool ret = this->getFlag(pButton->called, mask);
+        this->setFlag(pButton->called, mask, false);
+        return ret;
     }
 
     void setFlag(uint8_t& flags, uint8_t mask, bool value) {
@@ -236,6 +274,8 @@ private:
     ERaList<Button_t*> button;
     unsigned int numButton;
     unsigned long timeout;
+
+    using ButtonIterator = typename ERaList<Button_t*>::iterator;
 };
 
 using ButtonEntry = ERaButton::iterator;

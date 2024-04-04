@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <Client.hpp>
 #include <ERa/ERaDetect.hpp>
 
 class ERaTransp

@@ -4,7 +4,15 @@
 
 #include <Zigbee/ERaZigbee.hpp>
 
-#define SerialZB SerialZigbee<ERaSerialLinux>::serial()
+#if !defined(ERA_DEV_ZIGBEE)
+    #define ERA_DEV_ZIGBEE          ttyACM0
+#endif
+#define ERA_SERIAL_ZIGBEE_2(dev)    "/dev/" # dev
+#define ERA_SERIAL_ZIGBEE(dev)      ERA_SERIAL_ZIGBEE_2(dev)
+
+#if !defined(SerialZB)
+    #define SerialZB                SerialZigbee<ERaSerialLinux>::serial()
+#endif
 
 template <class Api>
 void ERaZigbee<Api>::configZigbee() {
@@ -16,7 +24,7 @@ void ERaZigbee<Api>::configZigbee() {
     }
 
     this->stream = &SerialZB;
-    SerialZB.begin("/dev/ttyACM0", ZIGBEE_BAUDRATE);
+    SerialZB.begin(ERA_SERIAL_ZIGBEE(ERA_DEV_ZIGBEE), ZIGBEE_BAUDRATE);
     this->initialized = true;
 }
 

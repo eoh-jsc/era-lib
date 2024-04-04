@@ -19,6 +19,8 @@ typedef void* ERaMutex_t;
 void ERaDelay(MillisTime_t ms);
 MillisTime_t ERaMillis();
 MillisTime_t ERaSeconds();
+MillisTime_t ERaMinutes();
+MillisTime_t ERaHours();
 uint32_t ERaRandomNumber(uint32_t min, uint32_t max);
 size_t ERaFreeRam();
 void ERaRestart(bool async) ERA_NORETURN;
@@ -28,14 +30,17 @@ void ERaFatality() ERA_NORETURN;
     #define ERaGuardAuto(mutex)     const ERaGuard ERA_CONCAT(guard, __LINE__)(mutex)
     #define ERaGuardLock(mutex)     ERaGuardLockFn(mutex)
     #define ERaGuardUnlock(mutex)   ERaGuardUnlockFn(mutex)
+    #define ERaGuardTryLock(mutex)  ERaGuardTryLockFn(mutex)
 #else
     #define ERaGuardAuto(mutex)
     #define ERaGuardLock(mutex)
     #define ERaGuardUnlock(mutex)
+    #define ERaGuardTryLock(mutex)  true
 #endif
 
 void ERaGuardLockFn(ERaMutex_t& mutex);
 void ERaGuardUnlockFn(ERaMutex_t& mutex);
+bool ERaGuardTryLockFn(ERaMutex_t& mutex);
 
 #if !defined(ERA_NO_RTOS)
     #include <Utility/ERaGuard.hpp>
@@ -186,7 +191,8 @@ void FormatString(char(&buf)[size], const char* format, ...) {
 bool IsHexString(const char* buf);
 
 bool ERaFloatCompare(float a, float b);
-double ERaDoubleCompare(double a, double b);
+bool ERaDoubleCompare(double a, double b);
+bool ERaStringCompare(const char* a, const char* b);
 
 char* ERaFindStr(const char* str, const char* str2);
 bool ERaStrCmp(const char* str, const char* str2);

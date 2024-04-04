@@ -14,6 +14,6 @@ namespace eras {
         using argument_type = Arg;
         using result_type = Result;
     };
-};
+} /* namespace eras */
 
 #endif /* INC_ERA_STRUCT_HPP_ */

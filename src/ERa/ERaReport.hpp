@@ -40,7 +40,7 @@ private:
     typedef void (*ReportCallback_p_t)(void*);
 #endif
 
-    const static int MAX_REPORTS = ERA_MAX_REPORT;
+    const static int MAX_REPORTS = ERA_MAX_REPORTS;
     enum ReportFlagT {
         REPORT_ON_CALLED = 0x01,
         REPORT_ON_DELETE = 0x80
@@ -331,6 +331,7 @@ private:
         return this->setupReport(minInterval, maxInterval, minChange, cb, pin, pinMode, 0);
     }
 
+    bool deleteHandler();
     bool isReportFree();
 
     bool isValidReport(const Report_t* pReport) const {
@@ -338,6 +339,15 @@ private:
             return false;
         }
         return ((pReport->callback != nullptr) || (pReport->callback_p != nullptr));
+    }
+
+    bool isCalled(Report_t* pReport, uint8_t mask) {
+        if (pReport == nullptr) {
+            return false;
+        }
+        bool ret = this->getFlag(pReport->called, mask);
+        this->setFlag(pReport->called, mask, false);
+        return ret;
     }
 
     void setFlag(uint8_t& flags, uint8_t mask, bool value) {
@@ -355,6 +365,8 @@ private:
 
     ERaList<Report_t*> report;
     unsigned int numReport;
+
+    using ReportIterator = typename ERaList<Report_t*>::iterator;
 };
 
 using ReportEntry = ERaReport::iterator;

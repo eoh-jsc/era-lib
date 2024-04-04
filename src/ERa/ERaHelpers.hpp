@@ -1,6 +1,8 @@
 #ifndef INC_ERA_HELPERS_HPP_
 #define INC_ERA_HELPERS_HPP_
 
+#include <ERa/ERaDetect.hpp>
+
 template <class S, typename... Args>
 class StaticHelper {
 public:
@@ -44,5 +46,17 @@ public:
 private:
     S& stream;
 };
+
+#if defined(ERA_HAS_TYPE_TRAITS_H)
+
+    /* std::enable_if_t from C++14 */
+    #if __cplusplus >= 201402L
+        using std::enable_if_t;
+    #else
+        template <bool B, class T = void>
+        using enable_if_t = typename std::enable_if<B, T>::type;
+    #endif
+
+#endif
 
 #endif /* INC_ERA_HELPERS_HPP_ */

@@ -6,6 +6,11 @@
                                                     (((*(&fiByte + 1))      ) & 0x00FFUL)) )
 #endif
 
+#if !defined(BUILD_UINT16_LE)
+    #define BUILD_UINT16_LE(fiByte)     ( (uint16_t)((((fiByte)             ) & 0x00FFUL) |       \
+                                                    (((*(&fiByte + 1)) << 8 ) & 0xFF00UL)) )
+#endif
+
 #if !defined(SWAP_UINT32_BE)
     #define SWAP_UINT32_BE(value)       ( (uint32_t)(((value) << 24) & 0xFF000000UL) | \
                                                     (((value) <<  8) & 0x00FF0000UL) | \
@@ -17,12 +22,12 @@
                                                     (((*(&fiByte + 1)) << 16) & 0x00FF0000UL) |   \
                                                     (((*(&fiByte + 2)) << 8 ) & 0x0000FF00UL) |   \
                                                     (((*(&fiByte + 3))      ) & 0x000000FFUL)) )
-#define BUILD_LITTE_ENDIAN(fiByte)      ( (uint32_t)(*reinterpret_cast<uint32_t*>(&fiByte)) )
+#define BUILD_LITTLE_ENDIAN(fiByte)     ( (uint32_t)(*reinterpret_cast<uint32_t*>(&fiByte)) )
 #define BUILD_MID_BIG_ENDIAN(fiByte)    ( (uint32_t)((((fiByte) << 16       ) & 0x00FF0000UL) |   \
                                                     (((*(&fiByte + 1)) << 24) & 0xFF000000UL) |   \
                                                     (((*(&fiByte + 2))      ) & 0x000000FFUL) |   \
                                                     (((*(&fiByte + 3)) << 8 ) & 0x0000FF00UL)) )
-#define BUILD_MID_MID_ENDIAN(fiByte)    ( (uint32_t)((((fiByte) << 8        ) & 0x0000FF00UL) |   \
+#define BUILD_MID_LITTLE_ENDIAN(fiByte) ( (uint32_t)((((fiByte) << 8        ) & 0x0000FF00UL) |   \
                                                     (((*(&fiByte + 1))      ) & 0x000000FFUL) |   \
                                                     (((*(&fiByte + 2)) << 24) & 0xFF000000UL) |   \
                                                     (((*(&fiByte + 3)) << 16) & 0x00FF0000UL)) )

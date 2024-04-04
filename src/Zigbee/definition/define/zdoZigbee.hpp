@@ -144,6 +144,6 @@ namespace ZigbeeNamespace {
         ZDO_MSG_CB_INCOMING = 0xFF
     };
 
-};
+} /* namespace ZigbeeNamespace */
 
 #endif /* INC_DEFINE_ZDO_ZIGBEE_HPP_ */

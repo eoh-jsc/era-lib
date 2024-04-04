@@ -21,6 +21,7 @@
 #include <ERa/ERaLogger.hpp>
 #include <ERa/ERaCallbacks.hpp>
 #include <OTA/ERaOTA.hpp>
+#include <Utility/ERaUUID.hpp>
 #include <Utility/ERaInfo.hpp>
 
 template <class Transp, class Flash>
@@ -76,7 +77,7 @@ public:
         , pORG(ERA_ORG_NAME)
         , pModel(ERA_MODEL_NAME)
         , _connected(false)
-        , heartbeat(ERA_HEARTBEAT_INTERVAL * 24UL)
+        , heartbeat(ERA_HEARTBEAT_INTERVAL * 12UL)
         , lastHeartbeat(0UL)
     {
         memset(this->ERA_TOPIC, 0, sizeof(this->ERA_TOPIC));
@@ -874,6 +875,8 @@ bool ERaProto<Transp, Flash>::sendInfo() {
         return false;
     }
 
+    cJSON_AddStringToObject(root, INFO_ID, ERaMessageID::make());
+
     Base::addInfo(root);
 
     if (this->heartbeat) {
@@ -886,7 +889,7 @@ bool ERaProto<Transp, Flash>::sendInfo() {
     FormatString(topic, ERA_PUB_PREFIX_INFO_TOPIC);
 
     if (payload != nullptr) {
-        status = this->transp.publishData(topic, payload);
+        status = this->transp.publishData(topic, payload, ERA_INFO_PUBLISH_RETAINED);
     }
 
     cJSON_Delete(root);

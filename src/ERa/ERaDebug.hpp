@@ -3,7 +3,7 @@
 
 #if !defined(ERA_RUN_YIELD)
     #if !defined(ERA_RUN_YIELD_MS)
-        #define ERA_RUN_YIELD_MS 0
+        #define ERA_RUN_YIELD_MS    0
     #endif
     #if !defined(ERA_NO_YIELD)
         #if defined(PARTICLE) || defined(SPARK)
@@ -12,7 +12,7 @@
             #define ERA_RUN_YIELD() { ERaDelay(ERA_RUN_YIELD_MS); }
         #endif
     #else
-        #define ERA_RUN_YIELD() {}
+        #define ERA_RUN_YIELD()     {}
     #endif
 #endif
 
@@ -51,6 +51,8 @@
 
     #if defined(ARDUINO) && defined(ESP32) &&   \
         (CORE_DEBUG_LEVEL >= ARDUHAL_LOG_LEVEL_INFO)
+        #include <esp32-hal-log.h>
+
         #define ERA_LOG_COLOR(COLOR, tag, format, ...)  ESP_LOGI(tag, ERA_LOG_ ##COLOR format ERA_LOG_RESET, ##__VA_ARGS__)
         #define ERA_LOG(tag, format, ...)               ERA_LOG_COLOR(GREEN, tag, format, ##__VA_ARGS__)
         #define ERA_LOG_ERROR(tag, format, ...)         ERA_LOG_COLOR(RED, tag, format, ##__VA_ARGS__)
@@ -262,6 +264,11 @@
         ERA_ASSERT(data != nullptr);\
         return rt;                  \
     }
+
+#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+#include <ERa/ERaDefine.hpp>
 
 static inline
 ERA_UNUSED void ERaLogHex(const char ERA_UNUSED *title, const uint8_t ERA_UNUSED *buf, size_t ERA_UNUSED len) {
