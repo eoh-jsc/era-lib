@@ -20,7 +20,7 @@ class ERaModbusInternal
     typedef bool (*WriteCallback_t)(int32_t);
 #endif
 
-    const static int MAX_REGISTERS = ERA_MAX_REGISTER;
+    const static int MAX_REGISTERS = ERA_MAX_REGISTERS;
     typedef struct __Register_t {
         uint8_t addr;
         uint8_t sa1;

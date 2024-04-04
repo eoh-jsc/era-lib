@@ -46,8 +46,8 @@
 #define MODBUS_STRING_FAIL_READ         "fail_read"
 #define MODBUS_STRING_FAIL_WRITE        "fail_write"
 
-#if !defined(ERA_MAX_REGISTER)
-    #define ERA_MAX_REGISTER            ERA_MAX_VIRTUAL_PIN
+#if !defined(ERA_MAX_REGISTERS)
+    #define ERA_MAX_REGISTERS           ERA_MAX_VIRTUAL_PINS
 #endif
 
 #define LOC_BUFFER_MODBUS(len)                      \

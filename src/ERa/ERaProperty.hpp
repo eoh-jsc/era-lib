@@ -1188,7 +1188,7 @@ int ERaProperty<Api>::findVirtualPin() {
         return -1;
     }
 
-    for (int i = 0; i < ERA_MAX_VIRTUAL_PIN; ++i) {
+    for (int i = 0; i < MAX_PROPERTIES; ++i) {
         if (this->isPropertyIdExist(i) != nullptr) {
             return i;
         }
