@@ -497,13 +497,21 @@ protected:
         }
     }
 
+    size_t readBytesFromFlash(const char* key, void* buf, size_t maxLen, bool force = false) {
+        size_t size {0};
+        if (!this->thisProto().getTransp().getAskConfig() || force) {
+            size = this->flash.readFlash(key, buf, maxLen);
+        }
+        return size;
+    }
+
     void writeBytesToFlash(const char* key, const void* value, size_t len, bool force = false) {
         if (!this->thisProto().getTransp().getAskConfig() || force) {
             this->flash.writeFlash(key, value, len);
         }
     }
 
-    void removeFromFlash(const char* filename, bool force = false) {
+    void removeFlash(const char* filename, bool force = false) {
         if (!this->thisProto().getTransp().getAskConfig() || force) {
             this->flash.writeFlash(filename, "{}");
         }
@@ -802,7 +810,7 @@ template <class Proto, class Flash>
 inline
 void ERaApi<Proto, Flash>::removePinConfig() {
     this->ERaPinRp.deleteAll();
-    this->removeFromFlash(FILENAME_PIN_CFG);
+    this->removeFlash(FILENAME_PIN_CFG);
 }
 
 #if defined(ERA_BT)
@@ -860,7 +868,7 @@ void ERaApi<Proto, Flash>::removePinConfig() {
     template <class Proto, class Flash>
     inline
     void ERaApi<Proto, Flash>::removeBluetoothConfig() {
-        this->removeFromFlash(FILENAME_BT_CFG);
+        this->removeFlash(FILENAME_BT_CFG);
     }
 #endif
 

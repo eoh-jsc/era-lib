@@ -226,8 +226,8 @@ protected:
         }
         ModbusState::set(ModbusStateT::STATE_MB_PARSE);
         ERaGuardUnlock(this->mutex);
-        this->thisApi().removeFromFlash(FILENAME_CONFIG);
-        this->thisApi().removeFromFlash(FILENAME_CONTROL);
+        this->thisApi().removeFlash(FILENAME_CONFIG);
+        this->thisApi().removeFlash(FILENAME_CONTROL);
     }
 
     void clearDataBuff() {

@@ -300,7 +300,7 @@ private:
     }
 
     void removeDataFromFlash(const char* filename, bool force = true) {
-        this->thisApi().removeFromFlash(filename, force);
+        this->thisApi().removeFlash(filename, force);
     }
 
     bool isRequest() {
