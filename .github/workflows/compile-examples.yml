@@ -75,7 +75,7 @@ jobs:
               - source-path: ./
               - name: WiFiNINA
           - name: "Espressif32"
-            fqbn: "esp32:esp32:esp32"
+            fqbn: "esp32:esp32:esp32:PartitionScheme=min_spiffs"
             platform-name: esp32:esp32
             sketch-paths: |
               - examples/ESP32/ESP32_WiFi_Basic
@@ -90,7 +90,7 @@ jobs:
               - source-path: ./
               - name: TinyGSM
           - name: "Espressif32-C3"
-            fqbn: "esp32:esp32:esp32c3"
+            fqbn: "esp32:esp32:esp32c3:PartitionScheme=min_spiffs"
             platform-name: esp32:esp32
             sketch-paths: |
               - examples/ESP32/ESP32_WiFi_Basic
@@ -103,7 +103,7 @@ jobs:
               - source-path: ./
               - name: TinyGSM
           - name: "Espressif32-S2"
-            fqbn: "esp32:esp32:esp32s2"
+            fqbn: "esp32:esp32:esp32s2:PartitionScheme=min_spiffs"
             platform-name: esp32:esp32
             sketch-paths: |
               - examples/ESP32/ESP32_WiFi_Basic
@@ -116,7 +116,7 @@ jobs:
               - source-path: ./
               - name: TinyGSM
           - name: "Espressif32-S3"
-            fqbn: "esp32:esp32:esp32s3"
+            fqbn: "esp32:esp32:esp32s3:PartitionScheme=min_spiffs"
             platform-name: esp32:esp32
             sketch-paths: |
               - examples/ESP32/ESP32_WiFi_Basic
