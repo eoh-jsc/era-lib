@@ -1,6 +1,8 @@
 #ifndef INC_ERA_SIMPLE_LINUX_HPP_
 #define INC_ERA_SIMPLE_LINUX_HPP_
 
+#include <pthread.h>
+
 #if defined(LINUX) &&        \
     (defined(RASPBERRY) ||   \
     defined(TINKER_BOARD) || \
