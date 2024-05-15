@@ -57,6 +57,9 @@ typedef struct __ERaConfig_t {
     bool connected;
     bool forceSave;
 
+    int32_t channel;
+    uint8_t bssid[6];
+
     void setFlag(uint8_t mask, bool value) {
         if (value) {
             flags |= mask;
@@ -173,6 +176,10 @@ public:
             CopyToArray(username, ERaConfig.username);
             CopyToArray(password, ERaConfig.password);
             ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_VALID, true);
+        }
+        else {
+            this->config(ERaConfig.token, ERaConfig.host, ERaConfig.port,
+                         ERaConfig.username, ERaConfig.password);
         }
 
         this->connectWiFi(ERaConfig.ssid, ERaConfig.pass);
@@ -434,10 +441,6 @@ void ERaPnP<Transport>::configApi() {
         if (token.length()) {
             CopyToArray(token, ERaConfig.token);
         }
-        else if (!strlen(ERaConfig.token) ||
-                ERaStrCmp(ERaConfig.token, ERaDefault.token)) {
-            CopyToArray(imei, ERaConfig.token);
-        }
         if (host.length()) {
             CopyToArray(host, ERaConfig.host);
         }
@@ -447,20 +450,14 @@ void ERaPnP<Transport>::configApi() {
         if (username.length()) {
             CopyToArray(username, ERaConfig.username);
         }
-        else if (!ERaStrCmp(ERaConfig.token, ERaDefault.token)) {
-            CopyToArray(ERaConfig.token, ERaConfig.username);
-        }
         else {
-            CopyToArray(imei, ERaConfig.username);
+            CopyToArray(ERaConfig.token, ERaConfig.username);
         }
         if (password.length()) {
             CopyToArray(password, ERaConfig.password);
         }
-        else if (!ERaStrCmp(ERaConfig.token, ERaDefault.token)) {
-            CopyToArray(ERaConfig.token, ERaConfig.password);
-        }
         else {
-            CopyToArray(imei, ERaConfig.password);
+            CopyToArray(ERaConfig.token, ERaConfig.password);
         }
 
         content = ERA_F(R"json({"status":"ok","message":"Connecting wifi..."})json");
@@ -645,10 +642,6 @@ void ERaPnP<Transport>::configApi() {
         if (token.length()) {
             CopyToArray(token, ERaConfig.token);
         }
-        else if (!strlen(ERaConfig.token) ||
-                ERaStrCmp(ERaConfig.token, ERaDefault.token)) {
-            CopyToArray(imei, ERaConfig.token);
-        }
         if (host.length()) {
             CopyToArray(host, ERaConfig.host);
         }
@@ -658,20 +651,14 @@ void ERaPnP<Transport>::configApi() {
         if (username.length()) {
             CopyToArray(username, ERaConfig.username);
         }
-        else if (!ERaStrCmp(ERaConfig.token, ERaDefault.token)) {
-            CopyToArray(ERaConfig.token, ERaConfig.username);
-        }
         else {
-            CopyToArray(imei, ERaConfig.username);
+            CopyToArray(ERaConfig.token, ERaConfig.username);
         }
         if (password.length()) {
             CopyToArray(password, ERaConfig.password);
         }
-        else if (!ERaStrCmp(ERaConfig.token, ERaDefault.token)) {
-            CopyToArray(ERaConfig.token, ERaConfig.password);
-        }
         else {
-            CopyToArray(imei, ERaConfig.password);
+            CopyToArray(ERaConfig.token, ERaConfig.password);
         }
 
         if (scanWifi) {
@@ -994,10 +981,6 @@ void ERaPnP<Transport>::configApi() {
         if (token.length()) {
             CopyToArray(token, ERaConfig.token);
         }
-        else if (!strlen(ERaConfig.token) ||
-                ERaStrCmp(ERaConfig.token, ERaDefault.token)) {
-            CopyToArray(imei, ERaConfig.token);
-        }
         if (host.length()) {
             CopyToArray(host, ERaConfig.host);
         }
@@ -1007,20 +990,14 @@ void ERaPnP<Transport>::configApi() {
         if (username.length()) {
             CopyToArray(username, ERaConfig.username);
         }
-        else if (!ERaStrCmp(ERaConfig.token, ERaDefault.token)) {
-            CopyToArray(ERaConfig.token, ERaConfig.username);
-        }
         else {
-            CopyToArray(imei, ERaConfig.username);
+            CopyToArray(ERaConfig.token, ERaConfig.username);
         }
         if (password.length()) {
             CopyToArray(password, ERaConfig.password);
         }
-        else if (!ERaStrCmp(ERaConfig.token, ERaDefault.token)) {
-            CopyToArray(ERaConfig.token, ERaConfig.password);
-        }
         else {
-            CopyToArray(imei, ERaConfig.password);
+            CopyToArray(ERaConfig.token, ERaConfig.password);
         }
 
         content = ERA_F(R"json({"status":"ok","message":"Connecting wifi..."})json");
@@ -1043,12 +1020,6 @@ void ERaPnP<Transport>::configApi() {
 
         if (token.length()) {
             CopyToArray(token, ERaConfig.token);
-        }
-        else if (!strlen(ERaConfig.token) ||
-                ERaStrCmp(ERaConfig.token, ERaDefault.token)) {
-            CopyToArray(imei, ERaConfig.token);
-        }
-        if (!ERaStrCmp(ERaConfig.token, ERaDefault.token)) {
             CopyToArray(ERaConfig.token, ERaConfig.username);
             CopyToArray(ERaConfig.token, ERaConfig.password);
         }
@@ -1313,17 +1284,35 @@ bool ERaPnP<Transport>::scanNetworks(const char* ssid) {
         nets = WiFi.scanComplete();
     }
     if (nets <= 0) {
+        WiFi.scanDelete();
         return false;
     }
 
+    int32_t rssi {-999};
     for (int i = 0; i < nets; ++i) {
         if (WiFi.SSID(i) == ssid) {
             found = true;
             ERA_LOG(TAG, ERA_PSTR("Found SSID: %s, BSSID: %s, RSSI: %d, Channel: %d"),
                         WiFi.SSID(i).c_str(), WiFi.BSSIDstr(i).c_str(), WiFi.RSSI(i),
                         WiFi.channel(i));
-            break;
+            if (rssi > WiFi.RSSI(i)) {
+                continue;
+            }
+            rssi = WiFi.RSSI(i);
+            const uint8_t* pbssid = WiFi.BSSID(i);
+            ERaConfig.channel = WiFi.channel(i);
+            if (pbssid != nullptr) {
+                CopyToArray(*pbssid, ERaConfig.bssid);
+            }
         }
+    }
+    if (found) {
+        char mac[20] {0};
+        FormatString(mac, "%02X:%02X:%02X:%02X:%02X:%02X", ERaConfig.bssid[0], ERaConfig.bssid[1],
+                                                        ERaConfig.bssid[2], ERaConfig.bssid[3],
+                                                        ERaConfig.bssid[4], ERaConfig.bssid[5]);
+        ERA_LOG(TAG, ERA_PSTR("Connecting SSID: %s, BSSID: %s, RSSI: %d, Channel: %d"),
+                                ssid, mac, rssi, ERaConfig.channel);
     }
     WiFi.scanDelete();
 
@@ -1448,18 +1437,28 @@ void ERaPnP<Transport>::connectWiFi(const char* ssid, const char* pass) {
         ERaWatchdogFeed();
 
         ERA_LOG(TAG, ERA_PSTR("Connecting to %s..."), ssid);
-        if (pass && strlen(pass)) {
-            WiFi.begin(ssid, pass);
+        if (this->scanWiFiConnect) {
+            if (pass && strlen(pass)) {
+                WiFi.begin(ssid, pass, ERaConfig.channel, ERaConfig.bssid);
+            }
+            else {
+                WiFi.begin(ssid, nullptr, ERaConfig.channel, ERaConfig.bssid);
+            }
         }
         else {
-            WiFi.begin(ssid);
+            if (pass && strlen(pass)) {
+                WiFi.begin(ssid, pass);
+            }
+            else {
+                WiFi.begin(ssid);
+            }
         }
 
         ERaWatchdogFeed();
 
         MillisTime_t startMillis = ERaMillis();
         while (status != WL_CONNECTED) {
-            ERaDelay(500);
+            ERaDelay(10);
             ERaWatchdogFeed();
             status = WiFi.status();
             Base::appLoop();

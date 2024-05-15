@@ -40,14 +40,27 @@
         #define ERA_LOG_RED                             "\033[0;31m"
         #define ERA_LOG_GREEN                           "\033[0;32m"
         #define ERA_LOG_YELLOW                          "\033[0;33m"
+        #define ERA_LOG_BLUE                            "\033[0;34m"
         #define ERA_LOG_RESET                           "\033[0m"
         #pragma message "Debugging with color support is only available in VSCode!!!"
     #else
         #define ERA_LOG_RED
         #define ERA_LOG_GREEN
         #define ERA_LOG_YELLOW
+        #define ERA_LOG_BLUE
         #define ERA_LOG_RESET
     #endif
+
+    #if defined(ERA_DEBUG_SECRET)
+        #define ERA_LOG_SECRET_BEGIN                    "\033[5m"
+        #define ERA_LOG_SECRET_END                      "\033[6m"
+        #pragma message "Debugging secret support is only available in VSCode!!!"
+    #else
+        #define ERA_LOG_SECRET_BEGIN
+        #define ERA_LOG_SECRET_END
+    #endif
+
+    #define ERA_LOG_SECRET(s)                           ERA_LOG_SECRET_BEGIN s ERA_LOG_SECRET_END
 
     #if defined(ARDUINO) && defined(ESP32) &&   \
         (CORE_DEBUG_LEVEL >= ARDUHAL_LOG_LEVEL_INFO)
@@ -57,6 +70,7 @@
         #define ERA_LOG(tag, format, ...)               ERA_LOG_COLOR(GREEN, tag, format, ##__VA_ARGS__)
         #define ERA_LOG_ERROR(tag, format, ...)         ERA_LOG_COLOR(RED, tag, format, ##__VA_ARGS__)
         #define ERA_LOG_WARNING(tag, format, ...)       ERA_LOG_COLOR(YELLOW, tag, format, ##__VA_ARGS__)
+        #define ERA_LOG_DEBUG(tag, format, ...)         ERA_LOG_COLOR(BLUE, tag, format, ##__VA_ARGS__)
     #elif defined(ARDUINO) &&                   \
         !defined(__MBED__) &&                   \
         (defined(ESP32) || defined(ESP8266) ||  \
@@ -73,6 +87,7 @@
         #define ERA_LOG(tag, format, ...)               ERA_LOG_COLOR(GREEN, tag, format, ##__VA_ARGS__)
         #define ERA_LOG_ERROR(tag, format, ...)         ERA_LOG_COLOR(RED, tag, format, ##__VA_ARGS__)
         #define ERA_LOG_WARNING(tag, format, ...)       ERA_LOG_COLOR(YELLOW, tag, format, ##__VA_ARGS__)
+        #define ERA_LOG_DEBUG(tag, format, ...)         ERA_LOG_COLOR(BLUE, tag, format, ##__VA_ARGS__)
 
         static inline
         ERA_UNUSED const char* ERaFileName(const char* path) {
@@ -110,6 +125,7 @@
         #define ERA_LOG(tag, format, ...)               ERA_LOG_COLOR(GREEN, tag, format, ##__VA_ARGS__)
         #define ERA_LOG_ERROR(tag, format, ...)         ERA_LOG_COLOR(RED, tag, format, ##__VA_ARGS__)
         #define ERA_LOG_WARNING(tag, format, ...)       ERA_LOG_COLOR(YELLOW, tag, format, ##__VA_ARGS__)
+        #define ERA_LOG_DEBUG(tag, format, ...)         ERA_LOG_COLOR(BLUE, tag, format, ##__VA_ARGS__)
 
         static inline
         ERA_UNUSED const char* ERaFileName(const char* path) {
@@ -179,6 +195,7 @@
         #define ERA_LOG(tag, format, ...)               ERA_LOG_COLOR(GREEN, tag, format, ##__VA_ARGS__)
         #define ERA_LOG_ERROR(tag, format, ...)         ERA_LOG_COLOR(RED, tag, format, ##__VA_ARGS__)
         #define ERA_LOG_WARNING(tag, format, ...)       ERA_LOG_COLOR(YELLOW, tag, format, ##__VA_ARGS__)
+        #define ERA_LOG_DEBUG(tag, format, ...)         ERA_LOG_COLOR(BLUE, tag, format, ##__VA_ARGS__)
 
         static inline
         ERA_UNUSED const char* ERaFileName(const char* path) {
@@ -206,6 +223,7 @@
         #define ERA_LOG(tag, format, ...)               ERA_LOG_COLOR(GREEN, tag, format, ##__VA_ARGS__)
         #define ERA_LOG_ERROR(tag, format, ...)         ERA_LOG_COLOR(RED, tag, format, ##__VA_ARGS__)
         #define ERA_LOG_WARNING(tag, format, ...)       ERA_LOG_COLOR(YELLOW, tag, format, ##__VA_ARGS__)
+        #define ERA_LOG_DEBUG(tag, format, ...)         ERA_LOG_COLOR(BLUE, tag, format, ##__VA_ARGS__)
 
         static inline
         ERA_UNUSED const char* ERaFileName(const char* path) {
@@ -244,11 +262,13 @@
     #undef ERA_LOG
     #undef ERA_LOG_ERROR
     #undef ERA_LOG_WARNING
+    #undef ERA_LOG_DEBUG
     #undef ERA_PRINT
     #undef ERA_DEBUG_DUMP
     #define ERA_LOG(...)            do {} while(0)
     #define ERA_LOG_ERROR(...)      do {} while(0)
     #define ERA_LOG_WARNING(...)    do {} while(0)
+    #define ERA_LOG_DEBUG(...)      do {} while(0)
     #define ERA_PRINT(...)          do {} while(0)
 #endif
 
@@ -271,7 +291,7 @@
 #include <ERa/ERaDefine.hpp>
 
 static inline
-ERA_UNUSED void ERaLogHex(const char ERA_UNUSED *title, const uint8_t ERA_UNUSED *buf, size_t ERA_UNUSED len) {
+ERA_UNUSED void ERaLogHex(const char ERA_UNUSED *title, const uint8_t ERA_UNUSED *buf, size_t ERA_UNUSED len, bool ERA_UNUSED character = false) {
 #ifdef ERA_DEBUG_DUMP
     if (title == nullptr) {
         return;
@@ -297,9 +317,14 @@ ERA_UNUSED void ERaLogHex(const char ERA_UNUSED *title, const uint8_t ERA_UNUSED
     snprintf(out + strlen(out), size - strlen(out), "%3d", len);
     snprintf(out + strlen(out), size - strlen(out), "): ");
     for (size_t i = 0; i < len; ++i) {
-        snprintf(out + strlen(out), size - strlen(out), "%02X ", buf[i]);
+        if (character) {
+            snprintf(out + strlen(out), size - strlen(out), "%c", buf[i]);
+        }
+        else {
+            snprintf(out + strlen(out), size - strlen(out), "%02X ", buf[i]);
+        }
     }
-    ERA_LOG(ERA_PSTR("Hex"), ERA_PSTR("%s"), out);
+    ERA_LOG_DEBUG(ERA_PSTR("Hex"), ERA_PSTR("%s"), out);
     if (out != locBuf) {
         free(out);
     }

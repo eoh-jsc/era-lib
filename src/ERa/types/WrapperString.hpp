@@ -470,13 +470,13 @@ class WrapperString;
 
         void concat(long long num) {
             char str[2 + 8 * sizeof(long long)] {0};
-            ltoa(num, str, 10);
+            ERaLltoa(num, str, sizeof(str), 10);
             this->concat((const char*)str);
         }
 
         void concat(unsigned long long num) {
             char str[1 + 8 * sizeof(unsigned long long)] {0};
-            ultoa(num, str, 10);
+            ERaUlltoa(num, str, sizeof(str), 10);
             this->concat((const char*)str);
         }
 
@@ -1298,13 +1298,13 @@ class WrapperString;
 
         void assign(long long num) {
             char str[2 + 8 * sizeof(long long)] {0};
-            ltoa(num, str, 10);
+            ERaLltoa(num, str, sizeof(str), 10);
             this->assign((const char*)str);
         }
 
         void assign(unsigned long long num) {
             char str[1 + 8 * sizeof(unsigned long long)] {0};
-            ultoa(num, str, 10);
+            ERaUlltoa(num, str, sizeof(str), 10);
             this->assign((const char*)str);
         }
 

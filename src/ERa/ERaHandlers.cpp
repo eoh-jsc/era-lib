@@ -15,6 +15,9 @@ void ERaNoModbusBaudrate(uint32_t ERA_UNUSED &baudrate) {
 void ERaNoInfo(cJSON ERA_UNUSED *root) {
 }
 
+void ERaNoWriteConfig(uint8_t ERA_UNUSED type) {
+}
+
 void ERaWidgetWrite(uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param) {
     ERA_LOG(ERA_PSTR("ERa"), ERA_PSTR("No handler for writing to V%u"), pin);
 }
@@ -41,8 +44,9 @@ ERA_WAITING() __attribute__((weak, alias("ERaNoHandler")));
 ERA_APP_LOOP() __attribute__((weak, alias("ERaNoHandler")));
 ERA_OPTION_CONNECTED() __attribute__((weak, alias("ERaNoOptConnected")));
 ERA_MODBUS_BAUDRATE() __attribute__((weak, alias("ERaNoModbusBaudrate")));
-ERA_INFO() __attribute__((weak, alias("ERaNoInfo")));
 ERA_MODBUS_INFO() __attribute__((weak, alias("ERaNoInfo")));
+ERA_INFO() __attribute__((weak, alias("ERaNoInfo")));
+ERA_WRITE_CONFIG() __attribute__((weak, alias("ERaNoWriteConfig")));
 
 ERA_ON_WRITE(Default);
 ERA_ON_PIN_READ(Default);

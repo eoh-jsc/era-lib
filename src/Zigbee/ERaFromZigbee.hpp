@@ -30,6 +30,9 @@ private:
     bool temperatureMeasFromZigbee(const DataAFMsg_t& afMsg, cJSON* root, uint16_t attribute, uint64_t& value);
     bool pressureMeasFromZigbee(const DataAFMsg_t& afMsg, cJSON* root, uint16_t attribute, uint64_t& value);
     bool humidityMeasFromZigbee(const DataAFMsg_t& afMsg, cJSON* root, uint16_t attribute, uint64_t& value);
+    bool iasZoneFromZigbee(const DataAFMsg_t& afMsg, cJSON* root, uint16_t attribute, uint64_t& value);
+    bool iasZoneSpecificFromZigbee(const DataAFMsg_t& afMsg, cJSON* root, const char* key, DefaultRsp_t& defaultRsp);
+
     void processNodeDescriptor(vector<uint8_t>& data, void* value = nullptr);
     void processSimpleDescriptor(vector<uint8_t>& data, void* value = nullptr);
     void processActiveEndpoint(vector<uint8_t>& data, void* value = nullptr);
@@ -348,6 +351,7 @@ uint8_t ERaFromZigbee<Zigbee>::getCheckSumReceive(const uint8_t* pData, size_t p
 #include "fromZigbee/ERaFromTempMeas.hpp"
 #include "fromZigbee/ERaFromPressMeas.hpp"
 #include "fromZigbee/ERaFromHumiMeas.hpp"
+#include "fromZigbee/ERaFromIASZone.hpp"
 #include "fromZigbee/ERaFromZstack.hpp"
 
 #endif /* INC_ERA_FROM_ZIGBEE_HPP_ */

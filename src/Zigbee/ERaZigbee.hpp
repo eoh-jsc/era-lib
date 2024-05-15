@@ -251,6 +251,8 @@ private:
                             vector<DataWriteAttr_t> data,
                             size_t limit = 2);
     void readDataDevice();
+    void handleIASDevice();
+    uint8_t getZoneID();
 
     template <int inSize, int outSize>
     bool isClusterExist(const ClusterIDT(&inZcl)[inSize], const ClusterIDT(&outZcl)[outSize], const ClusterIDT zclId);

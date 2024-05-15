@@ -11,13 +11,16 @@ void ERaPnP<Transport>::addEncryptionType(uint8_t networkItem, cJSON* const item
             cJSON_AddStringToObject(item, "encryption", "WEP");
             break;
         case wl_enc_type::ENC_TYPE_WPA:
-            cJSON_AddStringToObject(item, "encryption", "WPA");
+            cJSON_AddStringToObject(item, "encryption", "WPA/PSK");
             break;
         case wl_enc_type::ENC_TYPE_WPA2:
-            cJSON_AddStringToObject(item, "encryption", "WPA2");
+            cJSON_AddStringToObject(item, "encryption", "WPA2/PSK");
             break;
         case wl_enc_type::ENC_TYPE_WPA3:
-            cJSON_AddStringToObject(item, "encryption", "WPA3");
+            cJSON_AddStringToObject(item, "encryption", "WPA3/PSK");
+            break;
+        case wl_enc_type::ENC_TYPE_AUTO:
+            cJSON_AddStringToObject(item, "encryption", "WPA/WPA2/PSK");
             break;
         case wl_enc_type::ENC_TYPE_NONE:
             cJSON_AddStringToObject(item, "encryption", "OPEN");

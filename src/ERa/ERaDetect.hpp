@@ -1005,6 +1005,16 @@
     #endif
 #endif
 
+#if defined(ERA_IGNORE_STL_LIBRARY)
+    #if !defined(ERA_IGNORE_STD_FUNCTIONAL_STRING)
+        #define ERA_IGNORE_STD_FUNCTIONAL_STRING
+    #endif
+
+    #if !defined(ERA_IGNORE_STD_TYPE_TRAITS)
+        #define ERA_IGNORE_STD_TYPE_TRAITS
+    #endif
+#endif
+
 #if defined(ERA_IGNORE_STD_FUNCTIONAL_STRING)
     /* OK, ignore the std functional */
 #elif defined(__has_include)

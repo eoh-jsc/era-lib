@@ -263,6 +263,8 @@ public:
     void remove(size_t index);
     void remove(const char* key);
 
+    void removeFrom(size_t index);
+
     void done() {
         size_t index {0};
         this->dataLen = this->len;
@@ -426,14 +428,14 @@ void ERaDataBuff::add_on_change(const char* value) {
     inline
     void ERaDataBuff::add(long long value) {
         char str[2 + 8 * sizeof(long long)] {0};
-        ltoa(value, str, 10);
+        ERaLltoa(value, str, sizeof(str), 10);
         this->add(str);
     }
 
     inline
     void ERaDataBuff::add(unsigned long long value) {
         char str[1 + 8 * sizeof(unsigned long long)] {0};
-        ultoa(value, str, 10);
+        ERaUlltoa(value, str, sizeof(str), 10);
         this->add(str);
     }
 
@@ -648,6 +650,20 @@ void ERaDataBuff::remove(const char* key) {
             const char* dst = it;
             ++it; ++it;
             const char* src = it;
+            memmove((void*)dst, src, this->buff + this->len - src);
+            this->len -= (src - dst);
+            break;
+        }
+    }
+}
+
+inline
+void ERaDataBuff::removeFrom(size_t index) {
+    const iterator e = this->end();
+    for (iterator it = this->begin(); it < e; ++it) {
+        if (!index--) {
+            const char* dst = it;
+            const char* src = e;
             memmove((void*)dst, src, this->buff + this->len - src);
             this->len -= (src - dst);
             break;
@@ -1055,6 +1071,12 @@ public:
                 return false;
             }
             return ERaStringCompare(this->item->string, name);
+        }
+
+        iterator& shared(const iterator& it) {
+			this->item = it.item;
+            this->parent = it.parent;
+			return (*this);
         }
 
         ERaString type();

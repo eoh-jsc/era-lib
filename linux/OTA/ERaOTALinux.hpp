@@ -47,8 +47,8 @@ protected:
                 const char* hash = nullptr,
                 const char* type = nullptr,
                 size_t downSize = ERA_OTA_BUFFER_SIZE,
-                cJSON* root = nullptr) {
-        if (url == nullptr) {
+                const cJSON* info = nullptr) {
+        if ((url == nullptr) || !strlen(url)) {
             url = ERaOTAHelper::createUrl(this->thisProto().getAuth());
         }
 
@@ -127,7 +127,7 @@ protected:
         }
 
         if ((this->pHandler != nullptr) &&
-            this->pHandler->begin(client, contentLength, hash, type, downSize)) {
+            this->pHandler->begin(client, contentLength, hash, type, downSize, info)) {
             client->stop();
             delete client;
             return;
@@ -222,13 +222,13 @@ protected:
         ERA_LOG(TAG, ERA_PSTR("Update successfully. Rebooting!"));
         ERaDelay(1000);
         ERaRestart(true);
-        ERA_FORCE_UNUSED(root);
+        ERA_FORCE_UNUSED(info);
     }
 
 private:
     void storeOTAConfig(const char* url,
                         const char* hash) {
-        if (url == nullptr) {
+        if ((url == nullptr) || !strlen(url)) {
             return;
         }
 

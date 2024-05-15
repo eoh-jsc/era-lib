@@ -112,6 +112,10 @@ void setup() {
     // ERa.setVendorName("MyORG");
     // ERa.setVendorPrefix("MyPrefix");
 
+    /* Set scan WiFi. If activated, the board will scan
+       and connect to the best quality WiFi. */
+    // ERa.setScanWiFi(true);
+
     /* Initializing the ERa library. */
     ERa.begin();
 

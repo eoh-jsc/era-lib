@@ -108,6 +108,9 @@ IdentDeviceAddr_t* ERaFromZigbee<Zigbee>::createDataGlobal(const DataAFMsg_t& af
         case ClusterIDT::ZCL_CLUSTER_MEAS_HUMIDITY:
             defined = this->humidityMeasFromZigbee(afMsg, dataItem, attribute, value);
             break;
+        case ClusterIDT::ZCL_CLUSTER_SECURITY_IAS_ZONE:
+            defined = this->iasZoneFromZigbee(afMsg, dataItem, attribute, value);
+            break;
         default:
             break;
     }
@@ -210,6 +213,9 @@ IdentDeviceAddr_t* ERaFromZigbee<Zigbee>::createDataSpecific(const DataAFMsg_t& 
             break;
         case ClusterIDT::ZCL_CLUSTER_LEVEL_CONTROL:
             defined = this->levelSpecificFromZigbee(afMsg, dataItem, "", defaultRsp);
+            break;
+        case ClusterIDT::ZCL_CLUSTER_SECURITY_IAS_ZONE:
+            defined = this->iasZoneSpecificFromZigbee(afMsg, dataItem, "", defaultRsp);
             break;
         default:
             break;

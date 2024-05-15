@@ -17,7 +17,21 @@ void ERaFromZigbee<Zigbee>::processFrameTypeSpecific(const DataAFMsg_t& afMsg, D
             break;
         case ClusterIDT::ZCL_CLUSTER_GREEN_POWER:
             break;
-        case ClusterIDT::ZCL_CLUSTER_SECURITY_IAS_ZONE:
+        case ClusterIDT::ZCL_CLUSTER_SECURITY_IAS_ZONE: {
+            switch (afMsg.cmdId) {
+                case ZbZclIasZoneServerCommandsT::ZCL_IAS_ZONE_SVR_CMD_ZONE_ENROLL_REQUEST: {
+                    AFAddrType_t address;
+                    address = afMsg.srcAddr;
+                    defaultRsp.hasResponse = true;
+                    this->thisZigbee().Zigbee::ToZigbee::CommandZigbee::enrollResponseIASZone(address,
+                                            ZbZclIasZoneClientResponseCodeT::ZCL_IAS_ZONE_CLI_RESP_SUCCESS,
+                                            this->thisZigbee().getZoneID());
+                }
+                    break;
+                default:
+                    break;
+            }
+        }
             break;
         default:
             break;

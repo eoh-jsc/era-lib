@@ -17,6 +17,7 @@
 typedef void* ERaMutex_t;
 
 void ERaDelay(MillisTime_t ms);
+void ERaDelayUs(MillisTime_t us);
 MillisTime_t ERaMillis();
 MillisTime_t ERaSeconds();
 MillisTime_t ERaMinutes();
@@ -69,7 +70,10 @@ uint8_t SignalToPercentage(int16_t value);
 bool ERaIsNaN(double value);
 bool ERaIsInf(double value);
 bool ERaIsSpN(double value);
+double ERaAtof(const char* str);
 long long ERaAtoll(const char* str);
+char* ERaLltoa(long long value, char* buf, unsigned bufLen, int base);
+char* ERaUlltoa(unsigned long long value, char* buf, unsigned bufLen, int base);
 char* ERaDtostrf(double number, int decimal, char* str);
 
 template <typename T>
@@ -84,16 +88,17 @@ const T& ERaMax(const T& a, const T& b) {
     return (b < a) ? a : b;
 }
 
-template <class T, class T2>
+template <typename T>
 inline
-T ERaMathClamp(T val, T2 low, T2 high) {
+T ERaMathClamp(T val, T low, T high) {
     return (val < low) ? low : ((val > high) ? high : val);
 }
 
 template <typename T>
 inline
 T ERaMapNumberRange(T value, T fromLow, T fromHigh, T toLow, T toHigh) {
-    return (toLow + (ERaMin(value, fromHigh) - ERaMin(value, fromLow)) * (toHigh - toLow) / (fromHigh - fromLow));
+    value = (toLow + (value - fromLow) * (toHigh - toLow) / (fromHigh - fromLow));
+    return ERaMathClamp(value, ERaMin(toLow, toHigh), ERaMax(toLow, toHigh));
 }
 
 #if defined(ARDUINO) ||                 \
@@ -117,16 +122,9 @@ T ERaMapNumberRange(T value, T fromLow, T fromHigh, T toLow, T toHigh) {
         #include "driver/gpio.h"
     #endif
     #include "driver/uart.h"
-    #include <Utility/ERaOs.hpp>
-#elif defined(ARDUINO) &&               \
-    !defined(__MBED__) &&               \
-    (defined(RTL8722DM) ||              \
-    defined(ARDUINO_AMEBA) ||           \
-    defined(ARDUINO_ARCH_STM32) ||      \
-    defined(ARDUINO_ARCH_RENESAS) ||    \
-    defined(ARDUINO_ARCH_RP2040))
-    #include <Utility/ERaOs.hpp>
 #endif
+
+#include <Utility/ERaOs.hpp>
 
 template <typename T, int len, int size>
 inline

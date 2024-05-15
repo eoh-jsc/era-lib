@@ -40,7 +40,13 @@ void ERaApi<Proto, Flash>::handleReadPin(cJSON* root) {
         }
         item = cJSON_GetObjectItem(current, "value_type");
         if (cJSON_IsString(item)) {
-            this->ERaPinRp.setPinVirtual(pin.pin, pin.configId);
+            if (ERaStrCmp(item->valuestring, "boolean") ||
+                ERaStrCmp(item->valuestring, "integer")) {
+                this->ERaPinRp.setPinRaw(pin.pin, pin.configId);
+            }
+            else if (ERaStrCmp(item->valuestring, "virtual")) {
+                this->ERaPinRp.setPinVirtual(pin.pin, pin.configId);
+            }
         }
     }
 }
@@ -82,7 +88,13 @@ void ERaApi<Proto, Flash>::handleWritePin(cJSON* root) {
         }
         item = cJSON_GetObjectItem(current, "value_type");
         if (cJSON_IsString(item)) {
-            this->ERaPinRp.setPinVirtual(pin.pin, pin.configId);
+            if (ERaStrCmp(item->valuestring, "boolean") ||
+                ERaStrCmp(item->valuestring, "integer")) {
+                this->ERaPinRp.setPinRaw(pin.pin, pin.configId);
+            }
+            else if (ERaStrCmp(item->valuestring, "virtual")) {
+                this->ERaPinRp.setPinVirtual(pin.pin, pin.configId);
+            }
         }
     }
 }

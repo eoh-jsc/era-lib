@@ -60,7 +60,7 @@ public:
         if (byte == '\n') {
             this->flush();
         }
-        if (this->txBufferCount >= sizeof(this->txBuffer)) {
+        if (this->txBufferCount >= (sizeof(this->txBuffer) - 1)) {
             this->flush();
         }
         return 1;
@@ -69,7 +69,6 @@ public:
     virtual void flush() override {
         if (this->txBufferCount &&
             ERa.connected()) {
-            this->txBufferCount = ERaMin(this->txBufferCount, sizeof(this->txBuffer));
             this->txBuffer[this->txBufferCount] = '\0';
             ERa.virtualWrite(this->toPin, (char*)this->txBuffer, true);
             this->txBufferCount = 0;
@@ -139,7 +138,7 @@ private:
     uint8_t toPin;
 
     ERaQueue<uint8_t, ERA_TERMINAL_INPUT_BUFFER_SIZE> rxBuffer;
-    uint8_t txBuffer[ERA_TERMINAL_OUTPUT_BUFFER_SIZE];
+    uint8_t txBuffer[ERA_TERMINAL_OUTPUT_BUFFER_SIZE + 1];
     size_t txBufferCount;
 };
 

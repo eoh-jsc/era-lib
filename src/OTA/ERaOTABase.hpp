@@ -45,8 +45,8 @@ protected:
                 const char* hash = nullptr,
                 const char* type = nullptr,
                 size_t downSize = ERA_OTA_BUFFER_SIZE,
-                cJSON* root = nullptr) {
-        if (url == nullptr) {
+                const cJSON* info = nullptr) {
+        if ((url == nullptr) || !strlen(url)) {
             url = ERaOTAHelper::createUrl(this->thisProto().getAuth());
         }
 
@@ -109,7 +109,7 @@ protected:
         ERaWatchdogFeed();
 
         if ((this->pHandler != nullptr) &&
-            this->pHandler->begin(client, contentLength, hash, type, downSize)) {
+            this->pHandler->begin(client, contentLength, hash, type, downSize, info)) {
             return client->stop();
         }
 
@@ -216,7 +216,7 @@ protected:
         ERaDelay(1000);
         ERaRestart(true);
         ERA_FORCE_UNUSED(hash);
-        ERA_FORCE_UNUSED(root);
+        ERA_FORCE_UNUSED(info);
     }
 
 private:

@@ -299,6 +299,10 @@ public:
             CopyToArray(password, ERaConfig.password);
             ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_VALID, true);
         }
+        else {
+            this->config(ERaConfig.token, ERaConfig.host, ERaConfig.port,
+                         ERaConfig.username, ERaConfig.password);
+        }
 
         this->connectNetwork(ERaConfig.ssid, ERaConfig.pass);
         if (this->netConnected()) {
@@ -650,10 +654,6 @@ void ERaPnP<Transport>::configApi() {
         if (token.length()) {
             CopyToArray(token, ERaConfig.token);
         }
-        else if (!strlen(ERaConfig.token) ||
-                ERaStrCmp(ERaConfig.token, ERaDefault.token)) {
-            CopyToArray(imei, ERaConfig.token);
-        }
         if (host.length()) {
             CopyToArray(host, ERaConfig.host);
         }
@@ -663,20 +663,14 @@ void ERaPnP<Transport>::configApi() {
         if (username.length()) {
             CopyToArray(username, ERaConfig.username);
         }
-        else if (!ERaStrCmp(ERaConfig.token, ERaDefault.token)) {
-            CopyToArray(ERaConfig.token, ERaConfig.username);
-        }
         else {
-            CopyToArray(imei, ERaConfig.username);
+            CopyToArray(ERaConfig.token, ERaConfig.username);
         }
         if (password.length()) {
             CopyToArray(password, ERaConfig.password);
         }
-        else if (!ERaStrCmp(ERaConfig.token, ERaDefault.token)) {
-            CopyToArray(ERaConfig.token, ERaConfig.password);
-        }
         else {
-            CopyToArray(imei, ERaConfig.password);
+            CopyToArray(ERaConfig.token, ERaConfig.password);
         }
 
         content = ERA_F(R"json({"status":"ok","message":"Connecting wifi..."})json");
@@ -699,12 +693,6 @@ void ERaPnP<Transport>::configApi() {
 
         if (token.length()) {
             CopyToArray(token, ERaConfig.token);
-        }
-        else if (!strlen(ERaConfig.token) ||
-                ERaStrCmp(ERaConfig.token, ERaDefault.token)) {
-            CopyToArray(imei, ERaConfig.token);
-        }
-        if (!ERaStrCmp(ERaConfig.token, ERaDefault.token)) {
             CopyToArray(ERaConfig.token, ERaConfig.username);
             CopyToArray(ERaConfig.token, ERaConfig.password);
         }
@@ -1008,10 +996,6 @@ void ERaPnP<Transport>::runServer(String& networks) {
                         if (token.length()) {
                             CopyToArray(token, ERaConfig.token);
                         }
-                        else if (!strlen(ERaConfig.token) ||
-                                ERaStrCmp(ERaConfig.token, ERaDefault.token)) {
-                            CopyToArray(imei, ERaConfig.token);
-                        }
                         if (host.length()) {
                             CopyToArray(host, ERaConfig.host);
                         }
@@ -1021,20 +1005,14 @@ void ERaPnP<Transport>::runServer(String& networks) {
                         if (username.length()) {
                             CopyToArray(username, ERaConfig.username);
                         }
-                        else if (!ERaStrCmp(ERaConfig.token, ERaDefault.token)) {
-                            CopyToArray(ERaConfig.token, ERaConfig.username);
-                        }
                         else {
-                            CopyToArray(imei, ERaConfig.username);
+                            CopyToArray(ERaConfig.token, ERaConfig.username);
                         }
                         if (password.length()) {
                             CopyToArray(password, ERaConfig.password);
                         }
-                        else if (!ERaStrCmp(ERaConfig.token, ERaDefault.token)) {
-                            CopyToArray(ERaConfig.token, ERaConfig.password);
-                        }
                         else {
-                            CopyToArray(imei, ERaConfig.password);
+                            CopyToArray(ERaConfig.token, ERaConfig.password);
                         }
 
                         contentType = "application/json";
@@ -1243,25 +1221,25 @@ void ERaPnP<Transport>::addEncryptionType(uint8_t networkItem, cJSON* const item
             cJSON_AddStringToObject(item, "encryption", "WEP");
             break;
         case TinyWiFiEncTypeT::WIFI_ENC_TYPE_WPA_PSK:
-            cJSON_AddStringToObject(item, "encryption", "WPA");
+            cJSON_AddStringToObject(item, "encryption", "WPA/PSK");
             break;
         case TinyWiFiEncTypeT::WIFI_ENC_TYPE_WPA2_PSK:
-            cJSON_AddStringToObject(item, "encryption", "WPA2");
+            cJSON_AddStringToObject(item, "encryption", "WPA2/PSK");
             break;
         case TinyWiFiEncTypeT::WIFI_ENC_TYPE_WPA_WPA2_PSK:
-            cJSON_AddStringToObject(item, "encryption", "WPA/WPA2");
+            cJSON_AddStringToObject(item, "encryption", "WPA/WPA2/PSK");
             break;
         case TinyWiFiEncTypeT::WIFI_ENC_TYPE_WPA2_ENTERPRISE:
             cJSON_AddStringToObject(item, "encryption", "WPA2/ENTERPRISE");
             break;
         case TinyWiFiEncTypeT::WIFI_ENC_TYPE_WPA3_PSK:
-            cJSON_AddStringToObject(item, "encryption", "WPA3");
+            cJSON_AddStringToObject(item, "encryption", "WPA3/PSK");
             break;
         case TinyWiFiEncTypeT::WIFI_ENC_TYPE_WPA2_WPA3_PSK:
-            cJSON_AddStringToObject(item, "encryption", "WPA2/WPA3");
+            cJSON_AddStringToObject(item, "encryption", "WPA2/WPA3/PSK");
             break;
         case TinyWiFiEncTypeT::WIFI_ENC_TYPE_WAPI_PSK:
-            cJSON_AddStringToObject(item, "encryption", "WAPI");
+            cJSON_AddStringToObject(item, "encryption", "WAPI/PSK");
             break;
         default:
             cJSON_AddStringToObject(item, "encryption", "unknown");

@@ -230,6 +230,8 @@ protected:
     ResultT moveToLevelWithOnOffGenLevelCtrl(AFAddrType_t& dstAddr, uint8_t level, uint16_t transtime);
     ResultT stopWithOnOffGenLevelCtrl(AFAddrType_t& dstAddr);
 
+    ResultT enrollResponseIASZone(AFAddrType_t& dstAddr, uint8_t enrollRspCode, uint8_t zoneId);
+
 private:
     inline
     const ToZigbee& thisToZigbee() const {
@@ -304,5 +306,6 @@ ResultT ERaCommandZigbee<ToZigbee>::permitJoinRequest(AFAddrType_t& dstAddr, uin
 #include "cmdZigbee/ERaCmdBasic.hpp"
 #include "cmdZigbee/ERaCmdLevel.hpp"
 #include "cmdZigbee/ERaCmdOnOff.hpp"
+#include "cmdZigbee/ERaCmdIASZone.hpp"
 
 #endif /* INC_ERA_COMMAND_ZIGBEE_HPP_ */

@@ -71,6 +71,10 @@
         ERaOs::osDelay(ms);
     }
 
+    void ERaDelayUs(MillisTime_t us) {
+        delayMicroseconds(us);
+    }
+
     uint32_t ERaRandomNumber(uint32_t min, uint32_t max) {
         if (!max) {
             return 0;
@@ -183,6 +187,10 @@
     void ERaDelay(MillisTime_t ms) {
         ESP8266_YIELD_FIX(ms)
         delay(ms);
+    }
+
+    void ERaDelayUs(MillisTime_t us) {
+        delayMicroseconds(us);
     }
 
     uint32_t ERaRandomNumber(uint32_t min, uint32_t max) {
@@ -352,6 +360,10 @@
     void ERaDelay(MillisTime_t ms) {
         ERaOs::osDelay(ms);
     }
+
+    void ERaDelayUs(MillisTime_t us) {
+        delayMicroseconds(us);
+    }
 #else
     #define ERA_USE_DEFAULT_DELAY
 #endif
@@ -448,6 +460,10 @@
         ERaOs::osDelay(ms);
     }
 
+    void ERaDelayUs(MillisTime_t us) {
+        delayMicroseconds(us);
+    }
+
     uint32_t ERaRandomNumber(uint32_t min, uint32_t max) {
         if (!max) {
             return 0;
@@ -521,6 +537,10 @@
 #if defined(ERA_HAS_RTOS) && !defined(ERA_NO_RTOS)
     void ERaDelay(MillisTime_t ms) {
         ERaOs::osDelay(ms);
+    }
+
+    void ERaDelayUs(MillisTime_t us) {
+        delayMicroseconds(us);
     }
 #else
     #define ERA_USE_DEFAULT_DELAY
@@ -617,6 +637,10 @@
     void ERaDelay(MillisTime_t ms) {
         ERaOs::osDelay(ms);
     }
+
+    void ERaDelayUs(MillisTime_t us) {
+        delayMicroseconds(us);
+    }
 #else
     #define ERA_USE_DEFAULT_DELAY
 #endif
@@ -711,6 +735,10 @@
     }
 #endif
 
+    void ERaDelayUs(MillisTime_t us) {
+        delayMicroseconds(us);
+    }
+
     uint32_t ERaRandomNumber(uint32_t min, uint32_t max) {
         if (!max) {
             return 0;
@@ -777,7 +805,7 @@
         while (1) {}
     }
 
-#ifndef NO_RTOS
+#if !defined(ERA_NO_RTOS)
     void ERaGuardLockFn(ERaMutex_t& mutex) {
         if (mutex == nullptr) {
             mutex = new(std::nothrow) Semaphore(1);
@@ -915,19 +943,25 @@
         eraMillisTimer.start();
     }
 
+#if defined(ERA_NO_RTOS)
     void ERaDelay(MillisTime_t ms) {
-#ifndef NO_RTOS
-        ThisThread::sleep_for(ms);
-#else
         wait_us(ms * 1000);
+    }
+#else
+    void ERaDelay(MillisTime_t ms) {
+        ThisThread::sleep_for(ms);
+    }
 #endif
+
+    void ERaDelayUs(MillisTime_t us) {
+        wait_us(us);
     }
 
     MillisTime_t ERaMillis() {
         return eraMillisTimer.read_ms();
     }
 
-#ifndef NO_RTOS
+#if !defined(ERA_NO_RTOS)
     void ERaGuardLockFn(ERaMutex_t& mutex) {
         if (mutex == nullptr) {
             mutex = new(std::nothrow) Semaphore(1);
@@ -1034,6 +1068,10 @@
         usleep(ms * 1000);
     }
 
+    void ERaDelayUs(MillisTime_t us) {
+        usleep(us);
+    }
+
     MillisTime_t ERaMillis() {
         struct timespec ts;
         clock_gettime(CLOCK_MONOTONIC, &ts);
@@ -1093,6 +1131,10 @@
 #if defined(ERA_USE_DEFAULT_DELAY)
     void ERaDelay(MillisTime_t ms) {
         delay(ms);
+    }
+
+    void ERaDelayUs(MillisTime_t us) {
+        delayMicroseconds(us);
     }
 #endif
 
@@ -1259,12 +1301,113 @@ bool ERaIsSpN(double value) {
     return (isnan(value) || isinf(value));
 }
 
+#define white_space(c) ((c) == ' ' || (c) == '\t')
+#define valid_digit(c) ((c) >= '0' && (c) <= '9')
+
+double ERaAtof(const char* str) {
+    int frac;
+    double sign, value, scale;
+
+    while (white_space(*str)) {
+        str += 1;
+    }
+
+    sign = 1.0;
+    if (*str == '-') {
+        sign = -1.0;
+        str += 1;
+    }
+    else if (*str == '+') {
+        str += 1;
+    }
+
+    for (value = 0.0; valid_digit(*str); str += 1) {
+        value = value * 10.0 + (*str - '0');
+    }
+
+    if (*str == '.') {
+        double pow10 = 10.0;
+        str += 1;
+        while (valid_digit(*str)) {
+            value += (*str - '0') / pow10;
+            pow10 *= 10.0;
+            str += 1;
+        }
+    }
+
+    frac = 0;
+    scale = 1.0;
+    if ((*str == 'e') || (*str == 'E')) {
+        unsigned int expon;
+
+        str += 1;
+        if (*str == '-') {
+            frac = 1;
+            str += 1;
+
+        }
+        else if (*str == '+') {
+            str += 1;
+        }
+
+        for (expon = 0; valid_digit(*str); str += 1) {
+            expon = expon * 10 + (*str - '0');
+        }
+        if (expon > 308) { expon = 308; }
+
+        while (expon >= 50) { scale *= 1E50; expon -= 50; }
+        while (expon >=  8) { scale *= 1E8;  expon -=  8; }
+        while (expon >   0) { scale *= 10.0; expon -=  1; }
+    }
+
+    return (sign * (frac ? (value / scale) : (value * scale)));
+}
+
 long long ERaAtoll(const char* str) {
     long long value {0};
     for (; *str; str++) {
         value = ((10 * value) + (*str - '0'));
     }
     return value;
+}
+
+char* ERaLltoa(long long value, char* buf, unsigned bufLen, int base) {
+    int i = (bufLen - 2);
+    int sign = (value < 0);
+    buf[bufLen - 1] = '\0';
+
+    if (value == 0) {
+        buf[i] = '0';
+        return &buf[i];
+    }
+
+    unsigned long long absval = (sign ? (-value) : value);
+
+    for (; absval && i; --i, absval /= base) {
+        buf[i] = "0123456789abcdef"[absval % base];
+    }
+
+    if (sign) {
+        buf[i--] = '-';
+    }
+
+    return &buf[i + 1];
+}
+
+char* ERaUlltoa(unsigned long long value, char* buf, unsigned bufLen, int base) {
+    int i = (bufLen - 2);
+    buf[bufLen - 1] = '\0';
+
+    if (value == 0) {
+        buf[i] = '0';
+        return &buf[i];
+    }
+
+    for (; value && i; --i, value /= base) {
+        buf[i] = "0123456789abcdef"[value % base];
+    }
+
+    return &buf[i + 1];
 }
 
 char* ERaDtostrf(double number, int decimal, char* str) {

@@ -107,14 +107,24 @@
     #define V99 99
 #endif
 
+typedef enum
+    : uint8_t {
+    ERA_PIN_CONFIG = 0x00,
+    ERA_MODBUS_CONFIG = 0x01,
+    ERA_MODBUS_CONTROL = 0x02,
+    ERA_BLUETOOTH_CONFIG = 0x03,
+    ERA_ZIGBEE_CONFIG = 0x04
+} ERaConfigTypeT;
+
 #define ERA_CONNECTED()             void ERaOnConnected()
 #define ERA_DISCONNECTED()          void ERaOnDisconnected()
 #define ERA_WAITING()               void ERaOnWaiting()
 #define ERA_APP_LOOP()              void ERaAppLoop()
 #define ERA_OPTION_CONNECTED()      void ERaOptConnected(void ERA_UNUSED *arg)
 #define ERA_MODBUS_BAUDRATE()       void ERaModbusBaudrate(uint32_t ERA_UNUSED &baudrate)
-#define ERA_INFO()                  void ERaInfo(cJSON ERA_UNUSED *root)
 #define ERA_MODBUS_INFO()           void ERaModbusInfo(cJSON ERA_UNUSED *root)
+#define ERA_INFO()                  void ERaInfo(cJSON ERA_UNUSED *root)
+#define ERA_WRITE_CONFIG()          void ERaWriteConfig(uint8_t ERA_UNUSED type)
 
 #define ERA_WRITE_2(Pin)            void ERaWidgetWrite ## Pin (uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param)
 #define ERA_WRITE(Pin)              ERA_WRITE_2(Pin)
@@ -142,6 +152,7 @@ void ERaNoHandler();
 void ERaNoInfo(cJSON ERA_UNUSED *root);
 void ERaNoOptConnected(void ERA_UNUSED *arg);
 void ERaNoModbusBaudrate(uint32_t ERA_UNUSED &baudrate);
+void ERaNoWriteConfig(uint8_t ERA_UNUSED type);
 
 ERA_CONNECTED();
 ERA_DISCONNECTED();
@@ -149,8 +160,9 @@ ERA_WAITING();
 ERA_APP_LOOP();
 ERA_OPTION_CONNECTED();
 ERA_MODBUS_BAUDRATE();
-ERA_INFO();
 ERA_MODBUS_INFO();
+ERA_INFO();
+ERA_WRITE_CONFIG();
 
 ERA_WRITE_DEFAULT();
 ERA_PIN_READ_DEFAULT();

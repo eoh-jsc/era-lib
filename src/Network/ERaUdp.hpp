@@ -77,13 +77,16 @@ public:
     }
 
     ERaString arg(const char* name) {
-        if (cJSON_IsString(this->dataObject)) {
+        if (cJSON_IsString(this->dataObject) &&
+            this->matchArg(this->dataObject, name)) {
             return this->dataObject->valuestring;
         }
-        else if (cJSON_IsNumber(this->dataObject)) {
+        else if (cJSON_IsNumber(this->dataObject) &&
+            this->matchArg(this->dataObject, name)) {
             return this->dataObject->valuedouble;
         }
-        else if (cJSON_IsBool(this->dataObject)) {
+        else if (cJSON_IsBool(this->dataObject) &&
+            this->matchArg(this->dataObject, name)) {
             return this->dataObject->valueint;
         }
         else if (!cJSON_IsObject(this->dataObject)) {
@@ -152,6 +155,7 @@ private:
     void parseBuffer(const char* ptr, bool* status = nullptr);
     void runCommand(const char* cmd);
     void runCommand(const char* cmd, const ERaCmdHandler* handler);
+    bool matchArg(const cJSON* item, const char* name);
 
     template <int size>
     void getWiFiName(char(&ptr)[size], bool withPrefix = true);
@@ -287,6 +291,15 @@ void ERaUdp<Udp>::sendBoardInfo(unsigned long timeout) {
     cJSON_Delete(root);
     root = nullptr;
     ptr = nullptr;
+}
+
+template <class Udp>
+bool ERaUdp<Udp>::matchArg(const cJSON* item, const char* name) {
+    if ((item == nullptr) || (item->string == nullptr) || (name == nullptr)) {
+        return false;
+    }
+
+    return ERaStrCmp(item->string, name);
 }
 
 #endif /* INC_ERA_UDP_HPP_ */

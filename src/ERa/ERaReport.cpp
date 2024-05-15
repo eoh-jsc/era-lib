@@ -413,8 +413,8 @@ void ERaReport::setScale(Report_t* pReport, float min, float max, float rawMin, 
     if (!this->isValidReport(pReport)) {
         return;
     }
-    if ((max == 0) || (rawMax == 0) ||
-        (max <= min) || (rawMax <= rawMin)) {
+    if (ERaFloatCompare(min, max) ||
+        ERaFloatCompare(rawMin, rawMax)) {
         pReport->data.scale.enable = false;
         return;
     }
@@ -424,8 +424,14 @@ void ERaReport::setScale(Report_t* pReport, float min, float max, float rawMin, 
     pReport->data.scale.max = max;
     pReport->data.scale.rawMin = rawMin;
     pReport->data.scale.rawMax = rawMax;
+
+    /*
+    pReport->reportableChange = ERaMapNumberRange(pReport->reportableChange,
+                                        0.0f, max - min, 0.0f, rawMax - rawMin);
+
     pReport->reportableChange = ERaMapNumberRange(pReport->reportableChange,
                                         0.0f, rawMax - rawMin, 0.0f, max - min);
+    */
 }
 
 void ERaReport::enableAll() {
@@ -454,6 +460,51 @@ ERaReport::ScaleData_t* ERaReport::getScale(Report_t* pReport) const {
     }
     else {
         return nullptr;
+    }
+}
+
+float ERaReport::getScaleMin(Report_t* pReport) const {
+    if (this->isValidReport(pReport)) {
+        return pReport->data.scale.min;
+    }
+    else {
+        return 0.0f;
+    }
+}
+
+float ERaReport::getScaleMax(Report_t* pReport) const {
+    if (this->isValidReport(pReport)) {
+        return pReport->data.scale.max;
+    }
+    else {
+        return 0.0f;
+    }
+}
+
+float ERaReport::getScaleRawMin(Report_t* pReport) const {
+    if (this->isValidReport(pReport)) {
+        return pReport->data.scale.rawMin;
+    }
+    else {
+        return 0.0f;
+    }
+}
+
+float ERaReport::getScaleRawMax(Report_t* pReport) const {
+    if (this->isValidReport(pReport)) {
+        return pReport->data.scale.rawMax;
+    }
+    else {
+        return 0.0f;
+    }
+}
+
+float ERaReport::getReportableChange(Report_t* pReport) const {
+    if (this->isValidReport(pReport)) {
+        return pReport->reportableChange;
+    }
+    else {
+        return 0.0f;
     }
 }
 

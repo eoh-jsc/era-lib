@@ -231,6 +231,41 @@ public:
             return this->rp->getScale(this->pRp);
         }
 
+        float getScaleMin() const {
+            if (!this->isValid()) {
+                return 0.0f;
+            }
+            return this->rp->getScaleMin(this->pRp);
+        }
+
+        float getScaleMax() const {
+            if (!this->isValid()) {
+                return 0.0f;
+            }
+            return this->rp->getScaleMax(this->pRp);
+        }
+
+        float getScaleRawMin() const {
+            if (!this->isValid()) {
+                return 0.0f;
+            }
+            return this->rp->getScaleRawMin(this->pRp);
+        }
+
+        float getScaleRawMax() const {
+            if (!this->isValid()) {
+                return 0.0f;
+            }
+            return this->rp->getScaleRawMax(this->pRp);
+        }
+
+        float getReportableChange() const {
+            if (!this->isValid()) {
+                return 0.0f;
+            }
+            return this->rp->getReportableChange(this->pRp);
+        }
+
         void deleteReport() {
             if (!this->isValid()) {
                 return;
@@ -313,6 +348,11 @@ public:
     void disableAll();
 
     ERaReport::ScaleData_t* getScale(Report_t* pReport) const;
+    float getScaleMin(Report_t* pReport) const;
+    float getScaleMax(Report_t* pReport) const;
+    float getScaleRawMin(Report_t* pReport) const;
+    float getScaleRawMax(Report_t* pReport) const;
+    float getReportableChange(Report_t* pReport) const;
 
 protected:
 private:

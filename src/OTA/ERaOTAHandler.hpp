@@ -18,15 +18,17 @@ public:
     {}
 
     bool begin(Client* client, int contentLength, const char* hash,
-                const char* type, size_t downSize = ERA_OTA_BUFFER_SIZE) {
+                const char* type, size_t downSize = ERA_OTA_BUFFER_SIZE,
+                const cJSON* info = nullptr) {
         if (client == nullptr) {
             return false;
         }
-        return this->begin(*client, contentLength, hash, type, downSize);
+        return this->begin(*client, contentLength, hash, type, downSize, info);
     }
 
     virtual bool begin(Client& client, int contentLength, const char* hash,
-                        const char* type, size_t downSize = ERA_OTA_BUFFER_SIZE) = 0;
+                        const char* type, size_t downSize = ERA_OTA_BUFFER_SIZE,
+                        const cJSON* info = nullptr) = 0;
 
 protected:
     uint32_t calcCRC32(const void* data, size_t length, uint32_t previousCrc32 = 0) {

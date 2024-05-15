@@ -2,6 +2,7 @@
 #define INC_ERA_API_ESP32_HPP_
 
 #include <ERa/ERaApi.hpp>
+#include <ERa/ERaApiConfig.hpp>
 
 #ifndef SOC_ADC_MAX_CHANNEL_NUM
     #define SOC_ADC_MAX_CHANNEL_NUM         (10)
@@ -71,11 +72,9 @@ void ERaApi<Proto, Flash>::handleReadPin(cJSON* root) {
             }
             else if (ERaStrCmp(item->valuestring, "boolean")) {
                 this->getPinConfig(current, pin);
+                this->getScaleConfig(current, pin);
                 pinMode(pin.pin, pin.pinMode);
-                this->ERaPinRp.setPinReport(pin.pin, pin.pinMode, digitalReadEsp32,
-                                            pin.report.interval, pin.report.minInterval,
-                                            pin.report.maxInterval, pin.report.reportableChange,
-                                            this->reportPinConfigCb, pin.configId);
+                ERA_SET_PIN_REPORT(pin.pinMode, digitalReadEsp32);
             }
             else if (ERaStrCmp(item->valuestring, "integer")) {
                 pin.report = PinConfig_t::__ReportConfig_t(1000, 1000, 60000, 10.0f);
@@ -84,11 +83,7 @@ void ERaApi<Proto, Flash>::handleReadPin(cJSON* root) {
                 uint8_t adcUnit = (digitalPinToAnalogChannel(pin.pin) / SOC_ADC_MAX_CHANNEL_NUM);
                 if (adcUnit == 0) {
                     pinMode(pin.pin, ANALOG);
-                    this->ERaPinRp.setPinReport(pin.pin, ANALOG, analogReadEsp32,
-                                                pin.report.interval, pin.report.minInterval,
-                                                pin.report.maxInterval, pin.report.reportableChange,
-                                                this->reportPinConfigCb, pin.configId).setScale(pin.scale.min,
-                                                pin.scale.max, pin.scale.rawMin, pin.scale.rawMax);
+                    ERA_SET_PIN_REPORT(ANALOG, analogReadEsp32);
                 }
             }
             else if (ERaStrCmp(item->valuestring, "virtual")) {
@@ -140,11 +135,9 @@ void ERaApi<Proto, Flash>::handleWritePin(cJSON* root) {
             }
             else if (ERaStrCmp(item->valuestring, "boolean")) {
                 this->getPinConfig(current, pin);
+                this->getScaleConfig(current, pin);
                 pinMode(pin.pin, pin.pinMode);
-                this->ERaPinRp.setPinReport(pin.pin, pin.pinMode, digitalReadEsp32,
-                                            pin.report.interval, pin.report.minInterval,
-                                            pin.report.maxInterval, pin.report.reportableChange,
-                                            this->reportPinConfigCb, pin.configId);
+                ERA_SET_PIN_REPORT(pin.pinMode, digitalReadEsp32);
             }
             else if (ERaStrCmp(item->valuestring, "integer")) {
                 pin.pwm.channel = this->ERaPinRp.findChannelFree();
@@ -154,20 +147,12 @@ void ERaApi<Proto, Flash>::handleWritePin(cJSON* root) {
 #if (ESP_IDF_VERSION_MAJOR > 4)
                     ledcDetach(pin.pin);
                     ledcAttach(pin.pin, pin.pwm.frequency, pin.pwm.resolution);
-                    this->ERaPinRp.setPinReport(pin.pin, PWM, ledcReadEsp32,
-                                                pin.report.interval, pin.report.minInterval,
-                                                pin.report.maxInterval, pin.report.reportableChange,
-                                                this->reportPinConfigCb, pin.configId).setScale(pin.scale.min,
-                                                pin.scale.max, pin.scale.rawMin, pin.scale.rawMax);
+                    ERA_SET_PIN_REPORT(PWM, ledcReadEsp32);
 #else
                     ledcDetachPin(pin.pin);
                     ledcAttachPin(pin.pin, pin.pwm.channel);
                     ledcSetup(pin.pwm.channel, pin.pwm.frequency, pin.pwm.resolution);
-                    this->ERaPinRp.setPWMPinReport(pin.pin, PWM, pin.pwm.channel, ledcReadEsp32,
-                                                    pin.report.interval, pin.report.minInterval,
-                                                    pin.report.maxInterval, pin.report.reportableChange,
-                                                    this->reportPinConfigCb, pin.configId).setScale(pin.scale.min,
-                                                    pin.scale.max, pin.scale.rawMin, pin.scale.rawMax);
+                    ERA_SET_PWM_REPORT(PWM, ledcReadEsp32);
 #endif
                 }
             }
@@ -211,7 +196,6 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const ERaDataBuff& arrayTopi
             value = ERaMapNumberRange((float)item->valuedouble, scale->min, scale->max, scale->rawMin, scale->rawMax);
         }
         switch (pMode) {
-            case RAW_PIN:
             case VIRTUAL:
             case ERA_VIRTUAL:
                 break;
@@ -305,49 +289,31 @@ void ERaApi<Proto, Flash>::handlePinRequest(const ERaDataBuff& arrayTopic, const
 #if (ESP_IDF_VERSION_MAJOR > 4)
                 ledcDetach(pin.pin);
                 ledcAttach(pin.pin, pin.pwm.frequency, pin.pwm.resolution);
-                this->ERaPinRp.setPinReport(pin.pin, PWM, ledcReadEsp32,
-                                            pin.report.interval, pin.report.minInterval,
-                                            pin.report.maxInterval, pin.report.reportableChange,
-                                            this->reportPinCb);
+                ERA_SET_DEBUG_PIN_REPORT(PWM, ledcReadEsp32);
 #else
                 ledcDetachPin(pin.pin);
                 ledcAttachPin(pin.pin, pin.pwm.channel);
                 ledcSetup(pin.pwm.channel, pin.pwm.frequency, pin.pwm.resolution);
-                this->ERaPinRp.setPWMPinReport(pin.pin, PWM, pin.pwm.channel, ledcReadEsp32,
-                                                pin.report.interval, pin.report.minInterval,
-                                                pin.report.maxInterval, pin.report.reportableChange,
-                                                this->reportPinCb);
+                ERA_SET_DEBUG_PWM_REPORT(PWM, ledcReadEsp32);
 #endif
             }
             else if (ERaStrCmp(current->valuestring, "input")) {
                 pinMode(pin.pin, INPUT);
-                this->ERaPinRp.setPinReport(pin.pin, INPUT, digitalReadEsp32,
-                                            pin.report.interval, pin.report.minInterval,
-                                            pin.report.maxInterval, pin.report.reportableChange,
-                                            this->reportPinCb);
+                ERA_SET_DEBUG_PIN_REPORT(INPUT, digitalReadEsp32);
             }
             else if (ERaStrCmp(current->valuestring, "pullup")) {
                 pinMode(pin.pin, INPUT_PULLUP);
-                this->ERaPinRp.setPinReport(pin.pin, INPUT_PULLUP, digitalReadEsp32,
-                                            pin.report.interval, pin.report.minInterval,
-                                            pin.report.maxInterval, pin.report.reportableChange,
-                                            this->reportPinCb);
+                ERA_SET_DEBUG_PIN_REPORT(INPUT_PULLUP, digitalReadEsp32);
             }
             else if (ERaStrCmp(current->valuestring, "pulldown")) {
                 pinMode(pin.pin, INPUT_PULLDOWN);
-                this->ERaPinRp.setPinReport(pin.pin, INPUT_PULLDOWN, digitalReadEsp32,
-                                            pin.report.interval, pin.report.minInterval,
-                                            pin.report.maxInterval, pin.report.reportableChange,
-                                            this->reportPinCb);
+                ERA_SET_DEBUG_PIN_REPORT(INPUT_PULLDOWN, digitalReadEsp32);
             }
             else if (ERaStrCmp(current->valuestring, "analog")) {
                 uint8_t adcUnit = (digitalPinToAnalogChannel(pin.pin) / SOC_ADC_MAX_CHANNEL_NUM);
                 if (adcUnit == 0) {
                     pinMode(pin.pin, ANALOG);
-                    this->ERaPinRp.setPinReport(pin.pin, ANALOG, analogReadEsp32,
-                                                pin.report.interval, pin.report.minInterval,
-                                                pin.report.maxInterval, pin.report.reportableChange,
-                                                this->reportPinCb);
+                    ERA_SET_DEBUG_PIN_REPORT(ANALOG, analogReadEsp32);
                 }
             }
             else if (ERaStrCmp(current->valuestring, "remove")) {

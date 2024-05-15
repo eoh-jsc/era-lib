@@ -38,14 +38,23 @@ protected:
                 const char* hash = nullptr,
                 const char* type = nullptr,
                 size_t downSize = ERA_OTA_BUFFER_SIZE,
-                cJSON* root = nullptr) {
-        if (url == nullptr) {
+                const cJSON* info = nullptr) {
+        if ((url == nullptr) || !strlen(url)) {
             url = ERaOTAHelper::createUrl(this->thisProto().getAuth());
         }
 
         ERaWatchdogFeed();
 
         this->thisProto().getTransp().disconnect();
+
+        ERaWatchdogFeed();
+
+        if (this->rollback(type, info)) {
+            return;
+        }
+
+        ERaWatchdogFeed();
+
         ERA_LOG(TAG, ERA_PSTR("Firmware update URL: %s"), url);
 
         int httpCode {0};
@@ -87,7 +96,7 @@ protected:
         ERaWatchdogFeed();
 
         if ((this->pHandler != nullptr) &&
-            this->pHandler->begin(client, contentLength, hash, type, downSize)) {
+            this->pHandler->begin(client, contentLength, hash, type, downSize, info)) {
             return http.end();
         }
 
@@ -154,10 +163,24 @@ protected:
         ERA_LOG(TAG, ERA_PSTR("Update successfully. Rebooting!"));
         ERaDelay(1000);
         ERaRestart(true);
-        ERA_FORCE_UNUSED(root);
+        ERA_FORCE_UNUSED(info);
     }
 
 private:
+    bool rollback(const char* type, const cJSON* info) {
+        if ((type == nullptr) || !ERaStrCmp(type, "rollback")) {
+            return false;
+        }
+
+        bool status = Update.canRollBack();
+        if (status) {
+            status = Update.rollBack();
+        }
+        ERA_LOG(TAG, ERA_PSTR("Firmware rollback: %s"), (status ? "OK" : "Failed"));
+        ERA_FORCE_UNUSED(info);
+        return true;
+    }
+
     inline
     const Proto& thisProto() const {
         return static_cast<const Proto&>(*this);

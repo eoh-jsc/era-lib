@@ -329,18 +329,19 @@ protected:
     bool run() {
         ERA_RUN_YIELD();
 
-#if !defined(ERA_NO_RTOS)
         if (!this->isTaskRunning()) {
             this->handlerAPI(true);
         }
-#else
-        this->handlerAPI(true);
-#endif
 
         ERaWatchdogFeed();
 
+        if (this->enableAppLoop) {
+            ERaAppLoop();
+        }
 #if defined(ERA_NO_RTOS)
-        ERaOnWaiting();
+        else {
+            ERaOnWaiting();
+        }
 #endif
 
         ERaWatchdogFeed();

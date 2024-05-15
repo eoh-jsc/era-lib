@@ -203,7 +203,7 @@
         uint16_t address = atof(filename);
         do {
             buf[index] = EEPROM.read(address + index);
-        } while(--size && ++index);
+        } while (--size && ++index);
         return buf;
     #else
         this->setPosition(0);
@@ -432,10 +432,11 @@
                     return true;
                 }
                 if (buffer != nullptr) {
-                    buffer[index++] = ch;
+                    buffer[index] = ch;
                     if (index >= size) {
                         break;
                     }
+                    index++;
                 }
             }
             if (buffer != nullptr) {

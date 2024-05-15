@@ -97,7 +97,8 @@ public:
 
     static const char* make() {
         static ERaUUID uuid;
-        uuid.seed(ERaRandomNumber(0, ERA_UUID_SEED_MAX), ERaFreeRam());
+        uuid.seed(ERaRandomNumber(0, ERA_UUID_SEED_MAX),
+                  ERaFreeRam() + ERaMillis());
         uuid.generate();
         return uuid.toCharArray();
     }

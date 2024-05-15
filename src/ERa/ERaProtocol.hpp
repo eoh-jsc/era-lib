@@ -1,9 +1,10 @@
 #ifndef INC_ERA_PROTOCOL_HPP_
 #define INC_ERA_PROTOCOL_HPP_
 
-#if defined(__has_include) &&   \
-    __has_include("ERaOptions.hpp")
-    #include "ERaOptions.hpp"
+#if defined(__has_include)
+    #if __has_include("ERaOptions.hpp")
+        #include "ERaOptions.hpp"
+    #endif
 #endif
 
 #if defined(ARDUINO_ARCH_SAM)
@@ -219,6 +220,11 @@ public:
         return this->transp;
     }
 
+    void disconnect() {
+        this->transp.disconnect();
+        this->onDisconnected();
+    }
+
     bool connected() override {
         return (this->_connected && this->transp.connected());
     }
@@ -296,10 +302,6 @@ private:
 #endif
 
     size_t splitString(char* strInput, const char* delims);
-
-    void disconnect() {
-        this->transp.disconnect();
-    }
 
     void onWrite(const char* topic, const char* payload) override {
         this->processRequest(topic, payload);
@@ -534,7 +536,7 @@ bool ERaProto<Transp, Flash>::processActionChip(const char* payload, cJSON* root
     switch (type) {
 #if defined(ERA_OTA)
         case ERaChipCfgT::CHIP_OTA: {
-            cJSON* device = nullptr;
+            cJSON* info = nullptr;
             const char* otaType = nullptr;
             size_t downSize = ERA_OTA_BUFFER_SIZE;
             item = cJSON_GetObjectItem(dataItem, "type");
@@ -546,16 +548,17 @@ bool ERaProto<Transp, Flash>::processActionChip(const char* payload, cJSON* root
                 hash = item->valuestring;
             }
             item = cJSON_GetObjectItem(dataItem, "down_size");
-            if (cJSON_IsNumber(item)) {
+            if (cJSON_IsNumber(item) &&
+                (item->valueint > 0)) {
                 downSize = item->valueint;
             }
-            item = cJSON_GetObjectItem(dataItem, "device");
+            item = cJSON_GetObjectItem(dataItem, "info");
             if (cJSON_IsObject(item)) {
-                device = item;
+                info = item;
             }
             item = cJSON_GetObjectItem(dataItem, "url");
             if (cJSON_IsString(item)) {
-                OTA::begin(item->valuestring, hash, otaType, downSize, device);
+                OTA::begin(item->valuestring, hash, otaType, downSize, info);
             }
         }
             break;
@@ -666,6 +669,7 @@ void ERaProto<Transp, Flash>::processConfiguration(const char* payload, const ch
         if (Base::getPinRp().updateHashID(hash)) {
             Base::Property::updateProperty(Base::getPinRp());
             Base::storePinConfig(payload);
+            ERaWriteConfig(ERaConfigTypeT::ERA_PIN_CONFIG);
         }
     }
 }
@@ -937,7 +941,7 @@ bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
     switch (rsp.type) {
         case ERaTypeWriteT::ERA_WRITE_VIRTUAL_PIN: {
                 configId = Base::getPinRp().findVPinConfigId(rsp.id.getInt(), rsp.param);
-                if (configId == -1) {
+                if (configId < 0) {
                     break;
                 }
                 rsp.id = configId;
@@ -949,7 +953,7 @@ bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
             if ((pMode == OUTPUT) || (pMode == INPUT) ||
                 (pMode == INPUT_PULLUP) || (pMode == INPUT_PULLDOWN)) {
                 configId = Base::getPinRp().findConfigId(rsp.id.getInt(), rsp.param);
-                if (configId == -1) {
+                if (configId < 0) {
                     break;
                 }
                 rsp.id = configId;
@@ -960,7 +964,7 @@ bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
         case ERaTypeWriteT::ERA_WRITE_ANALOG_PIN:
             if (pMode == ANALOG) {
                 configId = Base::getPinRp().findConfigId(rsp.id.getInt(), rsp.param);
-                if (configId == -1) {
+                if (configId < 0) {
                     break;
                 }
                 rsp.id = configId;
@@ -971,7 +975,7 @@ bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
         case ERaTypeWriteT::ERA_WRITE_PWM_PIN:
             if (pMode == PWM) {
                 configId = Base::getPinRp().findConfigId(rsp.id.getInt(), rsp.param);
-                if (configId == -1) {
+                if (configId < 0) {
                     break;
                 }
                 rsp.id = configId;
@@ -981,7 +985,7 @@ bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
             break;
         case ERaTypeWriteT::ERA_WRITE_PIN:
             configId = Base::getPinRp().findConfigId(rsp.id.getInt(), rsp.param);
-            if (configId == -1) {
+            if (configId < 0) {
                 break;
             }
             rsp.id = configId;
@@ -1321,7 +1325,7 @@ void ERaProto<Transp, Flash>::sendCommandVirtual(ERaRsp_t& rsp, ERaDataJson* dat
         }
         char name[2 + 8 * sizeof(ERaInt_t)] {0};
         ERaInt_t configId = Base::getPinRp().findVPinConfigId(atoi(it.getName()), it);
-        if (configId == -1) {
+        if (configId < 0) {
             cJSON* item = data->detach(it);
             FormatString(name, "virtual_pin_%s", it.getName());
             if (it.isString()) {
@@ -1331,17 +1335,17 @@ void ERaProto<Transp, Flash>::sendCommandVirtual(ERaRsp_t& rsp, ERaDataJson* dat
                 dataNoConfig.add(name, item);
             }
             if (!current) {
-                it = data->begin();
+                it.shared(data->begin());
             }
             else {
-                it = current;
+                it.shared(current);
                 ++it;
             }
             continue;
         }
         FormatString(name, ERA_INTEGER_C_TYPE, configId);
         it.rename(name);
-        current = it;
+        current.shared(it);
         ++it;
     }
     if (dataNoConfig.isValid()) {

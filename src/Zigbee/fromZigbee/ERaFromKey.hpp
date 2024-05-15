@@ -61,13 +61,36 @@
 
 #define KEY_SPEC_GREEN_POWER_COMMAND_ID         "gp_command_id"
 
+#define KEY_IAS_ZONE_ZONE_STATE                 "zone_state"
+#define KEY_IAS_ZONE_ZONE_TYPE                  "zone_type"
+#define KEY_IAS_ZONE_ZONE_STATUS                "zone_status"
 #define KEY_IAS_ZONE_ALARM_STATE                "alarm_state"
 #define KEY_IAS_ZONE_TAMPER                     "tamper"
 #define KEY_IAS_ZONE_BATTERY_LOW                "battery_low"
+#define KEY_IAS_ZONE_SUPERVISION                "supervision_reports"
+#define KEY_IAS_ZONE_RESTORE                    "restore_reports"
+#define KEY_IAS_ZONE_TROUBLE                    "trouble"
+#define KEY_IAS_ZONE_AC_STATUS                  "ac_status"
+#define KEY_IAS_ZONE_TEST_MODE                  "test_mode"
+#define KEY_IAS_ZONE_BATTERY_DEFECT             "battery_defect"
+#define KEY_IAS_ZONE_SENSITIVITY_LEVEL          "zone_sensitivity_level"
 
+#define KEY_SPEC_IAS_ZONE_ENROLL_REQ            "enroll_request"
+#define KEY_SPEC_IAS_ZONE_ZONE_STATUS           "zone_status"
 #define KEY_SPEC_IAS_ZONE_ALARM_STATE           "alarm_state"
 #define KEY_SPEC_IAS_ZONE_TAMPER                "tamper"
 #define KEY_SPEC_IAS_ZONE_BATTERY_LOW           "battery_low"
+#define KEY_SPEC_IAS_ZONE_SUPERVISION           "supervision_reports"
+#define KEY_SPEC_IAS_ZONE_RESTORE               "restore_reports"
+#define KEY_SPEC_IAS_ZONE_TROUBLE               "trouble"
+#define KEY_SPEC_IAS_ZONE_AC_STATUS             "ac_status"
+#define KEY_SPEC_IAS_ZONE_TEST_MODE             "test_mode"
+#define KEY_SPEC_IAS_ZONE_BATTERY_DEFECT        "battery_defect"
+
+#define KEY_SPEC_IAS_ZONE_EXT_ZONE_STATUS       "ext_zone_status"
+#define KEY_SPEC_IAS_ZONE_ZONE_ID               "zone_id"
+#define KEY_SPEC_IAS_ZONE_DELAY                 "delay"
+#define KEY_SPEC_IAS_ZONE_ZONE_TYPE             "zone_type"
 
 #define KEY_CONCAT(zcl, id)                     KEY_ ## zcl ## _ ## id
 #define KEY(zcl, id)                            KEY_CONCAT(zcl, id)

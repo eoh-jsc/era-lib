@@ -136,7 +136,7 @@ public:
 
             MillisTime_t startMillis = ERaMillis();
             while (status != WL_CONNECTED) {
-                ERaDelay(500);
+                ERaDelay(10);
                 ERaWatchdogFeed();
                 status = WiFi.status();
                 Base::appLoop();

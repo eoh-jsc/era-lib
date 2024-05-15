@@ -26,8 +26,8 @@ public:
                 const char* hash = nullptr,
                 const char* type = nullptr,
                 size_t downSize = ERA_OTA_BUFFER_SIZE,
-                cJSON* root = nullptr) {
-        if (url == nullptr) {
+                const cJSON* info = nullptr) {
+        if ((url == nullptr) || !strlen(url)) {
             url = ERaOTAHelper::createUrl(this->thisProto().getAuth());
         }
 
@@ -94,7 +94,7 @@ public:
         ERA_FORCE_UNUSED(hash);
         ERA_FORCE_UNUSED(type);
         ERA_FORCE_UNUSED(downSize);
-        ERA_FORCE_UNUSED(root);
+        ERA_FORCE_UNUSED(info);
     }
 
 protected:

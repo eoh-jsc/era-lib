@@ -48,6 +48,8 @@ public:
         , pModbusCallbacks(NULL)
         , timeout(DEFAULT_TIMEOUT_MODBUS)
         , prevMillis(0)
+        , predelay(0)
+        , postdelay(0)
         , total(0)
         , failRead(0)
         , failWrite(0)
@@ -108,6 +110,11 @@ public:
     void writeAllModbus(uint8_t len1, uint8_t len2, const uint8_t* pData = NULL,
                         size_t pDataLen = 0, bool force = false, bool execute = false);
     void setModbusDEPin(int _pin);
+
+    void setModbusDelays(unsigned long preUs, unsigned long postUs) {
+        this->predelay = preUs;
+        this->postdelay = postUs;
+    }
 
     void setSkipModbus(bool skip) {
         this->skipModbus = skip;
@@ -183,6 +190,10 @@ protected:
             this->modbusControl->parseConfig(config);
             if (this->modbusControl->updateHashID(hash)) {
                 this->thisApi().writeToFlash(FILENAME_CONTROL, buf);
+                ERaWriteConfig(ERaConfigTypeT::ERA_MODBUS_CONTROL);
+#if !defined(ERA_PNP_MODBUS)
+                this->modbusControl->updated();
+#endif
             }
             ModbusState::set(ModbusStateT::STATE_MB_PARSE);
             ERaGuardUnlock(this->mutex);
@@ -198,6 +209,8 @@ protected:
                     this->thisApi().connectNewWiFi(this->modbusConfig->ssid,
                                                    this->modbusConfig->pass);
                 }
+                ERaWriteConfig(ERaConfigTypeT::ERA_MODBUS_CONFIG);
+                this->modbusConfig->updated();
             }
             ModbusState::set(ModbusStateT::STATE_MB_PARSE);
             ERaGuardUnlock(this->mutex);
@@ -531,6 +544,8 @@ private:
     ERaModbusCallbacks* pModbusCallbacks;
     uint32_t timeout;
     unsigned long prevMillis;
+    unsigned long predelay;
+    unsigned long postdelay;
     int total;
     int failRead;
     int failWrite;
@@ -735,11 +750,11 @@ void ERaModbus<Api>::processModbusScan() {
             return;
         }
 
-        static bool writed {true};
-        if (!this->modbusControl->updated() && writed) {
+        static bool wrote {true};
+        if (!this->modbusControl->updated() && wrote) {
             return;
         }
-        writed = false;
+        wrote = false;
 
         const ERaList<ModbusConfig_t*>::iterator* e = this->modbusControl->modbusConfigParam.end();
         for (ERaList<ModbusConfig_t*>::iterator* it = this->modbusControl->modbusConfigParam.begin(); it != e; it = it->getNext()) {
@@ -749,7 +764,7 @@ void ERaModbus<Api>::processModbusScan() {
             }
         }
 
-        writed = true;
+        wrote = true;
     }
 #endif
 
@@ -1077,6 +1092,7 @@ void ERaModbus<Api>::setModbusDEPin(int _pin) {
     defined(TINKER_BOARD) || \
     defined(ORANGE_PI)
     pinMode(this->dePin, OUTPUT);
+    ::digitalWrite(this->dePin, LOW);
 #endif
 }
 
@@ -1091,6 +1107,9 @@ void ERaModbus<Api>::switchToTransmit() {
     defined(TINKER_BOARD) || \
     defined(ORANGE_PI)
     ::digitalWrite(this->dePin, HIGH);
+    if (this->predelay) {
+        ERaDelayUs(this->predelay);
+    }
 #endif
 }
 
@@ -1104,6 +1123,9 @@ void ERaModbus<Api>::switchToReceive() {
     defined(RASPBERRY) ||    \
     defined(TINKER_BOARD) || \
     defined(ORANGE_PI)
+    if (this->postdelay) {
+        ERaDelayUs(this->postdelay);
+    }
     ::digitalWrite(this->dePin, LOW);
 #endif
 }

@@ -193,7 +193,8 @@ public:
                         unsigned long interval, unsigned long minInterval,
                         unsigned long maxInterval, float minChange,
                         ERaPin::ReportPinCallback_t cb) {
-        return iterator(this, this->setupPinReport(p, pMode, readPin, interval, minInterval, maxInterval, minChange, cb));
+        return iterator(this, this->setupPinReport(p, pMode, readPin, interval, minInterval,
+                                                                maxInterval, minChange, cb));
     }
 
     iterator setPinReport(uint8_t p, uint8_t pMode, ERaPin::ReadPinHandler_t readPin,
@@ -201,7 +202,8 @@ public:
                         unsigned long maxInterval, float minChange,
                         ERaPin::ReportPinCallback_t cb,
                         ERaUInt_t configId) {
-        return iterator(this, this->setupPinReport(p, pMode, readPin, interval, minInterval, maxInterval, minChange, cb, configId));
+        return iterator(this, this->setupPinReport(p, pMode, readPin, interval, minInterval,
+                                                    maxInterval, minChange, cb, configId));
     }
 
     iterator setPinRaw(uint8_t p, ERaUInt_t configId) {
@@ -217,7 +219,8 @@ public:
                             ERaPin::ReadPinHandler_t readPin, unsigned long interval,
                             unsigned long minInterval, unsigned long maxInterval,
                             float minChange, ERaPin::ReportPinCallback_t cb) {
-        return iterator(this, this->setupPWMPinReport(p, pMode, channel, readPin, interval, minInterval, maxInterval, minChange, cb));
+        return iterator(this, this->setupPWMPinReport(p, pMode, channel, readPin, interval,
+                                                    minInterval, maxInterval, minChange, cb));
     }
 
     iterator setPWMPinReport(uint8_t p, uint8_t pMode, uint8_t channel,
@@ -225,7 +228,8 @@ public:
                             unsigned long minInterval, unsigned long maxInterval,
                             float minChange, ERaPin::ReportPinCallback_t cb,
                             ERaUInt_t configId) {
-        return iterator(this, this->setupPWMPinReport(p, pMode, channel, readPin, interval, minInterval, maxInterval, minChange, cb, configId));
+        return iterator(this, this->setupPWMPinReport(p, pMode, channel, readPin, interval,
+                                                    minInterval, maxInterval, minChange, cb, configId));
     }
 
     bool changeInterval(Pin_t* pPin, unsigned long interval,

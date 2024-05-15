@@ -11,6 +11,7 @@ namespace ZigbeeNamespace {
     #include "zcl/zclTempMeas.hpp"
     #include "zcl/zclPressMeas.hpp"
     #include "zcl/zclHumiMeas.hpp"
+    #include "zcl/zclIAS.hpp"
 
 } /* namespace ZigbeeNamespace */
 

@@ -149,6 +149,9 @@ bool ERaZigbee<Api>::interviewDevice() {
 
     /* Config Reporting */
 
+    /* Handle IAS device */
+    this->handleIASDevice();
+
     ERA_LOG(TAG, ERA_PSTR("Interview network address %s(%d) successful"), IEEEToString(this->device->address.addr.ieeeAddr).c_str(),
                                                                         this->device->address.addr.nwkAddr);
     FromZigbee::createDeviceEvent(DeviceEventT::DEVICE_EVENT_INTERVIEW_SUCCESSFUL);
@@ -283,6 +286,49 @@ void ERaZigbee<Api>::readDataDevice() {
             }
         }
     }
+}
+
+template <class Api>
+void ERaZigbee<Api>::handleIASDevice() {
+    /* Handle IAS device */
+    ERA_LOG(TAG, ERA_PSTR("Handle IAS device %s(%d)"), IEEEToString(this->device->address.addr.ieeeAddr).c_str(),
+                                                                this->device->address.addr.nwkAddr);
+
+    for (size_t i = 0; i < this->device->epCount; ++i) {
+        if (this->device->epList[i].endpoint == EndpointListT::ENDPOINT_NONE) {
+            continue;
+        }
+        if (this->device->epList[i].endpoint == EndpointListT::ENDPOINT242) {
+            continue;
+        }
+        if (!this->device->epList[i].ias) {
+            continue;
+        }
+        this->device->enRoll = false;
+        ClearMem(this->device->ieeeIAS);
+        this->device->address.endpoint = this->device->epList[i].endpoint;
+
+        this->readAttrDevice(this->device->address, ClusterIDT::ZCL_CLUSTER_SECURITY_IAS_ZONE, {ZbZclIasZoneServerAttrT::ZCL_IAS_ZONE_SVR_ATTR_CIE_ADDR, /* Request a CIE address IAS from the dest device */
+                                                                                            ZbZclIasZoneServerAttrT::ZCL_IAS_ZONE_SVR_ATTR_ZONE_STATE}); /* Request a Zone state IAS from the dest device */
+
+        if (CompareArray(this->device->ieeeIAS, this->coordinator->address.addr.ieeeAddr)) {
+            if (this->device->enRoll) {
+                return;
+            }
+            ToZigbee::CommandZigbee::enrollResponseIASZone(this->device->address, ZbZclIasZoneClientResponseCodeT::ZCL_IAS_ZONE_CLI_RESP_SUCCESS, this->getZoneID());
+        }
+        else {
+            this->writeAttrDevice(this->device->address, ClusterIDT::ZCL_CLUSTER_SECURITY_IAS_ZONE, {
+                                {ZbZclIasZoneServerAttrT::ZCL_IAS_ZONE_SVR_ATTR_CIE_ADDR, DataTypeT::zcl_ieeeAddr,
+                                {this->coordinator->address.addr.ieeeAddr, this->coordinator->address.addr.ieeeAddr + LENGTH_EXTADDR_IEEE}}});
+            ToZigbee::CommandZigbee::enrollResponseIASZone(this->device->address, ZbZclIasZoneClientResponseCodeT::ZCL_IAS_ZONE_CLI_RESP_SUCCESS, this->getZoneID());
+        }
+    }
+}
+
+template <class Api>
+uint8_t ERaZigbee<Api>::getZoneID() {
+    return 0x27;
 }
 
 template <class Api>

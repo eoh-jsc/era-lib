@@ -123,6 +123,20 @@ void ERaFromZigbee<Zigbee>::processReadAttributeResponse(const DataAFMsg_t& afMs
             }
         }
             break;
+        case ClusterIDT::ZCL_CLUSTER_SECURITY_IAS_ZONE: {
+            switch (attribute) {
+                case ZbZclIasZoneServerAttrT::ZCL_IAS_ZONE_SVR_ATTR_CIE_ADDR:
+                case ZbZclIasZoneServerAttrT::ZCL_IAS_ZONE_SVR_ATTR_ZONE_STATE:
+                    this->getDataAttributes(afMsg, defaultRsp, afMsg.srcAddr.addr.nwkAddr, afMsg.srcAddr.endpoint, {
+                        {ZbZclIasZoneServerAttrT::ZCL_IAS_ZONE_SVR_ATTR_CIE_ADDR, this->device->ieeeIAS},
+                        {ZbZclIasZoneServerAttrT::ZCL_IAS_ZONE_SVR_ATTR_ZONE_STATE, &this->device->enRoll}
+                    });
+                    break;
+                default:
+                    break;
+            }
+        }
+            break;
         default:
             break;
     }

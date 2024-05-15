@@ -2,6 +2,7 @@
 #define INC_ERA_API_ARDUINO_HPP_
 
 #include <ERa/ERaApi.hpp>
+#include <ERa/ERaApiConfig.hpp>
 
 #if defined(ARDUINO_ARCH_STM32)
 
@@ -157,11 +158,9 @@ void ERaApi<Proto, Flash>::handleReadPin(cJSON* root) {
             }
             else if (ERaStrCmp(item->valuestring, "boolean")) {
                 this->getPinConfig(current, pin);
+                this->getScaleConfig(current, pin);
                 pinMode(pin.pin, pin.pinMode);
-                this->ERaPinRp.setPinReport(pin.pin, pin.pinMode, digitalReadArduino,
-                                            pin.report.interval, pin.report.minInterval,
-                                            pin.report.maxInterval, pin.report.reportableChange,
-                                            this->reportPinConfigCb, pin.configId);
+                ERA_SET_PIN_REPORT(pin.pinMode, digitalReadArduino);
             }
             else if (ERaStrCmp(item->valuestring, "integer")) {
                 pin.report = PinConfig_t::__ReportConfig_t(1000, 1000, 60000, 10.0f);
@@ -176,11 +175,7 @@ void ERaApi<Proto, Flash>::handleReadPin(cJSON* root) {
                 pin.pin = digitalPinToAnalogInput(pin.pin) + PNUM_ANALOG_BASE;
                 pinMode(pin.pin, ANALOG);
 #endif
-                this->ERaPinRp.setPinReport(pin.pin, ANALOG, analogReadArduino,
-                                            pin.report.interval, pin.report.minInterval,
-                                            pin.report.maxInterval, pin.report.reportableChange,
-                                            this->reportPinConfigCb, pin.configId).setScale(pin.scale.min,
-                                            pin.scale.max, pin.scale.rawMin, pin.scale.rawMax);
+                ERA_SET_PIN_REPORT(ANALOG, analogReadArduino);
             }
             else if (ERaStrCmp(item->valuestring, "virtual")) {
                 this->ERaPinRp.setPinVirtual(pin.pin, pin.configId);
@@ -231,21 +226,15 @@ void ERaApi<Proto, Flash>::handleWritePin(cJSON* root) {
             }
             else if (ERaStrCmp(item->valuestring, "boolean")) {
                 this->getPinConfig(current, pin);
+                this->getScaleConfig(current, pin);
                 pinMode(pin.pin, pin.pinMode);
-                this->ERaPinRp.setPinReport(pin.pin, pin.pinMode, digitalReadArduino,
-                                            pin.report.interval, pin.report.minInterval,
-                                            pin.report.maxInterval, pin.report.reportableChange,
-                                            this->reportPinConfigCb, pin.configId);
+                ERA_SET_PIN_REPORT(pin.pinMode, digitalReadArduino);
             }
             else if (ERaStrCmp(item->valuestring, "integer")) {
                 this->getPinConfig(current, pin);
                 this->getScaleConfig(current, pin);
                 pinMode(pin.pin, OUTPUT);
-                this->ERaPinRp.setPinReport(pin.pin, PWM, nullptr,
-                                            pin.report.interval, pin.report.minInterval,
-                                            pin.report.maxInterval, pin.report.reportableChange,
-                                            this->reportPinConfigCb, pin.configId).setScale(pin.scale.min,
-                                            pin.scale.max, pin.scale.rawMin, pin.scale.rawMax);
+                ERA_SET_PIN_REPORT(PWM, nullptr);
             }
             else if (ERaStrCmp(item->valuestring, "virtual")) {
                 this->ERaPinRp.setPinVirtual(pin.pin, pin.configId);
@@ -289,7 +278,6 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const ERaDataBuff& arrayTopi
             }
         }
         switch (pMode) {
-            case RAW_PIN:
             case VIRTUAL:
             case ERA_VIRTUAL:
                 break;
@@ -378,31 +366,19 @@ void ERaApi<Proto, Flash>::handlePinRequest(const ERaDataBuff& arrayTopic, const
             }
             else if (ERaStrCmp(current->valuestring, "pwm")) {
                 pinMode(pin.pin, OUTPUT);
-                this->ERaPinRp.setPinReport(pin.pin, PWM, nullptr,
-                                            pin.report.interval, pin.report.minInterval,
-                                            pin.report.maxInterval, pin.report.reportableChange,
-                                            this->reportPinCb);
+                ERA_SET_DEBUG_PIN_REPORT(PWM, nullptr);
             }
             else if (ERaStrCmp(current->valuestring, "input")) {
                 pinMode(pin.pin, INPUT);
-                this->ERaPinRp.setPinReport(pin.pin, INPUT, digitalReadArduino,
-                                            pin.report.interval, pin.report.minInterval,
-                                            pin.report.maxInterval, pin.report.reportableChange,
-                                            this->reportPinCb);
+                ERA_SET_DEBUG_PIN_REPORT(INPUT, digitalReadArduino);
             }
             else if (ERaStrCmp(current->valuestring, "pullup")) {
                 pinMode(pin.pin, INPUT_PULLUP);
-                this->ERaPinRp.setPinReport(pin.pin, INPUT_PULLUP, digitalReadArduino,
-                                            pin.report.interval, pin.report.minInterval,
-                                            pin.report.maxInterval, pin.report.reportableChange,
-                                            this->reportPinCb);
+                ERA_SET_DEBUG_PIN_REPORT(INPUT_PULLUP, digitalReadArduino);
             }
             else if (ERaStrCmp(current->valuestring, "pulldown")) {
                 pinMode(pin.pin, INPUT_PULLDOWN);
-                this->ERaPinRp.setPinReport(pin.pin, INPUT_PULLDOWN, digitalReadArduino,
-                                            pin.report.interval, pin.report.minInterval,
-                                            pin.report.maxInterval, pin.report.reportableChange,
-                                            this->reportPinCb);
+                ERA_SET_DEBUG_PIN_REPORT(INPUT_PULLDOWN, digitalReadArduino);
             }
             else if (ERaStrCmp(current->valuestring, "analog")) {
 #if defined(ESP32)
@@ -414,10 +390,7 @@ void ERaApi<Proto, Flash>::handlePinRequest(const ERaDataBuff& arrayTopic, const
                 pin.pin = digitalPinToAnalogInput(pin.pin) + PNUM_ANALOG_BASE;
                 pinMode(pin.pin, ANALOG);
 #endif
-                this->ERaPinRp.setPinReport(pin.pin, ANALOG, analogReadArduino,
-                                            pin.report.interval, pin.report.minInterval,
-                                            pin.report.maxInterval, pin.report.reportableChange,
-                                            this->reportPinCb);
+                ERA_SET_DEBUG_PIN_REPORT(ANALOG, analogReadArduino);
             }
             else if (ERaStrCmp(current->valuestring, "remove")) {
                 this->ERaPinRp.deleteWithPin(pin.pin);
