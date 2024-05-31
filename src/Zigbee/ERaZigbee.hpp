@@ -636,13 +636,15 @@ void ERaZigbee<Api>::hardResetUSB() {
 template <class Api>
 void ERaZigbee<Api>::setDtrRts(bool dtr, bool rts) {
 #if defined(LINUX)
-    if (this->stream != NULL) {
+    if ((this->dtrPin >= 0) && (this->stream != NULL)) {
         ioctl(*this->stream, dtr ? TIOCMBIS : TIOCMBIC, &this->dtrPin);
     }
-    if (this->stream != NULL) {
+    if ((this->rtsPin >= 0) && (this->stream != NULL)) {
         ioctl(*this->stream, rts ? TIOCMBIS : TIOCMBIC, &this->rtsPin);
     }
-    ERaDelay(500);
+    if ((this->dtrPin >= 0) || (this->rtsPin >= 0)) {
+        ERaDelay(500);
+    }
 #else
     ERA_FORCE_UNUSED(dtr);
     ERA_FORCE_UNUSED(rts);
