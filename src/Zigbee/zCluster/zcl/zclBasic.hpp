@@ -30,7 +30,7 @@ enum ZbZclBasicSvrAttrT {
 
     ZCL_ATTR_CLUSTER_REVISION = 0xFFFD,
 
-    ZCL_BASIC_ATTR_TUYA_UNKNOWN = 0xFFFE
+    ZCL_BASIC_ATTR_TUYA_INIT = 0xFFFE
 };
 
 /* Power Source Enumerations */

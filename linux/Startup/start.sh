@@ -10,20 +10,17 @@ if [ -f ${token_file} ]; then
 fi
 
 case "$1" in
-raspberry)
-    board_type="raspberry"
-    ;;
-tinker)
-    board_type="tinker"
+raspberry|tinker)
+    board_type="$1"
     ;;
 *)
     exec bash
     ;;
 esac
 
+cd ../
 command_run="sudo ./era --token="${token}
 command_build="make clean all target="${board_type}
-cd ../
 if [ ! -f "./era" ]; then
     exec ${command_build}
 fi

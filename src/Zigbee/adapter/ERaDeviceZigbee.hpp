@@ -65,6 +65,8 @@ bool ERaZigbee<Api>::interviewDevice() {
                 /* check-in poll */
             }
 
+            this->configureTuyaPacket();
+
             this->readAttrDevice(this->device->address, ClusterIDT::ZCL_CLUSTER_BASIC, {ZbZclBasicSvrAttrT::ZCL_BASIC_ATTR_MFR_NAME, /* Request a Manufacturer Name from the dest device */
                                                                                         ZbZclBasicSvrAttrT::ZCL_BASIC_ATTR_MODEL_NAME}); /* Request a Model Name from the dest device */
 
@@ -329,6 +331,19 @@ void ERaZigbee<Api>::handleIASDevice() {
 template <class Api>
 uint8_t ERaZigbee<Api>::getZoneID() {
     return 0x27;
+}
+
+template <class Api>
+void ERaZigbee<Api>::configureTuyaPacket() {
+    /* Enable reporting for Tuya device */
+    ERA_LOG(TAG, ERA_PSTR("Send config packet Tuya device"));
+    this->readAttrDevice(this->device->address, ClusterIDT::ZCL_CLUSTER_BASIC, {ZbZclBasicSvrAttrT::ZCL_BASIC_ATTR_MFR_NAME, /* Request a Manuf Name from the dest device */
+                                                                                ZbZclBasicSvrAttrT::ZCL_BASIC_ATTR_ZCL_VERSION, /* Request a ZCL Version from the dest device */
+                                                                                ZbZclBasicSvrAttrT::ZCL_BASIC_ATTR_APP_VERSION, /* Request a App Version from the dest device */
+                                                                                ZbZclBasicSvrAttrT::ZCL_BASIC_ATTR_MODEL_NAME, /* Request a Model Name from the dest device */
+                                                                                ZbZclBasicSvrAttrT::ZCL_BASIC_ATTR_POWER_SOURCE, /* Request a Power Source from the dest device */
+                                                                                ZbZclBasicSvrAttrT::ZCL_BASIC_ATTR_TUYA_INIT});
+    ERaDelay(2000);
 }
 
 template <class Api>

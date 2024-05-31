@@ -36,6 +36,10 @@ protected:
     bool toZigbee(const cJSON* const root, AFAddrType_t& dstAddr, const ConvertToZigbeeT type);
     bool permitJoinToZigbee(const cJSON* const root);
 
+    void hardReset() {
+        this->thisZigbee().hardReset();
+    }
+
 private:
     void handleZigbeeData() {
         this->thisZigbee().handleZigbeeData();

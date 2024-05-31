@@ -9,8 +9,11 @@ void ERaCommandZigbee<ToZigbee>::skipBootloader() {
 }
 
 template <class ToZigbee>
-ResultT ERaCommandZigbee<ToZigbee>::pingSystem(size_t limit, uint32_t timeout, void (*feed)(void)) {
+ResultT ERaCommandZigbee<ToZigbee>::pingSystem(size_t limit, uint32_t timeout, bool reset, void (*feed)(void)) {
     vector<uint8_t> payload;
+    if (reset) {
+        this->thisToZigbee().hardReset();
+    }
     for (size_t i = 0; i < limit; ++i) {
         if (this->thisToZigbee().createCommandBuffer(payload, TypeT::SREQ,
                                                     SubsystemT::SYS_INTER, SYSCommandsT::SYS_PING,

@@ -75,6 +75,8 @@ public:
         , _zigbeeTask(NULL)
         , _controlZigbeeTask(NULL)
         , _responseZigbeeTask(NULL)
+        , dtrPin(-1)
+        , rtsPin(-1)
     {}
     ~ERaZigbee()
     {}
@@ -83,11 +85,13 @@ public:
         this->stream = &_stream;
     }
 
+    void setZigbeeDtrRts(int dtr, int rts);
+
 protected:
     void begin() { 
         this->configZigbee();
         if ((ZigbeeState::is(ZigbeeStateT::STATE_ZB_IGNORE)) ||
-            (ToZigbee::CommandZigbee::pingSystem(5, 1000, ERaWatchdogFeed) != ResultT::RESULT_SUCCESSFUL)) {
+            (ToZigbee::CommandZigbee::pingSystem(5, 1000, true, ERaWatchdogFeed) != ResultT::RESULT_SUCCESSFUL)) {
             this->serialEnd();
             ZigbeeState::set(ZigbeeStateT::STATE_ZB_IGNORE);
             return;
@@ -253,6 +257,7 @@ private:
     void readDataDevice();
     void handleIASDevice();
     uint8_t getZoneID();
+    void configureTuyaPacket();
 
     template <int inSize, int outSize>
     bool isClusterExist(const ClusterIDT(&inZcl)[inSize], const ClusterIDT(&outZcl)[outSize], const ClusterIDT zclId);
@@ -268,6 +273,9 @@ private:
     bool actionZigbee(const ZigbeeActionT type, const char* ieeeAddr, const cJSON* const payload);
     void getZigbeeAction();
     void zigbeeTimerCallback(void* args);
+    void hardReset();
+    void hardResetUSB();
+    void setDtrRts(bool dtr, bool rts);
 
     void beginReadFromFlash(const char* filename, bool force = true) {
         this->thisApi().beginReadFromFlash(filename, force);
@@ -357,6 +365,9 @@ private:
     TaskHandle_t _zigbeeTask;
     TaskHandle_t _controlZigbeeTask;
     TaskHandle_t _responseZigbeeTask;
+
+    int dtrPin;
+    int rtsPin;
 };
 
 template <class Api>
@@ -368,6 +379,9 @@ void ERaZigbee<Api>::initZigbee(bool format, bool invalid) {
         switch (ZigbeeState::get()) {
             case ZigbeeStateT::STATE_ZB_INIT_SUCCESSFUL:
                 break;
+            case ZigbeeStateT::STATE_ZB_INIT_FAIL:
+            case ZigbeeStateT::STATE_ZB_INIT_FORMAT:
+                this->hardReset();
             default:
                 this->startZigbee(format, invalid);
                 break;
@@ -597,6 +611,42 @@ bool ERaZigbee<Api>::addZigbeeAction(const ZigbeeActionT type, const char* ieeeA
     strcpy(req.ieeeAddr, ieeeAddr);
     this->queue += req;
     return true;
+}
+
+template <class Api>
+void ERaZigbee<Api>::setZigbeeDtrRts(int dtr, int rts) {
+    this->dtrPin = dtr;
+    this->rtsPin = rts;
+
+    this->setDtrRts(false, false);
+}
+
+template <class Api>
+void ERaZigbee<Api>::hardReset() {
+    this->hardResetUSB();
+}
+
+template <class Api>
+void ERaZigbee<Api>::hardResetUSB() {
+    this->setDtrRts(false, false);
+    this->setDtrRts(false, true);
+    this->setDtrRts(false, false);
+}
+
+template <class Api>
+void ERaZigbee<Api>::setDtrRts(bool dtr, bool rts) {
+#if defined(LINUX)
+    if (this->stream != NULL) {
+        ioctl(*this->stream, dtr ? TIOCMBIS : TIOCMBIC, &this->dtrPin);
+    }
+    if (this->stream != NULL) {
+        ioctl(*this->stream, rts ? TIOCMBIS : TIOCMBIC, &this->rtsPin);
+    }
+    ERaDelay(500);
+#else
+    ERA_FORCE_UNUSED(dtr);
+    ERA_FORCE_UNUSED(rts);
+#endif
 }
 
 template <class S, typename... Args>

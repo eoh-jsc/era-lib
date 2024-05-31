@@ -38,7 +38,20 @@ ERA_DISCONNECTED() {
     printf("ERa disconnected!\r\n");
 }
 
+#if defined(ERA_ZIGBEE)
+    void setupZigbee() {
+        /* For reset and skip bootloader */
+        ERa.setZigbeeDtrRts(DTR_PIN, RTS_PIN);
+    }
+#else
+    void setupZigbee() {
+    }
+#endif
+
 void setup() {
+    /* Setup Zigbee */
+    setupZigbee();
+
     ERa.setAppLoop(false);
     ERa.setBoardID(boardID);
     ERa.begin(auth, host, port, user, pass);
