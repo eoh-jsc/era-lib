@@ -28,6 +28,7 @@
 
 #define TINY_GSM_MUX_COUNT          5
 
+#include "TinyGsmDetect.hpp"
 #include <TinyGsmModem.tpp>
 #include <TinyGsmSSL.tpp>
 #include <TinyGsmWifi.tpp>
@@ -35,10 +36,12 @@
 #include "TinyGsmWifiServer.tpp"
 #include "TinyGsmTCPUDP.tpp"
 
-#define GSM_NL      "\r\n"
-static const char   GSM_OK[] TINY_GSM_PROGMEM    = "OK" GSM_NL;
-static const char   GSM_ERROR[] TINY_GSM_PROGMEM = "ERROR" GSM_NL;
-static uint8_t      TINY_GSM_TCP_KEEP_ALIVE      = 120;
+#define GSM_NL          "\r\n"
+#if (ERA_TINY_GSM_VERSION < 2)
+    static const char   GSM_OK[] TINY_GSM_PROGMEM    = "OK" GSM_NL;
+    static const char   GSM_ERROR[] TINY_GSM_PROGMEM = "ERROR" GSM_NL;
+#endif
+static uint8_t          TINY_GSM_TCP_KEEP_ALIVE      = 120;
 
 // <stat> status of ESP32 station interface
 // 2 : ESP32 station connected to an AP and has obtained IP
@@ -59,14 +62,22 @@ class TinyGsmESP32
     , public TinyGsmWifiAP<TinyGsmESP32>
     , public TinyGsmWifiServer<TinyGsmESP32>
     , public TinyGsmTCP<TinyGsmESP32, TINY_GSM_MUX_COUNT>
+#if (ERA_TINY_GSM_VERSION < 2)
     , public TinyGsmSSL<TinyGsmESP32>
+#else
+    , public TinyGsmSSL<TinyGsmESP32, TINY_GSM_MUX_COUNT>
+#endif
 {
     friend class TinyGsmModem<TinyGsmESP32>;
     friend class TinyGsmWifi<TinyGsmESP32>;
     friend class TinyGsmWifiAP<TinyGsmESP32>;
     friend class TinyGsmWifiServer<TinyGsmESP32>;
     friend class TinyGsmTCP<TinyGsmESP32, TINY_GSM_MUX_COUNT>;
+#if (ERA_TINY_GSM_VERSION < 2)
     friend class TinyGsmSSL<TinyGsmESP32>;
+#else
+    friend class TinyGsmSSL<TinyGsmESP32, TINY_GSM_MUX_COUNT>;
+#endif
 
     /*
     * Inner Client

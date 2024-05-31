@@ -12,6 +12,7 @@
 #define TINY_GSM_MUX_COUNT 12
 #define TINY_GSM_BUFFER_READ_AND_CHECK_SIZE
 
+#include "TinyGsmDetect.hpp"
 #include <TinyGsmBattery.tpp>
 #include <TinyGsmCalling.tpp>
 #include <TinyGsmGPRS.tpp>
@@ -23,12 +24,14 @@
 #include <TinyGsmTime.tpp>
 #include <TinyGsmNTP.tpp>
 
-#define GSM_NL      "\r\n"
-static const char   GSM_OK[] TINY_GSM_PROGMEM    = "OK" GSM_NL;
-static const char   GSM_ERROR[] TINY_GSM_PROGMEM = "ERROR" GSM_NL;
-#if defined         TINY_GSM_DEBUG
-static const char   GSM_CME_ERROR[] TINY_GSM_PROGMEM = GSM_NL "+CME ERROR:";
-static const char   GSM_CMS_ERROR[] TINY_GSM_PROGMEM = GSM_NL "+CMS ERROR:";
+#define GSM_NL          "\r\n"
+#if (ERA_TINY_GSM_VERSION < 2)
+    static const char   GSM_OK[] TINY_GSM_PROGMEM    = "OK" GSM_NL;
+    static const char   GSM_ERROR[] TINY_GSM_PROGMEM = "ERROR" GSM_NL;
+#endif
+#if defined(TINY_GSM_DEBUG)
+    static const char   GSM_CME_ERROR[] TINY_GSM_PROGMEM = GSM_NL "+CME ERROR:";
+    static const char   GSM_CMS_ERROR[] TINY_GSM_PROGMEM = GSM_NL "+CMS ERROR:";
 #endif
 
 enum RegStatus {
