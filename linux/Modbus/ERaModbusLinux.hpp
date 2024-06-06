@@ -22,16 +22,6 @@
     #define SerialMB                SerialModBus<ERaSerialLinux>::serial()
 #endif
 
-template <class Api>
-void ERaModbus<Api>::setBaudRate(uint32_t baudrate) {
-    ERaModbusBaudrate(baudrate);
-    if (!this->streamDefault()) {
-        return;
-    }
-
-    SerialMB.begin(ERA_SERIAL_MODBUS(ERA_DEV_MODBUS), baudrate);
-}
-
 inline
 void ERaModbusStream::begin() {
     if (this->stream != NULL) {
