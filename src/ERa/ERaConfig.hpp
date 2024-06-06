@@ -170,6 +170,7 @@
 #define INFO_SSL                        "ssl"
 #define INFO_PING                       "ping"
 #define INFO_FREE_RAM                   "free_ram"
+#define INFO_ABBR                       "abbr"
 #define INFO_UPTIME                     "uptime"
 #define INFO_RESET_REASON               "reset_reason"
 #define BUILD_DATE_TIME                 __DATE__ " " __TIME__

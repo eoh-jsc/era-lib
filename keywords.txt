@@ -130,6 +130,7 @@ setBoardID	KEYWORD2
 getBoardID	KEYWORD2
 setSkipACK	KEYWORD2
 setKeepAlive	KEYWORD2
+setDropOverflow	KEYWORD2
 setHeartbeat	KEYWORD2
 setSpecSSID	KEYWORD2
 setScanWiFi	KEYWORD2
@@ -147,7 +148,10 @@ setSIMPinCode	KEYWORD2
 setModbusClient	KEYWORD2
 setModbusStream	KEYWORD2
 setModbusDEPin	KEYWORD2
+setModbusDelays	KEYWORD2
+setModbusFailCounter	KEYWORD2
 setModbusTimeout	KEYWORD2
+setModbusStreamTimeout	KEYWORD2
 setPubModbusInterval	KEYWORD2
 setSkipModbus	KEYWORD2
 setConnectWiFiModbus	KEYWORD2

@@ -73,12 +73,18 @@ class WrapperString;
         ERaString(unsigned long num)
             : String(num)
         {}
+
+#if !defined(__AVR__)
+
         ERaString(long long num)
             : String(num)
         {}
         ERaString(unsigned long long num)
             : String(num)
         {}
+
+#endif
+
         ERaString(float num)
             : String(num)
         {}

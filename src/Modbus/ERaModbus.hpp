@@ -8,6 +8,7 @@
 #include <Modbus/ERaParse.hpp>
 #include <Modbus/ERaModbusConfig.hpp>
 #include <Modbus/ERaDefineModbus.hpp>
+#include <Modbus/ERaModbusStream.hpp>
 #include <Modbus/ERaModbusTransp.hpp>
 #include <Modbus/ERaModbusCallbacks.hpp>
 
@@ -15,13 +16,10 @@ using namespace std;
 
 template <class Api>
 class ERaModbus
-    : public ERaModbusTransp < ERaModbus<Api> >
+    : public ERaModbusStream
+    , public ERaModbusTransp < ERaModbus<Api> >
+    , public ERaModbusSlave < ERaModbus<Api> >
 {
-    typedef struct __ModbusAction_t {
-        char* key;
-        uint8_t type;
-        uint16_t param;
-    } ModbusAction_t;
     typedef struct __TCPIp_t {
         IPAddress ip;
         uint16_t port;
@@ -33,8 +31,13 @@ class ERaModbus
     const char* FILENAME_CONTROL = FILENAME_MODBUS_CONTROL;
     const IPAddress ipNone{0, 0, 0, 0};
 
+    typedef ERaModbusStream ModbusStream;
+
     friend class ERaModbusTransp < ERaModbus<Api> >;
     typedef ERaModbusTransp < ERaModbus<Api> > ModbusTransp;
+
+    friend class ERaModbusSlave < ERaModbus<Api> >;
+    typedef ERaModbusSlave < ERaModbus<Api> > ModbusSlave;
 
 public:
     ERaModbus()
@@ -61,8 +64,11 @@ public:
             .ip = {},
             .port = 502
         }
-        , stream(NULL)
-        , _streamDefault(false)
+        , failCounter {
+            .min = 0,
+            .max = 255,
+            .start = 0
+        }
 #if !defined(ERA_NO_RTOS)
         , _modbusTask(NULL)
         , _writeModbusTask(NULL)
@@ -86,6 +92,7 @@ public:
 
     void setModbusStream(Stream& _stream) {
         this->streamRTU = &_stream;
+        ModbusStream::stream = &_stream;
     }
 
     void setModbusTimeout(uint32_t _timeout) {
@@ -114,6 +121,12 @@ public:
     void setModbusDelays(unsigned long preUs, unsigned long postUs) {
         this->predelay = preUs;
         this->postdelay = postUs;
+    }
+
+    void setModbusFailCounter(uint8_t min, uint8_t max = 255, uint8_t start = 0) {
+        this->failCounter.min = min;
+        this->failCounter.max = max;
+        this->failCounter.start = start;
     }
 
     void setSkipModbus(bool skip) {
@@ -157,6 +170,10 @@ protected:
             if (!ERaRemainingTime(this->modbusConfig->modbusInterval.prevMillis, this->modbusConfig->modbusInterval.delay)) {
                 this->modbusConfig->modbusInterval.prevMillis = ERaMillis();
                 this->readModbusConfig();
+                ModbusStream::streamStart();
+            }
+            else {
+                this->waitRequest();
             }
 #if !defined(ERA_NO_RTOS)
             this->timer.run();
@@ -216,7 +233,7 @@ protected:
             ERaGuardUnlock(this->mutex);
             this->initModbus();
             if (this->initialized) {
-                this->setBaudRate(this->modbusConfig->baudSpeed);
+                ModbusStream::setBaudRate(this->modbusConfig->baudSpeed);
             }
             this->executeNow();
         }
@@ -297,7 +314,7 @@ private:
                     });
                 }
 #endif
-                this->endModbus();
+                ModbusStream::end();
                 this->initialized = false;
             }
             return;
@@ -316,7 +333,8 @@ private:
         }
 #endif
 
-        this->configModbus();
+        this->switchToModbusRTU();
+        ModbusStream::begin();
 #if !defined(ERA_NO_RTOS)
         if (!this->skipModbus &&
             !this->isTaskRunning()) {
@@ -335,7 +353,7 @@ private:
         ptr = this->thisApi().readFromFlash(FILENAME_CONFIG);
         this->updateConfig(this->modbusConfig, ptr, "configuration");
         if (this->initialized) {
-            this->setBaudRate(this->modbusConfig->baudSpeed);
+            ModbusStream::setBaudRate(this->modbusConfig->baudSpeed);
         }
         free(ptr);
         ptr = this->thisApi().readFromFlash(FILENAME_CONTROL);
@@ -404,12 +422,12 @@ private:
     }
 
     void switchToModbusRTU() {
-        this->stream = this->streamRTU;
+        ModbusStream::stream = this->streamRTU;
         this->transp = ModbusTransportT::MODBUS_TRANSPORT_RTU;
     }
 
     void switchToModbusTCP() {
-        this->stream = this->clientTCP;
+        ModbusStream::stream = this->clientTCP;
         this->transp = ModbusTransportT::MODBUS_TRANSPORT_TCP;
     }
 
@@ -435,9 +453,6 @@ private:
         req.key = nullptr;
     }
 
-    void configModbus();
-    void endModbus();
-    void setBaudRate(uint32_t baudrate);
     void readModbusConfig();
     bool checkPubDataInterval();
     void delayModbus(const int address, bool unlock = false, bool skip = false);
@@ -458,10 +473,21 @@ private:
     bool handlerModbusWrite(ModbusConfig_t* param);
     void onData(ERaModbusRequest* request, ERaModbusResponse* response, bool skip = false);
     void onError(ERaModbusRequest* request, bool skip = false);
-    bool waitResponse(ERaModbusResponse* response);
-    void sendCommand(uint8_t* data, size_t size);
+    void processStateBegin(ERaModbusRequest* request, ERaModbusResponse* response, uint8_t data);
+    void processStateAddr(ERaModbusRequest* request, ERaModbusResponse* response, uint8_t data);
+    void processStateFunc(ERaModbusRequest* request, ERaModbusResponse* response, uint8_t data);
+    void processStateData(ERaModbusRequest* request, ERaModbusResponse* response, uint8_t data);
+    void processInput(ERaModbusRequest* request, ERaModbusResponse* response);
+    bool waitResponse(ERaModbusRequest* request, ERaModbusResponse* response);
+    void waitRequest();
+    void sendRequest(const uint8_t* data, size_t size);
+    void sendCommand(const uint8_t* data, size_t size);
     void switchToTransmit();
     void switchToReceive();
+
+    bool isRTU() {
+        return (this->transp == ModbusTransportT::MODBUS_TRANSPORT_RTU);
+    }
 
     bool isEmptyConfig() {
         return (this->modbusConfig->modbusConfigParam.isEmpty() &&
@@ -497,10 +523,6 @@ private:
 
     bool getBit(uint8_t byte, uint8_t pos) {
         return ((byte >> pos) & 0x01);
-    }
-
-    bool streamDefault() const {
-        return this->_streamDefault;
     }
 
     void executeNow() {
@@ -554,8 +576,12 @@ private:
     Stream* streamRTU;
     Client* clientTCP;
     TCPIp_t ip;
-    Stream* stream;
-    bool _streamDefault;
+
+    struct {
+        uint8_t min;
+        uint8_t max;
+        uint8_t start;
+    } failCounter;
 
 #if !defined(ERA_NO_RTOS)
     TaskHandle_t _modbusTask;
@@ -674,6 +700,7 @@ void ERaModbus<Api>::delays(MillisTime_t ms) {
             ModbusState::is(ModbusStateT::STATE_MB_CONTROLLED)) {
             break;
         }
+        this->waitRequest();
         ERA_MODBUS_YIELD();
     } while (ERaRemainingTime(startMillis, ms));
 }
@@ -861,6 +888,10 @@ bool ERaModbus<Api>::eachActionModbus(ModbusAction_t& request, Action_t& action,
 
     memcpy(config->extra, action.extra, sizeof(config->extra));
 
+    if (this->pModbusCallbacks != nullptr) {
+        this->pModbusCallbacks->onAction(&request, &action, config);
+    }
+
     return this->sendModbusWrite(*config);
 }
 
@@ -922,11 +953,9 @@ void ERaModbus<Api>::sendModbusRead(ModbusConfig_t& param) {
 #endif
 
     if (status) {
-        param.totalFail = 0;
     }
     else {
         this->failRead++;
-        param.totalFail++;
     }
 }
 
@@ -1078,6 +1107,228 @@ void ERaModbus<Api>::onError(ERaModbusRequest* request, bool skip) {
     if (this->pModbusCallbacks != nullptr) {
         this->pModbusCallbacks->onError(request);
     }
+}
+
+template <class Api>
+void ERaModbus<Api>::processStateBegin(ERaModbusRequest* request, ERaModbusResponse* response, uint8_t data) {
+    ModbusSlave::clear();
+    if (response != nullptr) {
+        response->clear();
+    }
+
+    ModbusSlave::setSlaveTransport(this->transp);
+
+    if (this->isRTU()) {
+        return this->processStateAddr(request, response, data);
+    }
+    /* Header Modbus TCP */
+    uint8_t header[6] {0};
+
+    header[0] = data;
+    if (ModbusStream::readBytes(header + 1, 5) < 5) {
+        ModbusStream::state = ModbusStreamStateT::MB_STREAM_STATE_END;
+        return;
+    }
+
+    for (size_t i = 0; i < sizeof(header); ++i) {
+        ModbusSlave::add(header[i]);
+        if (response == nullptr) {
+            continue;
+        }
+        response->add(header[i]);
+    }
+
+    ModbusStream::state = ModbusStreamStateT::MB_STREAM_STATE_ADDR;
+}
+
+template <class Api>
+void ERaModbus<Api>::processStateAddr(ERaModbusRequest* request, ERaModbusResponse* response, uint8_t data) {
+    ModbusSlave::add(data);
+    ModbusSlave::setSlaveAddress(data);
+    if (response != nullptr) {
+        response->add(data);
+    }
+
+    ModbusStream::state = ModbusStreamStateT::MB_STREAM_STATE_FUNC;
+
+    if (request == nullptr) {
+        return;
+    }
+    if (request->getSlaveAddress() == data) {
+    }
+    else if (response != nullptr) {
+        response->clear();
+    }
+}
+
+template <class Api>
+void ERaModbus<Api>::processStateFunc(ERaModbusRequest* request, ERaModbusResponse* response, uint8_t data) {
+    ModbusSlave::add(data);
+    ModbusSlave::setSlaveFunction(data);
+
+    if (response == nullptr) {
+    }
+    else if (!response->empty()) {
+        response->add(data);
+    }
+
+    switch (data) {
+        case ModbusFunctionT::READ_COIL_STATUS:
+        case ModbusFunctionT::READ_INPUT_STATUS:
+        case ModbusFunctionT::READ_HOLDING_REGISTERS:
+        case ModbusFunctionT::READ_INPUT_REGISTERS:
+        case ModbusFunctionT::FORCE_SINGLE_COIL:
+        case ModbusFunctionT::PRESET_SINGLE_REGISTER:
+        case ModbusFunctionT::FORCE_MULTIPLE_COILS:
+        case ModbusFunctionT::PRESET_MULTIPLE_REGISTERS:
+            if ((request == nullptr) || (response == nullptr)) {
+            }
+            else if (request->getFunction() != data) {
+                response->clear();
+            }
+            ModbusStream::state = ModbusStreamStateT::MB_STREAM_STATE_DATA;
+            return;
+        default:
+            if ((data & 0x80) != 0x80) {
+                break;
+            }
+            ModbusStream::state = ModbusStreamStateT::MB_STREAM_STATE_DATA;
+            return;
+    }
+
+    ModbusStream::state = ModbusStreamStateT::MB_STREAM_STATE_END;
+}
+
+template <class Api>
+void ERaModbus<Api>::processStateData(ERaModbusRequest* request, ERaModbusResponse* response, uint8_t data) {
+    bool complete {false};
+
+    ModbusSlave::add(data);
+
+    if ((response == nullptr) || response->empty()) {
+        complete = ModbusSlave::isComplete();
+    }
+    else if (!response->empty()) {
+        response->add(data);
+        complete = response->isComplete();
+    }
+
+    if (complete) {
+        ModbusSlave::handlerSlave();
+        ModbusSlave::clear();
+    }
+
+    if (complete) {
+        ModbusStream::state = ModbusStreamStateT::MB_STREAM_STATE_END;
+    }
+
+    ERA_FORCE_UNUSED(request);
+}
+
+template <class Api>
+void ERaModbus<Api>::processInput(ERaModbusRequest* request, ERaModbusResponse* response) {
+    while (ModbusStream::availableBytes()) {
+        int c = ModbusStream::readByte();
+        if (c < 0) {
+            continue;
+        }
+        uint8_t data = (uint8_t)c;
+        switch (ModbusStream::state) {
+            case ModbusStreamStateT::MB_STREAM_STATE_BEGIN:
+            case ModbusStreamStateT::MB_STREAM_STATE_END:
+                this->processStateBegin(request, response, data);
+                break;
+            case ModbusStreamStateT::MB_STREAM_STATE_ADDR:
+                this->processStateAddr(request, response, data);
+                break;
+            case ModbusStreamStateT::MB_STREAM_STATE_FUNC:
+                this->processStateFunc(request, response, data);
+                break;
+            case ModbusStreamStateT::MB_STREAM_STATE_DATA:
+                this->processStateData(request, response, data);
+                break;
+            default:
+                break;
+        }
+        if (ModbusStream::state == ModbusStreamStateT::MB_STREAM_STATE_END) {
+            ModbusStream::state = ModbusStreamStateT::MB_STREAM_STATE_BEGIN;
+            break;
+        }
+    }
+}
+
+template <class Api>
+bool ERaModbus<Api>::waitResponse(ERaModbusRequest* request, ERaModbusResponse* response) {
+    if (request == nullptr) {
+        return false;
+    }
+    if (response == nullptr) {
+        return false;
+    }
+
+    this->updateTotalTransmit();
+
+    MillisTime_t startMillis = ERaMillis();
+
+    ModbusStream::streamStart();
+
+    do {
+        if (!ModbusStream::availableBytes()) {
+#if defined(ERA_NO_RTOS)
+            if (this->runApiResponse) {
+                this->thisApi().run();
+                this->thisApi().runZigbee();
+            }
+#endif
+            if (ModbusState::is(ModbusStateT::STATE_MB_PARSE)) {
+                break;
+            }
+            ERA_MODBUS_YIELD();
+            continue;
+        }
+
+        this->processInput(request, response);
+
+        if (response->isComplete()) {
+            ERaLogHex("MB <<", response->getMessage(), response->getPosition());
+            return response->isSuccess();
+        }
+        ERA_MODBUS_YIELD();
+    } while (ERaRemainingTime(startMillis, this->timeout));
+
+    if (ModbusStream::state != ModbusStreamStateT::MB_STREAM_STATE_BEGIN) {
+        this->waitRequest();
+    }
+
+    ModbusStream::streamEnd();
+
+    return false;
+}
+
+template <class Api>
+void ERaModbus<Api>::waitRequest() {
+    if (!ModbusSlave::isEnabled()) {
+        return;
+    }
+    this->processInput(nullptr, nullptr);
+}
+
+template <class Api>
+void ERaModbus<Api>::sendRequest(const uint8_t* data, size_t size) {
+    if (data == nullptr) {
+        return;
+    }
+
+    ERaLogHex("MB >>", data, size);
+    this->sendCommand(data, size);
+}
+
+template <class Api>
+void ERaModbus<Api>::sendCommand(const uint8_t* data, size_t size) {
+    this->switchToTransmit();
+    ModbusStream::sendBytes(data, size);
+    ModbusStream::flushBytes();
+    this->switchToReceive();
 }
 
 template <class Api>

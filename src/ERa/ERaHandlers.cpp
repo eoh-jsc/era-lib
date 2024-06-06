@@ -38,15 +38,15 @@ bool ERaWidgetPinWrite(uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param
 #define ERA_ON_PIN_WRITE(Pin) bool ERaWidgetPinWrite ## Pin (uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param, const ERaParam ERA_UNUSED &raw) \
         __attribute__((weak, alias("ERaWidgetPinWrite")))
 
-ERA_CONNECTED() __attribute__((weak, alias("ERaNoHandler")));
-ERA_DISCONNECTED() __attribute__((weak, alias("ERaNoHandler")));
-ERA_WAITING() __attribute__((weak, alias("ERaNoHandler")));
-ERA_APP_LOOP() __attribute__((weak, alias("ERaNoHandler")));
-ERA_OPTION_CONNECTED() __attribute__((weak, alias("ERaNoOptConnected")));
-ERA_MODBUS_BAUDRATE() __attribute__((weak, alias("ERaNoModbusBaudrate")));
-ERA_MODBUS_INFO() __attribute__((weak, alias("ERaNoInfo")));
-ERA_INFO() __attribute__((weak, alias("ERaNoInfo")));
-ERA_WRITE_CONFIG() __attribute__((weak, alias("ERaNoWriteConfig")));
+ERA_CONNECTED()         __attribute__((weak, alias("ERaNoHandler")));
+ERA_DISCONNECTED()      __attribute__((weak, alias("ERaNoHandler")));
+ERA_WAITING()           __attribute__((weak, alias("ERaNoHandler")));
+ERA_APP_LOOP()          __attribute__((weak, alias("ERaNoHandler")));
+ERA_OPTION_CONNECTED()  __attribute__((weak, alias("ERaNoOptConnected")));
+ERA_MODBUS_BAUDRATE()   __attribute__((weak, alias("ERaNoModbusBaudrate")));
+ERA_MODBUS_INFO()       __attribute__((weak, alias("ERaNoInfo")));
+ERA_INFO()              __attribute__((weak, alias("ERaNoInfo")));
+ERA_WRITE_CONFIG()      __attribute__((weak, alias("ERaNoWriteConfig")));
 
 ERA_ON_WRITE(Default);
 ERA_ON_PIN_READ(Default);

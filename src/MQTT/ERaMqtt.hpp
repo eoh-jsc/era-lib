@@ -9,28 +9,28 @@
 #include "MQTT/MQTT.h"
 #include "ERaMqttHelper.hpp"
 
-#define ERA_MQTT_PUB_LOG(status, errorCode)                                                                                             \
-    if (status) {                                                                                                                       \
-        ERA_LOG(TAG, ERA_PSTR("Publish (ok #%d) %s: %s"), this->mqtt.lastPacketID(), topic, payload);                                   \
-    }                                                                                                                                   \
-    else {                                                                                                                              \
-        ERA_LOG_ERROR(TAG, ERA_PSTR("Publish (error %d #%d) %s: %s"), errorCode, this->mqtt.lastPacketID(), topic, payload);            \
+#define ERA_MQTT_PUB_LOG(status, errorCode)                                                                                                             \
+    if (status) {                                                                                                                                       \
+        ERA_LOG(TAG, ERA_PSTR("Publish (ok #%d) %s (% 3d): %s"), this->mqtt.lastPacketID(), topic, strlen(payload), payload);                           \
+    }                                                                                                                                                   \
+    else {                                                                                                                                              \
+        ERA_LOG_ERROR(TAG, ERA_PSTR("Publish (error %d #%d) %s (% 3d): %s"), errorCode, this->mqtt.lastPacketID(), topic, strlen(payload), payload);    \
     }
 
-#define ERA_MQTT_SUB_LOG(status, errorCode)                                                                                             \
-    if (status) {                                                                                                                       \
-        ERA_LOG(TAG, ERA_PSTR("Subscribe (ok #%d): %s, QoS: %d"), this->mqtt.lastPacketID(), topicName, qos);                           \
-    }                                                                                                                                   \
-    else {                                                                                                                              \
-        ERA_LOG_ERROR(TAG, ERA_PSTR("Subscribe (error %d #%d): %s, QoS: %d"), errorCode, this->mqtt.lastPacketID(), topicName, qos);    \
+#define ERA_MQTT_SUB_LOG(status, errorCode)                                                                                                             \
+    if (status) {                                                                                                                                       \
+        ERA_LOG(TAG, ERA_PSTR("Subscribe (ok #%d): %s, QoS: %d"), this->mqtt.lastPacketID(), topicName, qos);                                           \
+    }                                                                                                                                                   \
+    else {                                                                                                                                              \
+        ERA_LOG_ERROR(TAG, ERA_PSTR("Subscribe (error %d #%d): %s, QoS: %d"), errorCode, this->mqtt.lastPacketID(), topicName, qos);                    \
     }
 
-#define ERA_MQTT_UNSUB_LOG(status, errorCode)                                                                                           \
-    if (status) {                                                                                                                       \
-        ERA_LOG(TAG, ERA_PSTR("Unsubscribe (ok #%d): %s"), this->mqtt.lastPacketID(), topicName);                                       \
-    }                                                                                                                                   \
-    else {                                                                                                                              \
-        ERA_LOG_ERROR(TAG, ERA_PSTR("Unsubscribe (error %d #%d): %s"), errorCode, this->mqtt.lastPacketID(), topicName);                \
+#define ERA_MQTT_UNSUB_LOG(status, errorCode)                                                                                                           \
+    if (status) {                                                                                                                                       \
+        ERA_LOG(TAG, ERA_PSTR("Unsubscribe (ok #%d): %s"), this->mqtt.lastPacketID(), topicName);                                                       \
+    }                                                                                                                                                   \
+    else {                                                                                                                                              \
+        ERA_LOG_ERROR(TAG, ERA_PSTR("Unsubscribe (error %d #%d): %s"), errorCode, this->mqtt.lastPacketID(), topicName);                                \
     }
 
 using namespace std;
@@ -155,6 +155,10 @@ public:
 
     void setKeepAlive(uint16_t keepAlive) {
         this->mqtt.setKeepAlive(keepAlive);
+    }
+
+    void setDropOverflow(bool enabled = false) {
+        this->mqtt.dropOverflow(enabled);
     }
 
     void setClientID(const char* id) {

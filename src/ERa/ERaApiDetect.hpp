@@ -1,7 +1,9 @@
 #ifndef INC_ERA_API_DETECT_HPP_
 #define INC_ERA_API_DETECT_HPP_
 
-#if defined(ESP32)
+#if defined(ERA_ABBR)
+    #include <ERa/ERaApiAbbr.hpp>
+#elif defined(ESP32)
     #include <ERa/ERaApiEsp32.hpp>
 #elif defined(ARDUINO_ARCH_STM32)
     #include <ERa/ERaApiStm32.hpp>

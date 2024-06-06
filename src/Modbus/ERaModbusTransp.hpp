@@ -31,23 +31,23 @@ public:
 
     virtual uint8_t responseLength() = 0;
 
-    uint16_t getPacketId() {
+    uint16_t getPacketId() const {
         return this->packetId;
     }
 
-    uint8_t getSlaveAddress() {
+    uint8_t getSlaveAddress() const {
         return this->slaveAddr;
     }
 
-    uint8_t getFunction() {
+    uint8_t getFunction() const {
         return this->function;
     }
 
-    uint16_t getAddress() {
+    uint16_t getAddress() const {
         return this->addr;
     }
 
-    uint16_t getLength() {
+    uint16_t getLength() const {
         return this->len;
     }
 
@@ -298,7 +298,7 @@ public:
 
 private:
     bool isCompleteRTU() {
-        if ((this->buffer[1] > 0x80) &&
+        if (((this->buffer[1] & 0x80) == 0x80) &&
             (this->index == 5)) {
             return true;
         }
@@ -312,7 +312,7 @@ private:
         if (!this->isCompleteRTU()) {
             return false;
         }
-        else if (this->buffer[1] > 0x80) {
+        else if ((this->buffer[1] & 0x80) == 0x80) {
             this->setStatusCode(this->buffer[2]);
             return false;
         }
@@ -324,7 +324,7 @@ private:
     }
 
     bool isCompleteTCP() {
-        if ((this->buffer[7] > 0x80) &&
+        if (((this->buffer[7] & 0x80) == 0x80) &&
             (this->index == 9)) {
             return true;
         }
@@ -338,7 +338,7 @@ private:
         if (!this->isCompleteTCP()) {
             return false;
         }
-        else if (this->buffer[7] > 0x80) {
+        else if ((this->buffer[7] & 0x80) == 0x80) {
             this->setStatusCode(this->buffer[8]);
             return false;
         }
@@ -699,66 +699,69 @@ public:
 };
 
 #include <Modbus/ERaModbusInternal.hpp>
+#include <Modbus/ERaModbusSlave.hpp>
 
 template <class Modbus>
 class ERaModbusTransp
     : public ERaModbusInternal
 {
+    const char* TAG = "Modbus";
+
 public:
     ERaModbusTransp()
     {}
     ~ERaModbusTransp()
     {}
 
-    bool readCoilStatus(const uint8_t transp, const ModbusConfig_t& param, bool skip = false) {
+    bool readCoilStatus(const uint8_t transp, ModbusConfig_t& param, bool skip = false) {
         ERaModbusRequest* request = new_modbus ERaModbusRequest01(transp, param.addr,
                                     BUILD_WORD(param.sa1, param.sa2), BUILD_WORD(param.len1, param.len2));
-        return this->processRead(request, skip);
+        return this->processRead(request, param, skip);
     }
 
-    bool readInputStatus(const uint8_t transp, const ModbusConfig_t& param, bool skip = false) {
+    bool readInputStatus(const uint8_t transp, ModbusConfig_t& param, bool skip = false) {
         ERaModbusRequest* request = new_modbus ERaModbusRequest02(transp, param.addr,
                                     BUILD_WORD(param.sa1, param.sa2), BUILD_WORD(param.len1, param.len2));
-        return this->processRead(request, skip);
+        return this->processRead(request, param, skip);
     }
 
-    bool readHoldingRegisters(const uint8_t transp, const ModbusConfig_t& param, bool skip = false) {
+    bool readHoldingRegisters(const uint8_t transp, ModbusConfig_t& param, bool skip = false) {
         ERaModbusRequest* request = new_modbus ERaModbusRequest03(transp, param.addr,
                                     BUILD_WORD(param.sa1, param.sa2), BUILD_WORD(param.len1, param.len2));
-        return this->processRead(request, skip);
+        return this->processRead(request, param, skip);
     }
 
-    bool readInputRegisters(const uint8_t transp, const ModbusConfig_t& param, bool skip = false) {
+    bool readInputRegisters(const uint8_t transp, ModbusConfig_t& param, bool skip = false) {
         ERaModbusRequest* request = new_modbus ERaModbusRequest04(transp, param.addr,
                                     BUILD_WORD(param.sa1, param.sa2), BUILD_WORD(param.len1, param.len2));
-        return this->processRead(request, skip);
+        return this->processRead(request, param, skip);
     }
 
-    bool forceSingleCoil(const uint8_t transp, const ModbusConfig_t& param) {
+    bool forceSingleCoil(const uint8_t transp, ModbusConfig_t& param) {
         ERaModbusRequest* request = new_modbus ERaModbusRequest05(transp, param.addr,
                                     BUILD_WORD(param.sa1, param.sa2), BUILD_WORD(param.len1, param.len2));
         return this->processWrite(request);
     }
 
-    bool presetSingleRegister(const uint8_t transp, const ModbusConfig_t& param) {
+    bool presetSingleRegister(const uint8_t transp, ModbusConfig_t& param) {
         ERaModbusRequest* request = new_modbus ERaModbusRequest06(transp, param.addr,
                                     BUILD_WORD(param.sa1, param.sa2), BUILD_WORD(param.len1, param.len2));
         return this->processWrite(request);
     }
 
-    bool forceMultipleCoils(const uint8_t transp, const ModbusConfig_t& param) {
+    bool forceMultipleCoils(const uint8_t transp, ModbusConfig_t& param) {
         ERaModbusRequest* request = new_modbus ERaModbusRequest0F(transp, param.addr,
                                     BUILD_WORD(param.sa1, param.sa2), BUILD_WORD(param.len1, param.len2), param.extra);
         return this->processWrite(request);
     }
 
-    bool presetMultipleRegisters(const uint8_t transp, const ModbusConfig_t& param) {
+    bool presetMultipleRegisters(const uint8_t transp, ModbusConfig_t& param) {
         ERaModbusRequest* request = new_modbus ERaModbusRequest10(transp, param.addr,
                                     BUILD_WORD(param.sa1, param.sa2), BUILD_WORD(param.len1, param.len2), param.extra);
         return this->processWrite(request);
     }
 
-    bool processRead(ERaModbusRequest* request, bool skip = false) {
+    bool processRead(ERaModbusRequest* request, ModbusConfig_t& param, bool skip = false) {
         bool status {false};
         ERA_ASSERT_NULL(request, false)
         ERaModbusResponse* response = new_modbus ERaModbusResponse(request, request->responseLength());
@@ -767,15 +770,26 @@ public:
             this->thisModbus().updateTotalTransmit();
             ERaLogHex("IB <<", response->getMessage(), response->getSize());
         }
+        else if (this->thisModbus().failCounter.min && !skip &&
+                (param.totalFail >= this->thisModbus().failCounter.min)) {
+            /* Skip send command */
+            ERA_LOG_WARNING(TAG, ERA_PSTR("Skip send command id: %d, counter: %d"),
+                            request->getSlaveAddress(), param.totalFail);
+        }
         else {
-            this->thisModbus().sendCommand(request->getMessage(), request->getSize());
-            status = this->thisModbus().waitResponse(response);
+            this->thisModbus().sendRequest(request->getMessage(), request->getSize());
+            status = this->thisModbus().waitResponse(request, response);
         }
         if (status) {
+            param.totalFail = 0;
             this->thisModbus().onData(request, response, skip);
         }
         else {
+            param.totalFail++;
             this->thisModbus().onError(request, skip);
+        }
+        if (param.totalFail >= this->thisModbus().failCounter.max) {
+            param.totalFail = this->thisModbus().failCounter.start;
         }
         delete request;
         delete response;
@@ -793,8 +807,8 @@ public:
         }
         else {
             for (size_t i = 0; i < 2; ++i) {
-                this->thisModbus().sendCommand(request->getMessage(), request->getSize());
-                if (this->thisModbus().waitResponse(response)) {
+                this->thisModbus().sendRequest(request->getMessage(), request->getSize());
+                if (this->thisModbus().waitResponse(request, response)) {
                     status = true;
                     break;
                 }

@@ -194,6 +194,10 @@ public:
         this->transp.setKeepAlive(keepAlive);
     }
 
+    void setDropOverflow(bool enabled = false) {
+        this->transp.dropOverflow(enabled);
+    }
+
     void setHeartbeat(unsigned long interval) {
         if (!interval) {
         }
@@ -395,7 +399,7 @@ void ERaProto<Transp, Flash>::processRequest(const char* topic, const char* payl
         return;
     }
 
-    ERA_LOG(this->transp.getTag(), ERA_PSTR("Message %s: %s"), topic, payload);
+    ERA_LOG(this->transp.getTag(), ERA_PSTR("Message %s (% 3d): %s"), topic, strlen(payload), payload);
 
     if (ERaFindStr(topic, this->ERA_TOPIC) != topic) {
         if (this->pServerCallbacks != nullptr) {
@@ -667,7 +671,9 @@ void ERaProto<Transp, Flash>::processConfiguration(const char* payload, const ch
         Base::getPinRp().deleteAll();
         this->processDeviceConfig(item, ERaChipCfgT::CHIP_IO_PIN);
         if (Base::getPinRp().updateHashID(hash)) {
+#if !defined(ERA_ABBR)
             Base::Property::updateProperty(Base::getPinRp());
+#endif
             Base::storePinConfig(payload);
             ERaWriteConfig(ERaConfigTypeT::ERA_PIN_CONFIG);
         }
@@ -882,6 +888,12 @@ bool ERaProto<Transp, Flash>::sendInfo() {
     cJSON_AddStringToObject(root, INFO_ID, ERaMessageID::make());
 
     Base::addInfo(root);
+
+#if defined(ERA_ABBR)
+    cJSON_AddBoolToObject(root, INFO_ABBR, true);
+#else
+    cJSON_AddBoolToObject(root, INFO_ABBR, false);
+#endif
 
     if (this->heartbeat) {
         cJSON_AddNumberToObject(root, INFO_UPTIME, (ERaMillis() / 1000UL));

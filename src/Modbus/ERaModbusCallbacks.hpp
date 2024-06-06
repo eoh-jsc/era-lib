@@ -29,6 +29,15 @@ public:
         ERA_LOG_WARNING(TAG, ERA_PSTR("onError callback default."));
         ERA_FORCE_UNUSED(request);
     }
+
+    virtual void onAction(const ModbusAction_t* request,
+                          const Action_t* action,
+                          ModbusConfig_t* config) {
+        ERA_LOG_WARNING(TAG, ERA_PSTR("onAction callback default."));
+        ERA_FORCE_UNUSED(request);
+        ERA_FORCE_UNUSED(action);
+        ERA_FORCE_UNUSED(config);
+    }
 };
 
 #endif /* INC_ERA_MODBUS_CALLBACKS_HPP_ */

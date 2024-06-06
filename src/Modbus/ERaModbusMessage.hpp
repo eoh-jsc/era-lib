@@ -51,6 +51,14 @@ public:
         this->buffer[this->index++] = value;
     }
 
+    void clear() {
+        this->index = 0;
+    }
+
+    bool empty() {
+        return (this->index == 0);
+    }
+
 protected:
     uint8_t* buffer;
     uint8_t length;

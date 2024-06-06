@@ -832,6 +832,8 @@ public:
 typedef ERaDataBuff ERaDataBuf;
 typedef ERaDataBuffDynamic ERaDataBufDynamic;
 
+#define containsValue(v)   containsKey(#v)
+
 class ERaDataJson
 {
     typedef cJSON* (CJSON_STDCALL* AddBool)(cJSON* const object, const char* const name, const cJSON_bool boolean);
@@ -1071,6 +1073,10 @@ public:
                 return false;
             }
             return ERaStringCompare(this->item->string, name);
+        }
+
+        bool containsKey(const char* key) const {
+            return (cJSON_GetObjectItem(this->item, key) != nullptr);
         }
 
         iterator& shared(const iterator& it) {
@@ -1459,6 +1465,8 @@ public:
         this->add_multi(name, head, tail...);
     }
 
+    bool containsKey(const char* key) const;
+
     cJSON* detach(size_t index);
     cJSON* detach(const char* key);
     cJSON* detach(cJSON* const it);
@@ -1659,6 +1667,11 @@ void ERaDataJson::add(const char* name, ERaDataJson& value) {
     }
 
 #endif
+
+inline
+bool ERaDataJson::containsKey(const char* key) const {
+    return (cJSON_GetObjectItem(this->root, key) != nullptr);
+}
 
 inline
 cJSON* ERaDataJson::detach(size_t index) {

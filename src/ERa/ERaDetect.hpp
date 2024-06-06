@@ -28,13 +28,13 @@
         #define ERA_MCU_CORE                1
     #endif
 
-#if !defined(ERA_STRING_CAPACITY_MAX)
-    #if defined(BOARD_HAS_PSRAM)
-        #define ERA_STRING_CAPACITY_MAX     3145728
-    #else
-        #define ERA_STRING_CAPACITY_MAX     65535
+    #if !defined(ERA_STRING_CAPACITY_MAX)
+        #if defined(BOARD_HAS_PSRAM)
+            #define ERA_STRING_CAPACITY_MAX 3145728
+        #else
+            #define ERA_STRING_CAPACITY_MAX 65535
+        #endif
     #endif
-#endif
 
     #define ERA_BT
     #define ERA_OTA
@@ -892,9 +892,9 @@
 
     #define ERA_100_PINS
 
-#if !defined(ERA_STRING_CAPACITY_MAX)
-    #define ERA_STRING_CAPACITY_MAX         3145728
-#endif
+    #if !defined(ERA_STRING_CAPACITY_MAX)
+        #define ERA_STRING_CAPACITY_MAX     3145728
+    #endif
 
     #define ERA_OTA
 
@@ -951,7 +951,7 @@
 #endif
 
 #if !defined(ERA_MAX_READ_BYTES)
-    #define ERA_MAX_READ_BYTES              512
+    #define ERA_MAX_READ_BYTES              ERA_BUFFER_SIZE
 #endif
 
 #if !defined(ERA_MAX_WRITE_BYTES)
@@ -1030,6 +1030,40 @@
     #if __has_include(<type_traits>)
         #include <type_traits>
         #define ERA_HAS_TYPE_TRAITS_H
+    #endif
+#endif
+
+#if defined(ERA_ABBR)
+    /* ERa Abbreviation */
+    #if defined(ERA_MODBUS)
+        #undef ERA_MODBUS
+    #endif
+
+    #if defined(ERA_ZIGBEE)
+        #undef ERA_ZIGBEE
+    #endif
+
+    #if defined(ERA_SPECIFIC)
+        #undef ERA_SPECIFIC
+    #endif
+
+    #if defined(ERA_BUFFER_SIZE)
+        #undef ERA_BUFFER_SIZE
+        #define ERA_BUFFER_SIZE             512
+    #endif
+
+    #if defined(ERA_MAX_READ_BYTES)
+        #undef ERA_MAX_READ_BYTES
+        #define ERA_MAX_READ_BYTES          512
+    #endif
+
+    #if defined(ERA_MQTT_BUFFER_SIZE)
+        #undef ERA_MQTT_BUFFER_SIZE
+        #define ERA_MQTT_BUFFER_SIZE        1024
+    #endif
+
+    #if !defined(ERA_VIRTUAL_WRITE_LEGACY)
+        #define ERA_VIRTUAL_WRITE_LEGACY
     #endif
 #endif
 

@@ -23,27 +23,6 @@
 #endif
 
 template <class Api>
-void ERaModbus<Api>::configModbus() {
-    if (this->streamRTU != NULL) {
-        return;
-    }
-
-    this->streamRTU = &SerialMB;
-    SerialMB.begin(ERA_SERIAL_MODBUS(ERA_DEV_MODBUS), MODBUS_BAUDRATE);
-    this->_streamDefault = true;
-}
-
-template <class Api>
-void ERaModbus<Api>::endModbus() {
-    if (!this->streamDefault()) {
-        return;
-    }
-
-    SerialMB.flush();
-    SerialMB.end();
-}
-
-template <class Api>
 void ERaModbus<Api>::setBaudRate(uint32_t baudrate) {
     ERaModbusBaudrate(baudrate);
     if (!this->streamDefault()) {
@@ -53,65 +32,110 @@ void ERaModbus<Api>::setBaudRate(uint32_t baudrate) {
     SerialMB.begin(ERA_SERIAL_MODBUS(ERA_DEV_MODBUS), baudrate);
 }
 
-template <class Api>
-bool ERaModbus<Api>::waitResponse(ERaModbusResponse* response) {
-    if (response == nullptr) {
-        return false;
+inline
+void ERaModbusStream::begin() {
+    if (this->stream != NULL) {
+        return;
     }
-    if (this->stream == NULL) {
-        return false;
+    if (this->initialized) {
+        return;
     }
 
-    this->updateTotalTransmit();
-
-    MillisTime_t startMillis = ERaMillis();
-
-    do {
-        if (!this->stream->available()) {
-#if defined(ERA_NO_RTOS)
-            if (this->runApiResponse) {
-                this->thisApi().run();
-                this->thisApi().runZigbee();
-            }
-#endif
-            if (ModbusState::is(ModbusStateT::STATE_MB_PARSE)) {
-                break;
-            }
-            ERA_MODBUS_YIELD();
-            continue;
-        }
-
-        do {
-            int c = this->stream->read();
-            if (c < 0) {
-                continue;
-            }
-            response->add((uint8_t)c);
-        } while (this->stream->available());
-
-        if (response->isComplete()) {
-            ERaLogHex("MB <<", response->getMessage(), response->getPosition());
-            return response->isSuccess();
-        }
-        ERA_MODBUS_YIELD();
-    } while (ERaRemainingTime(startMillis, this->timeout));
-    return false;
+    SerialMB.begin(ERA_SERIAL_MODBUS(ERA_DEV_MODBUS), MODBUS_BAUDRATE);
+    this->initialized = true;
 }
 
-template <class Api>
-void ERaModbus<Api>::sendCommand(uint8_t* data, size_t size) {
-    if (data == nullptr) {
-        return;
-    }
-    if (this->stream == NULL) {
+inline
+void ERaModbusStream::end() {
+    if (!this->initialized) {
         return;
     }
 
-    ERaLogHex("MB >>", data, size);
-    this->switchToTransmit();
-    this->stream->write(data, size);
-    this->stream->flush();
-    this->switchToReceive();
+    SerialMB.flush();
+    SerialMB.end();
+    this->initialized = false;
+}
+
+inline
+void ERaModbusStream::setBaudRate(uint32_t baudrate) {
+    ERaModbusBaudrate(baudrate);
+    if (!this->initialized) {
+        return;
+    }
+
+    SerialMB.begin(ERA_SERIAL_MODBUS(ERA_DEV_MODBUS), baudrate);
+}
+
+inline
+void ERaModbusStream::flushBytes() {
+    if (this->stream != NULL) {
+        return this->stream->flush();
+    }
+
+    SerialMB.flush();
+}
+
+inline
+int ERaModbusStream::availableBytes() {
+    if (this->stream != NULL) {
+        return this->stream->available();
+    }
+
+    return SerialMB.available();
+}
+
+inline
+void ERaModbusStream::sendByte(uint8_t byte) {
+    ERaGuardLock(this->mutex);
+    if (this->stream != NULL) {
+        this->stream->write(byte);
+    }
+    else {
+        SerialMB.write(byte);
+    }
+    ERaGuardUnlock(this->mutex);
+}
+
+inline
+void ERaModbusStream::sendBytes(const uint8_t* pData, size_t pDataLen) {
+    ERaGuardLock(this->mutex);
+    if (this->stream != NULL) {
+        this->stream->write(pData, pDataLen);
+    }
+    else {
+        SerialMB.write(pData, pDataLen);
+    }
+    ERaGuardUnlock(this->mutex);
+}
+
+inline
+int ERaModbusStream::readByte() {
+    if (this->stream != NULL) {
+        return this->stream->read();
+    }
+
+    return SerialMB.read();
+}
+
+inline
+int ERaModbusStream::readBytes(uint8_t* buf, size_t size) {
+    uint8_t* begin = buf;
+    uint8_t* end = buf + size;
+    MillisTime_t startMillis = ERaMillis();
+    while ((begin < end) && ((ERaMillis() - startMillis) < this->timeout)) {
+        int c {0};
+        if (this->stream != NULL) {
+            c = this->stream->read();
+        }
+        else {
+            c = SerialMB.read();
+        }
+        if (c < 0) {
+            continue;
+        }
+        *begin++ = (uint8_t)c;
+    }
+    return ((int)(begin - buf));
 }
 
 #endif /* INC_ERA_MODBUS_LINUX_HPP_ */

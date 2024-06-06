@@ -105,9 +105,9 @@ private:
     Register_t* setupRegister(uint8_t addr, uint8_t sa1, uint8_t sa2);
     bool onRead(Register_t* pReg, ERaModbusInternal::ReadCallback_t cb);
     bool onWrite(Register_t* pReg, ERaModbusInternal::WriteCallback_t cb);
-    bool isRegisterFree();
+    bool isRegisterFree() const;
 
-    bool isValidRegister(const Register_t* pReg) {
+    bool isValidRegister(const Register_t* pReg) const {
         if (pReg == nullptr) {
             return false;
         }
@@ -349,7 +349,7 @@ bool ERaModbusInternal::handlerWriteMulti(ERaModbusRequest* request, ERaModbusRe
                 value = request->getExtraBit((regIndex / 8), (regIndex % 8));
                 break;
             case ModbusFunctionT::PRESET_MULTIPLE_REGISTERS:
-                value = request->getExtraWord(regIndex);
+                value = request->getExtraWord(regIndex * 2);
                 break;
             default:
                 continue;
@@ -410,7 +410,7 @@ bool ERaModbusInternal::onWrite(Register_t* pReg, ERaModbusInternal::WriteCallba
 }
 
 inline
-bool ERaModbusInternal::isRegisterFree() {
+bool ERaModbusInternal::isRegisterFree() const {
     if (this->numRegister >= MAX_REGISTERS) {
         return false;
     }

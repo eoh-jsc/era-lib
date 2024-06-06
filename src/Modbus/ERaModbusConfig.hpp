@@ -68,7 +68,7 @@
 #define MODBUS_BUFFER_SIZE              256
 
 #if !defined(DEFAULT_TIMEOUT_MODBUS)
-    #define DEFAULT_TIMEOUT_MODBUS      1500
+    #define DEFAULT_TIMEOUT_MODBUS      1000
 #endif
 
 #if !defined(MODBUS_DATA_BUFFER_SIZE)

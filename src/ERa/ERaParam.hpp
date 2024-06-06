@@ -118,6 +118,13 @@ public:
         return this->valueobject;
     }
 
+    bool containsKey(const char* key) const {
+        if (this->valueobject == nullptr) {
+            return false;
+        }
+        return this->valueobject->containsKey(key);
+    }
+
 #if defined(ERA_USE_LONG_LONG)
 
 #if defined(ERA_USE_ERA_ATOLL)

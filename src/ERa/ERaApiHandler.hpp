@@ -51,6 +51,10 @@ public:
     }
 #endif
 
+    virtual void beginFlash() {
+        ERA_LOG_WARNING(TAG, ERA_PSTR("beginFlash default."));
+    }
+
     virtual char* readFromFlash(const char* filename, bool force = false) {
         ERA_LOG_WARNING(TAG, ERA_PSTR("readFromFlash default."));
         ERA_FORCE_UNUSED(filename);
@@ -63,6 +67,25 @@ public:
         ERA_LOG_WARNING(TAG, ERA_PSTR("writeToFlash default."));
         ERA_FORCE_UNUSED(filename);
         ERA_FORCE_UNUSED(buf);
+        ERA_FORCE_UNUSED(force);
+    }
+
+    virtual size_t readBytesFromFlash(const char* key, void* buf, size_t maxLen,
+                                                    bool force = false) {
+        ERA_LOG_WARNING(TAG, ERA_PSTR("readBytesFromFlash default."));
+        ERA_FORCE_UNUSED(key);
+        ERA_FORCE_UNUSED(buf);
+        ERA_FORCE_UNUSED(maxLen);
+        ERA_FORCE_UNUSED(force);
+        return 0;
+    }
+
+    virtual void writeBytesToFlash(const char* key, const void* value, size_t len,
+                                                    bool force = false) {
+        ERA_LOG_WARNING(TAG, ERA_PSTR("writeBytesToFlash default."));
+        ERA_FORCE_UNUSED(key);
+        ERA_FORCE_UNUSED(value);
+        ERA_FORCE_UNUSED(len);
         ERA_FORCE_UNUSED(force);
     }
 

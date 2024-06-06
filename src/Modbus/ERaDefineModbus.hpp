@@ -109,4 +109,10 @@ enum ModbusActionTypeT
     MODBUS_ACTION_PARAMS = 0x01
 };
 
+typedef struct __ModbusAction_t {
+    char* key;
+    uint8_t type;
+    uint16_t param;
+} ModbusAction_t;
+
 #endif /* INC_ERA_DEFINE_MODBUS_HPP_ */

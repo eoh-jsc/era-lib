@@ -8,7 +8,7 @@
 #include <ERa/ERaParam.hpp>
 #include <ERa/ERaHooks.hpp>
 #include <ERa/ERaHelpers.hpp>
-#include <ERa/ERaProperty.hpp>
+#include <ERa/ERaPropertyDet.hpp>
 #include <ERa/ERaTransp.hpp>
 #include <ERa/ERaTimer.hpp>
 #include <ERa/ERaApiHandler.hpp>
@@ -21,7 +21,9 @@
 template <class Proto, class Flash>
 class ERaApi
     : public ERaApiHandler
+#if !defined(ERA_ABBR)
     , public ERaProperty< ERaApi<Proto, Flash> >
+#endif
 #if defined(ERA_MODBUS)
     , public ERaModbus< ERaApi<Proto, Flash> >
 #endif
@@ -43,8 +45,10 @@ class ERaApi
     typedef ERaApiHandler Handler;
 
 protected:
+#if !defined(ERA_ABBR)
     friend class ERaProperty< ERaApi<Proto, Flash> >;
     typedef ERaProperty< ERaApi<Proto, Flash> > Property;
+#endif
 #if defined(ERA_MODBUS)
     friend class ERaModbus< ERaApi<Proto, Flash> >;
     typedef ERaModbus< ERaApi<Proto, Flash> > Modbus;
@@ -200,7 +204,7 @@ public:
 #endif
 
     void eraseAllConfigs() {
-        this->flash.begin();
+        this->beginFlash();
         this->removePinConfig();
 #if defined(ERA_BT)
         this->removeBluetoothConfig();
@@ -236,6 +240,10 @@ public:
 #endif
     }
 
+    void beginFlash() override {
+        this->flash.begin();
+    }
+
     char* readFromFlash(const char* filename, bool force = false) override {
         char* buf = nullptr;
         if (!this->thisProto().getTransp().getAskConfig() || force) {
@@ -248,6 +256,22 @@ public:
                                             bool force = false) override {
         if (!this->thisProto().getTransp().getAskConfig() || force) {
             this->flash.writeFlash(filename, buf);
+        }
+    }
+
+    size_t readBytesFromFlash(const char* key, void* buf, size_t maxLen,
+                                            bool force = false) override {
+        size_t size {0};
+        if (!this->thisProto().getTransp().getAskConfig() || force) {
+            size = this->flash.readFlash(key, buf, maxLen);
+        }
+        return size;
+    }
+
+    void writeBytesToFlash(const char* key, const void* value, size_t len,
+                                            bool force = false) override {
+        if (!this->thisProto().getTransp().getAskConfig() || force) {
+            this->flash.writeFlash(key, value, len);
         }
     }
 
@@ -356,7 +380,9 @@ protected:
     }
 
     void handlerAPI(bool feed) {
+#if !defined(ERA_ABBR)
         Property::run();
+#endif
         this->ERaPinRp.run();
 
         if (feed) {
@@ -427,7 +453,9 @@ protected:
 #endif
 
     void callERaWriteHandler(uint8_t pin, const ERaParam& param) override {
+#if !defined(ERA_ABBR)
         Property::handler(pin, param);
+#endif
         ERaWriteHandler_t handle = getERaWriteHandler(pin);
         if ((handle != nullptr) &&
             (handle != ERaWidgetWrite)) {
@@ -495,20 +523,6 @@ protected:
     void endWriteToFlash(bool force = false) {
         if (!this->thisProto().getTransp().getAskConfig() || force) {
             this->flash.endWrite();
-        }
-    }
-
-    size_t readBytesFromFlash(const char* key, void* buf, size_t maxLen, bool force = false) {
-        size_t size {0};
-        if (!this->thisProto().getTransp().getAskConfig() || force) {
-            size = this->flash.readFlash(key, buf, maxLen);
-        }
-        return size;
-    }
-
-    void writeBytesToFlash(const char* key, const void* value, size_t len, bool force = false) {
-        if (!this->thisProto().getTransp().getAskConfig() || force) {
-            this->flash.writeFlash(key, value, len);
         }
     }
 
@@ -1158,7 +1172,9 @@ void ERaApi<Proto, Flash>::callERaProHandler(const char* deviceId, const cJSON* 
         else {
             continue;
         }
+#if !defined(ERA_ABBR)
         Property::handler(id, param);
+#endif
     }
 }
 
@@ -1375,6 +1391,7 @@ void ERaAttachNoRTOSRun(T& head, Args&... tail) {
     #define ERA_ATTACH_RUN(...)
 #endif
 
+#include <ERa/ERaPragma.hpp>
 #include <ERa/ERaWdt.hpp>
 
 #endif /* INC_ERA_API_HPP_ */
