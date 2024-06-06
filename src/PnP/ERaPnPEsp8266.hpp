@@ -130,6 +130,7 @@ public:
         , authToken(nullptr)
         , scanWiFiConnect(false)
         , persistent(false)
+        , scanWiFiRetry(1UL)
         , prevMillisScan(0UL)
         , server(80)
         , udpERa(Udp)
@@ -223,8 +224,11 @@ public:
     }
 #endif
 
-    void setScanWiFi(bool enable) {
+    void setScanWiFi(bool enable, unsigned long retry = 2UL) {
         this->scanWiFiConnect = enable;
+        if (retry) {
+            this->scanWiFiRetry = retry;
+        }
     }
 
     void setPersistent(bool enable) {
@@ -257,6 +261,7 @@ private:
     void configMode();
     void waitHandle(unsigned long ms);
     int scanNetworks();
+    bool scanNetwork(const char* ssid);
     bool scanNetworks(const char* ssid);
     void connectNetwork();
     void connectNewNetwork();
@@ -298,6 +303,7 @@ private:
     const char* authToken;
     bool scanWiFiConnect;
     bool persistent;
+    unsigned long scanWiFiRetry;
     unsigned long prevMillisScan;
     ESP8266WebServer server;
     DNSServer        dnsServer;
@@ -1266,7 +1272,7 @@ int ERaPnP<Transport>::scanNetworks() {
 }
 
 template <class Transport>
-bool ERaPnP<Transport>::scanNetworks(const char* ssid) {
+bool ERaPnP<Transport>::scanNetwork(const char* ssid) {
     if (!this->scanWiFiConnect) {
         return true;
     }
@@ -1288,7 +1294,7 @@ bool ERaPnP<Transport>::scanNetworks(const char* ssid) {
         return false;
     }
 
-    int32_t rssi {-999};
+    int32_t rssi {-9999};
     for (int i = 0; i < nets; ++i) {
         if (WiFi.SSID(i) == ssid) {
             found = true;
@@ -1314,9 +1320,22 @@ bool ERaPnP<Transport>::scanNetworks(const char* ssid) {
         ERA_LOG(TAG, ERA_PSTR("Connecting SSID: %s, BSSID: %s, RSSI: %d, Channel: %d"),
                                 ssid, mac, rssi, ERaConfig.channel);
     }
+    else {
+        ERA_LOG_WARNING(TAG, ERA_PSTR("Not Found SSID: %s"), ssid);
+    }
     WiFi.scanDelete();
 
     return found;
+}
+
+template <class Transport>
+bool ERaPnP<Transport>::scanNetworks(const char* ssid) {
+    for (unsigned long i = 0; i < this->scanWiFiRetry; ++i) {
+        if (this->scanNetwork(ssid)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 template <class Transport>
