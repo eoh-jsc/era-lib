@@ -35,7 +35,6 @@ TimeElement_t ntpTime;
 
 /* This function will run every time ERa is connected */
 ERA_CONNECTED() {
-    syncTime.begin();
     ERA_LOG("ERa", "ERa connected!");
 }
 
@@ -61,8 +60,9 @@ void setup() {
     /* Set board id */
     // ERa.setBoardID("Board_1");
 
-    /* Config timezone +7 */
-    syncTime.config(7);
+    /* Set timezone +7 */
+    syncTime.setTimeZone(7);
+    syncTime.begin();
 
     /* Initializing the ERa library. */
     ERa.begin(ssid, pass);

@@ -26,7 +26,7 @@ public:
     virtual ~ERaEspTime()
     {}
 
-    void config(long tz) {
+    void setTimeZone(long tz = 7L) {
         this->timeZone = tz;
     }
 
