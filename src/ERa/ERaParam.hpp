@@ -230,19 +230,19 @@ public:
     void add_dynamic(char* value) {
         this->free();
         this->valuestring = value;
-        this->setType(ERaParamTypeT::ERA_PARAM_TYPE_STRING, true);
+        this->setTypeString();
     }
 
     void add_static(char* value) {
         this->free();
         this->valuestring = value;
-        this->setType(ERaParamTypeT::ERA_PARAM_TYPE_STATIC_STRING, true);
+        this->setTypeStaticString();
     }
 
     void add_static(const char* value) {
         this->free();
         this->valuestring = const_cast<char*>(value);
-        this->setType(ERaParamTypeT::ERA_PARAM_TYPE_STATIC_STRING, true);
+        this->setTypeStaticString();
     }
 
     template <typename T>
@@ -443,25 +443,25 @@ private:
     void addParam(char* value) {
         this->free();
         this->valuestring = ERaStrdup(value);
-        this->setType(ERaParamTypeT::ERA_PARAM_TYPE_STRING, true);
+        this->setTypeString();
     }
 
     void addParam(const char* value) {
         this->free();
         this->valuestring = ERaStrdup(value);
-        this->setType(ERaParamTypeT::ERA_PARAM_TYPE_STRING, true);
+        this->setTypeString();
     }
 
     void addParam(cJSON* value) {
         this->free();
         this->valuestring = cJSON_PrintUnformatted(value);
-        this->setType(ERaParamTypeT::ERA_PARAM_TYPE_STRING, true);
+        this->setTypeString();
     }
 
     void addParam(const cJSON* value) {
         this->free();
         this->valuestring = cJSON_PrintUnformatted(value);
-        this->setType(ERaParamTypeT::ERA_PARAM_TYPE_STRING, true);
+        this->setTypeString();
     }
 
     void addParam(ERaDataJson& value) {
@@ -475,8 +475,16 @@ private:
             ::free(this->valuestring);
         }
         this->valuestring = nullptr;
-        this->setType(ERaParamTypeT::ERA_PARAM_TYPE_STRING, false);
-        this->setType(ERaParamTypeT::ERA_PARAM_TYPE_STATIC_STRING, false);
+        this->setTypeString();
+        this->setTypeStaticString();
+    }
+
+    void setTypeString() {
+        this->setType(ERaParamTypeT::ERA_PARAM_TYPE_STRING, (this->valuestring != nullptr));
+    }
+
+    void setTypeStaticString() {
+        this->setType(ERaParamTypeT::ERA_PARAM_TYPE_STATIC_STRING, (this->valuestring != nullptr));
     }
 
     void setType(uint8_t mask, bool value) {

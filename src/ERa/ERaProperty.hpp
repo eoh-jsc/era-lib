@@ -697,13 +697,13 @@ void ERaProperty<Api>::handler(const char* id, const ERaParam& param) {
                 continue;
             }
             else {
-                if (pProp->allocPointer != nullptr) {
-                    free(pProp->allocPointer);
-                    pProp->allocPointer = nullptr;
-                }
                 if (pProp->value != nullptr) {
                     delete pProp->value;
                     pProp->value = nullptr;
+                }
+                if (pProp->allocPointer != nullptr) {
+                    free(pProp->allocPointer);
+                    pProp->allocPointer = nullptr;
                 }
                 pProp->report.deleteReport();
                 delete pProp;
