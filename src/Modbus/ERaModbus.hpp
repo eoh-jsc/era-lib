@@ -792,6 +792,7 @@ void ERaModbus<Api>::processModbusScan() {
         .len1 = 0,
         .len2 = 1,
         .extra = {},
+        .delay = 20,
         .ipSlave = {
             .ip = {
                 .dword = this->modbusScan->ipSlave.ip.dword

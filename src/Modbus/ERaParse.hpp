@@ -56,14 +56,9 @@ typedef struct __ModbusConfig_t {
     uint8_t len1;
     uint8_t len2;
     uint8_t extra[10];
-    uint8_t type;
-    uint8_t button;
     uint16_t delay;
     IPSlave_t ipSlave;
     uint8_t totalFail;
-    uint8_t sizeData;
-    uint8_t ack;
-    uint32_t value;
 } ModbusConfig_t;
 
 typedef struct __Action_t {
