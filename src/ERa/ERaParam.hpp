@@ -29,7 +29,7 @@ public:
         , valueobject(nullptr)
     {}
     template <typename T>
-    ERaParam(T value)
+    ERaParam(const T& value)
         : type(0)
         , valueint(0)
         , valuedouble(0)
@@ -38,7 +38,7 @@ public:
     {
         this->add(value);
     }
-    ERaParam(ERaDataJson& value)
+    ERaParam(const ERaDataJson& value)
         : type(0)
         , valueint(0)
         , valuedouble(0)
@@ -85,6 +85,10 @@ public:
 
     bool isObject() const {
         return this->getType(ERaParamTypeT::ERA_PARAM_TYPE_OBJECT);
+    }
+
+    bool hasNonObject() const {
+        return (this->isNumber() || this->isString());
     }
 
     ERaInt_t getInt() const {
@@ -211,11 +215,11 @@ public:
     }
 
     template <typename T>
-    void add(T value) {
+    void add(const T& value) {
         this->addParam(value);
     }
 
-    void add(ERaDataJson& value) {
+    void add(const ERaDataJson& value) {
         this->addParam(value);
     }
 
@@ -246,12 +250,12 @@ public:
     }
 
     template <typename T>
-    ERaParam& operator = (T value) {
+    ERaParam& operator = (const T& value) {
         this->addParam(value);
         return (*this);
     }
 
-    ERaParam& operator = (ERaDataJson& value) {
+    ERaParam& operator = (const ERaDataJson& value) {
         this->addParam(value);
         return (*this);
     }
@@ -267,7 +271,7 @@ public:
     }
 
     template <typename T>
-    bool operator == (T value) const {
+    bool operator == (const T& value) const {
         if (!this->isNumber()) {
             return false;
         }
@@ -319,6 +323,14 @@ public:
         return (*this->valueobject == *value);
     }
 
+    bool operator == (ERaDataJson& value) const {
+        return operator == (&value);
+    }
+
+    bool operator == (const ERaDataJson& value) const {
+        return operator == (&value);
+    }
+
     bool operator == (ERaParam& value) const {
         return operator == ((const ERaParam&)value);
     }
@@ -342,8 +354,11 @@ public:
         return false;
     }
 
+    bool operator == (ERaString& value) const;
+    bool operator == (const ERaString& value) const;
+
     template <typename T>
-    bool operator != (T value) const {
+    bool operator != (const T& value) const {
         return !(operator == <T> (value));
     }
 
@@ -371,11 +386,27 @@ public:
         return !(operator == (value));
     }
 
+    bool operator != (ERaDataJson& value) const {
+        return !(operator == (value));
+    }
+
+    bool operator != (const ERaDataJson& value) const {
+        return !(operator == (value));
+    }
+
     bool operator != (ERaParam& value) const {
         return !(operator == (value));
     }
 
     bool operator != (const ERaParam& value) const {
+        return !(operator == (value));
+    }
+
+    bool operator != (ERaString& value) const {
+        return !(operator == (value));
+    }
+
+    bool operator != (const ERaString& value) const {
         return !(operator == (value));
     }
 
@@ -406,7 +437,7 @@ public:
 protected:
 private:
     template <typename T>
-    void addParam(T value) {
+    void addParam(const T& value) {
         double number = (double)value;
         if (number >= ERA_INT_MAX) {
             this->valueint = ERA_INT_MAX;
@@ -464,8 +495,8 @@ private:
         this->setTypeString();
     }
 
-    void addParam(ERaDataJson& value) {
-        this->valueobject = &value;
+    void addParam(const ERaDataJson& value) {
+        this->valueobject = &const_cast<ERaDataJson&>(value);
         this->setType(ERaParamTypeT::ERA_PARAM_TYPE_OBJECT, true);
     }
 
@@ -508,12 +539,28 @@ private:
 };
 
 inline
-void ERaDataJson::add(const char* name, ERaParam& value) {
-    if (value.isString()) {
+void ERaDataJson::add(const char* name, const ERaParam& value) {
+    if (value.isNumber()) {
+        this->add(name, value.getDouble());
+    }
+    else if (value.isString()) {
         this->add(name, value.getString());
     }
-    else if (value.isNumber()) {
-        this->add(name, value.getDouble());
+    else if (value.isObject()) {
+        this->add(name, *value.getObject());
+    }
+}
+
+inline
+void ERaDataJson::add(const ERaParam& value) {
+    if (value.isNumber()) {
+        this->add(value.getDouble());
+    }
+    else if (value.isString()) {
+        this->add(value.getString());
+    }
+    else if (value.isObject()) {
+        this->add(*value.getObject());
     }
 }
 
@@ -522,6 +569,16 @@ void ERaDataJson::add(const char* name, ERaParam& value) {
 inline
 void ERaParam::addParam(const ERaString& value) {
     this->addParam(value.getString());
+}
+
+inline
+bool ERaParam::operator == (ERaString& value) const {
+    return operator == ((const char*)value.getString());
+}
+
+inline
+bool ERaParam::operator == (const ERaString& value) const {
+    return operator == ((const char*)value.getString());
 }
 
 inline
@@ -541,6 +598,16 @@ ERaString ERaDataJson::iterator::operator | (const char* value) const {
         return ERaString("null");
     }
     return ERaString(value);
+}
+
+inline
+void ERaDataJson::add(const char* name, const ERaString& value) {
+    this->add(name, value.getString());
+}
+
+inline
+void ERaDataJson::add(const ERaString& value) {
+    this->add(value.getString());
 }
 
 inline

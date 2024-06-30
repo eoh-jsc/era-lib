@@ -106,6 +106,10 @@
     #define ERA_MODBUS_MUTEX_MS         100UL
 #endif
 
+#if !defined(ERA_MODBUS_WAIT_TCP_MS)
+    #define ERA_MODBUS_WAIT_TCP_MS      60000UL
+#endif
+
 #if !defined(ERA_DISABLE_PNP_MODBUS)
     #define ERA_PNP_MODBUS
 #endif

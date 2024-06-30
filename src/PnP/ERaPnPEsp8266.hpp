@@ -161,6 +161,7 @@ public:
                 uint16_t port,
                 const char* username,
                 const char* password) {
+        WiFi.persistent(false);
         WiFi.mode(WIFI_STA);
         Base::init();
         this->config(auth, host, port, username, password);
@@ -1214,7 +1215,9 @@ void ERaPnP<Transport>::configMode() {
         else if (!WiFi.softAPgetStationNum()) {
             this->scanNetworks();
         }
-        if (ERaConfig.getFlag(ConfigFlagT::CONFIG_FLAG_VALID)) {
+        if (ERaState::is(StateT::STATE_SWITCH_TO_AP_STA)) {
+        }
+        else if (ERaConfig.getFlag(ConfigFlagT::CONFIG_FLAG_VALID)) {
             if (!ERaRemainingTime(tick, WIFI_NET_CHECK_TIMEOUT)) {
                 ERaState::set(StateT::STATE_SWITCH_TO_STA);
                 break;
@@ -1351,6 +1354,7 @@ void ERaPnP<Transport>::connectNetwork() {
         /* Udp */
         if (ERaConfig.getFlag(ConfigFlagT::CONFIG_FLAG_UDP)) {
             String content = ERA_F(R"json({"status":"ok","message":"Connected to WiFi"})json");
+            ERaDelay(100);
             this->udpERa.send(content.c_str());
             ERaDelay(100);
             this->udpERa.sendBoardInfo();
@@ -1370,7 +1374,9 @@ void ERaPnP<Transport>::connectNetwork() {
         /* Udp */
         if (ERaConfig.getFlag(ConfigFlagT::CONFIG_FLAG_UDP)) {
             String content = ERA_F(R"json({"status":"error","message":"Connect WiFi failed"})json");
+            ERaDelay(100);
             this->udpERa.send(content.c_str());
+            ERaDelay(500);
             ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_UDP, false);
         }
         /* Udp */
@@ -1545,6 +1551,7 @@ void ERaPnP<Transport>::switchToAP() {
     WiFi.mode(WIFI_AP);
     ERaDelay(2000);
     WiFi.softAPConfig(WIFI_AP_IP, WIFI_AP_IP, WIFI_AP_Subnet);
+    ERaDelay(200);
     WiFi.softAP(ssidAP, WIFI_AP_PASS);
     ERaDelay(500);
     ERaWatchdogFeed();

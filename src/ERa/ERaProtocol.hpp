@@ -1044,6 +1044,9 @@ bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
     else if (rsp.param.isString()) {
         cJSON_AddStringToObject(root, name, rsp.param.getString());
     }
+    else if (rsp.param.isObject() && (rsp.json || rsp.param.getObject()->isSendJSON())) {
+        cJSON_AddItemToObject(root, name, rsp.param.getObject()->duplicateObject());
+    }
     else if (rsp.param.isObject()) {
         cJSON_AddStringToObject(root, name, rsp.param.getObject()->getString());
     }
@@ -1089,6 +1092,9 @@ bool ERaProto<Transp, Flash>::sendConfigIdData(ERaRsp_t& rsp) {
     }
     else if (rsp.param.isString()) {
         cJSON_AddStringToObject(root, "v", rsp.param.getString());
+    }
+    else if (rsp.param.isObject() && (rsp.json || rsp.param.getObject()->isSendJSON())) {
+        cJSON_AddItemToObject(root, "v", rsp.param.getObject()->duplicateObject());
     }
     else if (rsp.param.isObject()) {
         cJSON_AddStringToObject(root, "v", rsp.param.getObject()->getString());
@@ -1239,6 +1245,9 @@ void ERaProto<Transp, Flash>::sendCommand(const char* auth, ERaRsp_t& rsp, ApiDa
     else if (rsp.param.isString()) {
         cJSON_AddStringToObject(root, "value", rsp.param.getString());
     }
+    else if (rsp.param.isObject() && (rsp.json || rsp.param.getObject()->isSendJSON())) {
+        cJSON_AddItemToObject(root, "value", rsp.param.getObject()->duplicateObject());
+    }
     else if (rsp.param.isObject()) {
         cJSON_AddStringToObject(root, "value", rsp.param.getObject()->getString());
     }
@@ -1269,6 +1278,9 @@ void ERaProto<Transp, Flash>::sendCommandVirtualMulti(const char* auth, ERaRsp_t
         }
         else if (it.isBool() || it.isNumber()) {
             rsp.param = it.getDouble();
+        }
+        else if (it.isObject() || it.isArray()) {
+            rsp.param = it.getObject();
         }
         this->sendCommand(auth, rsp);
     }
@@ -1340,12 +1352,7 @@ void ERaProto<Transp, Flash>::sendCommandVirtual(ERaRsp_t& rsp, ERaDataJson* dat
         if (configId < 0) {
             cJSON* item = data->detach(it);
             FormatString(name, "virtual_pin_%s", it.getName());
-            if (it.isString()) {
-                dataNoConfig.add(name, item);
-            }
-            else if (it.isBool() || it.isNumber()) {
-                dataNoConfig.add(name, item);
-            }
+            dataNoConfig.add(name, item);
             if (!current) {
                 it.shared(data->begin());
             }
@@ -1384,9 +1391,10 @@ void ERaProto<Transp, Flash>::sendCommandVirtual(ERaRsp_t& rsp, ERaDataJson* dat
         if (root == nullptr) {
             return;
         }
-        int mbTotal {0};
-        int mbFailed {0};
-        int mbWriteFailed {0};
+        int mbFailRead {0};
+        int mbFailWrite {0};
+        int mbTotalRead {0};
+        int mbTotalWrite {0};
         size_t index {0};
         size_t dataLen = ERaMax(data->getLen(), data->getDataLen()) + 1;
         char* mbData = (char*)ERA_CALLOC(dataLen, sizeof(char));
@@ -1402,15 +1410,19 @@ void ERaProto<Transp, Flash>::sendCommandVirtual(ERaRsp_t& rsp, ERaDataJson* dat
         for (ERaDataBuff::iterator it = data->begin(data->getDataLen()); it < e; ++it) {
             if (it == MODBUS_STRING_FAIL_READ) {
                 ++it;
-                mbFailed = it.getInt();
+                mbFailRead = it.getInt();
             }
             else if (it == MODBUS_STRING_FAIL_WRITE) {
                 ++it;
-                mbWriteFailed = it.getInt();
+                mbFailWrite = it.getInt();
             }
-            else if (it == MODBUS_STRING_TOTAL) {
+            else if (it == MODBUS_STRING_TOTAL_READ) {
                 ++it;
-                mbTotal = it.getInt();
+                mbTotalRead = it.getInt();
+            }
+            else if (it == MODBUS_STRING_TOTAL_WRITE) {
+                ++it;
+                mbTotalWrite = it.getInt();
             }
             else if (it == MODBUS_STRING_SCAN) {
                 ++it;
@@ -1427,9 +1439,10 @@ void ERaProto<Transp, Flash>::sendCommandVirtual(ERaRsp_t& rsp, ERaDataJson* dat
         }
         cJSON_AddStringToObject(root, INFO_MB_DATA, mbData);
         cJSON_AddStringToObject(root, INFO_MB_ACK, mbAck);
-        cJSON_AddNumberToObject(root, INFO_MB_READ_FAIL, mbFailed);
-        cJSON_AddNumberToObject(root, INFO_MB_WRITE_FAIL, mbWriteFailed);
-        cJSON_AddNumberToObject(root, INFO_MB_TOTAL, mbTotal);
+        cJSON_AddNumberToObject(root, INFO_MB_FAIL_READ, mbFailRead);
+        cJSON_AddNumberToObject(root, INFO_MB_FAIL_WRITE, mbFailWrite);
+        cJSON_AddNumberToObject(root, INFO_MB_TOTAL_READ, mbTotalRead);
+        cJSON_AddNumberToObject(root, INFO_MB_TOTAL_WRITE, mbTotalWrite);
         Base::addModbusInfo(root);
         if (mbScan != nullptr) {
             cJSON_AddStringToObject(root, INFO_MB_SCAN, mbScan);

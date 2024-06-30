@@ -196,6 +196,11 @@ char* ERaFindStr(const char* str, const char* str2);
 bool ERaStrCmp(const char* str, const char* str2);
 void ERaStrConcat(char* str, const char* str2);
 
+char* ERaStrStr(const char* str, const char* str2, bool caseSensitive);
+char* ERaStrrStr(const char* str, const char* str2, bool caseSensitive);
+char* ERaStrChr(const char* str, int c, bool caseSensitive);
+char* ERaStrrChr(const char* str, int c, bool caseSensitive);
+
 template <int size>
 inline
 bool ERaStrNCmp(const char* str, const char(&str2)[size]) {

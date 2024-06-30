@@ -88,6 +88,7 @@ enum ERaTypeWriteT {
 
 typedef struct __ERaRsp_t {
     uint8_t type;
+    bool json;
     bool retained;
     ERaParam id;
     ERaParam param;
@@ -96,6 +97,7 @@ typedef struct __ERaRsp_t {
 typedef struct __ERaEvent_t {
     uint8_t type;
     bool specific;
+    bool json;
     bool retained;
     void* id;
     void* data;

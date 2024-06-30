@@ -469,6 +469,18 @@ CJSON_PUBLIC(const char*) cJSON_TypeOf(const cJSON* const object) {
     }
 }
 
+CJSON_PUBLIC(cJSON*) cJSON_AddMultiItemToObject(cJSON* const object, const char* const name, cJSON* const item) {
+    if ((object == NULL) || (name == NULL) || (item == NULL)) {
+        return NULL;
+    }
+    if (cJSON_AddItemToObject(object, name, item)) {
+        return item;
+    }
+    else {
+        return NULL;
+    }
+}
+
 CJSON_PUBLIC(cJSON*) cJSON_AddMultiItemToObject(cJSON* const object, const char* const name, const double number) {
     if ((object == NULL) || (name == NULL)) {
         return NULL;

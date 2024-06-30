@@ -43,6 +43,7 @@ CJSON_PUBLIC(cJSON_bool) cJSON_Empty(const cJSON* const object);
 
 CJSON_PUBLIC(const char*) cJSON_TypeOf(const cJSON* const object);
 
+CJSON_PUBLIC(cJSON*) cJSON_AddMultiItemToObject(cJSON* const object, const char* const name, cJSON* const item);
 CJSON_PUBLIC(cJSON*) cJSON_AddMultiItemToObject(cJSON* const object, const char* const name, const double number);
 CJSON_PUBLIC(cJSON*) cJSON_AddMultiItemToObject(cJSON* const object, const char* const name, const char* const string);
 

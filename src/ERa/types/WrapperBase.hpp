@@ -20,7 +20,9 @@ enum WrapperTypeT
     WRAPPER_TYPE_FLOAT = 8,
     WRAPPER_TYPE_DOUBLE = 9,
     WRAPPER_TYPE_NUMBER = 10,
-    WRAPPER_TYPE_STRING = 11
+    WRAPPER_TYPE_STRING = 11,
+    WRAPPER_TYPE_OBJECT = 12,
+    WRAPPER_TYPE_ARRAY = 13
 };
 
 class WrapperBase
@@ -74,11 +76,21 @@ public:
 
     bool isNumber() const {
         return ((this->type != WrapperTypeT::WRAPPER_TYPE_INVALID) &&
-                (this->type != WrapperTypeT::WRAPPER_TYPE_STRING));
+                (this->type != WrapperTypeT::WRAPPER_TYPE_STRING) &&
+                (this->type != WrapperTypeT::WRAPPER_TYPE_OBJECT) &&
+                (this->type != WrapperTypeT::WRAPPER_TYPE_ARRAY));
     }
 
     bool isString() const {
         return this->type == WrapperTypeT::WRAPPER_TYPE_STRING;
+    }
+
+    bool isObject() const {
+        return this->type == WrapperTypeT::WRAPPER_TYPE_OBJECT;
+    }
+
+    bool isArray() const {
+        return this->type == WrapperTypeT::WRAPPER_TYPE_ARRAY;
     }
 
     virtual bool updated() {
@@ -133,10 +145,16 @@ public:
     }
 
     ERaDataJson toJSON() const {
-        if (!this->isString()) {
+        if (!this->isString() &&
+            !this->isObject() &&
+            !this->isArray()) {
             return ERaDataJson();
         }
         return ERaDataJson((const char*)this->getPointer());
+    }
+
+    virtual bool isSendJSON() const {
+        return false;
     }
 
     operator double() const {
@@ -159,11 +177,11 @@ public:
         if (this == &rwb) {
             return (*this);
         }
-        if (this->isString()) {
-            return operator = ((const char*)rwb.getPointer());
+        if (this->isNumber()) {
+            return operator = (rwb.get());
         }
         else {
-            return operator = (rwb.get());
+            return operator = ((const char*)rwb.getPointer());
         }
     }
 
@@ -207,7 +225,7 @@ public:
     }
 
     template <typename T>
-    WrapperBase& operator = (T rt) {
+    WrapperBase& operator = (const T& rt) {
         return operator = ((double)rt);
     }
 
@@ -224,11 +242,11 @@ public:
         if (this == &rwb) {
             return true;
         }
-        if (this->isString()) {
-            return operator == ((const char*)rwb.getPointer());
+        if (this->isNumber()) {
+            return operator == (rwb.get());
         }
         else {
-            return operator == (rwb.get());
+            return operator == ((const char*)rwb.getPointer());
         }
     }
 
@@ -269,7 +287,7 @@ public:
     }
 
     template <typename T>
-    bool operator == (T rt) const {
+    bool operator == (const T& rt) const {
         return operator == ((double)rt);
     }
 
@@ -285,11 +303,11 @@ public:
         if (this == &rwb) {
             return false;
         }
-        if (this->isString()) {
-            return operator != ((const char*)rwb.getPointer());
+        if (this->isNumber()) {
+            return operator != (rwb.get());
         }
         else {
-            return operator != (rwb.get());
+            return operator != ((const char*)rwb.getPointer());
         }
     }
 
@@ -330,7 +348,7 @@ public:
     }
 
     template <typename T>
-    bool operator != (T rt) const {
+    bool operator != (const T& rt) const {
         return operator != ((double)rt);
     }
 
@@ -346,11 +364,11 @@ public:
         if (this == &rwb) {
             return false;
         }
-        if (this->isString()) {
-            return operator > ((const char*)rwb.getPointer());
+        if (this->isNumber()) {
+            return operator > (rwb.get());
         }
         else {
-            return operator > (rwb.get());
+            return operator > ((const char*)rwb.getPointer());
         }
     }
 
@@ -394,7 +412,7 @@ public:
     }
 
     template <typename T>
-    bool operator > (T rt) const {
+    bool operator > (const T& rt) const {
         return operator > ((double)rt);
     }
 
@@ -413,11 +431,11 @@ public:
         if (this == &rwb) {
             return false;
         }
-        if (this->isString()) {
-            return operator < ((const char*)rwb.getPointer());
+        if (this->isNumber()) {
+            return operator < (rwb.get());
         }
         else {
-            return operator < (rwb.get());
+            return operator < ((const char*)rwb.getPointer());
         }
     }
 
@@ -461,7 +479,7 @@ public:
     }
 
     template <typename T>
-    bool operator < (T rt) const {
+    bool operator < (const T& rt) const {
         return operator < ((double)rt);
     }
 
@@ -480,11 +498,11 @@ public:
         if (this == &rwb) {
             return true;
         }
-        if (this->isString()) {
-            return operator >= ((const char*)rwb.getPointer());
+        if (this->isNumber()) {
+            return operator >= (rwb.get());
         }
         else {
-            return operator >= (rwb.get());
+            return operator >= ((const char*)rwb.getPointer());
         }
     }
 
@@ -528,7 +546,7 @@ public:
     }
 
     template <typename T>
-    bool operator >= (T rt) const {
+    bool operator >= (const T& rt) const {
         return operator >= ((double)rt);
     }
 
@@ -547,11 +565,11 @@ public:
         if (this == &rwb) {
             return true;
         }
-        if (this->isString()) {
-            return operator <= ((const char*)rwb.getPointer());
+        if (this->isNumber()) {
+            return operator <= (rwb.get());
         }
         else {
-            return operator <= (rwb.get());
+            return operator <= ((const char*)rwb.getPointer());
         }
     }
 
@@ -595,7 +613,7 @@ public:
     }
 
     template <typename T>
-    bool operator <= (T rt) const {
+    bool operator <= (const T& rt) const {
         return operator <= ((double)rt);
     }
 

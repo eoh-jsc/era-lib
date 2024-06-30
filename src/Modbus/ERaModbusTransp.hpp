@@ -767,7 +767,7 @@ public:
         ERaModbusResponse* response = new_modbus ERaModbusResponse(request, request->responseLength());
         ERA_ASSERT_NULL(response, false)
         if (ERaModbusInternal::handlerRead(request, response, status)) {
-            this->thisModbus().updateTotalTransmit();
+            this->thisModbus().updateTotalRead();
             ERaLogHex("IB <<", response->getMessage(), response->getSize());
         }
         else if (this->thisModbus().failCounter.min && !skip &&
@@ -777,6 +777,7 @@ public:
                             request->getSlaveAddress(), param.totalFail);
         }
         else {
+            this->thisModbus().updateTotalRead();
             this->thisModbus().sendRequest(request->getMessage(), request->getSize());
             status = this->thisModbus().waitResponse(request, response);
         }
@@ -801,8 +802,8 @@ public:
         ERA_ASSERT_NULL(request, false)
         ERaModbusResponse* response = new_modbus ERaModbusResponse(request, request->responseLength());
         ERA_ASSERT_NULL(response, false)
+        this->thisModbus().updateTotalWrite();
         if (ERaModbusInternal::handlerWrite(request, response, status)) {
-            this->thisModbus().updateTotalTransmit();
             ERaLogHex("IB <<", request->getMessage(), request->getSize());
         }
         else {

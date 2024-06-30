@@ -77,9 +77,9 @@ public:
     {}
 
     template <typename T>
-    void virtualWrite(int pin, T value, bool send = false) {
+    void virtualWrite(int pin, const T& value, bool send = false) {
 #if defined(ERA_VIRTUAL_WRITE_LEGACY)
-        this->virtualWriteSingle(pin, value);
+        this->virtualWriteSingle(pin, value, false);
         ERA_FORCE_UNUSED(send);
 #else
         Property::virtualWriteProperty(pin, value, send);
@@ -87,32 +87,50 @@ public:
     }
 
     template <typename T, typename... Args>
-    void virtualWrite(int pin, T value, Args... tail) {
+    void virtualWrite(int pin, const T& value, const Args&... tail) {
         this->virtualWriteMulti(pin, value, tail...);
     }
 
-    void virtualWriteObject(const char* value) {
-        ERaDataJson data(value);
-        this->virtualWriteObject(data);
+    template <typename... Args>
+    void virtualObject(int pin, const Args&... tail) {
+        ERaDataJson data;
+        data.add_multi(tail...);
+#if defined(ERA_VIRTUAL_WRITE_LEGACY)
+        this->virtualWriteSingle(pin, data, ERA_API_JSON);
+#else
+        Property::virtualObjectProperty(pin, data, false);
+#endif
     }
 
-    void virtualWriteObject(cJSON* value) {
-        ERaDataJson data(value);
-        this->virtualWriteObject(data);
+    template <typename... Args>
+    void virtualArray(int pin, const Args&... tail) {
+        ERaDataJson data;
+        data.array_multi(tail...);
+#if defined(ERA_VIRTUAL_WRITE_LEGACY)
+        this->virtualWriteSingle(pin, data, ERA_API_JSON);
+#else
+        Property::virtualArrayProperty(pin, data, false);
+#endif
     }
 
-    void virtualWriteObject(ERaDataJson& value) {
-        ERaRsp_t rsp;
-        rsp.type = ERaTypeWriteT::ERA_WRITE_VIRTUAL_PIN_MULTI;
-        rsp.retained = ERA_MQTT_PUBLISH_RETAINED;
-        rsp.id = 0;
-        rsp.param = 0;
-        this->thisProto().sendCommand(rsp, &value);
+    void virtualObject(const char* value) {
+        ERaDataJson data(value);
+        this->virtualObject(data);
+    }
+
+    void virtualObject(cJSON* value) {
+        ERaDataJson data(value);
+        this->virtualObject(data);
+    }
+
+    void virtualObject(ERaDataJson& value) {
+        this->virtualWriteMultiReal(value, false);
     }
 
     void digitalWrite(int pin, bool value) {
         ERaRsp_t rsp;
         rsp.type = ERaTypeWriteT::ERA_WRITE_DIGITAL_PIN;
+        rsp.json = false;
         rsp.retained = ERA_MQTT_PUBLISH_RETAINED;
         rsp.id = pin;
         rsp.param = value;
@@ -122,6 +140,7 @@ public:
     void analogWrite(int pin, int value) {
         ERaRsp_t rsp;
         rsp.type = ERaTypeWriteT::ERA_WRITE_ANALOG_PIN;
+        rsp.json = false;
         rsp.retained = ERA_MQTT_PUBLISH_RETAINED;
         rsp.id = pin;
         rsp.param = value;
@@ -131,6 +150,7 @@ public:
     void pwmWrite(int pin, int value) {
         ERaRsp_t rsp;
         rsp.type = ERaTypeWriteT::ERA_WRITE_PWM_PIN;
+        rsp.json = false;
         rsp.retained = ERA_MQTT_PUBLISH_RETAINED;
         rsp.id = pin;
         rsp.param = value;
@@ -140,6 +160,7 @@ public:
     void pinWrite(int pin, int value) {
         ERaRsp_t rsp;
         rsp.type = ERaTypeWriteT::ERA_WRITE_PIN;
+        rsp.json = false;
         rsp.retained = ERA_MQTT_PUBLISH_RETAINED;
         rsp.id = pin;
         rsp.param = value;
@@ -147,9 +168,10 @@ public:
     }
 
     template <typename T>
-    void configIdWrite(ERaInt_t configId, T value) {
+    void configIdWrite(ERaInt_t configId, const T& value) {
         ERaRsp_t rsp;
         rsp.type = ERaTypeWriteT::ERA_WRITE_CONFIG_ID;
+        rsp.json = false;
         rsp.retained = ERA_MQTT_PUBLISH_RETAINED;
         rsp.id = configId;
         rsp.param = value;
@@ -157,7 +179,7 @@ public:
     }
 
     template <typename T, typename... Args>
-    void configIdWrite(ERaInt_t configId, T value, Args... tail) {
+    void configIdWrite(ERaInt_t configId, const T& value, const Args&... tail) {
         this->configIdMultiWrite(configId, value, tail...);
     }
 
@@ -178,6 +200,7 @@ public:
 #else
         ERaRsp_t rsp;
         rsp.type = ERaTypeWriteT::ERA_WRITE_SPECIFIC_DATA;
+        rsp.json = false;
         rsp.retained = retained;
         rsp.id = id;
         rsp.param = value;
@@ -194,6 +217,7 @@ public:
 #else
         ERaRsp_t rsp;
         rsp.type = ERaTypeWriteT::ERA_WRITE_SPECIFIC_DATA;
+        rsp.json = false;
         rsp.retained = retained;
         rsp.id = id;
         rsp.param = value;
@@ -426,6 +450,7 @@ protected:
 #else
         ERaRsp_t rsp;
         rsp.type = ERaTypeWriteT::ERA_WRITE_MODBUS_DATA;
+        rsp.json = false;
         rsp.retained = ERA_MQTT_PUBLISH_RETAINED;
         rsp.id = 0;
         rsp.param = 0;
@@ -443,6 +468,7 @@ protected:
 #else
         ERaRsp_t rsp;
         rsp.type = ERaTypeWriteT::ERA_WRITE_ZIGBEE_DATA;
+        rsp.json = false;
         rsp.retained = retained;
         rsp.id = id;
         rsp.param = value;
@@ -550,9 +576,10 @@ protected:
 
 private:
     template <typename T>
-    void virtualWriteSingle(int pin, T value) {
+    void virtualWriteSingle(int pin, const T& value, bool json = false) {
         ERaRsp_t rsp;
         rsp.type = ERaTypeWriteT::ERA_WRITE_VIRTUAL_PIN;
+        rsp.json = json;
         rsp.retained = ERA_MQTT_PUBLISH_RETAINED;
         rsp.id = pin;
         rsp.param = value;
@@ -560,23 +587,29 @@ private:
     }
 
     template <typename... Args>
-    void virtualWriteMulti(Args... tail) {
-        ERaRsp_t rsp;
+    void virtualWriteMulti(const Args&... tail) {
         ERaDataJson data;
         data.add_multi(tail...);
+        this->virtualWriteMultiReal(data, false);
+    }
+
+    void virtualWriteMultiReal(ERaDataJson& value, bool json = false) {
+        ERaRsp_t rsp;
         rsp.type = ERaTypeWriteT::ERA_WRITE_VIRTUAL_PIN_MULTI;
+        rsp.json = json;
         rsp.retained = ERA_MQTT_PUBLISH_RETAINED;
         rsp.id = 0;
         rsp.param = 0;
-        this->thisProto().sendCommand(rsp, &data);
+        this->thisProto().sendCommand(rsp, &value);
     }
 
     template <typename... Args>
-    void configIdMultiWrite(Args... tail) {
+    void configIdMultiWrite(const Args&... tail) {
         ERaRsp_t rsp;
         ERaDataJson data;
         data.add_multi(tail...);
         rsp.type = ERaTypeWriteT::ERA_WRITE_CONFIG_ID_MULTI;
+        rsp.json = false;
         rsp.retained = ERA_MQTT_PUBLISH_RETAINED;
         rsp.id = 0;
         rsp.param = data.getObject();
@@ -761,8 +794,10 @@ void ERaApi<Proto, Flash>::processVirtualPinRequest(const ERaDataBuff& arrayTopi
     ERaParam param(data);
     uint8_t pin = ERA_DECODE_PIN_NAME(str);
     cJSON* item = cJSON_GetObjectItem(root, "value");
-    if (cJSON_IsNumber(item) ||
-        cJSON_IsBool(item)) {
+    if (cJSON_IsBool(item)) {
+        param.add(item->valueint);
+    }
+    else if (cJSON_IsNumber(item)) {
         param.add(item->valuedouble);
     }
     else if (cJSON_IsString(item)) {
@@ -771,8 +806,17 @@ void ERaApi<Proto, Flash>::processVirtualPinRequest(const ERaDataBuff& arrayTopi
     else if (item != nullptr) {
         param.add(item);
     }
+
+    if (cJSON_IsObject(item) ||
+        cJSON_IsArray(item)) {
+        data.detachObject();
+        data.setObject(item, false);
+    }
+
     this->callERaWriteHandler(pin, param);
 
+    data.detachObject();
+    cJSON_Delete(root);
     root = nullptr;
     item = nullptr;
 }
@@ -1155,9 +1199,10 @@ template <class Proto, class Flash>
 inline
 void ERaApi<Proto, Flash>::callERaProHandler(const char* deviceId, const cJSON* const root) {
     char id[65] {0};
-    ERaParam param;
+    ERaDataJson data;
     cJSON* current = nullptr;
     for (current = root->child; current != nullptr && current->string != nullptr; current = current->next) {
+        ERaParam param;
         ClearArray(id);
         FormatString(id, "%s:%s", deviceId, current->string);
         if (cJSON_IsBool(current)) {
@@ -1166,8 +1211,14 @@ void ERaApi<Proto, Flash>::callERaProHandler(const char* deviceId, const cJSON* 
         else if (cJSON_IsNumber(current)) {
             param = current->valuedouble;
         }
-        else if (cJSON_IsString(current)){
-            param = current->valuestring;
+        else if (cJSON_IsString(current)) {
+            param.add_static(current->valuestring);
+        }
+        else if (cJSON_IsObject(current) ||
+                 cJSON_IsArray(current)) {
+            data.setObject(current, false);
+            param = current;
+            param = data;
         }
         else {
             continue;
@@ -1175,6 +1226,7 @@ void ERaApi<Proto, Flash>::callERaProHandler(const char* deviceId, const cJSON* 
 #if !defined(ERA_ABBR)
         Property::handler(id, param);
 #endif
+        data.detachObject();
     }
 }
 
@@ -1220,6 +1272,7 @@ void ERaApi<Proto, Flash>::callERaProHandler(const char* deviceId, const cJSON* 
         ERaEvent_t event;
         event.type = ERaTypeWriteT::ERA_WRITE_MODBUS_DATA;
         event.specific = false;
+        event.json = false;
         event.retained = ERA_MQTT_PUBLISH_RETAINED;
         event.id = nullptr;
         event.data = value;
@@ -1236,6 +1289,7 @@ void ERaApi<Proto, Flash>::callERaProHandler(const char* deviceId, const cJSON* 
         ERaRsp_t rsp;
         ERaDataBuff* data = (ERaDataBuff*)event.data;
         rsp.type = ERaTypeWriteT::ERA_WRITE_MODBUS_DATA;
+        rsp.json = false;
         rsp.retained = ERA_MQTT_PUBLISH_RETAINED;
         rsp.id = 0;
         rsp.param = 0;
@@ -1255,6 +1309,7 @@ void ERaApi<Proto, Flash>::callERaProHandler(const char* deviceId, const cJSON* 
         ERaEvent_t event;
         event.type = ERaTypeWriteT::ERA_WRITE_ZIGBEE_DATA;
         event.specific = specific;
+        event.json = false;
         event.retained = retained;
         if (!specific) {
             event.id = (void*)id;
@@ -1277,6 +1332,7 @@ void ERaApi<Proto, Flash>::callERaProHandler(const char* deviceId, const cJSON* 
 
         ERaRsp_t rsp;
         rsp.type = ERaTypeWriteT::ERA_WRITE_ZIGBEE_DATA;
+        rsp.json = event.json;
         rsp.retained = event.retained;
         rsp.id.add_static((char*)event.id);
         if (!event.specific) {
@@ -1307,6 +1363,7 @@ void ERaApi<Proto, Flash>::callERaProHandler(const char* deviceId, const cJSON* 
         ERaEvent_t event;
         event.type = ERaTypeWriteT::ERA_WRITE_SPECIFIC_DATA;
         event.specific = specific;
+        event.json = false;
         event.retained = retained;
         if (!specific) {
             event.id = (void*)id;
@@ -1330,6 +1387,7 @@ void ERaApi<Proto, Flash>::callERaProHandler(const char* deviceId, const cJSON* 
         ERaEvent_t event;
         event.type = ERaTypeWriteT::ERA_WRITE_SPECIFIC_DATA;
         event.specific = specific;
+        event.json = false;
         event.retained = retained;
         if (!specific) {
             event.id = (void*)id;
@@ -1352,6 +1410,7 @@ void ERaApi<Proto, Flash>::callERaProHandler(const char* deviceId, const cJSON* 
 
         ERaRsp_t rsp;
         rsp.type = ERaTypeWriteT::ERA_WRITE_SPECIFIC_DATA;
+        rsp.json = false;
         rsp.retained = event.retained;
         rsp.id.add_static((char*)event.id);
         if (!event.specific) {

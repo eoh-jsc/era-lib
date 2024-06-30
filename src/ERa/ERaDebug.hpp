@@ -332,4 +332,18 @@ ERA_UNUSED void ERaLogHex(const char ERA_UNUSED *title, const uint8_t ERA_UNUSED
 #endif
 }
 
+template <typename S>
+inline void ERaHexDump(S& serial, const void* data, size_t size) {
+    static constexpr char alphabet[] { "0123456789ABCDEF" };
+    const uint8_t* buffer = (const uint8_t*)data;
+    char hex[3] {0};
+    for (size_t i = 0; i < size; ++i) {
+        hex[0] = alphabet[(buffer[i] >> 4) & 0xF];
+        hex[1] = alphabet[(buffer[i])      & 0xF];
+        serial.print(hex);
+        serial.print(" ");
+    }
+    serial.println();
+}
+
 #endif /* INC_ERA_DEBUG_HPP_ */

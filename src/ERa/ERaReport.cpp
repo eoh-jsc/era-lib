@@ -45,10 +45,10 @@ void ERaReport::run() {
         if (!this->isValidReport(pReport)) {
             continue;
         }
-        if (this->getFlag(pReport->called, ReportFlagT::REPORT_ON_DELETE)) {
+        if (!this->isCalled(pReport, ReportFlagT::REPORT_ON_CALLED)) {
             continue;
         }
-        if (!this->isCalled(pReport, ReportFlagT::REPORT_ON_CALLED)) {
+        if (this->getFlag(pReport->called, ReportFlagT::REPORT_ON_DELETE)) {
             continue;
         }
         if (pReport->callback_p == nullptr) {

@@ -140,6 +140,13 @@ public:
             return (*this);
         }
 
+        iterator& resetUpdate() {
+            if (this->isValid()) {
+                this->prop->resetUpdate(this->pProp);
+            }
+            return (*this);
+        }
+
     private:
         void invalidate() {
             this->prop = nullptr;
@@ -164,6 +171,10 @@ public:
 
     iterator getPropertyReal(const char* id) {
         return iterator(this, this->isPropertyIdExist(id));
+    }
+
+    ERaReport& getPropertyReport() {
+        return this->ERaPropRp;
     }
 
     template <typename T>
@@ -393,9 +404,11 @@ protected:
 
 #if !defined(ERA_VIRTUAL_WRITE_LEGACY)
     template <typename T>
-    void virtualWriteProperty(uint8_t pin, T value, bool send) {
+    void virtualWriteProperty(uint8_t pin, const T& value, bool send) {
         Property_t* pProp = this->isPropertyIdExist(pin);
-        if (pProp != nullptr) {
+        if (pProp == nullptr) {
+        }
+        else if (pProp->value->isNumber()) {
             (*pProp->value) = value;
             pProp->report.updateReport(value, false, false);
             if (send) {
@@ -403,19 +416,21 @@ protected:
             }
             return;
         }
-        double* pValue = (double*)malloc(sizeof(double));
+        else {
+            return;
+        }
+        double* pValue = this->create<double>(value);
         if (pValue == nullptr) {
             return;
         }
-        memset((void*)pValue, 0, sizeof(double));
-        (*pValue) = value;
         WrapperBase* wrapper = new WrapperDouble(*pValue);
         if (wrapper == nullptr) {
             free(pValue);
             pValue = nullptr;
             return;
         }
-        this->addPropertyVirtual(pin, *wrapper, PermissionT::PERMISSION_CLOUD_READ_WRITE).publishOnChange(0, this->writeTimeout).publish().allocatorPointer(pValue);
+        this->addPropertyVirtual(pin, *wrapper, PermissionT::PERMISSION_CLOUD_READ_WRITE).
+                                 publishOnChange(0, this->writeTimeout).publish().allocatorPointer(pValue);
     }
 
     void virtualWriteProperty(uint8_t pin, const ERaParam& value, bool send) {
@@ -425,10 +440,21 @@ protected:
         else if (value.isString()) {
             this->virtualWriteProperty(pin, value.getString(), send);
         }
+        else if (value.isObject()) {
+            this->virtualWriteProperty(pin, *value.getObject(), send);
+        }
     }
 
-    void virtualWriteProperty(uint8_t pin, ERaDataJson& value, bool send) {
-        this->virtualWriteProperty(pin, value.getString(), send);
+    void virtualWriteProperty(uint8_t pin, const ERaDataJson& value, bool send) {
+        if (!value.isSendJSON()) {
+            this->virtualWriteProperty(pin, const_cast<ERaDataJson&>(value).getString(), send);
+        }
+        else if (value.isObject()) {
+            this->virtualObjectProperty(pin, value, send);
+        }
+        else if (value.isArray()) {
+            this->virtualArrayProperty(pin, value, send);
+        }
     }
 
     void virtualWriteProperty(uint8_t pin, const ERaString& value, bool send) {
@@ -437,7 +463,7 @@ protected:
 
 #if defined(ERA_STRING_WRITE_LEGACY)
     void virtualWriteProperty(uint8_t pin, const char* value, bool send) {
-        this->thisApi().virtualWriteSingle(pin, value);
+        this->thisApi().virtualWriteSingle(pin, value, false);
         ERA_FORCE_UNUSED(send);
     }
 #else
@@ -451,12 +477,10 @@ protected:
             }
             return;
         }
-        ERaString* pValue = (ERaString*)malloc(sizeof(ERaString));
+        ERaString* pValue = this->create<ERaString>(value);
         if (pValue == nullptr) {
             return;
         }
-        memset((void*)pValue, 0, sizeof(ERaString));
-        (*pValue) = value;
         WrapperBase* wrapper = new WrapperString(*pValue);
         if (wrapper == nullptr) {
             pValue->~ERaString();
@@ -465,12 +489,50 @@ protected:
             return;
         }
         wrapper->setOptions(0x01);
-        this->addPropertyVirtual(pin, *wrapper, PermissionT::PERMISSION_CLOUD_READ_WRITE).publishOnChange(0, this->writeTimeout).allocatorPointer(pValue);
+        this->addPropertyVirtual(pin, *wrapper, PermissionT::PERMISSION_CLOUD_READ_WRITE).
+                                 publishOnChange(0, this->writeTimeout).publish().
+                                 allocatorPointer(pValue).resetUpdate();
     }
 #endif
 
     void virtualWriteProperty(uint8_t pin, char* value, bool send) {
         this->virtualWriteProperty(pin, (const char*)value, send);
+    }
+
+    void virtualObjectProperty(uint8_t pin, const ERaDataJson& value, bool send) {
+        this->virtualJsonProperty<WrapperObject>(pin, value, send);
+    }
+
+    void virtualArrayProperty(uint8_t pin, const ERaDataJson& value, bool send) {
+        this->virtualJsonProperty<WrapperArray>(pin, value, send);
+    }
+
+    template <typename T>
+    void virtualJsonProperty(uint8_t pin, const ERaDataJson& value, bool send) {
+        Property_t* pProp = this->isPropertyIdExist(pin);
+        if (pProp != nullptr) {
+            (*pProp->value) = const_cast<ERaDataJson&>(value).getString();
+            if (send) {
+                pProp->report();
+                pProp->value->updated();
+            }
+            return;
+        }
+        ERaDataJson* pValue = this->create(value);
+        if (pValue == nullptr) {
+            return;
+        }
+        WrapperBase* wrapper = new T(*pValue);
+        if (wrapper == nullptr) {
+            pValue->~ERaDataJson();
+            free(pValue);
+            pValue = nullptr;
+            return;
+        }
+        wrapper->setOptions(0x01);
+        this->addPropertyVirtual(pin, *wrapper, PermissionT::PERMISSION_CLOUD_READ_WRITE).
+                                 publishOnChange(0, this->writeTimeout).publish().
+                                 allocatorPointer(pValue).resetUpdate();
     }
 #endif
 
@@ -491,6 +553,7 @@ private:
                         unsigned long minInterval = 1000UL,
                         unsigned long maxInterval = 60000UL);
     bool allocatorPointer(Property_t* pProp, void* ptr);
+    bool resetUpdate(Property_t* pProp);
     bool isPropertyFree();
     int findVirtualPin();
 
@@ -505,6 +568,16 @@ private:
 #if !defined(ERA_HAS_FUNCTIONAL_H)
     static void _onCallback(void* args);
 #endif
+
+    template <typename T>
+    T* create(const T& value) {
+        T* ptr = (T*)malloc(sizeof(T));
+        if (ptr != nullptr) {
+            memset((void*)ptr, 0, sizeof(T));
+            (*ptr) = value;
+        }
+        return ptr;
+    }
 
     bool isValidProperty(const Property_t* pProp) {
         if (pProp == nullptr) {
@@ -604,6 +677,8 @@ void ERaProperty<Api>::updateValue(const Property_t* pProp) {
             pProp->report.updateReport(pProp->value->getDouble(), false, false);
             break;
         case WrapperTypeT::WRAPPER_TYPE_STRING:
+        case WrapperTypeT::WRAPPER_TYPE_OBJECT:
+        case WrapperTypeT::WRAPPER_TYPE_ARRAY:
             if (pProp->value->updated()) {
                 pProp->report();
             }
@@ -639,8 +714,16 @@ void ERaProperty<Api>::handler(uint8_t pin, const ERaParam& param) {
         return;
     }
 #endif
-    if (!found) {
+    if (found) {
+    }
+    else if (param.hasNonObject()) {
         this->virtualWriteProperty(pin, param, false);
+    }
+    else if (param.isObject() && param.getObject()->isObject()) {
+        this->virtualObjectProperty(pin, *param.getObject(), false);
+    }
+    else if (param.isObject() && param.getObject()->isArray()) {
+        this->virtualArrayProperty(pin, *param.getObject(), false);
     }
 
 #endif
@@ -688,6 +771,9 @@ void ERaProperty<Api>::handler(const char* id, const ERaParam& param) {
                 return;
             }
             if (!pProp->id.isNumber()) {
+                continue;
+            }
+            if (pProp->id.getInt() < 0) {
                 continue;
             }
             if (pin.isVPinExist(pProp->id.getInt(), pProp->value)) {
@@ -751,6 +837,8 @@ void ERaProperty<Api>::getValue(Property_t* pProp, const ERaParam& param) {
             }
             break;
         case WrapperTypeT::WRAPPER_TYPE_STRING:
+        case WrapperTypeT::WRAPPER_TYPE_OBJECT:
+        case WrapperTypeT::WRAPPER_TYPE_ARRAY:
             if (param.isString()) {
                 (*pProp->value) = param.getString();
                 if (pProp->value->updated()) {
@@ -821,7 +909,7 @@ typename ERaProperty<Api>::Property_t* ERaProperty<Api>::setupProperty(const cha
         return nullptr;
     }
 
-    pProp->id = 0xFF;
+    pProp->id = -1;
     pProp->id = id;
     pProp->value = value;
     pProp->callback = nullptr;
@@ -927,13 +1015,13 @@ bool ERaProperty<Api>::publishOnChange(Property_t* pProp, float minChange,
     else {
         pProp->report = this->ERaPropRp.setReporting(minInterval, maxInterval, minChange, this->propertyCb, pProp);
     }
-    if (pProp->value->isString()) {
+    if (pProp->value->isNumber()) {
+        this->updateValue(pProp);
+    }
+    else {
 #if defined(ERA_STRING_REPORT_INTERVAL)
         pProp->report.updateReport(0.0f, false, false);
 #endif
-    }
-    else {
-        this->updateValue(pProp);
     }
     return true;
 }
@@ -949,6 +1037,16 @@ bool ERaProperty<Api>::allocatorPointer(Property_t* pProp, void* ptr) {
 }
 
 template <class Api>
+bool ERaProperty<Api>::resetUpdate(Property_t* pProp) {
+    if (pProp == nullptr) {
+        return false;
+    }
+
+    pProp->value->updated();
+    return true;
+}
+
+template <class Api>
 void ERaProperty<Api>::onCallbackVirtual(const Property_t* const pProp) {
     if (pProp->value->isNumber() && ERaIsSpN(pProp->value->getDouble())) {
         return;
@@ -956,38 +1054,45 @@ void ERaProperty<Api>::onCallbackVirtual(const Property_t* const pProp) {
 
     switch (pProp->value->getType()) {
         case WrapperTypeT::WRAPPER_TYPE_BOOL:
-            this->thisApi().virtualWriteSingle(pProp->id.getInt(), pProp->value->getBool());
+            this->thisApi().virtualWriteSingle(pProp->id.getInt(), pProp->value->getBool(), false);
             break;
         case WrapperTypeT::WRAPPER_TYPE_INT:
-            this->thisApi().virtualWriteSingle(pProp->id.getInt(), pProp->value->getInt());
+            this->thisApi().virtualWriteSingle(pProp->id.getInt(), pProp->value->getInt(), false);
             break;
         case WrapperTypeT::WRAPPER_TYPE_UNSIGNED_INT:
-            this->thisApi().virtualWriteSingle(pProp->id.getInt(), pProp->value->getUnsignedInt());
+            this->thisApi().virtualWriteSingle(pProp->id.getInt(), pProp->value->getUnsignedInt(), false);
             break;
         case WrapperTypeT::WRAPPER_TYPE_LONG:
-            this->thisApi().virtualWriteSingle(pProp->id.getInt(), pProp->value->getLong());
+            this->thisApi().virtualWriteSingle(pProp->id.getInt(), pProp->value->getLong(), false);
             break;
         case WrapperTypeT::WRAPPER_TYPE_UNSIGNED_LONG:
-            this->thisApi().virtualWriteSingle(pProp->id.getInt(), pProp->value->getUnsignedLong());
+            this->thisApi().virtualWriteSingle(pProp->id.getInt(), pProp->value->getUnsignedLong(), false);
             break;
         case WrapperTypeT::WRAPPER_TYPE_LONG_LONG:
-            this->thisApi().virtualWriteSingle(pProp->id.getInt(), pProp->value->getLongLong());
+            this->thisApi().virtualWriteSingle(pProp->id.getInt(), pProp->value->getLongLong(), false);
             break;
         case WrapperTypeT::WRAPPER_TYPE_UNSIGNED_LONG_LONG:
-            this->thisApi().virtualWriteSingle(pProp->id.getInt(), pProp->value->getUnsignedLongLong());
+            this->thisApi().virtualWriteSingle(pProp->id.getInt(), pProp->value->getUnsignedLongLong(), false);
             break;
         case WrapperTypeT::WRAPPER_TYPE_FLOAT:
-            this->thisApi().virtualWriteSingle(pProp->id.getInt(), pProp->value->getFloat());
+            this->thisApi().virtualWriteSingle(pProp->id.getInt(), pProp->value->getFloat(), false);
             break;
         case WrapperTypeT::WRAPPER_TYPE_DOUBLE:
-            this->thisApi().virtualWriteSingle(pProp->id.getInt(), pProp->value->getDouble());
+            this->thisApi().virtualWriteSingle(pProp->id.getInt(), pProp->value->getDouble(), false);
             break;
         case WrapperTypeT::WRAPPER_TYPE_NUMBER:
-            this->thisApi().virtualWriteSingle(pProp->id.getInt(), pProp->value->getNumber());
+            this->thisApi().virtualWriteSingle(pProp->id.getInt(), pProp->value->getNumber(), false);
             break;
         case WrapperTypeT::WRAPPER_TYPE_STRING:
             if (pProp->value->getString() != nullptr) {
-                this->thisApi().virtualWriteSingle(pProp->id.getInt(), pProp->value->getString());
+                this->thisApi().virtualWriteSingle(pProp->id.getInt(), pProp->value->getString(), false);
+            }
+            break;
+        case WrapperTypeT::WRAPPER_TYPE_OBJECT:
+        case WrapperTypeT::WRAPPER_TYPE_ARRAY:
+            if (pProp->value->getString() != nullptr) {
+                this->thisApi().virtualWriteSingle(pProp->id.getInt(), pProp->value->toJSON(),
+                                                   pProp->value->isSendJSON() | ERA_API_JSON);
             }
             break;
         default:

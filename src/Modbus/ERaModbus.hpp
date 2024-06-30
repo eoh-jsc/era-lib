@@ -10,6 +10,7 @@
 #include <Modbus/ERaDefineModbus.hpp>
 #include <Modbus/ERaModbusStream.hpp>
 #include <Modbus/ERaModbusTransp.hpp>
+#include <Modbus/ERaModbusAction.hpp>
 #include <Modbus/ERaModbusCallbacks.hpp>
 
 using namespace std;
@@ -17,6 +18,7 @@ using namespace std;
 template <class Api>
 class ERaModbus
     : public ERaModbusStream
+    , public ERaModbusAction
     , public ERaModbusTransp < ERaModbus<Api> >
     , public ERaModbusSlave < ERaModbus<Api> >
 {
@@ -32,6 +34,7 @@ class ERaModbus
     const IPAddress ipNone{0, 0, 0, 0};
 
     typedef ERaModbusStream ModbusStream;
+    typedef ERaModbusAction ModbusAction;
 
     friend class ERaModbusTransp < ERaModbus<Api> >;
     typedef ERaModbusTransp < ERaModbus<Api> > ModbusTransp;
@@ -53,9 +56,10 @@ public:
         , prevMillis(0)
         , predelay(0)
         , postdelay(0)
-        , total(0)
         , failRead(0)
         , failWrite(0)
+        , totalRead(0)
+        , totalWrite(0)
         , dePin(-1)
         , transp(0)
         , streamRTU(NULL)
@@ -76,7 +80,9 @@ public:
         , messageHandle(NULL)
         , mutex(NULL)
         , skipModbus(false)
+        , skipPubModbus(false)
         , wifiConfig(false)
+        , actionWriteTask(true)
         , runApiResponse(true)
     {}
     ~ERaModbus()
@@ -133,8 +139,16 @@ public:
         this->skipModbus = skip;
     }
 
+    void setSkipPublishModbus(bool skip) {
+        this->skipPubModbus = skip;
+    }
+
     void setConnectWiFiModbus(bool enable) {
         this->wifiConfig = enable;
+    }
+
+    void setActionOnReadTaskModbus(bool enable) {
+        this->actionWriteTask = !enable;
     }
 
 protected:
@@ -170,6 +184,8 @@ protected:
             if (!ERaRemainingTime(this->modbusConfig->modbusInterval.prevMillis, this->modbusConfig->modbusInterval.delay)) {
                 this->modbusConfig->modbusInterval.prevMillis = ERaMillis();
                 this->readModbusConfig();
+                this->getModbusAction(false);
+                this->getModbusActionRaw(false);
                 ModbusStream::streamStart();
             }
             else {
@@ -188,7 +204,8 @@ protected:
     void runWrite(bool forever = true) {
         this->waitTCPIpReady(!forever);
         for (;;) {
-            this->getModbusAction();
+            this->getModbusAction(true);
+            this->getModbusActionRaw(true);
 #if defined(ERA_PNP_MODBUS)
             this->processModbusControl();
 #endif
@@ -262,35 +279,6 @@ protected:
 
     void clearDataBuff() {
         this->dataBuff.clearBuffer();
-    }
-
-    bool addModbusAction(const char* ptr) {
-        return this->addModbusAction(ptr, ModbusActionTypeT::MODBUS_ACTION_DEFAULT, 0);
-    }
-
-    bool addModbusAction(const char* ptr, uint16_t param) {
-        return this->addModbusAction(ptr, ModbusActionTypeT::MODBUS_ACTION_PARAMS, param);
-    }
-
-    bool addModbusAction(const char* ptr, uint8_t type, uint16_t param) {
-        if (strlen(ptr) != 36) {
-            return false;
-        }
-        if (!this->queue.writeable()) {
-            return false;
-        }
-        char* buf = (char*)ERA_MALLOC(37 * sizeof(char));
-        if (buf == nullptr) {
-            return false;
-        }
-        ModbusAction_t req;
-        req.key = buf;
-        req.type = type;
-        req.param = param;
-        memset(req.key, 0, 37 * sizeof(char));
-        strcpy(req.key, ptr);
-        this->queue += req;
-        return true;
     }
 
     void initModbusTask();
@@ -402,23 +390,42 @@ private:
         if (this->clientTCP == nullptr) {
             return;
         }
-        if (param.ipSlave.ip.dword) {
-            this->switchToModbusTCP();
-        }
-        if ((ip.ip == IPAddress(param.ipSlave.ip.dword)) ||
-            (param.ipSlave.ip.dword == 0)) {
+        if (!param.ipSlave.ip.dword) {
             return;
         }
-        if (param.ipSlave.port == 0) {
+        if (!param.ipSlave.port) {
             return;
         }
-        ip.ip = param.ipSlave.ip.dword;
-        ip.port = param.ipSlave.port;
+        if (!this->thisApi().afterNetwork()) {
+            return;
+        }
+        this->switchToModbusTCP();
+        if (this->ip.ip != IPAddress(param.ipSlave.ip.dword)) {
+        }
+        else if (this->clientTCP->connected()) {
+            return;
+        }
+        this->ip.ip = param.ipSlave.ip.dword;
+        this->ip.port = param.ipSlave.port;
         // TODO
+        this->connectTcpIp(2);
+    }
+
+    void connectTcpIp(size_t retry) {
         if (this->clientTCP->connected()) {
             this->clientTCP->stop();
         }
-        this->clientTCP->connect(ip.ip, ip.port);
+
+        do {
+            this->clientTCP->connect(this->ip.ip, this->ip.port);
+            if (this->clientTCP->connected()) {
+                break;
+            }
+            ERA_LOG(TAG, "Connect to %d.%d.%d.%d:%d failed", this->ip.ip[0], this->ip.ip[1],
+                                                             this->ip.ip[2], this->ip.ip[3],
+                                                             this->ip.port);
+            ERaDelay(1000);
+        } while (--retry);
     }
 
     void switchToModbusRTU() {
@@ -431,19 +438,22 @@ private:
         this->transp = ModbusTransportT::MODBUS_TRANSPORT_TCP;
     }
 
-    void getModbusAction() {
-        if (!this->isRequest()) {
+    void getModbusAction(bool writeTask) {
+        if (this->actionWriteTask != writeTask) {
+            return;
+        }
+        if (!ModbusAction::isRequest()) {
             return;
         }
         if (ModbusState::is(ModbusStateT::STATE_MB_PARSE)) {
             return;
         }
-        ModbusAction_t& req = this->getRequest();
+        ModbusAction_t& req = ModbusAction::getRequest();
         if (req.key == nullptr) {
             return;
         }
         this->actionModbus(req);
-        if (this->isEmptyRequest()) {
+        if (ModbusAction::isEmptyRequest()) {
             this->executeNow();
             if (!ModbusState::is(ModbusStateT::STATE_MB_PARSE)) {
                 ModbusState::set(ModbusStateT::STATE_MB_CONTROLLED);
@@ -453,12 +463,37 @@ private:
         req.key = nullptr;
     }
 
+    void getModbusActionRaw(bool writeTask) {
+        if (this->actionWriteTask != writeTask) {
+            return;
+        }
+        if (!ModbusAction::isRawRequest()) {
+            return;
+        }
+        if (ModbusState::is(ModbusStateT::STATE_MB_PARSE)) {
+            return;
+        }
+        ModbusActionRaw_t& req = ModbusAction::getRawRequest();
+        this->actionModbusRaw(req);
+        if (ModbusAction::isEmptyRawRequest()) {
+            this->executeNow();
+            if (!ModbusState::is(ModbusStateT::STATE_MB_PARSE)) {
+                ModbusState::set(ModbusStateT::STATE_MB_CONTROLLED);
+            }
+        }
+        if (req.pExtra != nullptr) {
+            free(req.pExtra);
+            req.pExtra = nullptr;
+        }
+    }
+
     void readModbusConfig();
     bool checkPubDataInterval();
     void delayModbus(const int address, bool unlock = false, bool skip = false);
     void delays(MillisTime_t ms);
     ModbusConfigAlias_t* getModbusAlias(const char* key);
     ModbusConfig_t* getModbusConfig(int id);
+    ModbusConfig_t* getModbusConfigWithAddress(uint8_t addr);
     void addScanData();
     void processModbusScan();
 #if defined(ERA_PNP_MODBUS)
@@ -467,6 +502,7 @@ private:
     void writeAllModbusWithOption(bool execute = false);
     bool actionModbus(ModbusAction_t& request);
     bool eachActionModbus(ModbusAction_t& request, Action_t& action, ModbusConfig_t*& config);
+    bool actionModbusRaw(ModbusActionRaw_t& request);
     void sendModbusRead(ModbusConfig_t& param);
     bool handlerModbusRead(ModbusConfig_t* param);
     bool sendModbusWrite(ModbusConfig_t& param);
@@ -501,10 +537,16 @@ private:
     }
 #endif
 
-    void updateTotalTransmit() {
-        if (this->total++ > 99) {
-            this->total = 1;
+    void updateTotalRead() {
+        if (this->totalRead++ > 99) {
+            this->totalRead = 1;
             this->failRead = 0;
+        }
+    }
+
+    void updateTotalWrite() {
+        if (this->totalWrite++ > 99) {
+            this->totalWrite = 1;
             this->failWrite = 0;
         }
     }
@@ -516,9 +558,13 @@ private:
         if (this->clientTCP == nullptr) {
             return;
         }
+        MillisTime_t startMillis = ERaMillis();
         do {
             ERaDelay(1000);
-        } while (!this->thisApi().connected());
+            if (this->thisApi().afterNetwork()) {
+                break;
+            }
+        } while (ERaRemainingTime(startMillis, ERA_MODBUS_WAIT_TCP_MS));
     }
 
     bool getBit(uint8_t byte, uint8_t pos) {
@@ -527,18 +573,6 @@ private:
 
     void executeNow() {
         this->modbusConfig->modbusInterval.prevMillis = (ERaMillis() - this->modbusConfig->modbusInterval.delay + ERA_MODBUS_EXECUTE_MS);
-    }
-
-    bool isRequest() {
-        return this->queue.readable();
-    }
-
-    ModbusAction_t& getRequest() {
-        return this->queue;
-    }
-
-    bool isEmptyRequest() {
-        return this->queue.isEmpty();
     }
 
     inline
@@ -558,7 +592,6 @@ private:
     ERaTimer::iterator timerFatal;
 #endif
 
-    ERaQueue<ModbusAction_t, MODBUS_MAX_ACTION> queue;
     ERaDataBuffDynamic dataBuff;
     ERaModbusEntry*& modbusConfig;
     ERaModbusEntry*& modbusControl;
@@ -568,9 +601,10 @@ private:
     unsigned long prevMillis;
     unsigned long predelay;
     unsigned long postdelay;
-    int total;
     int failRead;
     int failWrite;
+    int totalRead;
+    int totalWrite;
     int dePin;
     uint8_t transp;
     Stream* streamRTU;
@@ -591,7 +625,9 @@ private:
     QueueMessage_t messageHandle;
     ERaMutex_t mutex;
     bool skipModbus;
+    bool skipPubModbus;
     bool wifiConfig;
+    bool actionWriteTask;
     volatile bool runApiResponse;
 };
 
@@ -621,10 +657,13 @@ void ERaModbus<Api>::readModbusConfig() {
 #endif
     this->dataBuff.add_multi(ERA_F(MODBUS_STRING_FAIL_READ), this->failRead,
                             ERA_F(MODBUS_STRING_FAIL_WRITE), this->failWrite,
-                            ERA_F(MODBUS_STRING_TOTAL), this->total);
+                            ERA_F(MODBUS_STRING_TOTAL_READ), this->totalRead,
+                            ERA_F(MODBUS_STRING_TOTAL_WRITE), this->totalWrite);
     this->addScanData();
     this->dataBuff.done();
-    this->thisApi().modbusDataWrite(&this->dataBuff);
+    if (!this->skipPubModbus) {
+        this->thisApi().modbusDataWrite(&this->dataBuff);
+    }
 }
 
 template <class Api>
@@ -751,13 +790,21 @@ void ERaModbus<Api>::processModbusScan() {
         .sa1 = 0,
         .sa2 = 0,
         .len1 = 0,
-        .len2 = 1
+        .len2 = 1,
+        .extra = {},
+        .ipSlave = {
+            .ip = {
+                .dword = this->modbusScan->ipSlave.ip.dword
+            },
+            .port = this->modbusScan->ipSlave.port
+        }
     };
 
     for (size_t i = this->modbusScan->start; (i < this->modbusScan->end) &&
         (this->modbusScan->numberDevice < this->modbusScan->numberScan); ++i) {
         param.addr = i;
         ERaGuardLock(this->mutex);
+        this->nextTransport(param);
         if (ModbusTransp::readHoldingRegisters(this->transp, param, true)) {
             this->modbusScan->addr[this->modbusScan->numberDevice++] = i;
         }
@@ -840,8 +887,10 @@ bool ERaModbus<Api>::actionModbus(ModbusAction_t& request) {
     for (int i = 0; i < alias->readActionCount; ++i) {
         ERaGuardLock(this->mutex);
         this->eachActionModbus(request, alias->action[i], config);
-        if ((config != nullptr) &&
-            (i != (alias->readActionCount - 1))) {
+        if (config == nullptr) {
+            continue;
+        }
+        if (i != (alias->readActionCount - 1)) {
             this->delayModbus(config->addr, true);
         }
         else {
@@ -860,6 +909,20 @@ ModbusConfig_t* ERaModbus<Api>::getModbusConfig(int id) {
             continue;
         }
         if (it->get()->id == id) {
+            return it->get();
+        }
+    }
+    return nullptr;
+}
+
+template <class Api>
+ModbusConfig_t* ERaModbus<Api>::getModbusConfigWithAddress(uint8_t addr) {
+    const ERaList<ModbusConfig_t*>::iterator* e = this->modbusControl->modbusConfigParam.end();
+    for (ERaList<ModbusConfig_t*>::iterator* it = this->modbusControl->modbusConfigParam.begin(); it != e; it = it->getNext()) {
+        if (it->get() == nullptr) {
+            continue;
+        }
+        if (it->get()->addr == addr) {
             return it->get();
         }
     }
@@ -896,6 +959,41 @@ bool ERaModbus<Api>::eachActionModbus(ModbusAction_t& request, Action_t& action,
 }
 
 template <class Api>
+bool ERaModbus<Api>::actionModbusRaw(ModbusActionRaw_t& request) {
+    bool status {false};
+    ModbusConfig_t config {0};
+    ModbusConfig_t* writeConfig = this->getModbusConfigWithAddress(request.addr);
+
+    memcpy(&config.addr, &request.addr, 6);
+    if (request.pExtra != nullptr) {
+        memcpy(config.extra, request.pExtra, ERaMin(sizeof(config.extra), request.pExtraLen));
+    }
+    if (request.ip.ip.dword) {
+        config.ipSlave.port = request.ip.port;
+        config.ipSlave.ip.dword = request.ip.ip.dword;
+    }
+    else if (writeConfig != nullptr) {
+        config.ipSlave.port = writeConfig->ipSlave.port;
+        config.ipSlave.ip.dword = writeConfig->ipSlave.ip.dword;
+    }
+
+    if (request.prevdelay) {
+        this->delays(request.prevdelay);
+    }
+    ERaGuardLock(this->mutex);
+    status = this->sendModbusWrite(config);
+    if (request.postdelay) {
+        this->delays(request.postdelay);
+        ERaGuardUnlock(this->mutex);
+    }
+    else {
+        this->delayModbus(request.addr, true, true);
+    }
+
+    return status;
+}
+
+template <class Api>
 void ERaModbus<Api>::writeAllModbus(uint8_t len1, uint8_t len2, const uint8_t* pData,
                                     size_t pDataLen, bool force, bool execute) {
     if ((this->modbusConfig == nullptr) ||
@@ -929,8 +1027,16 @@ void ERaModbus<Api>::writeAllModbus(uint8_t len1, uint8_t len2, const uint8_t* p
 
 template <class Api>
 void ERaModbus<Api>::sendModbusRead(ModbusConfig_t& param) {
+    bool skip {false};
     bool status {false};
     this->nextTransport(param);
+
+    if (!this->failCounter.min) {
+    }
+    else if (param.totalFail >= this->failCounter.min) {
+        skip = true;
+    }
+
     switch (param.func) {
         case ModbusFunctionT::READ_COIL_STATUS:
             status = ModbusTransp::readCoilStatus(this->transp, param);
@@ -952,9 +1058,9 @@ void ERaModbus<Api>::sendModbusRead(ModbusConfig_t& param) {
     ERaWatchdogFeed();
 #endif
 
-    if (status) {
+    if (skip) {
     }
-    else {
+    else if (!status) {
         this->failRead++;
     }
 }
@@ -1265,8 +1371,6 @@ bool ERaModbus<Api>::waitResponse(ERaModbusRequest* request, ERaModbusResponse* 
     if (response == nullptr) {
         return false;
     }
-
-    this->updateTotalTransmit();
 
     MillisTime_t startMillis = ERaMillis();
 

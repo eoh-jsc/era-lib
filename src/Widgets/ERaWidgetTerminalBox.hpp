@@ -66,11 +66,25 @@ public:
         return 1;
     }
 
+    void trimTxBuffer() {
+        for (size_t i = 0; i < this->txBufferCount; ++i) {
+            if (!isspace(this->txBuffer[i])) {
+                return;
+            }
+        }
+        this->txBufferCount = 0;
+    }
+
     virtual void flush() override {
+            this->trimTxBuffer();
+
         if (this->txBufferCount &&
             ERa.connected()) {
             this->txBuffer[this->txBufferCount] = '\0';
             ERa.virtualWrite(this->toPin, (char*)this->txBuffer, true);
+#if !defined(ERA_ABBR)
+            ERa.getPropertyReport().run();
+#endif
             this->txBufferCount = 0;
         }
     }
@@ -125,10 +139,13 @@ private:
 
     void onUpdate() {
         this->process();
+        ERa.virtualWrite(this->fromPin, this->estr, true);
+#if !defined(ERA_ABBR)
+        ERa.getPropertyReport().run();
+#endif
         if (this->callback != NULL) {
             this->callback();
         }
-        ERa.virtualWrite(this->fromPin, this->estr, true);
     }
 
     ERaString& estr;

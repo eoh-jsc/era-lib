@@ -14,7 +14,7 @@ public:
         this->type = WrapperTypeT::WRAPPER_TYPE_NUMBER;
     }
 
-    WrapperNumber& operator = (T num) {
+    WrapperNumber& operator = (const T& num) {
         this->value = num;
         return (*this);
     }

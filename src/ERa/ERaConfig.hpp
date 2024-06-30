@@ -111,7 +111,7 @@
 #if defined(DEFAULT_INFO_PUBLISH_RETAINED)
     #define ERA_INFO_PUBLISH_RETAINED   DEFAULT_INFO_PUBLISH_RETAINED
 #else
-    #define ERA_INFO_PUBLISH_RETAINED   false
+    #define ERA_INFO_PUBLISH_RETAINED   ERA_MQTT_PUBLISH_RETAINED
 #endif
 
 #if defined(DEFAULT_SOCKET_TIMEOUT)
@@ -148,6 +148,10 @@
     #define LIMIT_CONNECT_BROKER_MQTT   5
 #endif
 
+#if !defined(ERA_API_JSON)
+    #define ERA_API_JSON                false
+#endif
+
 #define INFO_ID                         "id"
 #define INFO_BOARD                      "board"
 #define INFO_MODEL                      "model"
@@ -178,9 +182,10 @@
 #define INFO_MB_DATA                    "data"
 #define INFO_MB_ACK                     "ack"
 #define INFO_MB_SCAN                    "scan"
-#define INFO_MB_READ_FAIL               "modbus_fail"
-#define INFO_MB_WRITE_FAIL              "modbus_write_fail"
-#define INFO_MB_TOTAL                   "modbus_total"
+#define INFO_MB_FAIL_READ               "modbus_fail"
+#define INFO_MB_FAIL_WRITE              "modbus_fail_write"
+#define INFO_MB_TOTAL_READ              "modbus_total"
+#define INFO_MB_TOTAL_WRITE             "modbus_total_write"
 #define INFO_MB_CHIP_TEMPERATURE        "chip_temperature"
 #define INFO_MB_TEMPERATURE             "temperature"
 #define INFO_MB_VOLTAGE                 "voltage"

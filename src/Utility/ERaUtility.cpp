@@ -1515,3 +1515,119 @@ bool ERaStrCmp(const char* str, const char* str2) {
 void ERaStrConcat(char* str, const char* str2) {
     strcat(str, str2);
 }
+
+char* ERaStrStr(const char* str, const char* str2, bool caseSensitive) {
+    if ((str == NULL) || (str2 == NULL)) {
+        return NULL;
+    }
+
+    if (caseSensitive) {
+        return (char*)strstr(str, str2);
+    }
+
+    if (!*str2) {
+        return (char*)str;
+    }
+
+    for (; *str; ++str) {
+        if (::tolower((unsigned char)*str) == ::tolower((unsigned char)*str2)) {
+            const char* h;
+            const char* n;
+            for (h = str, n = str2; *h && *n; ++h, ++n) {
+                if (::tolower((unsigned char)*h) != ::tolower((unsigned char)*n)) {
+                    break;
+                }
+            }
+            if (!*n) {
+                return (char*)str;
+            }
+        }
+    }
+    return NULL;
+}
+
+static char* ERaStrrStr(const char* str, const char* str2) {
+    if (!*str2) {
+        return (char*)(str + strlen(str));
+    }
+
+    const char* result = NULL;
+    const char* p = str;
+    
+    while ((p = strstr(p, str2)) != NULL) {
+        result = p;
+        p++;
+    }
+    return (char*)result;
+}
+
+char* ERaStrrStr(const char* str, const char* str2, bool caseSensitive) {
+    if ((str == NULL) || (str2 == NULL)) {
+        return NULL;
+    }
+
+    if (caseSensitive) {
+        return (char*)ERaStrrStr(str, str2);
+    }
+
+    if (!*str2) {
+        return (char*)(str + strlen(str));
+    }
+
+    const char* result = NULL;
+    const char* p = str;
+    
+    while (*p) {
+        const char* h = p;
+        const char* n = str2;
+        while (*h && *n && (::tolower((unsigned char)*h) == ::tolower((unsigned char)*n))) {
+            h++;
+            n++;
+        }
+        if (!*n) {
+            result = p;
+        }
+        p++;
+    }
+    return (char*)result;
+}
+
+char* ERaStrChr(const char* str, int c, bool caseSensitive) {
+    if (str == NULL) {
+        return NULL;
+    }
+
+    if (caseSensitive) {
+        return (char*)strchr(str, c);
+    }
+
+    char lower = ::tolower((unsigned char)c);
+    while (*str) {
+        if (::tolower((unsigned char)*str) == lower) {
+            return (char*)str;
+        }
+        str++;
+    }
+    return NULL;
+}
+
+char* ERaStrrChr(const char* str, int c, bool caseSensitive) {
+    if (str == NULL) {
+        return NULL;
+    }
+
+    if (caseSensitive) {
+        return (char*)strrchr(str, c);
+    }
+
+    char lower = ::tolower((unsigned char)c);
+    const char* last = NULL;
+    
+    while (*str) {
+        if (::tolower((unsigned char)*str) == lower) {
+            last = str;
+        }
+        str++;
+    }
+    return (char*)last;
+}

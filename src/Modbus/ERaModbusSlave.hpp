@@ -212,7 +212,7 @@ bool ERaModbusSlave<Modbus>::handlerCallbacks() {
         if (this->callbacks != nullptr) {
             this->callbacks(this);
         }
-        if (this->getSlaveAddress() != pReg->addr) {
+        if (pReg->addr && (this->getSlaveAddress() != pReg->addr)) {
             continue;
         }
         if (this->getFunction() != pReg->func) {
@@ -247,7 +247,7 @@ void ERaModbusSlave<Modbus>::sendResponse(Register_t* pReg) {
         case ModbusFunctionT::READ_HOLDING_REGISTERS:
         case ModbusFunctionT::READ_INPUT_REGISTERS: {
             uint8_t data[5] {0};
-            data[0] = pReg->addr;
+            data[0] = this->getSlaveAddress();
             data[1] = (pReg->func | 0x80);
             data[2] = ModbusStatusT::MODBUS_STATUS_ILLEGAL_DATA_VALUE;
             uint16_t crc = this->modbusCRC(data, sizeof(data) - 2);

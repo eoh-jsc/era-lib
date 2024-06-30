@@ -33,10 +33,10 @@ void ERaTimer::run() {
         if (!this->isValidTimer(pTimer)) {
             continue;
         }
-        if (this->getFlag(pTimer->called, TimerFlagT::TIMER_ON_DELETE)) {
+        if (!this->isCalled(pTimer, TimerFlagT::TIMER_ON_CALLED)) {
             continue;
         }
-        if (!this->isCalled(pTimer, TimerFlagT::TIMER_ON_CALLED)) {
+        if (this->getFlag(pTimer->called, TimerFlagT::TIMER_ON_DELETE)) {
             continue;
         }
         if (pTimer->callback_p == nullptr) {

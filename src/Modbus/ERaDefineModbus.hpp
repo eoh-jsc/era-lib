@@ -42,9 +42,10 @@
 #define MODBUS_SINGLE_COIL_OFF          (uint16_t)0x0000
 
 #define MODBUS_STRING_SCAN              "scan"
-#define MODBUS_STRING_TOTAL             "total"
 #define MODBUS_STRING_FAIL_READ         "fail_read"
 #define MODBUS_STRING_FAIL_WRITE        "fail_write"
+#define MODBUS_STRING_TOTAL_READ        "total_read"
+#define MODBUS_STRING_TOTAL_WRITE       "total_write"
 
 #if !defined(ERA_MAX_REGISTERS)
     #define ERA_MAX_REGISTERS           ERA_MAX_VIRTUAL_PINS
@@ -114,5 +115,19 @@ typedef struct __ModbusAction_t {
     uint8_t type;
     uint16_t param;
 } ModbusAction_t;
+
+typedef struct __ModbusActionRaw_t {
+    uint8_t addr;
+    uint8_t func;
+    uint8_t sa1;
+    uint8_t sa2;
+    uint8_t len1;
+    uint8_t len2;
+    uint8_t* pExtra;
+    size_t pExtraLen;
+    uint16_t prevdelay;
+    uint16_t postdelay;
+    IPSlave_t ip;
+} ModbusActionRaw_t;
 
 #endif /* INC_ERA_DEFINE_MODBUS_HPP_ */

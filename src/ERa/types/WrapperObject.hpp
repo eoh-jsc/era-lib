@@ -11,10 +11,10 @@ public:
         : value(js)
         , local()
     {
-        this->type = WrapperTypeT::WRAPPER_TYPE_STRING;
+        this->type = WrapperTypeT::WRAPPER_TYPE_OBJECT;
     }
 
-    WrapperObject& operator = (const ERaDataJson& rjs) {
+    virtual WrapperObject& operator = (const ERaDataJson& rjs) {
         this->value = rjs;
         return (*this);
     }
@@ -31,6 +31,10 @@ public:
         return true;
     }
 
+    bool isSendJSON() const override {
+        return this->value.isSendJSON();
+    }
+
 protected:
     double get() const override {
         return 0.0f;
@@ -45,10 +49,14 @@ protected:
     }
 
     void setPointer(const void* cptr) override {
-        this->value.parse((const char*)cptr);
+        cJSON* root = cJSON_Parse((const char*)cptr);
+        if (root != nullptr) {
+            this->value.setObject(root, true);
+        }
+        root = nullptr;
     }
 
-private:
+protected:
     ERaDataJson& value;
     ERaDataJson  local;
 };

@@ -10,6 +10,14 @@
     #define MAX_DEVICE_MODBUS           20
 #endif
 
+#ifndef MAX_CONFIG_MODBUS
+    #define MAX_CONFIG_MODBUS           50
+#endif
+
+#ifndef MAX_ALIAS_MODBUS
+    #define MAX_ALIAS_MODBUS            100
+#endif
+
 #ifndef DEFAULT_MODBUS_BAUD_SPEED
     #define DEFAULT_MODBUS_BAUD_SPEED   9600
 #endif
@@ -54,8 +62,8 @@ typedef struct __ModbusConfig_t {
     IPSlave_t ipSlave;
     uint8_t totalFail;
     uint8_t sizeData;
-    uint32_t value;
     uint8_t ack;
+    uint32_t value;
 } ModbusConfig_t;
 
 typedef struct __Action_t {
@@ -85,6 +93,8 @@ typedef struct __IntervalDelay_t {
     unsigned long prevMillis;
 } IntervalDelay_t;
 
+class ERaScanEntry;
+
 class ERaModbusEntry
 {
     enum ParseConfigT {
@@ -100,7 +110,8 @@ class ERaModbusEntry
         PARSE_CONFIG_ALIAS_TOTAL_ROW = 10,
         PARSE_CONFIG_ALIAS_DATA = 11,
         PARSE_IS_BLUETOOTH = 12,
-        PARSE_AUTO_CLOSING = 13
+        PARSE_TCP_IP_CONFIG = 13,
+        PARSE_AUTO_CLOSING = 14
     };
 
     enum ParseIntervalT {
@@ -108,6 +119,8 @@ class ERaModbusEntry
         PARSE_MODBUS_INTERVAL = 1,
         PARSE_PUB_MODBUS_INTERVAL = 2
     };
+
+    friend class ERaScanEntry;
 
 public:
     ERaModbusEntry()
@@ -228,13 +241,79 @@ private:
     void parseOneAction(const char* ptr, size_t len, ModbusConfigAlias_t& config);
     void actOneAction(const int* ptr, size_t len, ModbusConfigAlias_t& config);
     void processParseIsEnableBluetooth(const char* ptr, size_t len);
+    void parseOneTcpIp(const char* ptr, size_t len);
+    void processParseTcpIpConfig(const char* ptr, size_t len);
     void processParseEnableAutoClosing(const char* ptr, size_t len);
+
+    static inline
+    bool portFromString(IPSlave_t& ip, const char* port) {
+        uint32_t acc = 0;
+        while (*port) {
+            char c = *port++;
+            if ((c >= '0') && (c <= '9')) {
+                acc = (acc * 10) + (c - '0');
+                if (acc > 65535) {
+                    return false;
+                }
+            }
+            else if (c == '"') {
+                continue;
+            }
+            else {
+                break;
+            }
+        }
+        ip.port = acc;
+        return true;
+    }
+
+    static inline
+    bool ipFromString(IPSlave_t& ip, const char* address) {
+        uint16_t acc = 0;
+        uint8_t dots = 0;
+
+        while (*address) {
+            char c = *address++;
+            if ((c >= '0') && (c <= '9')) {
+                acc = (acc * 10) + (c - '0');
+                if (acc > 255) {
+                    return false;
+                }
+            }
+            else if (c == '.') {
+                if (dots == 3) {
+                    return false;
+                }
+                ip.ip.bytes[dots++] = acc;
+                acc = 0;
+            }
+            else if (c == '"') {
+                continue;
+            }
+            else if (c == ':') {
+                ERaModbusEntry::portFromString(ip, address);
+                break;
+            }
+            else {
+                return false;
+            }
+        }
+
+        if (dots != 3) {
+            return false;
+        }
+        if (ip.port == 0) {
+            ip.port = 502;
+        }
+        ip.ip.bytes[3] = acc;
+        return true;
+    }
 
     template <typename T>
     T* create() {
         T* ptr = (T*)ERA_MALLOC(sizeof(T));
         if (ptr != nullptr) {
-            memset(ptr, 0, sizeof(T));
+            memset((void*)ptr, 0, sizeof(T));
         }
         return ptr;
     }
@@ -270,6 +349,21 @@ private:
             }
             value.remove(it);
         }
+    }
+
+    template <typename T>
+    T find(ERaList<T>& value, int id) {
+        const typename ERaList<T>::iterator* e = value.end();
+        for (typename ERaList<T>::iterator* it = value.begin(); it != e; it = it->getNext()) {
+            T& item = it->get();
+            if (item == nullptr) {
+                continue;
+            }
+            if (item->id == id) {
+                return item;
+            }
+        }
+        return nullptr;
     }
 
 };
@@ -400,6 +494,9 @@ void ERaModbusEntry::processParseConfig(int part, const char* ptr, size_t len) {
         case ParseConfigT::PARSE_IS_BLUETOOTH:
             this->processParseIsEnableBluetooth(ptr, len);
             break;
+        case ParseConfigT::PARSE_TCP_IP_CONFIG:
+            this->processParseTcpIpConfig(ptr, len);
+            break;
         case ParseConfigT::PARSE_AUTO_CLOSING:
             this->processParseEnableAutoClosing(ptr, len);
             break;
@@ -475,7 +572,7 @@ void ERaModbusEntry::processParseConfigSensorDelay(const char* ptr, size_t len) 
     */
 
     SensorDelay_t* sensor = nullptr;
-    ERaList<SensorDelay_t *>::iterator* it = nullptr;
+    ERaList<SensorDelay_t*>::iterator* it = nullptr;
     for (size_t i = 0; i < len; ++i) { 
         buf[bufLen++] = ptr[i];
 
@@ -549,7 +646,7 @@ void ERaModbusEntry::processParseConfigSensorReadWrite(const char* ptr, size_t l
             if (newItem) {
                 this->modbusConfigParam.put(config);
             }
-            if (this->readConfigCount++ >= MAX_DEVICE_MODBUS) {
+            if (this->readConfigCount++ >= MAX_CONFIG_MODBUS) {
                 break;
             }
         }
@@ -709,7 +806,7 @@ void ERaModbusEntry::processParseConfigAliasData(const char* ptr, size_t len) {
             if (newItem) {
                 this->modbusConfigAliasParam.put(config);
             }
-            if (this->readConfigAliasCount++ >= MAX_DEVICE_MODBUS) {
+            if (this->readConfigAliasCount++ >= MAX_ALIAS_MODBUS) {
                 break;
             }
         }
@@ -848,6 +945,48 @@ void ERaModbusEntry::processParseIsEnableBluetooth(const char* ptr, size_t len) 
 }
 
 inline
+void ERaModbusEntry::parseOneTcpIp(const char* ptr, size_t len) {
+    if (!len) {
+        return;
+    }
+
+    LOC_BUFFER_PARSE
+
+    size_t bufLen {0};
+    ModbusConfig_t* config = nullptr;
+    for (size_t i = 0; i < len; ++i) {
+        buf[bufLen++] = ptr[i];
+        if (ptr[i] == ',') {
+            buf[--bufLen] = '\0';
+            bufLen = 0;
+            config = this->find(this->modbusConfigParam, atoi(buf));
+            if (config == nullptr) {
+                break;
+            }
+            if (!ERaModbusEntry::ipFromString(config->ipSlave, ptr + i + 1)) {
+                config->ipSlave.port = 0;
+                config->ipSlave.ip.dword = 0UL;
+            }
+            break;
+        }
+    }
+
+    FREE_BUFFER_PARSE
+}
+
+inline
+void ERaModbusEntry::processParseTcpIpConfig(const char* ptr, size_t len) {
+    size_t position {0};
+
+    for (size_t i = 0; i < len; ++i) {
+        if (ptr[i] == '-') {
+            this->parseOneTcpIp(ptr + position, i - position);
+            position = i + 1;
+        }
+    }
+}
+
+inline
 void ERaModbusEntry::processParseEnableAutoClosing(const char* ptr, size_t len) {
     if (!len) {
         return;
@@ -859,11 +998,18 @@ class ERaScanEntry
 {
     enum ParseConfigT {
         PARSE_CONFIG_RANGE = 1,
-        PARSE_CONFIG_NUMBER_SCAN = 2
+        PARSE_CONFIG_NUMBER_SCAN = 2,
+        PARSE_TCP_IP_CONFIG = 3
     };
 
 public:
     ERaScanEntry()
+        : start(0)
+        , end(0)
+        , numberScan(0)
+        , numberDevice(0)
+        , addr {}
+        , ipSlave {}
     {}
     ~ERaScanEntry()
     {}
@@ -873,6 +1019,7 @@ public:
     uint8_t numberScan;
     uint8_t numberDevice;
     uint8_t addr[MAX_DEVICE_MODBUS];
+    IPSlave_t ipSlave;
 
     void parseConfig(const char* ptr);
 
@@ -893,6 +1040,7 @@ private:
     void processParseConfig(int part, const char* ptr, size_t len);
     void processParseConfigRange(const char* ptr, size_t len);
     void processParseConfigNumberScan(const char* ptr, size_t len);
+    void processParseTcpIpConfig(const char* ptr, size_t len);
 };
 
 inline
@@ -926,6 +1074,9 @@ void ERaScanEntry::processParseConfig(int part, const char* ptr, size_t len) {
             break;
         case ParseConfigT::PARSE_CONFIG_NUMBER_SCAN:
             this->processParseConfigNumberScan(ptr, len);
+            break;
+        case ParseConfigT::PARSE_TCP_IP_CONFIG:
+            this->processParseTcpIpConfig(ptr, len);
             break;
         default:
             break;
@@ -970,6 +1121,18 @@ void ERaScanEntry::processParseConfigNumberScan(const char* ptr, size_t len) {
     buf[pos] = 0;
 
     this->numberScan = atoi(buf);
+}
+
+inline
+void ERaScanEntry::processParseTcpIpConfig(const char* ptr, size_t len) {
+    if (!len) {
+        return;
+    }
+
+    if (!ERaModbusEntry::ipFromString(this->ipSlave, ptr)) {
+        this->ipSlave.port = 0;
+        this->ipSlave.ip.dword = 0UL;
+    }
 }
 
 #endif /* INC_ERA_PARSE_HPP_ */

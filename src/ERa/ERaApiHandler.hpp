@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <ERa/ERaDefine.hpp>
 #include <ERa/ERaConfig.hpp>
+#include <ERa/ERaState.hpp>
 #include <ERa/ERaDebug.hpp>
 #include <ERa/ERaTimer.hpp>
 #include <ERa/ERaCallbacksHelper.hpp>
@@ -127,6 +128,12 @@ public:
 
     void runTimer() {
         this->ERaTm.run();
+    }
+
+    virtual bool afterNetwork() {
+        return (ERaState::is(StateT::STATE_RUNNING) ||
+                ERaState::is(StateT::STATE_CONNECTED) ||
+                ERaState::is(StateT::STATE_CONNECTING_CLOUD));
     }
 
     virtual bool connected() = 0;

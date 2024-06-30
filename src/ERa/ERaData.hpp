@@ -248,12 +248,12 @@ public:
 #endif
 
     template <typename T> 
-    void add_multi(const T last) {
+    void add_multi(const T& last) {
         this->add(last);
     }
 
     template <typename T, typename... Args> 
-    void add_multi(const T head, Args... tail) {
+    void add_multi(const T& head, const Args&... tail) {
         this->add(head);
         this->add_multi(tail...);
     }
@@ -841,12 +841,14 @@ class ERaDataJson
     typedef cJSON* (CJSON_STDCALL* AddDouble)(cJSON* const object, const char* const name, const double number, int decimal);
     typedef cJSON* (CJSON_STDCALL* AddString)(cJSON* const object, const char* const name, const char* const string);
     typedef cJSON_bool (CJSON_STDCALL* AddItem)(cJSON* object, const char* name, cJSON* item);
+    typedef cJSON_bool (CJSON_STDCALL* AddArray)(cJSON* array, cJSON* item);
     typedef struct __DataHooks {
         AddBool addBool;
         AddNumber addNumber;
         AddDouble addDouble;
         AddString addString;
         AddItem addItem;
+        AddArray addArray;
     } DataHooks;
 
 public:
@@ -1119,7 +1121,7 @@ public:
         }
 
         template <typename T>
-        iterator& operator = (T value) {
+        iterator& operator = (const T& value) {
             cJSON_SetNumber(this->parent, this->item, value);
             return (*this);
         }
@@ -1167,7 +1169,7 @@ public:
         }
 
         template <typename T>
-        bool operator == (T value) const {
+        bool operator == (const T& value) const {
             if (!this->isNumber()) {
                 return false;
             }
@@ -1213,7 +1215,7 @@ public:
         }
 
         template <typename T>
-        bool operator != (T value) const {
+        bool operator != (const T& value) const {
             return !(operator == <T> (value));
         }
 
@@ -1250,7 +1252,7 @@ public:
         }
 
         template <typename T>
-        T operator | (T value) const {
+        T operator | (const T& value) const {
             if (!this->isNumber()) {
                 return value;
             }
@@ -1315,6 +1317,7 @@ public:
     ERaDataJson(cJSON* json = nullptr)
         : ptr(nullptr)
         , root(json)
+        , sendJS(false)
     {}
     ERaDataJson(const char* str)
         : ERaDataJson(cJSON_Parse(str))
@@ -1322,13 +1325,13 @@ public:
     ERaDataJson(const ERaDataJson& json)
         : ptr(nullptr)
         , root(nullptr)
+        , sendJS(false)
     {
         (*this) = json;
     }
     ~ERaDataJson()
     {
-        this->clear();
-        this->clearObject();
+        this->reset();
     }
 
     const cJSON* getObject() const {
@@ -1341,14 +1344,37 @@ public:
         return it;
     }
 
-    void setObject(cJSON* const it) {
+    cJSON* duplicateObject() const {
+        return cJSON_Duplicate(this->root, true);
+    }
+
+    void setObject(cJSON* const it, bool rst = true) {
+        if (rst) {
+            this->reset();
+        }
         this->root = it;
     }
 
+    void copyObject(cJSON* const it, bool rst = true) {
+        this->setObject(cJSON_Duplicate(it, true), rst);
+    }
+
     void parse(const char* str) {
+        this->reset();
+        this->root = cJSON_Parse(str);
+    }
+
+    void reset() {
         this->clear();
         this->clearObject();
-        this->root = cJSON_Parse(str);
+    }
+
+    void setSendJSON(bool enable) {
+        this->sendJS = enable;
+    }
+
+    bool isSendJSON() const {
+        return this->sendJS;
     }
 
     const char* c_str() {
@@ -1413,7 +1439,7 @@ public:
     }
 
     template <typename T>
-    void set(const char* name, T value);
+    void set(const char* name, const T& value);
     void set(const char* name, bool value);
     void set(const char* name, float value);
     void set(const char* name, double value);
@@ -1421,48 +1447,76 @@ public:
     void set(const char* name, const char* value);
 
     template <typename T>
-    void add(const char* name, T value);
+    void add(const char* name, const T& value);
     void add(const char* name, bool value);
     void add(const char* name, float value);
     void add(const char* name, double value);
     void add(const char* name, char* value);
     void add(const char* name, const char* value);
     void add(const char* name, cJSON* value);
-    void add(const char* name, ERaDataJson& value);
-    void add(const char* name, ERaParam& value);
+    void add(const char* name, const ERaDataJson& value);
+    void add(const char* name, const ERaParam& value);
+    void add(const char* name, const ERaString& value);
 
 #if defined(ERA_HAS_PROGMEM)
     void add(const char* name, const __FlashStringHelper* value);
 #endif
 
     template <typename T>
-    void add_multi(const T value) {
+    void add_multi(const T& value) {
         (void)value;
     }
 
     template <typename T> 
-    void add_multi(const char* name, const T last) {
+    void add_multi(const char* name, const T& last) {
         this->add(name, last);
     }
 
     template <typename T, typename... Args> 
-    void add_multi(const char* name, const T head, Args... tail) {
+    void add_multi(const char* name, const T& head, const Args&... tail) {
         this->add(name, head);
         this->add_multi(tail...);
     }
 
     template <typename T> 
-    void add_multi(ERaInt_t id, const T last) {
+    void add_multi(ERaInt_t id, const T& last) {
         char name[2 + 8 * sizeof(ERaInt_t)] {0};
         snprintf(name, sizeof(name), ERA_INT_FORMAT, id);
         this->add_multi(name, last);
     }
 
     template <typename T, typename... Args> 
-    void add_multi(ERaInt_t id, const T head, Args... tail) {
+    void add_multi(ERaInt_t id, const T& head, const Args&... tail) {
         char name[2 + 8 * sizeof(ERaInt_t)] {0};
         snprintf(name, sizeof(name), ERA_INT_FORMAT, id);
         this->add_multi(name, head, tail...);
+    }
+
+    template <typename T>
+    void add(const T& value);
+    void add(bool value);
+    void add(float value);
+    void add(double value);
+    void add(char* value);
+    void add(const char* value);
+    void add(cJSON* value);
+    void add(const ERaDataJson& value);
+    void add(const ERaParam& value);
+    void add(const ERaString& value);
+
+#if defined(ERA_HAS_PROGMEM)
+    void add(const __FlashStringHelper* value);
+#endif
+
+    template <typename T> 
+    void array_multi(const T& last) {
+        this->add(last);
+    }
+
+    template <typename T, typename... Args> 
+    void array_multi(const T& head, const Args&... tail) {
+        this->add(head);
+        this->array_multi(tail...);
     }
 
     bool containsKey(const char* key) const;
@@ -1507,6 +1561,7 @@ public:
     bool operator != (nullptr_t) const;
 
     ERaDataJson& operator = (const char* value);
+    ERaDataJson& operator = (const cJSON* value);
     ERaDataJson& operator = (const ERaDataJson& value);
     ERaDataJson& operator = (nullptr_t);
 
@@ -1563,13 +1618,35 @@ protected:
         return cJSON_AddItemToObject(object, name, item);
     }
 
+    cJSON_bool addArray(cJSON* array, cJSON* item) {
+        return cJSON_AddItemToArray(array, item);
+    }
+
+    cJSON_bool addBoolArray(cJSON* array, const cJSON_bool boolean) {
+        return this->addArray(array, cJSON_CreateBool(boolean));
+    }
+
+    cJSON_bool addNumberArray(cJSON* array, const double number) {
+        return this->addArray(array, cJSON_CreateNumber(number));
+    }
+
+    cJSON_bool addDoubleArray(cJSON* array, const double number, int decimal) {
+        return this->addArray(array, cJSON_CreateNumberWithDecimalToObject(number, decimal));
+    }
+
+    cJSON_bool addStringArray(cJSON* array, const char* const string) {
+        return this->addArray(array, cJSON_CreateString(string));
+    }
+
     char* ptr;
     cJSON* root;
+
+    bool sendJS;
 };
 
 template <typename T>
 inline
-void ERaDataJson::set(const char* name, T value) {
+void ERaDataJson::set(const char* name, const T& value) {
     this->create();
     this->setNumber(this->root, name, value);
 }
@@ -1606,7 +1683,7 @@ void ERaDataJson::set(const char* name, const char* value) {
 
 template <typename T>
 inline
-void ERaDataJson::add(const char* name, T value) {
+void ERaDataJson::add(const char* name, const T& value) {
     this->create();
     this->addNumber(this->root, name, value);
 }
@@ -1648,8 +1725,8 @@ void ERaDataJson::add(const char* name, cJSON* value) {
 }
 
 inline
-void ERaDataJson::add(const char* name, ERaDataJson& value) {
-    this->add(name, value.detachObject());
+void ERaDataJson::add(const char* name, const ERaDataJson& value) {
+    this->add(name, value.duplicateObject());
 }
 
 #if defined(ERA_HAS_PROGMEM)
@@ -1664,6 +1741,70 @@ void ERaDataJson::add(const char* name, ERaDataJson& value) {
         char str[size + 1] {0};
         memcpy_P(str, p, size);
         this->add(name, str);
+    }
+
+#endif
+
+template <typename T>
+inline
+void ERaDataJson::add(const T& value) {
+    this->createArray();
+    this->addNumberArray(this->root, value);
+}
+
+inline
+void ERaDataJson::add(bool value) {
+    this->createArray();
+    this->addBoolArray(this->root, value);
+}
+
+inline
+void ERaDataJson::add(float value) {
+    this->createArray();
+    this->addDoubleArray(this->root, value, 2);
+}
+
+inline
+void ERaDataJson::add(double value) {
+    this->createArray();
+    this->addDoubleArray(this->root, value, 5);
+}
+
+inline
+void ERaDataJson::add(char* value) {
+    this->createArray();
+    this->addStringArray(this->root, value);
+}
+
+inline
+void ERaDataJson::add(const char* value) {
+    this->createArray();
+    this->addStringArray(this->root, value);
+}
+
+inline
+void ERaDataJson::add(cJSON* value) {
+    this->createArray();
+    this->addArray(this->root, value);
+}
+
+inline
+void ERaDataJson::add(const ERaDataJson& value) {
+    this->add(value.duplicateObject());
+}
+
+#if defined(ERA_HAS_PROGMEM)
+
+    inline
+    void ERaDataJson::add(const __FlashStringHelper* value) {
+        if (value == nullptr) {
+            return;
+        }
+        PGM_P p = reinterpret_cast<PGM_P>(value);
+        size_t size = strlen_P(p);
+        char str[size + 1] {0};
+        memcpy_P(str, p, size);
+        this->add(str);
     }
 
 #endif
@@ -1801,9 +1942,18 @@ bool ERaDataJson::operator != (nullptr_t) const {
 
 inline
 ERaDataJson& ERaDataJson::operator = (const char* value) {
-    this->clear();
-    this->clearObject();
+    this->reset();
     this->root = cJSON_Parse(value);
+    return (*this);
+}
+
+inline
+ERaDataJson& ERaDataJson::operator = (const cJSON* value) {
+    if (this->root == value) {
+        return (*this);
+    }
+    this->reset();
+    this->root = cJSON_Duplicate(value, true);
     return (*this);
 }
 
@@ -1812,16 +1962,15 @@ ERaDataJson& ERaDataJson::operator = (const ERaDataJson& value) {
     if (this == &value) {
         return (*this);
     }
-    this->clear();
-    this->clearObject();
+    this->reset();
+    this->sendJS = value.sendJS;
     this->root = cJSON_Duplicate(value.getObject(), true);
     return (*this);
 }
 
 inline
 ERaDataJson& ERaDataJson::operator = (nullptr_t) {
-    this->clear();
-    this->clearObject();
+    this->reset();
     return (*this);
 }
 

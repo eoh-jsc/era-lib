@@ -870,7 +870,9 @@ void ERaPnP<Transport>::configMode() {
         ERaWatchdogFeed();
         Base::appLoop();
         ERaWatchdogFeed();
-        if (ERaConfig.getFlag(ConfigFlagT::CONFIG_FLAG_VALID)) {
+        if (ERaState::is(StateT::STATE_SWITCH_TO_AP_STA)) {
+        }
+        else if (ERaConfig.getFlag(ConfigFlagT::CONFIG_FLAG_VALID)) {
             if (!ERaRemainingTime(tick, WIFI_NET_CHECK_TIMEOUT)) {
                 ERaState::set(StateT::STATE_SWITCH_TO_STA);
                 break;
@@ -1322,6 +1324,7 @@ void ERaPnP<Transport>::connectNetwork() {
         /* Udp */
         if (ERaConfig.getFlag(ConfigFlagT::CONFIG_FLAG_UDP)) {
             String content = ERA_F(R"json({"status":"ok","message":"Connected to WiFi"})json");
+            ERaDelay(100);
             udpERa.send(content.c_str());
             ERaDelay(100);
             udpERa.sendBoardInfo();
@@ -1341,7 +1344,9 @@ void ERaPnP<Transport>::connectNetwork() {
         /* Udp */
         if (ERaConfig.getFlag(ConfigFlagT::CONFIG_FLAG_UDP)) {
             String content = ERA_F(R"json({"status":"error","message":"Connect WiFi failed"})json");
+            ERaDelay(100);
             udpERa.send(content.c_str());
+            ERaDelay(500);
             ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_UDP, false);
         }
         /* Udp */

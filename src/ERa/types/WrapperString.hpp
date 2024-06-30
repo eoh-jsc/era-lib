@@ -629,11 +629,23 @@ class WrapperString;
             return this->indexOf(c, 0);
         }
 
+        int indexOfIgnoreCase(char c) const {
+            return this->indexOfIgnoreCase(c, 0);
+        }
+
         int indexOf(char c, size_t index) const {
+            return this->indexOfCaseSensitive(c, index, true);
+        }
+
+        int indexOfIgnoreCase(char c, size_t index) const {
+            return this->indexOfCaseSensitive(c, index, false);
+        }
+
+        int indexOfCaseSensitive(char c, size_t index, bool caseSensitive) const {
             if (index >= this->length()) {
                 return -1;
             }
-            const char* ptr = strchr(this->value.buffer + index, c);
+            const char* ptr = ERaStrChr(this->value.buffer + index, c, caseSensitive);
             if (ptr == nullptr) {
                 return -1;
             }
@@ -644,14 +656,26 @@ class WrapperString;
             return this->indexOf(str, 0);
         }
 
+        int indexOfIgnoreCase(const ERaString& str) const {
+            return this->indexOfIgnoreCase(str, 0);
+        }
+
         int indexOf(const ERaString& str, size_t index) const {
+            return this->indexOfCaseSensitive(str, index, true);
+        }
+
+        int indexOfIgnoreCase(const ERaString& str, size_t index) const {
+            return this->indexOfCaseSensitive(str, index, false);
+        }
+
+        int indexOfCaseSensitive(const ERaString& str, size_t index, bool caseSensitive) const {
             if (!str.length()) {
                 return -1;
             }
             if (index >= this->length()) {
                 return -1;
             }
-            const char* ptr = strstr(this->value.buffer + index, str.value.buffer);
+            const char* ptr = ERaStrStr(this->value.buffer + index, str.value.buffer, caseSensitive);
             if (ptr == nullptr) {
                 return -1;
             }
@@ -662,13 +686,25 @@ class WrapperString;
             return this->lastIndexOf(c, this->length() - 1);
         }
 
+        int lastIndexOfIgnoreCase(char c) const {
+            return this->lastIndexOfIgnoreCase(c, this->length() - 1);
+        }
+
         int lastIndexOf(char c, size_t index) const {
+            return this->lastIndexOfCaseSensitive(c, index, true);
+        }
+
+        int lastIndexOfIgnoreCase(char c, size_t index) const {
+            return this->lastIndexOfCaseSensitive(c, index, false);
+        }
+
+        int lastIndexOfCaseSensitive(char c, size_t index, bool caseSensitive) const {
             if (index >= this->length()) {
                 return -1;
             }
             const char temp = this->value.buffer[index + 1];
             this->value.buffer[index + 1] = '\0';
-            const char* ptr = strrchr(this->value.buffer, c);
+            const char* ptr = ERaStrrChr(this->value.buffer, c, caseSensitive);
             this->value.buffer[index + 1] = temp;
             if (ptr == nullptr) {
                 return -1;
@@ -680,7 +716,19 @@ class WrapperString;
             return this->lastIndexOf(str, this->length() - str.length());
         }
 
+        int lastIndexOfIgnoreCase(const ERaString& str) const {
+            return this->lastIndexOfIgnoreCase(str, this->length() - str.length());
+        }
+
         int lastIndexOf(const ERaString& str, size_t index) const {
+            return this->lastIndexOfCaseSensitive(str, index, true);
+        }
+
+        int lastIndexOfIgnoreCase(const ERaString& str, size_t index) const {
+            return this->lastIndexOfCaseSensitive(str, index, false);
+        }
+
+        int lastIndexOfCaseSensitive(const ERaString& str, size_t index, bool caseSensitive) const {
             if (!this->length() || !str.length()) {
                 return -1;
             }
@@ -692,7 +740,7 @@ class WrapperString;
             }
             int found = -1;
             for (char* ptr = this->value.buffer; ptr <= (this->value.buffer + index); ++ptr) {
-                ptr = strstr(ptr, str.value.buffer);
+                ptr = ERaStrStr(ptr, str.value.buffer, caseSensitive);
                 if (ptr == nullptr) {
                     break;
                 }

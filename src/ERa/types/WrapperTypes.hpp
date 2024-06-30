@@ -13,6 +13,7 @@
 #include "WrapperNumber.hpp"
 #include "WrapperString.hpp"
 #include "WrapperObject.hpp"
+#include "WrapperArray.hpp"
 #include "CloudColor.hpp"
 
 typedef bool CloudContact;

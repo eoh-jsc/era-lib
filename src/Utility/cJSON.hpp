@@ -84,7 +84,7 @@ then using the CJSON_API_VISIBILITY flag to "export" the same symbols the way CJ
 /* project version */
 #define CJSON_VERSION_MAJOR 1
 #define CJSON_VERSION_MINOR 7
-#define CJSON_VERSION_PATCH 17
+#define CJSON_VERSION_PATCH 18
 
 /* cJSON Types: */
 #define cJSON_Invalid (0)
