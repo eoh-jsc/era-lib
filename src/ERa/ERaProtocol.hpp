@@ -423,6 +423,9 @@ void ERaProto<Transp, Flash>::processRequest(const char* topic, const char* payl
     else if (arrayTopic.at(1) == "virtual_pin") {
         Base::processVirtualPinRequest(arrayTopic, payload);
     }
+    else if (arrayTopic.at(1) == "wifi") {
+        Base::processWifiRequest(arrayTopic, payload);
+    }
     else if (arrayTopic.at(1) == "down") {
         this->processDownRequest(arrayTopic, payload);
     }
