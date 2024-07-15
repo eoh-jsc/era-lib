@@ -825,6 +825,9 @@ void ERaApi<Proto, Flash>::processVirtualPinRequest(const ERaDataBuff& arrayTopi
 }
 
 #if defined(ESP32)
+
+#include <WiFi.h>
+
 const char* scanWiFi() {
     int nets = WiFi.scanNetworks(false, true, false, 150);
     if (nets < 0) {
