@@ -13,7 +13,7 @@ Topic format:
 
 /* Subscribe topic */
 #define ERA_SUB_PREFIX_DOWN_TOPIC                   "/down"
-#define ERA_SUB_PREFIX_WIFI_TOPIC					"/wifi/+"
+#define ERA_SUB_PREFIX_WIFI_TOPIC                   "/wifi/+"
 #define ERA_SUB_PREFIX_ARDUINO_TOPIC                "/arduino_pin/+"
 #define ERA_SUB_PREFIX_VIRTUAL_TOPIC                "/virtual_pin/+"
 
