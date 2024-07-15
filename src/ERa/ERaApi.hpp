@@ -824,6 +824,7 @@ void ERaApi<Proto, Flash>::processVirtualPinRequest(const ERaDataBuff& arrayTopi
     item = nullptr;
 }
 
+#if defined(ESP32)
 const char* scanWiFi() {
     int nets = WiFi.scanNetworks(false, true, false, 150);
     if (nets < 0) {
@@ -831,7 +832,8 @@ const char* scanWiFi() {
         return nullptr;
     }
 
-    ERaJson json;
+    static ERaJson json;
+	json.reset();
     for (int i = 0; i < nets; ++i) {
         json[i]["ssid"] = WiFi.SSID(i).c_str();
         json[i]["rssi"] = WiFi.RSSI(i);
@@ -888,6 +890,15 @@ bool changeWifi(const char* newSsid, const char* newPassword) {
     // tryConnectWifi(ERaConfig.ssid, ERaConfig.pass);  try connect old wifi
     return false;
 }
+#else
+const char* scanWiFi() {
+	return nullptr;
+}
+
+bool changeWifi(const char* newSsid, const char* newPassword) {
+	return false;
+}
+#endif
 
 template <class Proto, class Flash>
 inline
@@ -914,6 +925,8 @@ void ERaApi<Proto, Flash>::processWifiRequest(const ERaDataBuff& arrayTopic, con
         const char * ssid = ssidItem->valuestring;
         const char * password = passwordItem->valuestring;
         this->_changing_wifi_success = changeWifi(ssid, password) ? 1 : 0;
+		cJSON_Delete(root);
+		root = nullptr;
     }
 }
 
