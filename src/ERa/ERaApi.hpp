@@ -836,7 +836,7 @@ const char* scanWiFi() {
     }
 
     static ERaJson json;
-	json.reset();
+    json.reset();
     for (int i = 0; i < nets; ++i) {
         json[i]["ssid"] = WiFi.SSID(i).c_str();
         json[i]["rssi"] = WiFi.RSSI(i);
@@ -890,16 +890,16 @@ bool changeWifi(const char* newSsid, const char* newPassword) {
     if (tryConnectWifi(newSsid, newPassword)) {
         return true;
     }
-    // tryConnectWifi(ERaConfig.ssid, ERaConfig.pass);  try connect old wifi
+    WiFi.disconnect();
     return false;
 }
 #else
 const char* scanWiFi() {
-	return nullptr;
+    return nullptr;
 }
 
 bool changeWifi(const char* newSsid, const char* newPassword) {
-	return false;
+    return false;
 }
 #endif
 
@@ -928,8 +928,8 @@ void ERaApi<Proto, Flash>::processWifiRequest(const ERaDataBuff& arrayTopic, con
         const char * ssid = ssidItem->valuestring;
         const char * password = passwordItem->valuestring;
         this->_changing_wifi_success = changeWifi(ssid, password) ? 1 : 0;
-		cJSON_Delete(root);
-		root = nullptr;
+        cJSON_Delete(root);
+        root = nullptr;
     }
 }
 
