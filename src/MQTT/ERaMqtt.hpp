@@ -125,6 +125,10 @@ public:
         this->config(_host, _port, _username, _password);
     }
 
+    bool isConnected() {
+        return _connected;
+    }
+
     void init(int readBufSize = ERA_MQTT_RX_BUFFER_SIZE,
             int writeBufSize = ERA_MQTT_TX_BUFFER_SIZE) {
         this->mqtt.init(readBufSize, writeBufSize);
@@ -142,6 +146,9 @@ public:
     bool publishData(const char* topic, const char* payload,
                     bool retained = ERA_MQTT_PUBLISH_RETAINED,
                     QoST qos = (QoST)ERA_MQTT_PUBLISH_QOS) override;
+    bool publishChipData(const char* topic, const char* payload,
+                    bool retained = ERA_MQTT_PUBLISH_RETAINED,
+                    QoST qos = (QoST)ERA_MQTT_PUBLISH_QOS);
     bool publishState(bool online);
     bool syncConfig();
 
@@ -350,6 +357,7 @@ bool ERaMqtt<Client, MQTT>::connect(FunctionCallback_t fn) {
     this->subscribeTopic(this->ERaTopic, ERA_SUB_PREFIX_VIRTUAL_TOPIC);
     this->subscribeTopic(this->ERaTopic, ERA_SUB_PREFIX_OP_DOWN_TOPIC);
     this->subscribeTopic(this->ERaTopic, ERA_SUB_PREFIX_DOWN_TOPIC);
+    this->subscribeTopic(this->ERaTopic, ERA_SUB_PREFIX_WIFI_TOPIC);
 
     ERaWatchdogFeed();
 
@@ -488,6 +496,18 @@ bool ERaMqtt<Client, MQTT>::publishData(const char* topic, const char* payload,
     this->unlockMQTT();
 
     return status;
+}
+
+template <class Client, class MQTT>
+inline
+bool ERaMqtt<Client, MQTT>::publishChipData(const char* topic, const char* payload,
+                                        bool retained, QoST qos) {
+    char topicName[MAX_TOPIC_LENGTH] {0};
+    FormatString(topicName, this->ERaTopic);
+    if (topic != NULL) {
+        FormatString(topicName, topic);
+    }
+    return this->publishData(topicName, payload, retained, qos);
 }
 
 template <class Client, class MQTT>
