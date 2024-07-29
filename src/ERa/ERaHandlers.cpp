@@ -45,6 +45,7 @@ ERA_APP_LOOP()          __attribute__((weak, alias("ERaNoHandler")));
 ERA_OPTION_CONNECTED()  __attribute__((weak, alias("ERaNoOptConnected")));
 ERA_MODBUS_BAUDRATE()   __attribute__((weak, alias("ERaNoModbusBaudrate")));
 ERA_MODBUS_INFO()       __attribute__((weak, alias("ERaNoInfo")));
+ERA_SELF_INFO()         __attribute__((weak, alias("ERaNoInfo")));
 ERA_INFO()              __attribute__((weak, alias("ERaNoInfo")));
 ERA_WRITE_CONFIG()      __attribute__((weak, alias("ERaNoWriteConfig")));
 

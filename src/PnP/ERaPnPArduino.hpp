@@ -47,9 +47,11 @@
 #define WIFI_AP_Subnet                IPAddress(255, 255, 255, 0)
 
 typedef struct __WiFiConfig_t {
+    uint8_t flag;
+
     char ssid[64];
     char pass[64];
-} WiFiConfig_t;
+} ERA_ATTR_PACKED WiFiConfig_t;
 
 typedef struct __ERaConfig_t {
     uint32_t magic;
@@ -112,6 +114,12 @@ static const ERaConfig_t ERaDefault = {
 
     false,
     false
+};
+
+enum WiFiFlagT {
+    WIFI_FLAG_INVALID = 0x00,
+    WIFI_FLAG_CONNECTED = 0x01,
+    WIFI_FLAG_FAILED = 0x02
 };
 
 enum ConfigFlagT {
@@ -282,10 +290,12 @@ public:
                 uint16_t port,
                 const char* username,
                 const char* password) {
-#if defined(ESP32) ||   \
+#if defined(ESP32) ||       \
     defined(ESP8266)
+        WiFi.persistent(false);
         WiFi.mode(WIFI_STA);
 #endif
+        WiFi.status();
         Base::init();
         this->config(auth, host, port, username, password);
 
@@ -373,16 +383,20 @@ private:
     void waitHandle(String& networks, unsigned long ms);
     void runServer(String& networks);
     String scanNetworks();
+    cJSON* scanNetworksJson(int nets, bool compact = false);
     void addEncryptionType(uint8_t networkItem, cJSON* const item);
     String urlDecode(const String& text);
     String urlFindArg(const String& url, const String& arg);
     String bodyFindArg(const String& body, const String& arg);
     void connectNetwork();
     void connectNewNetwork();
+    void connectNewNetworkResult() override;
     void connectCloud();
     void connectWiFi(const char* ssid, const char* pass);
     void connectNewWiFi(const char* ssid, const char* pass) override;
     void connectWiFiBackup();
+    void requestListWiFi() override;
+    void responseListWiFi() override;
     void switchToAP();
     void switchToSTA();
     void switchToAPSTA();
@@ -420,6 +434,11 @@ private:
 template <class Transport>
 void ERaPnP<Transport>::begin(const char* auth) {
     this->authToken = auth;
+#if defined(ESP32) ||   \
+    defined(ESP8266)
+    WiFi.persistent(false);
+#endif
+    WiFi.status();
 
     Base::init();
     this->configInit();
@@ -484,6 +503,10 @@ void ERaPnP<Transport>::run() {
         case StateT::STATE_RESET_CONFIG_REBOOT:
             this->configReset();
             ERaState::set(StateT::STATE_REBOOT);
+            break;
+        case StateT::STATE_REQUEST_LIST_WIFI:
+            this->responseListWiFi();
+            ERaState::set(StateT::STATE_RUNNING);
             break;
         case StateT::STATE_REBOOT:
             ERaDelay(1000);
@@ -597,12 +620,12 @@ void ERaPnP<Transport>::configApi() {
 
     udpERa.on("scan/wifi", []() {
         ERA_LOG(ERA_PSTR("WiFi"), ERA_PSTR("Scanning wifi..."));
-        String content;
+        String content = ERA_F(R"json({"type":"data_wifi","wifi":"[]"})json");
         int nets = WiFi.scanNetworks();
         ERA_LOG(ERA_PSTR("WiFi"), ERA_PSTR("Found %d wifi"), nets);
 
         if (nets <= 0) {
-            udpERa.send("[]");
+            udpERa.send(content.c_str());
             return;
         }
 
@@ -620,7 +643,7 @@ void ERaPnP<Transport>::configApi() {
 
         cJSON* root = cJSON_CreateObject();
         if (root == nullptr) {
-            udpERa.send("[]");
+            udpERa.send(content.c_str());
             return;
         }
         cJSON_AddStringToObject(root, "type", "data_wifi");
@@ -778,6 +801,10 @@ void ERaPnP<Transport>::configMode() {
 
     ERaDelay(1000);
 
+#if defined(ESP32) ||       \
+    defined(ESP8266)
+    WiFi.scanDelete();
+#endif
 #if defined(ERA_ARDUINO_WIFI_ESP_AT)
     this->server.end();
 #elif !defined(ERA_ARDUINO_WIFI)
@@ -802,7 +829,10 @@ void ERaPnP<Transport>::waitHandle(String& networks, unsigned long ms) {
 
 template <class Transport>
 void ERaPnP<Transport>::runServer(String& networks) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     WiFiClient client = this->server.available();
+#pragma GCC diagnostic pop
     if (!client) {
         return;
     }
@@ -1057,12 +1087,37 @@ void ERaPnP<Transport>::runServer(String& networks) {
 template <class Transport>
 String ERaPnP<Transport>::scanNetworks() {
     ERA_LOG(ERA_PSTR("WiFi"), ERA_PSTR("Scanning wifi..."));
-    String content;
+    String content = ERA_F("[]");
     int nets = WiFi.scanNetworks();
     ERA_LOG(ERA_PSTR("WiFi"), ERA_PSTR("Found %d wifi"), nets);
 
     if (nets <= 0) {
         return "[]";
+    }
+
+    cJSON* root = this->scanNetworksJson(nets, false);
+    if (root != nullptr) {
+        char* ptr = cJSON_PrintUnformatted(root);
+        if (ptr != nullptr) {
+            content = ptr;
+            free(ptr);
+        }
+        cJSON_Delete(root);
+        root = nullptr;
+        ptr = nullptr;
+    }
+    return content;
+}
+
+template <class Transport>
+cJSON* ERaPnP<Transport>::scanNetworksJson(int nets, bool compact) {
+    if (nets <= 0) {
+        return nullptr;
+    }
+
+    cJSON* root = cJSON_CreateArray();
+    if (root == nullptr) {
+        return nullptr;
     }
 
     int indices[nets] {0};
@@ -1077,44 +1132,36 @@ String ERaPnP<Transport>::scanNetworks() {
         }
     }
 
-    cJSON* root = cJSON_CreateArray();
-    if (root != nullptr) {
-        int limit {0};
-        for (int i = 0; i < nets; ++i) {
-            int id = indices[i];
-            if (!::getSSID(id).length()) {
-                continue;
-            }
+    int limit {0};
+    for (int i = 0; i < nets; ++i) {
+        int id = indices[i];
+        if (!::getSSID(id).length()) {
+            continue;
+        }
 
-            cJSON* item = cJSON_CreateObject();
-            if (item == nullptr) {
-                break;
-            }
-            cJSON_AddStringToObject(item, "ssid", ::getSSID(id).c_str());
+        cJSON* item = cJSON_CreateObject();
+        if (item == nullptr) {
+            break;
+        }
+        cJSON_AddStringToObject(item, "ssid", ::getSSID(id).c_str());
+        cJSON_AddNumberToObject(item, "rssi", WiFi.RSSI(id));
+        if (!compact) {
 #if !defined(RTL8722DM) &&      \
     !defined(ARDUINO_AMEBA) &&  \
     !defined(ARDUINO_MBED_HAS_WIFI)
             cJSON_AddStringToObject(item, "bssid", ::getBSSID(id).c_str());
             cJSON_AddNumberToObject(item, "channel", WiFi.channel(id));
 #endif
-            cJSON_AddNumberToObject(item, "rssi", WiFi.RSSI(id));
             this->addEncryptionType(id, item);
-            cJSON_AddItemToArray(root, item);
-            item = nullptr;
-            if(++limit >= WIFI_SCAN_MAX) {
-                break;
-            }
         }
-        char* ptr = cJSON_PrintUnformatted(root);
-        if (ptr != nullptr) {
-            content = ptr;
-            free(ptr);
+        cJSON_AddItemToArray(root, item);
+        item = nullptr;
+        if(++limit >= WIFI_SCAN_MAX) {
+            break;
         }
-        cJSON_Delete(root);
-        root = nullptr;
-        ptr = nullptr;
     }
-    return content;
+
+    return root;
 }
 
 template <class Transport>
@@ -1172,10 +1219,10 @@ String ERaPnP<Transport>::bodyFindArg(const String& body, const String& arg) {
         data = item->valuestring;
     }
     else if (cJSON_IsNumber(item)) {
-        data = item->valueint;
+        data = String(item->valueint);
     }
     else if (cJSON_IsBool(item)) {
-        data = item->valueint;
+        data = String(item->valueint);
     }
 
     cJSON_Delete(root);
@@ -1211,7 +1258,7 @@ void ERaPnP<Transport>::connectNetwork() {
             ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_UDP, false);
         }
         ERaDelay(100);
-#if defined(ESP32) ||   \
+#if defined(ESP32) ||           \
     defined(ESP8266)
         WiFi.mode(WIFI_STA);
 #endif
@@ -1238,6 +1285,12 @@ void ERaPnP<Transport>::connectNetwork() {
 
 template <class Transport>
 void ERaPnP<Transport>::connectNewNetwork() {
+    if (this->newWiFi.flag != WiFiFlagT::WIFI_FLAG_INVALID) {
+        this->connectNewNetworkResult();
+        ERaState::set(StateT::STATE_CONNECTED);
+        return;
+    }
+
     if (!strlen(this->newWiFi.ssid)) {
         ERaState::set(StateT::STATE_CONNECTING_NETWORK);
         return;
@@ -1258,15 +1311,42 @@ void ERaPnP<Transport>::connectNewNetwork() {
 
     this->connectWiFi(this->newWiFi.ssid, this->newWiFi.pass);
     if (this->netConnected()) {
+        ClearArray(ERaConfig.backupSSID);
+        ClearArray(ERaConfig.backupPass);
+        CopyToArray(ERaConfig.ssid, ERaConfig.backupSSID);
+        CopyToArray(ERaConfig.pass, ERaConfig.backupPass);
         ClearArray(ERaConfig.ssid);
         ClearArray(ERaConfig.pass);
         CopyToArray(this->newWiFi.ssid, ERaConfig.ssid);
         CopyToArray(this->newWiFi.pass, ERaConfig.pass);
+        ERaConfig.hasBackup = true;
+        this->newWiFi.flag = WiFiFlagT::WIFI_FLAG_CONNECTED;
         ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_STORE, true);
         ERaState::set(StateT::STATE_CONNECTING_CLOUD);
     }
     else {
+        this->newWiFi.flag = WiFiFlagT::WIFI_FLAG_FAILED;
         ERaState::set(StateT::STATE_CONNECTING_NETWORK);
+    }
+}
+
+template <class Transport>
+void ERaPnP<Transport>::connectNewNetworkResult() {
+    bool status {false};
+    switch (this->newWiFi.flag) {
+        case WiFiFlagT::WIFI_FLAG_CONNECTED:
+            status = Base::sendChangeResultWiFi(R"json({"success":1})json");
+            ERA_LOG(TAG, ERA_PSTR("Connected to new WiFi: %s"), this->newWiFi.ssid);
+            break;
+        case WiFiFlagT::WIFI_FLAG_FAILED:
+            status = Base::sendChangeResultWiFi(R"json({"success":0})json");
+            ERA_LOG_ERROR(TAG, ERA_PSTR("Connect new WiFi failed: %s"), this->newWiFi.ssid);
+            break;
+        default:
+            break;
+    }
+    if (status) {
+        ClearStruct(this->newWiFi);
     }
 }
 
@@ -1279,6 +1359,7 @@ void ERaPnP<Transport>::connectCloud() {
         ERaConfig.connected = true;
         this->configSave();
         ERaOptConnected(this);
+        this->connectNewNetworkResult();
         ERaState::set(StateT::STATE_CONNECTED);
     }
     else if (Base::isConfigMode()) {
@@ -1360,15 +1441,22 @@ void ERaPnP<Transport>::connectNewWiFi(const char* ssid, const char* pass) {
     if (!strlen(ssid)) {
         return;
     }
-    if (ERaStrCmp(ERaConfig.ssid, ssid)) {
-        return;
+    if (pass == nullptr) {
+        pass = "";
     }
 
     ClearStruct(this->newWiFi);
     CopyToArray(ssid, this->newWiFi.ssid);
-    if (pass != nullptr) {
-        CopyToArray(pass, this->newWiFi.pass);
+    CopyToArray(pass, this->newWiFi.pass);
+    if (!ERaStrCmp(ERaConfig.ssid, ssid)) {
     }
+    else if (ERaStrCmp(ERaConfig.pass, pass)) {
+        this->newWiFi.flag = WiFiFlagT::WIFI_FLAG_CONNECTED;
+    }
+    else {
+        this->newWiFi.flag = WiFiFlagT::WIFI_FLAG_FAILED;
+    }
+
     ERaState::set(StateT::STATE_CONNECTING_NEW_NETWORK);
 }
 
@@ -1378,6 +1466,17 @@ void ERaPnP<Transport>::connectWiFiBackup() {
         return;
     }
     this->connectWiFi(ERaConfig.backupSSID, ERaConfig.backupPass);
+}
+
+template <class Transport>
+void ERaPnP<Transport>::requestListWiFi() {
+    ERaState::set(StateT::STATE_REQUEST_LIST_WIFI);
+}
+
+template <class Transport>
+void ERaPnP<Transport>::responseListWiFi() {
+    String networks = this->scanNetworks();
+    Base::sendListWiFi(networks.c_str());
 }
 
 template <class Transport>
@@ -1429,7 +1528,7 @@ template <class Transport>
 void ERaPnP<Transport>::switchToSTA() {
     ERA_LOG(TAG, ERA_PSTR("Switching to STA..."));
 
-#if defined(ESP32) ||   \
+#if defined(ESP32) ||           \
     defined(ESP8266)
     ERaDelay(1000);
     WiFi.mode(WIFI_OFF);
@@ -1445,10 +1544,13 @@ template <class Transport>
 void ERaPnP<Transport>::switchToAPSTA() {
     ERA_LOG(TAG, ERA_PSTR("Switching to AP STA..."));
 
-#if defined(ESP32) ||   \
+#if defined(ESP32) ||           \
     defined(ESP8266)
     ERaDelay(100);
     WiFi.mode(WIFI_AP_STA);
+#elif defined(RTL8722DM) ||     \
+    defined(ARDUINO_AMEBA)
+    WiFi.enableConcurrent();
 #endif
     ERaWatchdogFeed();
 
@@ -1460,12 +1562,7 @@ template <int size>
 void ERaPnP<Transport>::getWiFiName(char(&ptr)[size], bool withPrefix) {
     char mac[20] {0};
     uint8_t macAddr[6] {0};
-#if defined(RTL8722DM) ||     \
-    defined(ARDUINO_AMEBA)
-    WiFi.BSSID(macAddr);
-#else
     WiFi.macAddress(macAddr);
-#endif
     FormatString(mac, "%02x%02x%02x%02x%02x%02x", macAddr[0], macAddr[1],
                                                     macAddr[2], macAddr[3],
                                                     macAddr[4], macAddr[5]);
@@ -1484,12 +1581,7 @@ template <int size>
 void ERaPnP<Transport>::getImeiChip(char(&ptr)[size]) {
     char mac[20] {0};
     uint8_t macAddr[6] {0};
-#if defined(RTL8722DM) ||     \
-    defined(ARDUINO_AMEBA)
-    WiFi.BSSID(macAddr);
-#else
     WiFi.macAddress(macAddr);
-#endif
     FormatString(mac, "%02x%02x%02x%02x%02x%02x", macAddr[0], macAddr[1],
                                                     macAddr[2], macAddr[3],
                                                     macAddr[4], macAddr[5]);
@@ -1525,13 +1617,6 @@ inline
 void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
     int16_t signal = WiFi.RSSI();
 
-    cJSON_AddStringToObject(root, INFO_BOARD, ERA_BOARD_TYPE);
-    cJSON_AddStringToObject(root, INFO_MODEL, ERA_MODEL_TYPE);
-    cJSON_AddStringToObject(root, INFO_BOARD_ID, this->thisProto().getBoardID());
-    cJSON_AddStringToObject(root, INFO_AUTH_TOKEN, this->thisProto().getAuth());
-    cJSON_AddStringToObject(root, INFO_BUILD_DATE, BUILD_DATE_TIME);
-    cJSON_AddStringToObject(root, INFO_VERSION, ERA_VERSION);
-    cJSON_AddStringToObject(root, INFO_FIRMWARE_VERSION, ERA_FIRMWARE_VERSION);
     cJSON_AddNumberToObject(root, INFO_PLUG_AND_PLAY, ERaConfig.getFlag(ConfigFlagT::CONFIG_FLAG_PNP));
     cJSON_AddStringToObject(root, INFO_NETWORK_PROTOCOL, ERA_NETWORK_TYPE);
     cJSON_AddStringToObject(root, INFO_SSID, ::getSSID().c_str());
@@ -1541,12 +1626,6 @@ void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
     cJSON_AddStringToObject(root, INFO_MAC, ::getMAC().c_str());
     cJSON_AddStringToObject(root, INFO_LOCAL_IP, ::getLocalIP().c_str());
     cJSON_AddNumberToObject(root, INFO_SSL, ERaInfoSSL(ERaConfig.port));
-    cJSON_AddNumberToObject(root, INFO_PING, this->thisProto().getTransp().getPing());
-    cJSON_AddNumberToObject(root, INFO_FREE_RAM, ERaFreeRam());
-
-#if defined(ERA_RESET_REASON)
-    cJSON_AddStringToObject(root, INFO_RESET_REASON, SystemGetResetReason().c_str());
-#endif
 
     /* Override info */
     ERaInfo(root);
@@ -1554,23 +1633,38 @@ void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
 
 template <class Proto, class Flash>
 inline
-void ERaApi<Proto, Flash>::addModbusInfo(cJSON* root) {
+void ERaApi<Proto, Flash>::addSelfInfo(cJSON* root) {
     int16_t signal = WiFi.RSSI();
 
 #if defined(ESP32)
-    cJSON_AddNumberToObject(root, INFO_MB_CHIP_TEMPERATURE, static_cast<uint16_t>(temperatureRead() * 100.0f));
+    cJSON_AddNumberToObject(root, SELF_CHIP_TEMPERATURE, static_cast<uint16_t>(temperatureRead() * 100.0f));
 #else
-    cJSON_AddNumberToObject(root, INFO_MB_CHIP_TEMPERATURE, 5000);
+    cJSON_AddNumberToObject(root, SELF_CHIP_TEMPERATURE, 5000);
 #endif
-    cJSON_AddNumberToObject(root, INFO_MB_TEMPERATURE, 0);
-    cJSON_AddNumberToObject(root, INFO_MB_VOLTAGE, 999);
-    cJSON_AddNumberToObject(root, INFO_MB_IS_BATTERY, 0);
-    cJSON_AddNumberToObject(root, INFO_MB_RSSI, signal);
-    cJSON_AddNumberToObject(root, INFO_MB_SIGNAL_STRENGTH, SignalToPercentage(signal));
-    cJSON_AddStringToObject(root, INFO_MB_WIFI_USING, ::getSSID().c_str());
+    cJSON_AddNumberToObject(root, SELF_SIGNAL_STRENGTH, SignalToPercentage(signal));
 
-    /* Override modbus info */
-    ERaModbusInfo(root);
+    /* Override self info */
+    ERaSelfInfo(root);
 }
+
+#if defined(ERA_MODBUS)
+    template <class Proto, class Flash>
+    inline
+    void ERaApi<Proto, Flash>::addModbusInfo(cJSON* root) {
+        int16_t signal = WiFi.RSSI();
+
+    #if defined(ESP32)
+        cJSON_AddNumberToObject(root, INFO_MB_CHIP_TEMPERATURE, static_cast<uint16_t>(temperatureRead() * 100.0f));
+    #else
+        cJSON_AddNumberToObject(root, INFO_MB_CHIP_TEMPERATURE, 5000);
+    #endif
+        cJSON_AddNumberToObject(root, INFO_MB_RSSI, signal);
+        cJSON_AddNumberToObject(root, INFO_MB_SIGNAL_STRENGTH, SignalToPercentage(signal));
+        cJSON_AddStringToObject(root, INFO_MB_WIFI_USING, ::getSSID().c_str());
+
+        /* Override modbus info */
+        ERaModbusInfo(root);
+    }
+#endif
 
 #endif /* INC_ERA_PNP_ARDUINO_HPP_ */

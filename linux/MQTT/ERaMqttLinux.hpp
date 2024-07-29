@@ -108,9 +108,6 @@ public:
     bool publishData(const char* topic, const char* payload,
                     bool retained = ERA_MQTT_PUBLISH_RETAINED,
                     QoST qos = (QoST)ERA_MQTT_PUBLISH_QOS) override;
-    bool publishChipData(const char* topic, const char* payload,
-                    bool retained = ERA_MQTT_PUBLISH_RETAINED,
-                    QoST qos = (QoST)ERA_MQTT_PUBLISH_QOS);
     bool publishState(bool online);
     bool syncConfig();
 
@@ -308,6 +305,8 @@ bool ERaMqttLinux<MQTT>::connect(FunctionCallback_t fn) {
     this->subscribeTopic(this->ERaTopic, ERA_SUB_PREFIX_VIRTUAL_TOPIC);
     this->subscribeTopic(this->ERaTopic, ERA_SUB_PREFIX_OP_DOWN_TOPIC);
     this->subscribeTopic(this->ERaTopic, ERA_SUB_PREFIX_DOWN_TOPIC);
+    this->subscribeTopic(this->ERaTopic, ERA_SUB_PREFIX_ASK_WIFI_TOPIC);
+    this->subscribeTopic(this->ERaTopic, ERA_SUB_PREFIX_CHANGE_WIFI_TOPIC);
 
     if (fn != NULL) {
         fn();
@@ -432,18 +431,6 @@ bool ERaMqttLinux<MQTT>::publishData(const char* topic, const char* payload,
     this->unlockMQTT();
 
     return status;
-}
-
-template <class MQTT>
-inline
-bool ERaMqttLinux<MQTT>::publishChipData(const char* topic, const char* payload,
-                                        bool retained, QoST qos) {
-    char topicName[MAX_TOPIC_LENGTH] {0};
-    FormatString(topicName, this->ERaTopic);
-    if (topic != NULL) {
-        FormatString(topicName, topic);
-    }
-    return this->publishData(topicName, payload, retained, qos);
 }
 
 template <class MQTT>

@@ -976,6 +976,7 @@
 
 #define ERA_FATALITY_TIMEOUT                10000UL
 #define ERA_HEARTBEAT_INTERVAL              3600000UL
+#define ERA_SELF_INFO_INTERVAL              60000UL
 
 #define ERA_STRING_REPORT_ON_WRITE
 
@@ -1045,6 +1046,10 @@
 
     #if defined(ERA_SPECIFIC)
         #undef ERA_SPECIFIC
+    #endif
+
+    #if defined(ERA_PIN_DEBUG)
+        #undef ERA_PIN_DEBUG
     #endif
 
     #if defined(ERA_BUFFER_SIZE)

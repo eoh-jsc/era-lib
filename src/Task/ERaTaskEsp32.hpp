@@ -143,7 +143,6 @@ void ERaApi<Proto, Flash>::runERaApiTask() {
     defined(ERA_NO_RTOS)
     Zigbee::run();
 #endif
-    this->sendResultChangeWifi();
 }
 
 #endif /* INC_ERA_TASK_ESP32_HPP_ */

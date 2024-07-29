@@ -108,6 +108,7 @@ addPropertyRealT	KEYWORD2
 addPropertyVirtualT	KEYWORD2
 addRegister	KEYWORD2
 addModbusRegister	KEYWORD2
+addModbusActionRaw	KEYWORD2
 restartOption	KEYWORD2
 onUpdate	KEYWORD2
 publishEvery	KEYWORD2
@@ -145,6 +146,7 @@ setERaLogger	KEYWORD2
 getERaLogger	KEYWORD2
 setLogInterval	KEYWORD2
 setSIMPinCode	KEYWORD2
+setPropertyPublishSettings	KEYWORD2
 setModbusClient	KEYWORD2
 setModbusStream	KEYWORD2
 setModbusDEPin	KEYWORD2
@@ -152,9 +154,12 @@ setModbusDelays	KEYWORD2
 setModbusFailCounter	KEYWORD2
 setModbusTimeout	KEYWORD2
 setModbusStreamTimeout	KEYWORD2
+setModbusInterval	KEYWORD2
 setPubModbusInterval	KEYWORD2
 setSkipModbus	KEYWORD2
+setSkipPublishModbus	KEYWORD2
 setConnectWiFiModbus	KEYWORD2
+setActionOnReadTaskModbus	KEYWORD2
 setZigbeeStream	KEYWORD2
 setZigbeeStreamTimeout	KEYWORD2
 setZigbeeTime	KEYWORD2
@@ -307,6 +312,7 @@ ERA_USE_LONG_LONG	KEYWORD2
 ERA_TURN_OFF_WARNING	KEYWORD2
 ERA_FIRMWARE_VERSION	KEYWORD2
 ERA_LIMIT_CONNECT	KEYWORD2
+ERA_API_JSON	KEYWORD2
 BOARD_MODEL_NAME	KEYWORD2
 DEFAULT_MQTT_CLIENT_ID	KEYWORD2
 DEFAULT_MQTT_HOST	KEYWORD2

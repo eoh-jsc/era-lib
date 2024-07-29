@@ -74,13 +74,22 @@ class WrapperString;
             : String(num)
         {}
 
-#if !defined(__AVR__)
+#if defined(ESP32) || defined(ESP8266)
 
         ERaString(long long num)
             : String(num)
         {}
         ERaString(unsigned long long num)
             : String(num)
+        {}
+
+#elif !defined(__AVR__)
+
+        ERaString(long long num)
+            : String((long)num)
+        {}
+        ERaString(unsigned long long num)
+            : String((unsigned long)num)
         {}
 
 #endif
@@ -102,6 +111,103 @@ class WrapperString;
 
         ERaDataJson toJSON() const {
             return ERaDataJson(String::c_str());
+        }
+
+        int indexOfIgnoreCase(char c) const {
+            return this->indexOfIgnoreCase(c, 0);
+        }
+
+        int indexOfIgnoreCase(char c, size_t index) const {
+            return this->indexOfCaseSensitive(c, index, false);
+        }
+
+        int indexOfCaseSensitive(char c, size_t index, bool caseSensitive) const {
+            if (index >= String::len()) {
+                return -1;
+            }
+            const char* ptr = ERaStrChr(String::buffer() + index, c, caseSensitive);
+            if (ptr == nullptr) {
+                return -1;
+            }
+            return (int)(ptr - String::buffer());
+        }
+
+        int indexOfIgnoreCase(const ERaString& str) const {
+            return this->indexOfIgnoreCase(str, 0);
+        }
+
+        int indexOfIgnoreCase(const ERaString& str, size_t index) const {
+            return this->indexOfCaseSensitive(str, index, false);
+        }
+
+        int indexOfCaseSensitive(const ERaString& str, size_t index, bool caseSensitive) const {
+            if (!str.length()) {
+                return -1;
+            }
+            if (index >= String::len()) {
+                return -1;
+            }
+            const char* ptr = ERaStrStr(String::buffer() + index, str.buffer(), caseSensitive);
+            if (ptr == nullptr) {
+                return -1;
+            }
+            return (int)(ptr - String::buffer());
+        }
+
+        int lastIndexOfIgnoreCase(char c) const {
+            return this->lastIndexOfIgnoreCase(c, this->length() - 1);
+        }
+
+        int lastIndexOfIgnoreCase(char c, size_t index) const {
+            return this->lastIndexOfCaseSensitive(c, index, false);
+        }
+
+        int lastIndexOfCaseSensitive(char c, size_t index, bool caseSensitive) const {
+            if (index >= String::len()) {
+                return -1;
+            }
+            char temp = String::buffer()[index + 1];
+            String::wbuffer()[index + 1] = '\0';
+            char* ptr = ERaStrrChr(String::wbuffer(), c, caseSensitive);
+            String::wbuffer()[index + 1] = temp;
+            if (ptr == nullptr) {
+                return -1;
+            }
+            return (int)(ptr - String::buffer());
+        }
+
+        int lastIndexOfIgnoreCase(const ERaString& str) const {
+            return this->lastIndexOfIgnoreCase(str, this->length() - str.length());
+        }
+
+        int lastIndexOfIgnoreCase(const ERaString& str, size_t index) const {
+            return this->lastIndexOfCaseSensitive(str, index, false);
+        }
+
+        int lastIndexOfCaseSensitive(const ERaString& str, size_t index, bool caseSensitive) const {
+            if (!str.len() || !String::len()) {
+                return -1;
+            }
+            if (str.len() > String::len()) {
+                return -1;
+            }
+            if (index >= String::len()) {
+                index = (String::len() - 1);
+            }
+            int found = -1;
+            for (char* ptr = String::wbuffer(); ptr <= String::wbuffer() + index; ++ptr) {
+                ptr = ERaStrStr(ptr, str.buffer(), caseSensitive);
+                if (ptr == nullptr) {
+                    break;
+                }
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsign-compare"
+                if ((ptr - String::wbuffer()) <= index) {
+                    found = (ptr - String::buffer());
+                }
+#pragma GCC diagnostic pop
+            }
+            return found;
         }
 
     protected:
@@ -992,6 +1098,22 @@ class WrapperString;
                 }
             }
             return true;
+        }
+
+        char* begin() {
+            return this->value.buffer;
+        }
+
+        char* end() {
+            return (this->value.buffer + this->value.length);
+        }
+
+        const char* begin() const {
+            return this->value.buffer;
+        }
+
+        const char* end() const {
+            return (this->value.buffer + this->value.length);
         }
 
         operator const char*() const {

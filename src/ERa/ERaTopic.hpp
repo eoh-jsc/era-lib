@@ -13,9 +13,10 @@ Topic format:
 
 /* Subscribe topic */
 #define ERA_SUB_PREFIX_DOWN_TOPIC                   "/down"
-#define ERA_SUB_PREFIX_WIFI_TOPIC                   "/wifi/+"
 #define ERA_SUB_PREFIX_ARDUINO_TOPIC                "/arduino_pin/+"
 #define ERA_SUB_PREFIX_VIRTUAL_TOPIC                "/virtual_pin/+"
+#define ERA_SUB_PREFIX_ASK_WIFI_TOPIC               "/wifi/ask"
+#define ERA_SUB_PREFIX_CHANGE_WIFI_TOPIC            "/wifi/change"
 
 #if defined(ERA_ZIGBEE) ||  \
     defined(ERA_SPECIFIC)
@@ -30,6 +31,9 @@ Topic format:
 #define ERA_PUB_PREFIX_MODBUS_DATA_TOPIC            "/data"
 #define ERA_PUB_PREFIX_CONFIG_DATA_TOPIC            "/config/" ERA_INTEGER_C_TYPE "/value"
 #define ERA_PUB_PREFIX_MULTI_CONFIG_DATA_TOPIC      "/config_value"
+#define ERA_PUB_PREFIX_SELF_SENSOR_TOPIC            "/self_sensor"
+#define ERA_PUB_PREFIX_LIST_WIFI_TOPIC              "/wifi/list"
+#define ERA_PUB_PREFIX_CHANGE_RESULT_WIFI_TOPIC     "/wifi/change_result"
 
 /* For debug */
 #if !defined(ERA_DEBUG_PREFIX)

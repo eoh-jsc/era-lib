@@ -5,6 +5,8 @@
 #include <ERa/ERaDebug.hpp>
 #include <ERa/ERaHelpersDef.hpp>
 #include <Utility/ERaQueue.hpp>
+#include <Utility/ERacJSON.hpp>
+#include <Modbus/ERaParseKey.hpp>
 
 #ifndef MAX_DEVICE_MODBUS
     #define MAX_DEVICE_MODBUS           20
@@ -35,8 +37,8 @@
 #endif
 
 typedef struct __SensorDelay_t {
-    int delay;
-    int address;
+    ERaUInt_t delay;
+    ERaUInt_t address;
 } SensorDelay_t;
 
 typedef struct __IPSlave_t {
@@ -48,7 +50,7 @@ typedef struct __IPSlave_t {
 } IPSlave_t;
 
 typedef struct __ModbusConfig_t {
-    int id;
+    ERaUInt_t id;
     uint8_t addr;
     uint8_t func;
     uint8_t sa1;
@@ -62,15 +64,15 @@ typedef struct __ModbusConfig_t {
 } ModbusConfig_t;
 
 typedef struct __Action_t {
-    int id;
+    ERaUInt_t id;
     uint8_t len1;
     uint8_t len2;
     uint8_t extra[10];
 } Action_t;
 
 typedef struct __ModbusConfigAlias_t {
-    int readActionCount;
-    int id;
+    ERaUInt_t readActionCount;
+    ERaUInt_t id;
     char key[37];
     Action_t action[10];
     uint16_t timer;
@@ -87,6 +89,8 @@ typedef struct __IntervalDelay_t {
     uint32_t delay;
     unsigned long prevMillis;
 } IntervalDelay_t;
+
+#include <Modbus/ERaDefineModbus.hpp>
 
 class ERaScanEntry;
 
@@ -115,12 +119,17 @@ class ERaModbusEntry
         PARSE_PUB_MODBUS_INTERVAL = 2
     };
 
+    enum ConnectionTypeT {
+        CONNECTION_TYPE_RTU = 0,
+        CONNECTION_TYPE_TCPIP = 1
+    };
+
     friend class ERaScanEntry;
 
 public:
     ERaModbusEntry()
-        : id(0)
-        , prevId(0)
+        : id(0UL)
+        , prevId(0UL)
         , baudSpeed(DEFAULT_MODBUS_BAUD_SPEED)
         , isWiFi(false)
         , ssid {}
@@ -129,13 +138,15 @@ public:
         , isBluetooth(false)
         , autoClosing(false)
         , isUpdated(false)
+        , hasTcpIp(false)
         , sensorCount(0)
         , readConfigCount(0)
         , readConfigAliasCount(0)
         , writeOption {
             .enable = false,
             .len1 = 0,
-            .len2 = 0
+            .len2 = 0,
+            .extra = {}
         }
         , modbusInterval {
             .delay = DEFAULT_MODBUS_INTERVAL,
@@ -151,7 +162,7 @@ public:
     ~ERaModbusEntry()
     {}
 
-    void parseConfig(const char* ptr);
+    void parseConfig(const void* ptr, bool json = false);
     bool updateHashID(const char* hash, bool skip = false);
     bool equals(const char* hash);
     bool updated() {
@@ -165,9 +176,9 @@ public:
     bool operator == (const char* hash);
     bool operator != (const char* hash);
 
-    unsigned int id;
-    unsigned int prevId;
-    unsigned int baudSpeed;
+    ERaUInt_t id;
+    ERaUInt_t prevId;
+    ERaUInt_t baudSpeed;
     bool isWiFi;
     char ssid[64];
     char pass[64];
@@ -175,6 +186,7 @@ public:
     bool isBluetooth;
     bool autoClosing;
     bool isUpdated;
+    bool hasTcpIp;
 
     size_t sensorCount;
     ERaList<SensorDelay_t*> sensorDelay;
@@ -240,6 +252,14 @@ private:
     void processParseTcpIpConfig(const char* ptr, size_t len);
     void processParseEnableAutoClosing(const char* ptr, size_t len);
 
+    void processParseConfigJson(const void* ptr);
+    void processParseConfigSensorDelayJson(const cJSON* const root, uint8_t addr);
+    void processParseConfigSensorIpJson(const cJSON* const root, uint8_t type, IPSlave_t& ipSlave);
+    ModbusConfig_t* processParseConfigSensorParamJson(const cJSON* const root, uint8_t addr, IPSlave_t& ipSlave, ModbusConfig_t* prevConfig);
+    void processParseConfigSensorParamsJson(const cJSON* const root, uint8_t addr, IPSlave_t& ipSlave);
+    void processParseConfigSensorJson(const cJSON* const root);
+    void processParseConfigSensorsJson(const cJSON* const root);
+
     static inline
     bool portFromString(IPSlave_t& ip, const char* port) {
         uint32_t acc = 0;
@@ -304,6 +324,21 @@ private:
         return true;
     }
 
+    template <size_t len>
+    static inline
+    void stringToUint8(uint8_t(&arr)[len], const char* str) {
+        if (str == nullptr) {
+            return;
+        }
+        char hex[3] {0};
+        size_t size = (strlen(str) / 2);
+        for (size_t i = 0; (i < len) && (i < size); ++i) {
+            hex[0] = str[i * 2];
+            hex[1] = str[(i * 2) + 1];
+            arr[i] = strtol(hex, nullptr, 16);
+        }
+    }
+
     template <typename T>
     T* create() {
         T* ptr = (T*)ERA_MALLOC(sizeof(T));
@@ -347,7 +382,7 @@ private:
     }
 
     template <typename T>
-    T find(ERaList<T>& value, int id) {
+    T find(ERaList<T>& value, ERaUInt_t id) {
         const typename ERaList<T>::iterator* e = value.end();
         for (typename ERaList<T>::iterator* it = value.begin(); it != e; it = it->getNext()) {
             T& item = it->get();
@@ -364,26 +399,33 @@ private:
 };
 
 inline
-void ERaModbusEntry::parseConfig(const char* ptr) {
+void ERaModbusEntry::parseConfig(const void* ptr, bool json) {
     if (ptr == nullptr) {
-        return;
-    }
-    if (!strlen(ptr)) {
         return;
     }
 
     this->isWiFi = false;
+    this->hasTcpIp = false;
     this->sensorCount = 0;
     this->readConfigCount = 0;
     this->readConfigAliasCount = 0;
 
-    size_t len = strlen(ptr);
+    if (json) {
+        return this->processParseConfigJson(ptr);
+    }
+
+    const char* config = (const char*)ptr;
+    if (!strlen(config)) {
+        return;
+    }
+
+    size_t len = strlen(config);
     int part = 0;
     size_t position = 0;
     for (size_t i = 0; i < len; ++i) {
-        if (ptr[i] == ';') {
+        if (config[i] == ';') {
             part++;
-            this->processParseConfig(part, ptr + position, i - position);
+            this->processParseConfig(part, config + position, i - position);
             position = i + 1;
         }
     }
@@ -534,10 +576,12 @@ void ERaModbusEntry::processParseConfigBaudSpeed(const char* ptr, size_t len) {
                 this->baudSpeed = atoi(token);
                 break;
             case ParseIntervalT::PARSE_MODBUS_INTERVAL:
-                this->modbusInterval.delay = (atoi(token) < DEFAULT_MIN_MODBUS_INTERVAL ? DEFAULT_MIN_MODBUS_INTERVAL : atoi(token));
+                this->modbusInterval.delay = ((atoi(token) < DEFAULT_MIN_MODBUS_INTERVAL) ?
+                                               DEFAULT_MIN_MODBUS_INTERVAL : atoi(token));
                 break;
             case ParseIntervalT::PARSE_PUB_MODBUS_INTERVAL:
-                this->pubInterval.delay = (atoi(token) < DEFAULT_MIN_MODBUS_INTERVAL ? DEFAULT_MIN_MODBUS_INTERVAL : atoi(token));
+                this->pubInterval.delay = ((atoi(token) < DEFAULT_MIN_MODBUS_INTERVAL) ?
+                                            DEFAULT_MIN_MODBUS_INTERVAL : atoi(token));
                 break;
             default:
                 break;
@@ -693,6 +737,9 @@ void ERaModbusEntry::actOneConfigSensorReadWrite(const int* ptr, size_t len, Mod
         (i < sizeof(config.extra)); ++i) {
         config.extra[i] = ptr[i + 7];
     }
+
+    config.ipSlave.ip.dword = 0UL;
+    config.ipSlave.port = 0;
 }
 
 inline
@@ -962,6 +1009,9 @@ void ERaModbusEntry::parseOneTcpIp(const char* ptr, size_t len) {
                 config->ipSlave.port = 0;
                 config->ipSlave.ip.dword = 0UL;
             }
+            else {
+                this->hasTcpIp = true;
+            }
             break;
         }
     }
@@ -987,6 +1037,231 @@ void ERaModbusEntry::processParseEnableAutoClosing(const char* ptr, size_t len) 
         return;
     }
     this->autoClosing = ((ptr[0] == '1') ? true : false);
+}
+
+inline
+void ERaModbusEntry::processParseConfigJson(const void* ptr) {
+    const cJSON* root = (const cJSON*)ptr;
+    if (!cJSON_IsObject(root)) {
+        return;
+    }
+
+    cJSON* version = cJSON_GetObjectItem(root, MODBUS_VERSION_KEY);
+    if (!cJSON_IsNumber(version)) {
+        return;
+    }
+    if (version->valueint != 10) {
+        return;
+    }
+
+    cJSON* baud = cJSON_GetObjectItem(root, MODBUS_BAUD_SPEED_KEY);
+    if (cJSON_IsNumber(baud)) {
+        this->baudSpeed = baud->valueint;
+    }
+
+    cJSON* sensors = cJSON_GetObjectItem(root, MODBUS_SENSORS_KEY);
+    if (cJSON_IsArray(sensors)) {
+        this->processParseConfigSensorsJson(sensors);
+    }
+}
+
+inline
+void ERaModbusEntry::processParseConfigSensorDelayJson(const cJSON* const root, uint8_t addr) {
+    if (this->sensorCount >= MAX_DEVICE_MODBUS) {
+        return;
+    }
+
+    bool newItem {false};
+    SensorDelay_t* sensor = nullptr;
+    ERaList<SensorDelay_t*>::iterator* it = nullptr;
+
+    it = this->sensorDelay.get(this->sensorCount);
+    if (it != nullptr) {
+        sensor = it->get();
+    }
+    if (sensor == nullptr) {
+        newItem = true;
+        sensor = this->create<SensorDelay_t>();
+    }
+    if (sensor == nullptr) {
+        return;
+    }
+
+    cJSON* delay = cJSON_GetObjectItem(root, MODBUS_SENSOR_DELAY_KEY);
+    if (cJSON_IsNumber(delay)) {
+        sensor->delay = delay->valueint;
+    }
+    else {
+        sensor->delay = 20UL;
+    }
+    sensor->address = addr;
+
+    if (newItem) {
+        this->sensorDelay.put(sensor);
+    }
+    this->sensorCount++;
+}
+
+inline
+void ERaModbusEntry::processParseConfigSensorIpJson(const cJSON* const root, uint8_t type, IPSlave_t& ipSlave) {
+    memset(&ipSlave, 0, sizeof(ipSlave));
+
+    switch (type) {
+        case ConnectionTypeT::CONNECTION_TYPE_RTU:
+            break;
+        case ConnectionTypeT::CONNECTION_TYPE_TCPIP: {
+            cJSON* port = cJSON_GetObjectItem(root, MODBUS_SENSOR_PORT_KEY);
+            if (cJSON_IsNumber(port)) {
+                ipSlave.port = port->valueint;
+            }
+            cJSON* ip = cJSON_GetObjectItem(root, MODBUS_SENSOR_IP_KEY);
+            if (!cJSON_IsString(ip)) {
+                ipSlave.port = 0;
+                break;
+            }
+            if (!ERaModbusEntry::ipFromString(ipSlave, ip->valuestring)) {
+                ipSlave.port = 0;
+                ipSlave.ip.dword = 0UL;
+            }
+            else {
+                this->hasTcpIp = true;
+            }
+        }
+            break;
+    }
+}
+
+inline
+ModbusConfig_t* ERaModbusEntry::processParseConfigSensorParamJson(const cJSON* const root, uint8_t addr, IPSlave_t& ipSlave, ModbusConfig_t* prevConfig) {
+    if (this->readConfigCount >= MAX_CONFIG_MODBUS) {
+        return prevConfig;
+    }
+
+    bool newItem {false};
+    ModbusConfig_t* config = nullptr;
+    ERaList<ModbusConfig_t*>::iterator* it = nullptr;
+
+    it = this->modbusConfigParam.get(this->readConfigCount);
+    if (it != nullptr) {
+        config = it->get();
+    }
+    if (config == nullptr) {
+        newItem = true;
+        config = this->create<ModbusConfig_t>();
+    }
+    if (config == nullptr) {
+        return prevConfig;
+    }
+
+    ModbusConfig_t newConfig {};
+
+    newConfig.addr = addr;
+
+    cJSON* id = cJSON_GetObjectItem(root, MODBUS_PARAM_ID_KEY);
+    if (cJSON_IsNumber(id)) {
+        newConfig.id = id->valueint;
+    }
+
+    cJSON* func = cJSON_GetObjectItem(root, MODBUS_PARAM_FUNCTION_KEY);
+    if (cJSON_IsNumber(func)) {
+        newConfig.func = func->valueint;
+    }
+
+    cJSON* reg = cJSON_GetObjectItem(root, MODBUS_PARAM_REGISTER_KEY);
+    if (cJSON_IsNumber(reg)) {
+        newConfig.sa1 = HI_WORD(reg->valueint);
+        newConfig.sa2 = LO_WORD(reg->valueint);
+    }
+
+    cJSON* len = cJSON_GetObjectItem(root, MODBUS_PARAM_LENGTH_KEY);
+    if (cJSON_IsNumber(len)) {
+        newConfig.len1 = HI_WORD(len->valueint);
+        newConfig.len2 = LO_WORD(len->valueint);
+    }
+
+    cJSON* extra = cJSON_GetObjectItem(root, MODBUS_PARAM_EXTRA_KEY);
+    if (cJSON_IsString(extra)) {
+        ERaModbusEntry::stringToUint8(newConfig.extra, extra->valuestring);
+    }
+
+    newConfig.ipSlave.port = ipSlave.port;
+    newConfig.ipSlave.ip.dword = ipSlave.ip.dword;
+
+    if (prevConfig == nullptr) {
+        memcpy(config, &newConfig, sizeof(ModbusConfig_t));
+    }
+    else if ((prevConfig->addr == newConfig.addr) &&
+             (prevConfig->func == newConfig.func) &&
+             ((BUILD_WORD(prevConfig->sa1, prevConfig->sa2) +
+               BUILD_WORD(prevConfig->len1, prevConfig->len2)) ==
+               BUILD_WORD(newConfig.sa1, newConfig.sa2))) {
+        prevConfig->len1 += newConfig.len1;
+        prevConfig->len2 += newConfig.len2;
+        if (newItem) {
+            free(config);
+            config = nullptr;
+        }
+        return prevConfig;
+    }
+    else {
+        memcpy(config, &newConfig, sizeof(ModbusConfig_t));
+    }
+
+    if (newItem) {
+        this->modbusConfigParam.put(config);
+    }
+    this->readConfigCount++;
+    return config;
+}
+
+inline
+void ERaModbusEntry::processParseConfigSensorParamsJson(const cJSON* const root, uint8_t addr, IPSlave_t& ipSlave) {
+    size_t size = cJSON_GetArraySize(root);
+
+    ModbusConfig_t* config = nullptr;
+    for (size_t i = 0; i < size; ++i) {
+        cJSON* param = cJSON_GetArrayItem(root, i);
+        if (!cJSON_IsObject(param)) {
+            continue;
+        }
+        config = this->processParseConfigSensorParamJson(param, addr, ipSlave, config);
+    }
+}
+
+inline
+void ERaModbusEntry::processParseConfigSensorJson(const cJSON* const root) {
+    cJSON* type = cJSON_GetObjectItem(root, MODBUS_SENSOR_TYPE_KEY);
+    if (!cJSON_IsNumber(type)) {
+        return;
+    }
+
+    cJSON* address = cJSON_GetObjectItem(root, MODBUS_SENSOR_ADDRESS_KEY);
+    if (!cJSON_IsNumber(address)) {
+        return;
+    }
+
+    IPSlave_t ipSlave {};
+    this->processParseConfigSensorDelayJson(root, address->valueint);
+    this->processParseConfigSensorIpJson(root, type->valueint, ipSlave);
+
+    cJSON* configs = cJSON_GetObjectItem(root, MODBUS_SENSOR_CONFIGS_KEY);
+    if (!cJSON_IsArray(configs)) {
+        return;
+    }
+    this->processParseConfigSensorParamsJson(configs, address->valueint, ipSlave);
+}
+
+inline
+void ERaModbusEntry::processParseConfigSensorsJson(const cJSON* const root) {
+    size_t size = cJSON_GetArraySize(root);
+
+    for (size_t i = 0; i < size; ++i) {
+        cJSON* sensor = cJSON_GetArrayItem(root, i);
+        if (!cJSON_IsObject(sensor)) {
+            continue;
+        }
+        this->processParseConfigSensorJson(sensor);
+    }
 }
 
 class ERaScanEntry

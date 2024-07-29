@@ -80,6 +80,8 @@ public:
         , _connected(false)
         , heartbeat(ERA_HEARTBEAT_INTERVAL * 12UL)
         , lastHeartbeat(0UL)
+        , selfInfo(ERA_SELF_INFO_INTERVAL * 10UL)
+        , lastSelfInfo(0UL)
     {
         memset(this->ERA_TOPIC, 0, sizeof(this->ERA_TOPIC));
     }
@@ -109,6 +111,7 @@ public:
         }
         Base::runERaApiTask();
         this->publishHeartbeat();
+        this->publishSelfInfo();
     }
 
     void setERaORG(const char* org) {
@@ -207,6 +210,15 @@ public:
         this->heartbeat = interval;
     }
 
+    void setSelfInfo(unsigned long interval) {
+        if (!interval) {
+        }
+        else if (interval < ERA_SELF_INFO_INTERVAL) {
+            interval = ERA_SELF_INFO_INTERVAL;
+        }
+        this->selfInfo = interval;
+    }
+
     const char* getAuth() const {
         return this->transp.getAuth();
     }
@@ -250,6 +262,15 @@ protected:
         return true;
     }
 
+    virtual void requestListWiFi() override;
+    virtual void responseListWiFi() override;
+    virtual void connectNewWiFi(const char* ssid, const char* pass) override;
+    virtual void connectNewNetworkResult() override;
+
+    bool sendListWiFi(const char* payload);
+    bool sendChangeResultWiFi(const char* payload);
+    bool publishData(const char* prefixTopic, const char* payload,
+                            bool retained, bool extended = false);
     bool isConfigMode();
     void onConnected();
     void onDisconnected();
@@ -265,6 +286,8 @@ private:
     void processDeviceConfig(cJSON* root, uint8_t type);
     void processIOPin(cJSON* root);
     void processPinRequest(const ERaDataBuff& arrayTopic, const char* payload, size_t index);
+    void processWiFiRequest(const ERaDataBuff& arrayTopic, const char* payload);
+    void processChangeWiFi(const char* payload);
 #if defined(ERA_ZIGBEE)
     void processZigbeeRequest(const ERaDataBuff& arrayTopic, const char* payload);
     void processDeviceZigbee(const char* payload);
@@ -273,7 +296,9 @@ private:
 #endif
     void processState(const ERaDataBuff& arrayTopic, const char* payload);
     void publishHeartbeat();
+    void publishSelfInfo();
     bool sendInfo();
+    bool sendSelfInfo();
     bool sendData(ERaRsp_t& rsp);
     bool sendPinData(ERaRsp_t& rsp);
     bool sendPinMultiData(ERaRsp_t& rsp);
@@ -288,6 +313,7 @@ private:
 #if defined(ERA_SPECIFIC)
     bool sendSpecificData(ERaRsp_t& rsp);
 #endif
+    bool sendSelfData(ERaRsp_t& rsp);
     void sendCommandVirtualMulti(const char* auth, ERaRsp_t& rsp, ERaDataJson* data);
 #if defined(ERA_ZIGBEE)
     void sendCommandZigbee(const char* auth, ERaRsp_t& rsp);
@@ -342,6 +368,8 @@ private:
 
     unsigned long heartbeat;
     unsigned long lastHeartbeat;
+    unsigned long selfInfo;
+    unsigned long lastSelfInfo;
 };
 
 template <class Transp, class Flash>
@@ -423,11 +451,11 @@ void ERaProto<Transp, Flash>::processRequest(const char* topic, const char* payl
     else if (arrayTopic.at(1) == "virtual_pin") {
         Base::processVirtualPinRequest(arrayTopic, payload);
     }
-    else if (arrayTopic.at(1) == "wifi") {
-        Base::processWifiRequest(arrayTopic, payload);
-    }
     else if (arrayTopic.at(1) == "down") {
         this->processDownRequest(arrayTopic, payload);
+    }
+    else if (arrayTopic.at(1) == "wifi") {
+        this->processWiFiRequest(arrayTopic, payload);
     }
     else if (arrayTopic.at(1) == "is_online") {
         this->processState(arrayTopic, payload);
@@ -578,7 +606,12 @@ bool ERaProto<Transp, Flash>::processActionChip(const char* payload, cJSON* root
             }
             item = cJSON_GetObjectItem(dataItem, "configuration");
             if (cJSON_IsString(item)) {
-                Base::Modbus::parseModbusConfig(item->valuestring, hash, payload, false);
+                Base::Modbus::parseModbusConfig(item->valuestring, hash, payload, false, false);
+                break;
+            }
+            item = cJSON_GetObjectItem(dataItem, "modbus_configuration");
+            if (cJSON_IsObject(item)) {
+                Base::Modbus::parseModbusConfig(item, hash, payload, false, true);
             }
             break;
         case ERaChipCfgT::CHIP_UPDATE_CONTROL:
@@ -588,7 +621,7 @@ bool ERaProto<Transp, Flash>::processActionChip(const char* payload, cJSON* root
             }
             item = cJSON_GetObjectItem(dataItem, "control");
             if (cJSON_IsString(item)) {
-                Base::Modbus::parseModbusConfig(item->valuestring, hash, payload, true);
+                Base::Modbus::parseModbusConfig(item->valuestring, hash, payload, true, false);
             }
             break;
         case ERaChipCfgT::CHIP_CONTROL_ALIAS: {
@@ -732,6 +765,46 @@ void ERaProto<Transp, Flash>::processPinRequest(const ERaDataBuff& arrayTopic, c
     }
 }
 
+template <class Transp, class Flash>
+void ERaProto<Transp, Flash>::processWiFiRequest(const ERaDataBuff& arrayTopic, const char* payload) {
+    if (arrayTopic.size() != 3) {
+        return;
+    }
+    if (arrayTopic.at(2) == "ask") {
+        this->requestListWiFi();
+    }
+    else if (arrayTopic.at(2) == "change") {
+        this->processChangeWiFi(payload);
+    }
+}
+
+template <class Transp, class Flash>
+void ERaProto<Transp, Flash>::processChangeWiFi(const char* payload) {
+    cJSON* root = cJSON_Parse(payload);
+    if (!cJSON_IsObject(root)) {
+        cJSON_Delete(root);
+        root = nullptr;
+        return;
+    }
+
+    const char* ssid = nullptr;
+    const char* password = nullptr;
+    cJSON* item = cJSON_GetObjectItem(root, "ssid");
+    if (cJSON_IsString(item)) {
+        ssid = item->valuestring;
+    }
+    item = cJSON_GetObjectItem(root, "password");
+    if (cJSON_IsString(item)) {
+        password = item->valuestring;
+    }
+
+    this->connectNewWiFi(ssid, password);
+
+    cJSON_Delete(root);
+    root = nullptr;
+    item = nullptr;
+}
+
 #if defined(ERA_ZIGBEE)
     template <class Transp, class Flash>
     void ERaProto<Transp, Flash>::processZigbeeRequest(const ERaDataBuff& arrayTopic, const char* payload) {
@@ -854,6 +927,30 @@ void ERaProto<Transp, Flash>::processPinRequest(const ERaDataBuff& arrayTopic, c
 #endif
 
 template <class Transp, class Flash>
+void ERaProto<Transp, Flash>::requestListWiFi() {
+    ERaState::set(StateT::STATE_REQUEST_LIST_WIFI);
+}
+
+template <class Transp, class Flash>
+void ERaProto<Transp, Flash>::responseListWiFi() {
+    this->sendListWiFi("[]");
+    ERaState::set(StateT::STATE_RUNNING);
+}
+
+template <class Transp, class Flash>
+void ERaProto<Transp, Flash>::connectNewWiFi(const char* ssid, const char* pass) {
+    ERaState::set(StateT::STATE_CONNECTING_NEW_NETWORK);
+    ERA_FORCE_UNUSED(ssid);
+    ERA_FORCE_UNUSED(pass);
+}
+
+template <class Transp, class Flash>
+void ERaProto<Transp, Flash>::connectNewNetworkResult() {
+    this->sendChangeResultWiFi(R"json({"success":0})json");
+    ERaState::set(StateT::STATE_RUNNING);
+}
+
+template <class Transp, class Flash>
 void ERaProto<Transp, Flash>::processState(const ERaDataBuff& arrayTopic, const char* payload) {
     if (ERaStrCmp(payload, this->transp.getLWTPayload())) {
         this->transp.publishState(true);
@@ -881,6 +978,56 @@ void ERaProto<Transp, Flash>::publishHeartbeat() {
 }
 
 template <class Transp, class Flash>
+void ERaProto<Transp, Flash>::publishSelfInfo() {
+    if (!this->selfInfo) {
+        return;
+    }
+
+    unsigned long currentMillis = ERaMillis();
+    if ((currentMillis - this->lastSelfInfo) < this->selfInfo) {
+        return;
+    }
+    unsigned long skipTimes = ((currentMillis - this->lastSelfInfo) / this->selfInfo);
+    // update time
+    this->lastSelfInfo += (this->selfInfo * skipTimes);
+
+    if (this->connected()) {
+        this->sendSelfInfo();
+    }
+}
+
+template <class Transp, class Flash>
+bool ERaProto<Transp, Flash>::publishData(const char* prefixTopic, const char* payload,
+                                                        bool retained, bool extended) {
+    if (prefixTopic == nullptr) {
+        return false;
+    }
+    if (payload == nullptr) {
+        return false;
+    }
+
+    char topic[MAX_TOPIC_LENGTH] {0};
+    FormatString(topic, this->ERA_TOPIC);
+    FormatString(topic, prefixTopic);
+    if (extended) {
+        Handler::publishData(topic, payload);
+    }
+    return this->transp.publishData(topic, payload, retained);
+}
+
+template <class Transp, class Flash>
+bool ERaProto<Transp, Flash>::sendListWiFi(const char* payload) {
+    return this->publishData(ERA_PUB_PREFIX_LIST_WIFI_TOPIC,
+                                            payload, false);
+}
+
+template <class Transp, class Flash>
+bool ERaProto<Transp, Flash>::sendChangeResultWiFi(const char* payload) {
+    return this->publishData(ERA_PUB_PREFIX_CHANGE_RESULT_WIFI_TOPIC,
+                                            payload, false);
+}
+
+template <class Transp, class Flash>
 bool ERaProto<Transp, Flash>::sendInfo() {
     bool status {false};
     cJSON* root = cJSON_CreateObject();
@@ -889,8 +1036,22 @@ bool ERaProto<Transp, Flash>::sendInfo() {
     }
 
     cJSON_AddStringToObject(root, INFO_ID, ERaMessageID::make());
+    cJSON_AddStringToObject(root, INFO_BOARD, ERA_BOARD_TYPE);
+    cJSON_AddStringToObject(root, INFO_MODEL, ERA_MODEL_TYPE);
+    cJSON_AddStringToObject(root, INFO_BOARD_ID, this->getBoardID());
+    cJSON_AddStringToObject(root, INFO_AUTH_TOKEN, this->getAuth());
+    cJSON_AddStringToObject(root, INFO_BUILD_DATE, BUILD_DATE_TIME);
+    cJSON_AddStringToObject(root, INFO_VERSION, ERA_VERSION);
+    cJSON_AddStringToObject(root, INFO_FIRMWARE_VERSION, ERA_FIRMWARE_VERSION);
 
     Base::addInfo(root);
+
+    cJSON_AddNumberToObject(root, INFO_PING, this->transp.getPing());
+    cJSON_AddNumberToObject(root, INFO_FREE_RAM, ERaFreeRam());
+
+#if defined(ERA_RESET_REASON)
+    cJSON_AddStringToObject(root, INFO_RESET_REASON, SystemGetResetReason());
+#endif
 
 #if defined(ERA_ABBR)
     cJSON_AddBoolToObject(root, INFO_ABBR, true);
@@ -902,14 +1063,43 @@ bool ERaProto<Transp, Flash>::sendInfo() {
         cJSON_AddNumberToObject(root, INFO_UPTIME, (ERaMillis() / 1000UL));
     }
 
-    char topic[MAX_TOPIC_LENGTH] {0};
     char* payload = cJSON_PrintUnformatted(root);
-    FormatString(topic, this->ERA_TOPIC);
-    FormatString(topic, ERA_PUB_PREFIX_INFO_TOPIC);
 
-    if (payload != nullptr) {
-        status = this->transp.publishData(topic, payload, ERA_INFO_PUBLISH_RETAINED);
+    status = this->publishData(ERA_PUB_PREFIX_INFO_TOPIC, payload,
+                                        ERA_INFO_PUBLISH_RETAINED);
+
+    cJSON_Delete(root);
+    free(payload);
+    root = nullptr;
+    payload = nullptr;
+    return status;
+}
+
+template <class Transp, class Flash>
+bool ERaProto<Transp, Flash>::sendSelfInfo() {
+    bool status {false};
+    cJSON* root = cJSON_CreateObject();
+    if (root == nullptr) {
+        return false;
     }
+
+#if defined(ERA_MODBUS)
+    cJSON_AddNumberToObject(root, SELF_MB_FAIL, Base::Modbus::getModbusFail());
+    cJSON_AddNumberToObject(root, SELF_MB_TOTAL, Base::Modbus::getModbusTotal());
+#else
+    cJSON_AddNumberToObject(root, SELF_MB_FAIL, 0);
+    cJSON_AddNumberToObject(root, SELF_MB_TOTAL, 0);
+#endif
+    cJSON_AddNumberToObject(root, SELF_VOLTAGE, 999);
+    cJSON_AddNumberToObject(root, SELF_IS_BATTERY, 0);
+    cJSON_AddNumberToObject(root, SELF_TEMPERATURE, 0);
+
+    Base::addSelfInfo(root);
+
+    char* payload = cJSON_PrintUnformatted(root);
+
+    status = this->publishData(ERA_PUB_PREFIX_SELF_SENSOR_TOPIC, payload,
+                                            ERA_MQTT_PUBLISH_RETAINED);
 
     cJSON_Delete(root);
     free(payload);
@@ -944,6 +1134,8 @@ bool ERaProto<Transp, Flash>::sendData(ERaRsp_t& rsp) {
         case ERaTypeWriteT::ERA_WRITE_SPECIFIC_DATA:
             return this->sendSpecificData(rsp);
 #endif
+        case ERaTypeWriteT::ERA_WRITE_SELF_DATA:
+            return this->sendSelfData(rsp);
         default:
             return false;
     }
@@ -1010,12 +1202,10 @@ bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
             break;
     }
 
+#if defined(ERA_PIN_DEBUG)
     char name[50] {0};
     bool status {false};
     char* payload = nullptr;
-    char topicName[MAX_TOPIC_LENGTH] {0};
-    FormatString(topicName, this->ERA_TOPIC);
-    FormatString(topicName, ERA_PUB_PREFIX_PIN_DATA_TOPIC);
     cJSON* root = cJSON_CreateObject();
     if (root == nullptr) {
         return false;
@@ -1054,29 +1244,21 @@ bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
         cJSON_AddStringToObject(root, name, rsp.param.getObject()->getString());
     }
     payload = cJSON_PrintUnformatted(root);
-    if (payload != nullptr) {
-        status = this->transp.publishData(topicName, payload, rsp.retained);
-    }
+    status = this->publishData(ERA_PUB_PREFIX_PIN_DATA_TOPIC, payload, rsp.retained);
     cJSON_Delete(root);
     free(payload);
     root = nullptr;
     payload = nullptr;
     return status;
+#else
+    return false;
+#endif
 }
 
 template <class Transp, class Flash>
 bool ERaProto<Transp, Flash>::sendPinMultiData(ERaRsp_t& rsp) {
-    bool status {false};
-    char* payload = rsp.param;
-    if (payload == nullptr) {
-        return false;
-    }
-    char topicName[MAX_TOPIC_LENGTH] {0};
-    FormatString(topicName, this->ERA_TOPIC);
-    FormatString(topicName, ERA_PUB_PREFIX_PIN_DATA_TOPIC);
-    status = this->transp.publishData(topicName, payload, rsp.retained);
-    payload = nullptr;
-    return status;
+    return this->publishData(ERA_PUB_PREFIX_PIN_DATA_TOPIC,
+                                    rsp.param, rsp.retained);
 }
 
 template <class Transp, class Flash>
@@ -1115,17 +1297,8 @@ bool ERaProto<Transp, Flash>::sendConfigIdData(ERaRsp_t& rsp) {
 
 template <class Transp, class Flash>
 bool ERaProto<Transp, Flash>::sendConfigIdMultiData(ERaRsp_t& rsp) {
-    bool status {false};
-    char* payload = rsp.param;
-    if (payload == nullptr) {
-        return false;
-    }
-    char topicName[MAX_TOPIC_LENGTH] {0};
-    FormatString(topicName, this->ERA_TOPIC);
-    FormatString(topicName, ERA_PUB_PREFIX_MULTI_CONFIG_DATA_TOPIC);
-    status = this->transp.publishData(topicName, payload, rsp.retained);
-    payload = nullptr;
-    return status;
+    return this->publishData(ERA_PUB_PREFIX_MULTI_CONFIG_DATA_TOPIC,
+                                            rsp.param, rsp.retained);
 }
 
 #if defined(ERA_MODBUS)
@@ -1136,10 +1309,8 @@ bool ERaProto<Transp, Flash>::sendConfigIdMultiData(ERaRsp_t& rsp) {
         if (payload == nullptr) {
             return false;
         }
-        char topicName[MAX_TOPIC_LENGTH] {0};
-        FormatString(topicName, this->ERA_TOPIC);
-        FormatString(topicName, ERA_PUB_PREFIX_MODBUS_DATA_TOPIC);
-        status = this->transp.publishData(topicName, payload, rsp.retained);
+        status = this->publishData(ERA_PUB_PREFIX_MODBUS_DATA_TOPIC,
+                                            payload, rsp.retained);
         if (this->pLogger != nullptr) {
             this->pLogger->put("modbus", "", payload, status);
         }
@@ -1161,11 +1332,8 @@ bool ERaProto<Transp, Flash>::sendConfigIdMultiData(ERaRsp_t& rsp) {
             id = nullptr;
             return false;
         }
-        char topicName[MAX_TOPIC_LENGTH] {0};
-        FormatString(topicName, this->ERA_TOPIC);
-        FormatString(topicName, id);
-        status = this->transp.publishData(topicName, payload, rsp.retained);
-        Handler::publishData(topicName, payload);
+
+        status = this->publishData(id, payload, rsp.retained, true);
         if (this->pLogger != nullptr) {
             this->pLogger->put("zigbee", id, payload, status, true);
         }
@@ -1188,11 +1356,8 @@ bool ERaProto<Transp, Flash>::sendConfigIdMultiData(ERaRsp_t& rsp) {
             id = nullptr;
             return false;
         }
-        char topicName[MAX_TOPIC_LENGTH] {0};
-        FormatString(topicName, this->ERA_TOPIC);
-        FormatString(topicName, id);
-        status = this->transp.publishData(topicName, payload, rsp.retained);
-        Handler::publishData(topicName, payload);
+
+        status = this->publishData(id, payload, rsp.retained, true);
         if (this->pLogger != nullptr) {
             this->pLogger->put("specific", id, payload, status, true);
         }
@@ -1201,6 +1366,13 @@ bool ERaProto<Transp, Flash>::sendConfigIdMultiData(ERaRsp_t& rsp) {
         return status;
     }
 #endif
+
+template <class Transp, class Flash>
+bool ERaProto<Transp, Flash>::sendSelfData(ERaRsp_t& rsp) {
+    this->selfInfo = 0UL;
+    return this->publishData(ERA_PUB_PREFIX_SELF_SENSOR_TOPIC,
+                                    rsp.param, rsp.retained);
+}
 
 template <class Transp, class Flash>
 void ERaProto<Transp, Flash>::sendCommand(const char* auth, ERaRsp_t& rsp, ApiData_t data) {
@@ -1446,6 +1618,9 @@ void ERaProto<Transp, Flash>::sendCommandVirtual(ERaRsp_t& rsp, ERaDataJson* dat
         cJSON_AddNumberToObject(root, INFO_MB_FAIL_WRITE, mbFailWrite);
         cJSON_AddNumberToObject(root, INFO_MB_TOTAL_READ, mbTotalRead);
         cJSON_AddNumberToObject(root, INFO_MB_TOTAL_WRITE, mbTotalWrite);
+        cJSON_AddNumberToObject(root, INFO_MB_VOLTAGE, 999);
+        cJSON_AddNumberToObject(root, INFO_MB_IS_BATTERY, 0);
+        cJSON_AddNumberToObject(root, INFO_MB_TEMPERATURE, 0);
         Base::addModbusInfo(root);
         if (mbScan != nullptr) {
             cJSON_AddStringToObject(root, INFO_MB_SCAN, mbScan);

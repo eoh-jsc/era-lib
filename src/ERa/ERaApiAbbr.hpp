@@ -22,11 +22,13 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const ERaDataBuff& arrayTopi
     ERA_FORCE_UNUSED(payload);
 }
 
-template <class Proto, class Flash>
-inline
-void ERaApi<Proto, Flash>::handlePinRequest(const ERaDataBuff& arrayTopic, const char* payload) {
-    ERA_FORCE_UNUSED(arrayTopic);
-    ERA_FORCE_UNUSED(payload);
-}
+#if defined(ERA_PIN_DEBUG)
+    template <class Proto, class Flash>
+    inline
+    void ERaApi<Proto, Flash>::handlePinRequest(const ERaDataBuff& arrayTopic, const char* payload) {
+        ERA_FORCE_UNUSED(arrayTopic);
+        ERA_FORCE_UNUSED(payload);
+    }
+#endif
 
 #endif /* INC_ERA_API_ABBREVIATION_HPP_ */

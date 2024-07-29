@@ -45,9 +45,11 @@
 #define WIFI_AP_Subnet                IPAddress(255, 255, 255, 0)
 
 typedef struct __WiFiConfig_t {
+    uint8_t flag;
+
     char ssid[64];
     char pass[64];
-} WiFiConfig_t;
+} ERA_ATTR_PACKED WiFiConfig_t;
 
 typedef struct __ERaConfig_t {
     uint32_t magic;
@@ -122,6 +124,12 @@ static const ERaConfig_t ERaDefault = {
 
     false,
     false
+};
+
+enum WiFiFlagT {
+    WIFI_FLAG_INVALID = 0x00,
+    WIFI_FLAG_CONNECTED = 0x01,
+    WIFI_FLAG_FAILED = 0x02
 };
 
 enum ConfigFlagT {
@@ -300,7 +308,7 @@ public:
             ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_VALID, true);
         }
         else {
-            this->config(ERaConfig.token, ERaConfig.host, ERaConfig.port,
+            this->config(gsm, ERaConfig.token, ERaConfig.host, ERaConfig.port,
                          ERaConfig.username, ERaConfig.password);
         }
 
@@ -380,17 +388,21 @@ private:
     void waitHandle(String& networks, unsigned long ms);
     void runServer(String& networks);
     String scanNetworks();
+    cJSON* scanNetworksJson(int nets, bool compact = false);
     void addEncryptionType(uint8_t networkItem, cJSON* const item);
     String urlDecode(const String& text);
     String urlFindArg(const String& url, const String& arg);
     String bodyFindArg(const String& body, const String& arg);
     void connectNetwork();
     void connectNewNetwork();
+    void connectNewNetworkResult() override;
     void connectCloud();
     bool connectNetwork(const char* ssid, const char* pass);
     bool connectWiFi(const char* ssid, const char* pass);
     void connectNewWiFi(const char* ssid, const char* pass) override;
     void connectWiFiBackup();
+    void requestListWiFi() override;
+    void responseListWiFi() override;
     void switchToAP();
     void switchToSTA();
     void switchToAPSTA();
@@ -563,6 +575,10 @@ void ERaPnP<Transport>::run() {
             this->configReset();
             ERaState::set(StateT::STATE_REBOOT);
             break;
+        case StateT::STATE_REQUEST_LIST_WIFI:
+            this->responseListWiFi();
+            ERaState::set(StateT::STATE_RUNNING);
+            break;
         case StateT::STATE_REBOOT:
             ERaDelay(1000);
             ERaRestart(false);
@@ -708,7 +724,7 @@ void ERaPnP<Transport>::configApi() {
 
     udpERa.on("scan/wifi", []() {
         ERA_LOG(ERA_PSTR("WiFi"), ERA_PSTR("Scanning wifi..."));
-        String content;
+        String content = ERA_F(R"json({"type":"data_wifi","wifi":"[]"})json");
         int nets {0};
         ERaWatchdogFeed();
         TinyGsm* modem = ::getTinyModem();
@@ -719,7 +735,7 @@ void ERaPnP<Transport>::configApi() {
         ERA_LOG(ERA_PSTR("WiFi"), ERA_PSTR("Found %d wifi"), nets);
 
         if (nets <= 0) {
-            udpERa.send("[]");
+            udpERa.send(content.c_str());
             return;
         }
 
@@ -737,7 +753,7 @@ void ERaPnP<Transport>::configApi() {
 
         cJSON* root = cJSON_CreateObject();
         if (root == nullptr) {
-            udpERa.send("[]");
+            udpERa.send(content.c_str());
             return;
         }
         cJSON_AddStringToObject(root, "type", "data_wifi");
@@ -883,6 +899,7 @@ void ERaPnP<Transport>::configMode() {
     this->waitHandle(networks, 1000UL);
 
     ERaDelay(1000);
+    this->modem->scanDelete();
     this->modem->endServer();
 }
 
@@ -1127,7 +1144,7 @@ void ERaPnP<Transport>::runServer(String& networks) {
                 while (client.connected() && !client.available()) {
                     ERaDelay(1);
                     if (!ERaRemainingTime(timeout, 1000UL)) {
-                        ERA_LOG(TAG, ERA_PSTR("Response timeout"));
+                        ERA_LOG_ERROR(TAG, ERA_PSTR("Response timeout"));
                         break;
                     }
                 }
@@ -1158,12 +1175,39 @@ void ERaPnP<Transport>::runServer(String& networks) {
 template <class Transport>
 String ERaPnP<Transport>::scanNetworks() {
     ERA_LOG(ERA_PSTR("WiFi"), ERA_PSTR("Scanning wifi..."));
-    String content;
+    String content = ERA_F("[]");
     int nets = this->modem->scanNetworks();
     ERA_LOG(ERA_PSTR("WiFi"), ERA_PSTR("Found %d wifi"), nets);
 
     if (nets <= 0) {
         return "[]";
+    }
+
+    cJSON* root = this->scanNetworksJson(nets, false);
+    if (root != nullptr) {
+        char* ptr = cJSON_PrintUnformatted(root);
+        if (ptr != nullptr) {
+            content = ptr;
+            free(ptr);
+        }
+        cJSON_Delete(root);
+        root = nullptr;
+        ptr = nullptr;
+    }
+
+    this->modem->scanDelete();
+    return content;
+}
+
+template <class Transport>
+cJSON* ERaPnP<Transport>::scanNetworksJson(int nets, bool compact) {
+    if (nets <= 0) {
+        return nullptr;
+    }
+
+    cJSON* root = cJSON_CreateArray();
+    if (root == nullptr) {
+        return nullptr;
     }
 
     int indices[nets] {0};
@@ -1178,39 +1222,31 @@ String ERaPnP<Transport>::scanNetworks() {
         }
     }
 
-    cJSON* root = cJSON_CreateArray();
-    if (root != nullptr) {
-        int limit {0};
-        for (int i = 0; i < nets; ++i) {
-            int id = indices[i];
-            if (!::getSSID(id).length()) {
-                continue;
-            }
+    int limit {0};
+    for (int i = 0; i < nets; ++i) {
+        int id = indices[i];
+        if (!::getSSID(id).length()) {
+            continue;
+        }
 
-            cJSON* item = cJSON_CreateObject();
-            if (item == nullptr) {
-                break;
-            }
-            cJSON_AddStringToObject(item, "ssid", ::getSSID(id).c_str());
-            cJSON_AddNumberToObject(item, "rssi", this->modem->RSSI(id));
+        cJSON* item = cJSON_CreateObject();
+        if (item == nullptr) {
+            break;
+        }
+        cJSON_AddStringToObject(item, "ssid", ::getSSID(id).c_str());
+        cJSON_AddNumberToObject(item, "rssi", this->modem->RSSI(id));
+        if (!compact) {
             cJSON_AddNumberToObject(item, "channel", this->modem->channel(id));
             this->addEncryptionType(id, item);
-            cJSON_AddItemToArray(root, item);
-            item = nullptr;
-            if(++limit >= WIFI_SCAN_MAX) {
-                break;
-            }
         }
-        char* ptr = cJSON_PrintUnformatted(root);
-        if (ptr != nullptr) {
-            content = ptr;
-            free(ptr);
+        cJSON_AddItemToArray(root, item);
+        item = nullptr;
+        if(++limit >= WIFI_SCAN_MAX) {
+            break;
         }
-        cJSON_Delete(root);
-        root = nullptr;
-        ptr = nullptr;
     }
-    return content;
+
+    return root;
 }
 
 template <class Transport>
@@ -1357,6 +1393,12 @@ void ERaPnP<Transport>::connectNetwork() {
 
 template <class Transport>
 void ERaPnP<Transport>::connectNewNetwork() {
+    if (this->newWiFi.flag != WiFiFlagT::WIFI_FLAG_INVALID) {
+        this->connectNewNetworkResult();
+        ERaState::set(StateT::STATE_CONNECTED);
+        return;
+    }
+
     if (!strlen(this->newWiFi.ssid)) {
         ERaState::set(StateT::STATE_CONNECTING_NETWORK);
         return;
@@ -1377,15 +1419,42 @@ void ERaPnP<Transport>::connectNewNetwork() {
 
     this->connectNetwork(this->newWiFi.ssid, this->newWiFi.pass);
     if (this->netConnected()) {
+        ClearArray(ERaConfig.backupSSID);
+        ClearArray(ERaConfig.backupPass);
+        CopyToArray(ERaConfig.ssid, ERaConfig.backupSSID);
+        CopyToArray(ERaConfig.pass, ERaConfig.backupPass);
         ClearArray(ERaConfig.ssid);
         ClearArray(ERaConfig.pass);
         CopyToArray(this->newWiFi.ssid, ERaConfig.ssid);
         CopyToArray(this->newWiFi.pass, ERaConfig.pass);
+        ERaConfig.hasBackup = true;
+        this->newWiFi.flag = WiFiFlagT::WIFI_FLAG_CONNECTED;
         ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_STORE, true);
         ERaState::set(StateT::STATE_CONNECTING_CLOUD);
     }
     else {
+        this->newWiFi.flag = WiFiFlagT::WIFI_FLAG_FAILED;
         ERaState::set(StateT::STATE_CONNECTING_NETWORK);
+    }
+}
+
+template <class Transport>
+void ERaPnP<Transport>::connectNewNetworkResult() {
+    bool status {false};
+    switch (this->newWiFi.flag) {
+        case WiFiFlagT::WIFI_FLAG_CONNECTED:
+            status = Base::sendChangeResultWiFi(R"json({"success":1})json");
+            ERA_LOG(TAG, ERA_PSTR("Connected to new WiFi: %s"), this->newWiFi.ssid);
+            break;
+        case WiFiFlagT::WIFI_FLAG_FAILED:
+            status = Base::sendChangeResultWiFi(R"json({"success":0})json");
+            ERA_LOG_ERROR(TAG, ERA_PSTR("Connect new WiFi failed: %s"), this->newWiFi.ssid);
+            break;
+        default:
+            break;
+    }
+    if (status) {
+        ClearStruct(this->newWiFi);
     }
 }
 
@@ -1400,6 +1469,7 @@ void ERaPnP<Transport>::connectCloud() {
         ERaConfig.connected = true;
         this->configSave();
         ERaOptConnected(this);
+        this->connectNewNetworkResult();
         ERaState::set(StateT::STATE_CONNECTED);
     }
     else if (Base::isConfigMode()) {
@@ -1483,15 +1553,22 @@ void ERaPnP<Transport>::connectNewWiFi(const char* ssid, const char* pass) {
     if (!strlen(ssid)) {
         return;
     }
-    if (ERaStrCmp(ERaConfig.ssid, ssid)) {
-        return;
+    if (pass == nullptr) {
+        pass = "";
     }
 
     ClearStruct(this->newWiFi);
     CopyToArray(ssid, this->newWiFi.ssid);
-    if (pass != nullptr) {
-        CopyToArray(pass, this->newWiFi.pass);
+    CopyToArray(pass, this->newWiFi.pass);
+    if (!ERaStrCmp(ERaConfig.ssid, ssid)) {
     }
+    else if (ERaStrCmp(ERaConfig.pass, pass)) {
+        this->newWiFi.flag = WiFiFlagT::WIFI_FLAG_CONNECTED;
+    }
+    else {
+        this->newWiFi.flag = WiFiFlagT::WIFI_FLAG_FAILED;
+    }
+
     ERaState::set(StateT::STATE_CONNECTING_NEW_NETWORK);
 }
 
@@ -1501,6 +1578,17 @@ void ERaPnP<Transport>::connectWiFiBackup() {
         return;
     }
     this->connectNetwork(ERaConfig.backupSSID, ERaConfig.backupPass);
+}
+
+template <class Transport>
+void ERaPnP<Transport>::requestListWiFi() {
+    ERaState::set(StateT::STATE_REQUEST_LIST_WIFI);
+}
+
+template <class Transport>
+void ERaPnP<Transport>::responseListWiFi() {
+    String networks = this->scanNetworks();
+    Base::sendListWiFi(networks.c_str());
 }
 
 template <class Transport>
@@ -1612,13 +1700,6 @@ inline
 void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
     int16_t signal = ::getRSSI();
 
-    cJSON_AddStringToObject(root, INFO_BOARD, ERA_BOARD_TYPE);
-    cJSON_AddStringToObject(root, INFO_MODEL, ERA_MODEL_TYPE);
-    cJSON_AddStringToObject(root, INFO_BOARD_ID, this->thisProto().getBoardID());
-    cJSON_AddStringToObject(root, INFO_AUTH_TOKEN, this->thisProto().getAuth());
-    cJSON_AddStringToObject(root, INFO_BUILD_DATE, BUILD_DATE_TIME);
-    cJSON_AddStringToObject(root, INFO_VERSION, ERA_VERSION);
-    cJSON_AddStringToObject(root, INFO_FIRMWARE_VERSION, ERA_FIRMWARE_VERSION);
     cJSON_AddNumberToObject(root, INFO_PLUG_AND_PLAY, ERaConfig.getFlag(ConfigFlagT::CONFIG_FLAG_PNP));
     cJSON_AddStringToObject(root, INFO_NETWORK_PROTOCOL, ERA_NETWORK_TYPE);
     cJSON_AddStringToObject(root, INFO_SSID, ((this->thisProto().getTransp().getSSID() == nullptr) ?
@@ -1629,12 +1710,6 @@ void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
     cJSON_AddStringToObject(root, INFO_MAC, ::getMAC().c_str());
     cJSON_AddStringToObject(root, INFO_LOCAL_IP, ::getLocalIP().c_str());
     cJSON_AddNumberToObject(root, INFO_SSL, ERaInfoSSL(ERaConfig.port));
-    cJSON_AddNumberToObject(root, INFO_PING, this->thisProto().getTransp().getPing());
-    cJSON_AddNumberToObject(root, INFO_FREE_RAM, ERaFreeRam());
-
-#if defined(ERA_RESET_REASON)
-    cJSON_AddStringToObject(root, INFO_RESET_REASON, SystemGetResetReason().c_str());
-#endif
 
     /* Override info */
     ERaInfo(root);
@@ -1642,20 +1717,31 @@ void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
 
 template <class Proto, class Flash>
 inline
-void ERaApi<Proto, Flash>::addModbusInfo(cJSON* root) {
+void ERaApi<Proto, Flash>::addSelfInfo(cJSON* root) {
     int16_t signal = this->thisProto().getTransp().getSignalQuality();
 
-    cJSON_AddNumberToObject(root, INFO_MB_CHIP_TEMPERATURE, 5000);
-    cJSON_AddNumberToObject(root, INFO_MB_TEMPERATURE, 0);
-    cJSON_AddNumberToObject(root, INFO_MB_VOLTAGE, 999);
-    cJSON_AddNumberToObject(root, INFO_MB_IS_BATTERY, 0);
-    cJSON_AddNumberToObject(root, INFO_MB_RSSI, signal);
-    cJSON_AddNumberToObject(root, INFO_MB_SIGNAL_STRENGTH, SignalToPercentage(signal));
-    cJSON_AddStringToObject(root, INFO_MB_WIFI_USING, ((this->thisProto().getTransp().getSSID() == nullptr) ?
-                                                    ::getSSID().c_str() : this->thisProto().getTransp().getSSID()));
+    cJSON_AddNumberToObject(root, SELF_CHIP_TEMPERATURE, 5000);
+    cJSON_AddNumberToObject(root, SELF_SIGNAL_STRENGTH, SignalToPercentage(signal));
 
-    /* Override modbus info */
-    ERaModbusInfo(root);
+    /* Override self info */
+    ERaSelfInfo(root);
 }
+
+#if defined(ERA_MODBUS)
+    template <class Proto, class Flash>
+    inline
+    void ERaApi<Proto, Flash>::addModbusInfo(cJSON* root) {
+        int16_t signal = this->thisProto().getTransp().getSignalQuality();
+
+        cJSON_AddNumberToObject(root, INFO_MB_CHIP_TEMPERATURE, 5000);
+        cJSON_AddNumberToObject(root, INFO_MB_RSSI, signal);
+        cJSON_AddNumberToObject(root, INFO_MB_SIGNAL_STRENGTH, SignalToPercentage(signal));
+        cJSON_AddStringToObject(root, INFO_MB_WIFI_USING, ((this->thisProto().getTransp().getSSID() == nullptr) ?
+                                                        ::getSSID().c_str() : this->thisProto().getTransp().getSSID()));
+
+        /* Override modbus info */
+        ERaModbusInfo(root);
+    }
+#endif
 
 #endif /* INC_ERA_PNP_ARDUINO_HPP_ */

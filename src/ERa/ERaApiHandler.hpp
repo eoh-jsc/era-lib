@@ -143,10 +143,22 @@ protected:
         this->ERaTm.run();
     }
 
+    virtual void requestListWiFi() {
+        ERA_LOG_WARNING(TAG, ERA_PSTR("requestListWiFi default."));
+    }
+
+    virtual void responseListWiFi() {
+        ERA_LOG_WARNING(TAG, ERA_PSTR("responseListWiFi default."));
+    }
+
     virtual void connectNewWiFi(const char* ssid, const char* pass) {
         ERA_LOG_WARNING(TAG, ERA_PSTR("connectNewWiFi default."));
         ERA_FORCE_UNUSED(ssid);
         ERA_FORCE_UNUSED(pass);
+    }
+
+    virtual void connectNewNetworkResult() {
+        ERA_LOG_WARNING(TAG, ERA_PSTR("connectNewNetworkResult default."));
     }
 
 private:

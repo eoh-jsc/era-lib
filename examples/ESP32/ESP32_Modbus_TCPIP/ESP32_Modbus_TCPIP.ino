@@ -28,7 +28,7 @@
 const char ssid[] = "YOUR_SSID";
 const char pass[] = "YOUR_PASSWORD";
 
-WiFiClient clientSlave;
+WiFiClient mbTcpClient;
 
 /* This function will run every time ERa is connected */
 ERA_CONNECTED() {
@@ -51,11 +51,11 @@ void setup() {
     Serial.begin(115200);
 #endif
 
-    /* Setup Client for Modbus TCP/IP */
-    ERa.setModbusClient(clientSlave);
-
     /* Set board id */
     // ERa.setBoardID("Board_1");
+
+    /* Setup Client for Modbus TCP/IP */
+    ERa.setModbusClient(mbTcpClient);
 
     /* Set scan WiFi. If activated, the board will scan
        and connect to the best quality WiFi. */

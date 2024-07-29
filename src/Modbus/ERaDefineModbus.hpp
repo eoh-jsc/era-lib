@@ -110,6 +110,24 @@ enum ModbusActionTypeT
     MODBUS_ACTION_PARAMS = 0x01
 };
 
+enum ModbusDataT
+    : uint8_t {
+    MODBUS_BIT = 0x00,
+    MODBUS_INT16 = 0x01,
+    MODBUS_UINT16 = 0x02,
+    MODBUS_INT32 = 0x03,
+    MODBUS_UINT32 = 0x04,
+    MODBUS_FLOAT = 0x05
+};
+
+enum ModbusConvertT
+    : uint8_t {
+    MODBUS_BIG_ENDIAN = 0x00,
+    MODBUS_LITTLE_ENDIAN = 0x01,
+    MODBUS_MID_BIG_ENDIAN = 0x02,
+    MODBUS_MID_LITTLE_ENDIAN = 0x03
+};
+
 typedef struct __ModbusAction_t {
     char* key;
     uint8_t type;

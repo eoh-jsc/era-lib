@@ -11,7 +11,9 @@
     #define VIRTUAL                     0xFF
 #endif
 
-#define ERA_PROPERTY_TIMEOUT            500UL
+#define ERA_PROPERTY_MIN_CHANGE         0.0f
+#define ERA_PROPERTY_MIN_INTERVAL       500UL
+#define ERA_PROPERTY_MAX_INTERVAL       60000UL
 
 #define addProperty(p, ...)             addPropertyReal(ERA_F(#p), p, __VA_ARGS__)
 #define addPropertyT(p, ...)            addPropertyRealT(ERA_F(#p), p, __VA_ARGS__)
@@ -160,7 +162,11 @@ public:
     ERaProperty()
         : numProperty(0)
         , timeout(100L)
-        , writeTimeout(ERA_PROPERTY_TIMEOUT)
+        , publishSettings {
+            .minChange = ERA_PROPERTY_MIN_CHANGE,
+            .minInterval = ERA_PROPERTY_MIN_INTERVAL,
+            .maxInterval = ERA_PROPERTY_MAX_INTERVAL
+        }
     {}
     ~ERaProperty()
     {}
@@ -389,11 +395,18 @@ public:
 #endif
 #endif
 
-    void setPropertyTimeout(unsigned long _timeout) {
-        if (_timeout < ERA_PROPERTY_TIMEOUT) {
-            _timeout = ERA_PROPERTY_TIMEOUT;
+    void setPropertyPublishSettings(float minChange = ERA_PROPERTY_MIN_CHANGE,
+                                    unsigned long minInterval = ERA_PROPERTY_MIN_INTERVAL,
+                                    unsigned long maxInterval = ERA_PROPERTY_MAX_INTERVAL) {
+        if (minInterval < ERA_PROPERTY_MIN_INTERVAL) {
+            minInterval = ERA_PROPERTY_MIN_INTERVAL;
         }
-        this->writeTimeout = _timeout;
+        if (maxInterval < ERA_PROPERTY_MAX_INTERVAL) {
+            maxInterval = ERA_PROPERTY_MAX_INTERVAL;
+        }
+        this->publishSettings.minChange = minChange;
+        this->publishSettings.minInterval = minInterval;
+        this->publishSettings.maxInterval = maxInterval;
     }
 
 protected:
@@ -430,7 +443,9 @@ protected:
             return;
         }
         this->addPropertyVirtual(pin, *wrapper, PermissionT::PERMISSION_CLOUD_READ_WRITE).
-                                 publishOnChange(0, this->writeTimeout).publish().allocatorPointer(pValue);
+                                 publishOnChange(this->publishSettings.minChange,
+                                 this->publishSettings.minInterval, this->publishSettings.maxInterval).
+                                 publish().allocatorPointer(pValue);
     }
 
     void virtualWriteProperty(uint8_t pin, const ERaParam& value, bool send) {
@@ -490,8 +505,9 @@ protected:
         }
         wrapper->setOptions(0x01);
         this->addPropertyVirtual(pin, *wrapper, PermissionT::PERMISSION_CLOUD_READ_WRITE).
-                                 publishOnChange(0, this->writeTimeout).publish().
-                                 allocatorPointer(pValue).resetUpdate();
+                                 publishOnChange(this->publishSettings.minChange,
+                                 this->publishSettings.minInterval, this->publishSettings.maxInterval).
+                                 publish().allocatorPointer(pValue).resetUpdate();
     }
 #endif
 
@@ -531,8 +547,9 @@ protected:
         }
         wrapper->setOptions(0x01);
         this->addPropertyVirtual(pin, *wrapper, PermissionT::PERMISSION_CLOUD_READ_WRITE).
-                                 publishOnChange(0, this->writeTimeout).publish().
-                                 allocatorPointer(pValue).resetUpdate();
+                                 publishOnChange(this->publishSettings.minChange,
+                                 this->publishSettings.minInterval, this->publishSettings.maxInterval).
+                                 publish().allocatorPointer(pValue).resetUpdate();
     }
 #endif
 
@@ -614,7 +631,12 @@ private:
     ERaReport ERaPropRp;
     unsigned int numProperty;
     unsigned long timeout;
-    unsigned long writeTimeout;
+
+    struct {
+        float minChange;
+        unsigned long minInterval;
+        unsigned long maxInterval;
+    } publishSettings;
 
     using PropertyIterator = typename ERaList<Property_t*>::iterator;
 };
@@ -727,6 +749,7 @@ void ERaProperty<Api>::handler(uint8_t pin, const ERaParam& param) {
     }
 
 #endif
+    ERA_FORCE_UNUSED(found);
 }
 
 template <class Api>
@@ -1092,7 +1115,7 @@ void ERaProperty<Api>::onCallbackVirtual(const Property_t* const pProp) {
         case WrapperTypeT::WRAPPER_TYPE_ARRAY:
             if (pProp->value->getString() != nullptr) {
                 this->thisApi().virtualWriteSingle(pProp->id.getInt(), pProp->value->toJSON(),
-                                                   pProp->value->isSendJSON() | ERA_API_JSON);
+                                                   pProp->value->isSendJSON() || ERA_API_JSON);
             }
             break;
         default:

@@ -8,12 +8,7 @@ template <int size>
 void ERaUdp<Udp>::getWiFiName(char(&ptr)[size], bool withPrefix) {
     char mac[20] {0};
     uint8_t macAddr[6] {0};
-#if defined(RTL8722DM) ||     \
-    defined(ARDUINO_AMEBA)
-    WiFi.BSSID(macAddr);
-#else
     WiFi.macAddress(macAddr);
-#endif
     FormatString(mac, "%02x%02x%02x%02x%02x%02x", macAddr[0], macAddr[1],
                                                     macAddr[2], macAddr[3],
                                                     macAddr[4], macAddr[5]);
@@ -32,12 +27,7 @@ template <int size>
 void ERaUdp<Udp>::getImeiChip(char(&ptr)[size]) {
     char mac[20] {0};
     uint8_t macAddr[6] {0};
-#if defined(RTL8722DM) ||     \
-    defined(ARDUINO_AMEBA)
-    WiFi.BSSID(macAddr);
-#else
     WiFi.macAddress(macAddr);
-#endif
     FormatString(mac, "%02x%02x%02x%02x%02x%02x", macAddr[0], macAddr[1],
                                                     macAddr[2], macAddr[3],
                                                     macAddr[4], macAddr[5]);

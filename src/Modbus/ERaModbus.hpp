@@ -105,6 +105,13 @@ public:
         this->timeout = _timeout;
     }
 
+    void setModbusInterval(uint32_t _interval) {
+        if (!_interval) {
+            return;
+        }
+        ERaModbusEntry::getConfig()->modbusInterval.delay = _interval;
+    }
+
     void setPubModbusInterval(uint32_t _interval) {
         if (!_interval) {
             return;
@@ -217,11 +224,12 @@ protected:
         }
     }
 
-    void parseModbusConfig(char* config, const char* hash, const char* buf, bool isControl = false) {
+    void parseModbusConfig(const void* config, const char* hash, const char* buf,
+                                    bool isControl = false, bool json = false) {
         ModbusState::set(ModbusStateT::STATE_MB_PARSE);
         if (isControl) {
             ERaGuardLock(this->mutex);
-            this->modbusControl->parseConfig(config);
+            this->modbusControl->parseConfig(config, json);
             if (this->modbusControl->updateHashID(hash)) {
                 this->thisApi().writeToFlash(FILENAME_CONTROL, buf);
                 ERaWriteConfig(ERaConfigTypeT::ERA_MODBUS_CONTROL);
@@ -235,7 +243,8 @@ protected:
         }
         else {
             ERaGuardLock(this->mutex);
-            this->modbusConfig->parseConfig(config);
+            this->modbusConfig->parseConfig(config, json);
+            ModbusTransp::parseConfig(config, json);
             if (this->modbusConfig->updateHashID(hash)) {
                 this->clearDataBuff();
                 this->thisApi().writeToFlash(FILENAME_CONFIG, buf);
@@ -256,7 +265,7 @@ protected:
         }
     }
 
-    void parseModbusScan(char* config) {
+    void parseModbusScan(const char* config) {
         this->modbusScan->getInstance();
         this->modbusScan->parseConfig(config);
         ModbusState::set(ModbusStateT::STATE_MB_SCAN);
@@ -277,8 +286,20 @@ protected:
         this->thisApi().removeFlash(FILENAME_CONTROL);
     }
 
+    void configIdModbusWrite(ERaInt_t configId, float value) override {
+        this->thisApi().configIdWrite(configId, value);
+    }
+
     void clearDataBuff() {
         this->dataBuff.clearBuffer();
+    }
+
+    int getModbusFail() const {
+        return (this->failRead + this->failWrite);
+    }
+
+    int getModbusTotal() const {
+        return (this->totalRead + this->totalWrite);
     }
 
     void initModbusTask();
@@ -339,18 +360,18 @@ private:
     void initModbusConfig() {
         char* ptr = nullptr;
         ptr = this->thisApi().readFromFlash(FILENAME_CONFIG);
-        this->updateConfig(this->modbusConfig, ptr, "configuration");
+        this->updateConfig(this->modbusConfig, ptr, "configuration", "modbus_configuration");
         if (this->initialized) {
             ModbusStream::setBaudRate(this->modbusConfig->baudSpeed);
         }
         free(ptr);
         ptr = this->thisApi().readFromFlash(FILENAME_CONTROL);
-        this->updateConfig(this->modbusControl, ptr, "control");
+        this->updateConfig(this->modbusControl, ptr, "control", nullptr);
         free(ptr);
         ptr = nullptr;
     }
 
-    void updateConfig(ERaModbusEntry* config, const char* buf, const char* name) {
+    void updateConfig(ERaModbusEntry* config, const char* buf, const char* name, const char* jsName) {
         cJSON* root = cJSON_Parse(buf);
         if (!cJSON_IsObject(root)) {
             cJSON_Delete(root);
@@ -361,7 +382,14 @@ private:
         cJSON* data = cJSON_GetObjectItem(root, "data");
         cJSON* item = cJSON_GetObjectItem(data, name);
         if (cJSON_IsString(item)) {
-            config->parseConfig(item->valuestring);
+            config->parseConfig(item->valuestring, false);
+        }
+        else {
+            item = cJSON_GetObjectItem(data, jsName);
+            if (cJSON_IsObject(item)) {
+                config->parseConfig(item, true);
+                ModbusTransp::parseConfig(config, true);
+            }
         }
         item = cJSON_GetObjectItem(data, "hash_id");
         if (cJSON_IsString(item)) {
@@ -489,10 +517,10 @@ private:
 
     void readModbusConfig();
     bool checkPubDataInterval();
-    void delayModbus(const int address, bool unlock = false, bool skip = false);
+    void delayModbus(ERaUInt_t address, bool unlock = false, bool skip = false);
     void delays(MillisTime_t ms);
     ModbusConfigAlias_t* getModbusAlias(const char* key);
-    ModbusConfig_t* getModbusConfig(int id);
+    ModbusConfig_t* getModbusConfig(ERaUInt_t id);
     ModbusConfig_t* getModbusConfigWithAddress(uint8_t addr);
     void addScanData();
     void processModbusScan();
@@ -556,6 +584,9 @@ private:
             return;
         }
         if (this->clientTCP == nullptr) {
+            return;
+        }
+        if (!this->modbusConfig->hasTcpIp) {
             return;
         }
         MillisTime_t startMillis = ERaMillis();
@@ -661,7 +692,7 @@ void ERaModbus<Api>::readModbusConfig() {
                             ERA_F(MODBUS_STRING_TOTAL_WRITE), this->totalWrite);
     this->addScanData();
     this->dataBuff.done();
-    if (!this->skipPubModbus) {
+    if (!this->skipPubModbus && !ModbusTransp::isNewReport()) {
         this->thisApi().modbusDataWrite(&this->dataBuff);
     }
 }
@@ -678,7 +709,7 @@ bool ERaModbus<Api>::checkPubDataInterval() {
 }
 
 template <class Api>
-void ERaModbus<Api>::delayModbus(const int address, bool unlock, bool skip) {
+void ERaModbus<Api>::delayModbus(ERaUInt_t address, bool unlock, bool skip) {
     if (ModbusState::is(ModbusStateT::STATE_MB_PARSE)) {
         if (unlock) {
             ERaGuardUnlock(this->mutex);
@@ -885,7 +916,7 @@ bool ERaModbus<Api>::actionModbus(ModbusAction_t& request) {
     }
 
     ModbusConfig_t* config = nullptr;
-    for (int i = 0; i < alias->readActionCount; ++i) {
+    for (ERaUInt_t i = 0; i < alias->readActionCount; ++i) {
         ERaGuardLock(this->mutex);
         this->eachActionModbus(request, alias->action[i], config);
         if (config == nullptr) {
@@ -903,7 +934,7 @@ bool ERaModbus<Api>::actionModbus(ModbusAction_t& request) {
 }
 
 template <class Api>
-ModbusConfig_t* ERaModbus<Api>::getModbusConfig(int id) {
+ModbusConfig_t* ERaModbus<Api>::getModbusConfig(ERaUInt_t id) {
     const ERaList<ModbusConfig_t*>::iterator* e = this->modbusControl->modbusConfigParam.end();
     for (ERaList<ModbusConfig_t*>::iterator* it = this->modbusControl->modbusConfigParam.begin(); it != e; it = it->getNext()) {
         if (it->get() == nullptr) {
@@ -962,7 +993,7 @@ bool ERaModbus<Api>::eachActionModbus(ModbusAction_t& request, Action_t& action,
 template <class Api>
 bool ERaModbus<Api>::actionModbusRaw(ModbusActionRaw_t& request) {
     bool status {false};
-    ModbusConfig_t config {0};
+    ModbusConfig_t config {};
     ModbusConfig_t* writeConfig = this->getModbusConfigWithAddress(request.addr);
 
     memcpy(&config.addr, &request.addr, 6);

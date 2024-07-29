@@ -39,6 +39,8 @@
     #include <ERa/ERaButton.hpp>
 #endif
 
+WiFiClient mbTcpClient;
+
 #if defined(BUTTON_PIN)
     ERaButton button;
     pthread_t pthreadButton;
@@ -104,6 +106,9 @@ void setup() {
 
     /* Set board id */
     // ERa.setBoardID("Board_1");
+
+    /* Setup Client for Modbus TCP/IP */
+    ERa.setModbusClient(mbTcpClient);
 
     /* White labeling App (use this ONLY if you have a branded ERa App) */
     // ERa.setVendorName("MyORG");

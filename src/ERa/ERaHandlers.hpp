@@ -123,6 +123,7 @@ typedef enum
 #define ERA_OPTION_CONNECTED()      void ERaOptConnected(void ERA_UNUSED *arg)
 #define ERA_MODBUS_BAUDRATE()       void ERaModbusBaudrate(uint32_t ERA_UNUSED &baudrate)
 #define ERA_MODBUS_INFO()           void ERaModbusInfo(cJSON ERA_UNUSED *root)
+#define ERA_SELF_INFO()             void ERaSelfInfo(cJSON ERA_UNUSED *root)
 #define ERA_INFO()                  void ERaInfo(cJSON ERA_UNUSED *root)
 #define ERA_WRITE_CONFIG()          void ERaWriteConfig(uint8_t ERA_UNUSED type)
 
@@ -161,6 +162,7 @@ ERA_APP_LOOP();
 ERA_OPTION_CONNECTED();
 ERA_MODBUS_BAUDRATE();
 ERA_MODBUS_INFO();
+ERA_SELF_INFO();
 ERA_INFO();
 ERA_WRITE_CONFIG();
 

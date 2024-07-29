@@ -699,11 +699,13 @@ public:
 };
 
 #include <Modbus/ERaModbusInternal.hpp>
+#include <Modbus/ERaModbusData.hpp>
 #include <Modbus/ERaModbusSlave.hpp>
 
 template <class Modbus>
 class ERaModbusTransp
     : public ERaModbusInternal
+    , public ERaModbusData
 {
     const char* TAG = "Modbus";
 
@@ -783,10 +785,12 @@ public:
         }
         if (status) {
             param.totalFail = 0;
+            ERaModbusData::handler(request, response, true, skip);
             this->thisModbus().onData(request, response, skip);
         }
         else {
             param.totalFail++;
+            ERaModbusData::handler(request, response, false, skip);
             this->thisModbus().onError(request, skip);
         }
         if (param.totalFail >= this->thisModbus().failCounter.max) {

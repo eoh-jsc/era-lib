@@ -73,6 +73,12 @@ public:
             case StateT::STATE_RUNNING:
                 Base::run();
                 break;
+            case StateT::STATE_CONNECTING_NEW_NETWORK:
+                Base::connectNewNetworkResult();
+                break;
+            case StateT::STATE_REQUEST_LIST_WIFI:
+                Base::responseListWiFi();
+                break;
             default:
                 ERaState::set(StateT::STATE_CONNECTING_CLOUD);
                 break;
@@ -92,13 +98,6 @@ inline
 void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
     int16_t signal = GetRSSINetwork();
 
-    cJSON_AddStringToObject(root, INFO_BOARD, ERA_BOARD_TYPE);
-    cJSON_AddStringToObject(root, INFO_MODEL, ERA_MODEL_TYPE);
-    cJSON_AddStringToObject(root, INFO_BOARD_ID, this->thisProto().getBoardID());
-    cJSON_AddStringToObject(root, INFO_AUTH_TOKEN, this->thisProto().getAuth());
-    cJSON_AddStringToObject(root, INFO_BUILD_DATE, BUILD_DATE_TIME);
-    cJSON_AddStringToObject(root, INFO_VERSION, ERA_VERSION);
-    cJSON_AddStringToObject(root, INFO_FIRMWARE_VERSION, ERA_FIRMWARE_VERSION);
     cJSON_AddNumberToObject(root, INFO_PLUG_AND_PLAY, 0);
     cJSON_AddStringToObject(root, INFO_NETWORK_PROTOCOL, GetNetworkProtocol());
     cJSON_AddStringToObject(root, INFO_SSID, GetSSIDNetwork());
@@ -108,9 +107,6 @@ void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
     cJSON_AddStringToObject(root, INFO_MAC, GetMACAddress(NULL));
     cJSON_AddStringToObject(root, INFO_LOCAL_IP, GetLocalIP(NULL));
     cJSON_AddNumberToObject(root, INFO_SSL, ERaInfoSSL(this->thisProto().getTransp().getPort()));
-    cJSON_AddNumberToObject(root, INFO_PING, this->thisProto().getTransp().getPing());
-    cJSON_AddNumberToObject(root, INFO_FREE_RAM, ERaFreeRam());
-    cJSON_AddStringToObject(root, INFO_RESET_REASON, "UNKNOWN");
 
     /* Override info */
     ERaInfo(root);
@@ -118,19 +114,30 @@ void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
 
 template <class Proto, class Flash>
 inline
-void ERaApi<Proto, Flash>::addModbusInfo(cJSON* root) {
+void ERaApi<Proto, Flash>::addSelfInfo(cJSON* root) {
     int16_t signal = GetRSSINetwork();
 
-    cJSON_AddNumberToObject(root, INFO_MB_CHIP_TEMPERATURE, 5000);
-    cJSON_AddNumberToObject(root, INFO_MB_TEMPERATURE, 0);
-    cJSON_AddNumberToObject(root, INFO_MB_VOLTAGE, 999);
-    cJSON_AddNumberToObject(root, INFO_MB_IS_BATTERY, 0);
-    cJSON_AddNumberToObject(root, INFO_MB_RSSI, signal);
-    cJSON_AddNumberToObject(root, INFO_MB_SIGNAL_STRENGTH, SignalToPercentage(signal));
-    cJSON_AddStringToObject(root, INFO_MB_WIFI_USING, GetSSIDNetwork());
+    cJSON_AddNumberToObject(root, SELF_CHIP_TEMPERATURE, 5000);
+    cJSON_AddNumberToObject(root, SELF_SIGNAL_STRENGTH, SignalToPercentage(signal));
 
-    /* Override modbus info */
-    ERaModbusInfo(root);
+    /* Override self info */
+    ERaSelfInfo(root);
 }
+
+#if defined(ERA_MODBUS)
+    template <class Proto, class Flash>
+    inline
+    void ERaApi<Proto, Flash>::addModbusInfo(cJSON* root) {
+        int16_t signal = GetRSSINetwork();
+
+        cJSON_AddNumberToObject(root, INFO_MB_CHIP_TEMPERATURE, 5000);
+        cJSON_AddNumberToObject(root, INFO_MB_RSSI, signal);
+        cJSON_AddNumberToObject(root, INFO_MB_SIGNAL_STRENGTH, SignalToPercentage(signal));
+        cJSON_AddStringToObject(root, INFO_MB_WIFI_USING, GetSSIDNetwork());
+
+        /* Override modbus info */
+        ERaModbusInfo(root);
+    }
+#endif
 
 #endif /* INC_ERA_LINUX_CLIENT_HPP_ */

@@ -46,6 +46,8 @@
 const char ssid[] = "YOUR_SSID";
 const char pass[] = "YOUR_PASSWORD";
 
+WiFiClient mbTcpClient;
+
 #if defined(BUTTON_PIN)
     ERaButton button;
     pthread_t pthreadButton;
@@ -113,6 +115,9 @@ void setup() {
 
     /* Set board id */
     // ERa.setBoardID("Board_1");
+
+    /* Setup Client for Modbus TCP/IP */
+    ERa.setModbusClient(mbTcpClient);
 
     /* Set scan WiFi. If activated, the board will scan
        and connect to the best quality WiFi. */

@@ -111,7 +111,7 @@
 #if defined(DEFAULT_INFO_PUBLISH_RETAINED)
     #define ERA_INFO_PUBLISH_RETAINED   DEFAULT_INFO_PUBLISH_RETAINED
 #else
-    #define ERA_INFO_PUBLISH_RETAINED   ERA_MQTT_PUBLISH_RETAINED
+    #define ERA_INFO_PUBLISH_RETAINED   false
 #endif
 
 #if defined(DEFAULT_SOCKET_TIMEOUT)
@@ -179,6 +179,14 @@
 #define INFO_RESET_REASON               "reset_reason"
 #define BUILD_DATE_TIME                 __DATE__ " " __TIME__
 
+#define SELF_MB_FAIL                    "modbus_fail"
+#define SELF_MB_TOTAL                   "modbus_total"
+#define SELF_TEMPERATURE                "temperature"
+#define SELF_CHIP_TEMPERATURE           "internal_temperature"
+#define SELF_IS_BATTERY                 "is_battery"
+#define SELF_VOLTAGE                    "volt"
+#define SELF_SIGNAL_STRENGTH            "signal"
+
 #define INFO_MB_DATA                    "data"
 #define INFO_MB_ACK                     "ack"
 #define INFO_MB_SCAN                    "scan"
@@ -188,8 +196,8 @@
 #define INFO_MB_TOTAL_WRITE             "modbus_total_write"
 #define INFO_MB_CHIP_TEMPERATURE        "chip_temperature"
 #define INFO_MB_TEMPERATURE             "temperature"
-#define INFO_MB_VOLTAGE                 "voltage"
 #define INFO_MB_IS_BATTERY              "is_battery"
+#define INFO_MB_VOLTAGE                 "voltage"
 #define INFO_MB_RSSI                    "rssi"
 #define INFO_MB_SIGNAL_STRENGTH         "signal_strength"
 #define INFO_MB_WIFI_USING              "wifi_is_using"

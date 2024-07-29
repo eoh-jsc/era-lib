@@ -325,104 +325,106 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const ERaDataBuff& arrayTopi
     item = nullptr;
 }
 
-template <class Proto, class Flash>
-inline
-void ERaApi<Proto, Flash>::handlePinRequest(const ERaDataBuff& arrayTopic, const char* payload) {
-    cJSON* root = cJSON_Parse(payload);
-    if (!cJSON_IsObject(root)) {
-        cJSON_Delete(root);
-        root = nullptr;
-        return;
-    }
-
-    ERaParam param;
-    PinConfig_t pin {};
-    cJSON* current = nullptr;
-
-    for (current = root->child; current != nullptr && current->string != nullptr; current = current->next) {
-        if (this->getGPIOPin(current, "virtual_pin", pin.pin)) {
-            if (cJSON_IsNumber(current)) {
-                param = current->valuedouble;
-            }
-            else if (cJSON_IsString(current)) {
-                param.add_static(current->valuestring);
-            }
-            this->callERaWriteHandler(pin.pin, param);
-            continue;
+#if defined(ERA_PIN_DEBUG)
+    template <class Proto, class Flash>
+    inline
+    void ERaApi<Proto, Flash>::handlePinRequest(const ERaDataBuff& arrayTopic, const char* payload) {
+        cJSON* root = cJSON_Parse(payload);
+        if (!cJSON_IsObject(root)) {
+            cJSON_Delete(root);
+            root = nullptr;
+            return;
         }
-        if (this->getGPIOPin(current, "pin_mode", pin.pin)) {
-            if (!cJSON_IsString(current)) {
+
+        ERaParam param;
+        PinConfig_t pin {};
+        cJSON* current = nullptr;
+
+        for (current = root->child; current != nullptr && current->string != nullptr; current = current->next) {
+            if (this->getGPIOPin(current, "virtual_pin", pin.pin)) {
+                if (cJSON_IsNumber(current)) {
+                    param = current->valuedouble;
+                }
+                else if (cJSON_IsString(current)) {
+                    param.add_static(current->valuestring);
+                }
+                this->callERaWriteHandler(pin.pin, param);
                 continue;
             }
-            ERA_CHECK_PIN(pin.pin);
-
-            this->getReportConfig(root, pin);
-
-            if (ERaStrCmp(current->valuestring, "output")) {
-                pinMode(pin.pin, OUTPUT);
-            }
-            else if (ERaStrCmp(current->valuestring, "open_drain")) {
-                pinMode(pin.pin, OUTPUT_OPEN_DRAIN);
-            }
-            else if (ERaStrCmp(current->valuestring, "pwm")) {
-                pinMode(pin.pin, OUTPUT);
-                ERA_SET_DEBUG_PIN_REPORT(PWM, nullptr);
-            }
-            else if (ERaStrCmp(current->valuestring, "input")) {
-                pinMode(pin.pin, INPUT);
-                ERA_SET_DEBUG_PIN_REPORT(INPUT, digitalReadArduino);
-            }
-            else if (ERaStrCmp(current->valuestring, "pullup")) {
-                pinMode(pin.pin, INPUT_PULLUP);
-                ERA_SET_DEBUG_PIN_REPORT(INPUT_PULLUP, digitalReadArduino);
-            }
-            else if (ERaStrCmp(current->valuestring, "pulldown")) {
-                pinMode(pin.pin, INPUT_PULLDOWN);
-                ERA_SET_DEBUG_PIN_REPORT(INPUT_PULLDOWN, digitalReadArduino);
-            }
-            else if (ERaStrCmp(current->valuestring, "analog")) {
-#if defined(ESP32)
-                pinMode(pin.pin, ANALOG);
-#elif defined(ARDUINO_ARCH_STM32)
-                if (!digitalpinIsAnalogInput(pin.pin)) {
+            if (this->getGPIOPin(current, "pin_mode", pin.pin)) {
+                if (!cJSON_IsString(current)) {
                     continue;
                 }
-                pin.pin = digitalPinToAnalogInput(pin.pin) + PNUM_ANALOG_BASE;
-                pinMode(pin.pin, ANALOG);
-#endif
-                ERA_SET_DEBUG_PIN_REPORT(ANALOG, analogReadArduino);
-            }
-            else if (ERaStrCmp(current->valuestring, "remove")) {
-                this->ERaPinRp.deleteWithPin(pin.pin);
-            }
-            continue;
-        }
-        if (this->getGPIOPin(current, "digital_pin", pin.pin)) {
-            ERA_CHECK_PIN(pin.pin);
-            ERaParam param(current->valueint);
-            pinMode(pin.pin, OUTPUT);
-            if (current->valueint == TOGGLE) {
-                ::digitalWrite(pin.pin, ((digitalReadArduino(pin.pin) == LOW) ? HIGH : LOW));
-            }
-            else {
-                ::digitalWrite(pin.pin, current->valueint ? HIGH : LOW);
-            }
-            this->digitalWrite(pin.pin, digitalReadArduino(pin.pin));
-            this->callERaPinWriteHandler(pin.pin, param, param);
-            continue;
-        }
-        if (this->getGPIOPin(current, "pwm_pin", pin.pin)) {
-            ERA_CHECK_PIN(pin.pin);
-#if !defined(ERA_IGNORE_ANALOG_WRITE)
-            ::analogWrite(pin.pin, current->valueint);
-#endif
-            continue;
-        }
-    }
+                ERA_CHECK_PIN(pin.pin);
 
-    cJSON_Delete(root);
-    root = nullptr;
-    ERA_FORCE_UNUSED(arrayTopic);
-}
+                this->getReportConfig(root, pin);
+
+                if (ERaStrCmp(current->valuestring, "output")) {
+                    pinMode(pin.pin, OUTPUT);
+                }
+                else if (ERaStrCmp(current->valuestring, "open_drain")) {
+                    pinMode(pin.pin, OUTPUT_OPEN_DRAIN);
+                }
+                else if (ERaStrCmp(current->valuestring, "pwm")) {
+                    pinMode(pin.pin, OUTPUT);
+                    ERA_SET_DEBUG_PIN_REPORT(PWM, nullptr);
+                }
+                else if (ERaStrCmp(current->valuestring, "input")) {
+                    pinMode(pin.pin, INPUT);
+                    ERA_SET_DEBUG_PIN_REPORT(INPUT, digitalReadArduino);
+                }
+                else if (ERaStrCmp(current->valuestring, "pullup")) {
+                    pinMode(pin.pin, INPUT_PULLUP);
+                    ERA_SET_DEBUG_PIN_REPORT(INPUT_PULLUP, digitalReadArduino);
+                }
+                else if (ERaStrCmp(current->valuestring, "pulldown")) {
+                    pinMode(pin.pin, INPUT_PULLDOWN);
+                    ERA_SET_DEBUG_PIN_REPORT(INPUT_PULLDOWN, digitalReadArduino);
+                }
+                else if (ERaStrCmp(current->valuestring, "analog")) {
+    #if defined(ESP32)
+                    pinMode(pin.pin, ANALOG);
+    #elif defined(ARDUINO_ARCH_STM32)
+                    if (!digitalpinIsAnalogInput(pin.pin)) {
+                        continue;
+                    }
+                    pin.pin = digitalPinToAnalogInput(pin.pin) + PNUM_ANALOG_BASE;
+                    pinMode(pin.pin, ANALOG);
+    #endif
+                    ERA_SET_DEBUG_PIN_REPORT(ANALOG, analogReadArduino);
+                }
+                else if (ERaStrCmp(current->valuestring, "remove")) {
+                    this->ERaPinRp.deleteWithPin(pin.pin);
+                }
+                continue;
+            }
+            if (this->getGPIOPin(current, "digital_pin", pin.pin)) {
+                ERA_CHECK_PIN(pin.pin);
+                ERaParam param(current->valueint);
+                pinMode(pin.pin, OUTPUT);
+                if (current->valueint == TOGGLE) {
+                    ::digitalWrite(pin.pin, ((digitalReadArduino(pin.pin) == LOW) ? HIGH : LOW));
+                }
+                else {
+                    ::digitalWrite(pin.pin, current->valueint ? HIGH : LOW);
+                }
+                this->digitalWrite(pin.pin, digitalReadArduino(pin.pin));
+                this->callERaPinWriteHandler(pin.pin, param, param);
+                continue;
+            }
+            if (this->getGPIOPin(current, "pwm_pin", pin.pin)) {
+                ERA_CHECK_PIN(pin.pin);
+    #if !defined(ERA_IGNORE_ANALOG_WRITE)
+                ::analogWrite(pin.pin, current->valueint);
+    #endif
+                continue;
+            }
+        }
+
+        cJSON_Delete(root);
+        root = nullptr;
+        ERA_FORCE_UNUSED(arrayTopic);
+    }
+#endif
 
 #endif /* INC_ERA_API_ARDUINO_HPP_ */

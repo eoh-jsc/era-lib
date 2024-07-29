@@ -30,7 +30,6 @@
 
 /*
 * Download the Micro-RTSP library at:
-* https://github.com/geeksville/Micro-RTSP.git#fc43f56
 * https://github.com/geeksville/Micro-RTSP/tree/fc43f56
 * 
 * Refer to the installation guide for the Arduino library zip file here:

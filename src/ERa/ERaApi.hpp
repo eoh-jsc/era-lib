@@ -227,6 +227,13 @@ public:
     }
 #endif
 
+    template <typename... Args>
+    void selfWrite(const Args&... tail) {
+        ERaDataJson data;
+        data.add_multi(tail...);
+        this->selfWriteReal(data);
+    }
+
     void eraseAllConfigs() {
         this->beginFlash();
         this->removePinConfig();
@@ -334,7 +341,10 @@ protected:
     void initERaApiTask();
     void runERaApiTask();
     void addInfo(cJSON* root);
+    void addSelfInfo(cJSON* root);
+#if defined(ERA_MODBUS)
     void addModbusInfo(cJSON* root);
+#endif
     void handleReadPin(cJSON* root);
     void handleWritePin(cJSON* root);
     void handleVirtualPin(cJSON* root);
@@ -342,7 +352,6 @@ protected:
     void processArduinoPinRequest(const ERaDataBuff& arrayTopic, const char* payload);
     void processVirtualPinRequest(const ERaDataBuff& arrayTopic, const char* payload);
     void processWifiRequest(const ERaDataBuff& arrayTopic, const char* payload);
-    void sendResultChangeWifi();
     void initPinConfig();
     void parsePinConfig(const char* str);
     void storePinConfig(const char* str);
@@ -577,13 +586,13 @@ protected:
 #endif
 
 private:
-    int8_t _changing_wifi_success = -1;
     template <typename T>
-    void virtualWriteSingle(int pin, const T& value, bool json = false) {
+    void virtualWriteSingle(int pin, const T& value, bool json = false,
+                            bool retained = ERA_MQTT_PUBLISH_RETAINED) {
         ERaRsp_t rsp;
         rsp.type = ERaTypeWriteT::ERA_WRITE_VIRTUAL_PIN;
         rsp.json = json;
-        rsp.retained = ERA_MQTT_PUBLISH_RETAINED;
+        rsp.retained = retained;
         rsp.id = pin;
         rsp.param = value;
         this->thisProto().sendCommand(rsp);
@@ -616,6 +625,16 @@ private:
         rsp.retained = ERA_MQTT_PUBLISH_RETAINED;
         rsp.id = 0;
         rsp.param = data.getObject();
+        this->thisProto().sendCommand(rsp);
+    }
+
+    void selfWriteReal(ERaDataJson& value) {
+        ERaRsp_t rsp;
+        rsp.type = ERaTypeWriteT::ERA_WRITE_SELF_DATA;
+        rsp.json = true;
+        rsp.retained = ERA_MQTT_PUBLISH_RETAINED;
+        rsp.id = 0;
+        rsp.param = value.getObject();
         this->thisProto().sendCommand(rsp);
     }
 
@@ -822,129 +841,6 @@ void ERaApi<Proto, Flash>::processVirtualPinRequest(const ERaDataBuff& arrayTopi
     cJSON_Delete(root);
     root = nullptr;
     item = nullptr;
-}
-
-#if defined(ESP32)
-
-#include <WiFi.h>
-
-const char* scanWiFi() {
-    int nets = WiFi.scanNetworks(false, true, false, 150);
-    if (nets < 0) {
-        ERA_LOG("WiFi", "Failed to scan networks");
-        return nullptr;
-    }
-
-    static ERaJson json;
-    json.reset();
-    for (int i = 0; i < nets; ++i) {
-        json[i]["ssid"] = WiFi.SSID(i).c_str();
-        json[i]["rssi"] = WiFi.RSSI(i);
-        json[i]["bssid"] = WiFi.BSSIDstr(i).c_str();
-        json[i]["channel"] = WiFi.channel(i);
-        switch (WiFi.encryptionType(i)) {
-            case wifi_auth_mode_t::WIFI_AUTH_WEP:
-                json[i]["encryption"] = "WEP";
-                break;
-            case wifi_auth_mode_t::WIFI_AUTH_WPA_PSK:
-                json[i]["encryption"] = "WPA/PSK";
-                break;
-            case wifi_auth_mode_t::WIFI_AUTH_WPA2_PSK:
-                json[i]["encryption"] = "WPA2/PSK";
-                break;
-            case wifi_auth_mode_t::WIFI_AUTH_WPA_WPA2_PSK:
-                json[i]["encryption"] = "WPA/WPA2/PSK";
-                break;
-            case wifi_auth_mode_t::WIFI_AUTH_OPEN:
-                json[i]["encryption"] = "OPEN";
-                break;
-            default:
-                json[i]["encryption"] = "UNKNOWN";
-                break;
-        }
-    }
-
-    WiFi.scanDelete();
-    return json.getString();
-}
-
-bool tryConnectWifi(const char* newSsid, const char* newPassword) {
-    WiFi.disconnect();
-
-    if (newPassword) {
-        WiFi.begin(newSsid, newPassword);
-    } else {
-        WiFi.begin(newSsid);
-    }
-
-    for (int i = 0; i < 100; i++) { // 10s
-        if (WiFi.isConnected()) {
-            return true;
-        }
-        delay(100);
-    }
-    return false;
-}
-
-bool changeWifi(const char* newSsid, const char* newPassword) {
-    if (tryConnectWifi(newSsid, newPassword)) {
-        return true;
-    }
-    WiFi.disconnect();
-    return false;
-}
-#else
-const char* scanWiFi() {
-    return nullptr;
-}
-
-bool changeWifi(const char* newSsid, const char* newPassword) {
-    return false;
-}
-#endif
-
-template <class Proto, class Flash>
-inline
-void ERaApi<Proto, Flash>::processWifiRequest(const ERaDataBuff& arrayTopic, const char* payload) {
-    if (arrayTopic.size() != 3) {
-        return;
-    }
-    if (arrayTopic.at(2) == "ask")
-    {
-        this->thisProto().getTransp().publishChipData(
-            "/wifi/list",
-            scanWiFi()
-        );
-    }
-    else if (arrayTopic.at(2) == "change") {
-        cJSON* root = cJSON_Parse(payload);
-        if (!cJSON_IsObject(root)) {
-            cJSON_Delete(root);
-            root = nullptr;
-            return;
-        }
-        cJSON* ssidItem = cJSON_GetObjectItem(root, "ssid");
-        cJSON* passwordItem = cJSON_GetObjectItem(root, "password");
-        const char * ssid = ssidItem->valuestring;
-        const char * password = passwordItem->valuestring;
-        this->_changing_wifi_success = changeWifi(ssid, password) ? 1 : 0;
-        cJSON_Delete(root);
-        root = nullptr;
-    }
-}
-
-template <class Proto, class Flash>
-inline
-void ERaApi<Proto, Flash>::sendResultChangeWifi() {
-    if (this->_changing_wifi_success == -1) {
-        return;
-    }
-    if(this->thisProto().getTransp().publishChipData(
-        "/wifi/change_result",
-        this->_changing_wifi_success ? "{\"success\": 1}" : "{\"success\": 0}"
-    )) {
-        this->_changing_wifi_success = -1;
-    }
 }
 
 template <class Proto, class Flash>
@@ -1555,6 +1451,15 @@ void ERaApi<Proto, Flash>::callERaProHandler(const char* deviceId, const cJSON* 
     }
 #endif
 
+#endif
+
+#if !defined(ERA_PIN_DEBUG)
+    template <class Proto, class Flash>
+    inline
+    void ERaApi<Proto, Flash>::handlePinRequest(const ERaDataBuff& arrayTopic, const char* payload) {
+        ERA_FORCE_UNUSED(arrayTopic);
+        ERA_FORCE_UNUSED(payload);
+    }
 #endif
 
 template <typename T>
