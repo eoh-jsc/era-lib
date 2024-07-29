@@ -9,12 +9,12 @@ extern "C" {
 
 #if defined(ERA_RESET_REASON)
     static inline
-    String SystemGetResetReason() {
+    const char* SystemGetResetReason() {
         struct rst_info* rtcInfo = system_get_rst_info();
         if (rtcInfo == NULL) {
             return "UNKNOWN";
         }
-        String rstReason;
+        const char* rstReason = "UNKNOWN";
         switch (rtcInfo->reason) {
             case 0:
                 rstReason = "REASON_DEFAULT_RST";       /** <0, Normal startup by power on */

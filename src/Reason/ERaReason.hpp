@@ -14,8 +14,8 @@
         #define ERA_RESET_REASON
 
         static inline
-        String SystemGetResetReason() {
-            return String("UNKNOWN");
+        const char* SystemGetResetReason() {
+            return "UNKNOWN";
         }
     #endif
 #endif

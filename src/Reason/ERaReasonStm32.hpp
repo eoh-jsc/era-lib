@@ -43,8 +43,8 @@
     }
 
     static inline
-    String SystemGetResetReason() {
-        String rstReason;
+    const char* SystemGetResetReason() {
+        const char* rstReason = "UNKNOWN";
         int reason = SystemGetFlagReason();
         switch (reason) {
             case 0:

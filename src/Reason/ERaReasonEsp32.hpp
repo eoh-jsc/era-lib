@@ -31,8 +31,8 @@
 
 #if defined(ERA_RESET_REASON)
     static inline
-    String SystemGetResetReason() {
-        String rstReason;
+    const char* SystemGetResetReason() {
+        const char* rstReason = "UNKNOWN";
         int reason = rtc_get_reset_reason(0);
         switch (reason) {
             case 1:

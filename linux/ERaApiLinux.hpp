@@ -142,35 +142,37 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const ERaDataBuff& arrayTopi
     item = nullptr;
 }
 
-template <class Proto, class Flash>
-inline
-void ERaApi<Proto, Flash>::handlePinRequest(const ERaDataBuff& arrayTopic, const char* payload) {
-    cJSON* root = cJSON_Parse(payload);
-    if (!cJSON_IsObject(root)) {
+#if defined(ERA_PIN_DEBUG)
+    template <class Proto, class Flash>
+    inline
+    void ERaApi<Proto, Flash>::handlePinRequest(const ERaDataBuff& arrayTopic, const char* payload) {
+        cJSON* root = cJSON_Parse(payload);
+        if (!cJSON_IsObject(root)) {
+            cJSON_Delete(root);
+            root = nullptr;
+            return;
+        }
+
+        ERaParam param;
+        PinConfig_t pin {};
+        cJSON* current = nullptr;
+
+        for (current = root->child; current != nullptr && current->string != nullptr; current = current->next) {
+            if (this->getGPIOPin(current, "virtual_pin", pin.pin)) {
+                if (cJSON_IsNumber(current)) {
+                    param = current->valuedouble;
+                }
+                else if (cJSON_IsString(current)) {
+                    param.add_static(current->valuestring);
+                }
+                this->callERaWriteHandler(pin.pin, param);
+            }
+        }
+
         cJSON_Delete(root);
         root = nullptr;
-        return;
+        ERA_FORCE_UNUSED(arrayTopic);
     }
-
-    ERaParam param;
-    PinConfig_t pin {};
-    cJSON* current = nullptr;
-
-    for (current = root->child; current != nullptr && current->string != nullptr; current = current->next) {
-        if (this->getGPIOPin(current, "virtual_pin", pin.pin)) {
-            if (cJSON_IsNumber(current)) {
-                param = current->valuedouble;
-            }
-            else if (cJSON_IsString(current)) {
-                param.add_static(current->valuestring);
-            }
-            this->callERaWriteHandler(pin.pin, param);
-        }
-    }
-
-    cJSON_Delete(root);
-    root = nullptr;
-    ERA_FORCE_UNUSED(arrayTopic);
-}
+#endif
 
 #endif /* INC_ERA_API_LINUX_HPP_ */
