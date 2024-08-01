@@ -28,6 +28,8 @@ static uint16_t port;
 static const char* user;
 static const char* pass;
 
+ERaSocket mbTcpClient;
+
 /* This function will run every time ERa is connected */
 ERA_CONNECTED() {
     printf("ERa connected!\r\n");
@@ -51,6 +53,9 @@ ERA_DISCONNECTED() {
 void setup() {
     /* Setup Zigbee */
     setupZigbee();
+
+    /* Setup Client for Modbus TCP/IP */
+    ERa.setModbusClient(mbTcpClient);
 
     ERa.setAppLoop(false);
     ERa.setBoardID(boardID);

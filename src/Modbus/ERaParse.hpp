@@ -20,6 +20,10 @@
     #define MAX_ALIAS_MODBUS            100
 #endif
 
+#ifndef MAX_ACTION_MODBUS
+    #define MAX_ACTION_MODBUS           10
+#endif
+
 #ifndef DEFAULT_MODBUS_BAUD_SPEED
     #define DEFAULT_MODBUS_BAUD_SPEED   9600
 #endif
@@ -35,6 +39,8 @@
 #ifndef DEFAULT_MIN_MODBUS_INTERVAL
     #define DEFAULT_MIN_MODBUS_INTERVAL 1000
 #endif
+
+#define MODBUS_VERSION_SUPPORT_JSON     9
 
 typedef struct __SensorDelay_t {
     ERaUInt_t delay;
@@ -68,14 +74,14 @@ typedef struct __Action_t {
     uint8_t len1;
     uint8_t len2;
     uint8_t extra[10];
+    uint16_t delay;
 } Action_t;
 
 typedef struct __ModbusConfigAlias_t {
     ERaUInt_t readActionCount;
     ERaUInt_t id;
     char key[37];
-    Action_t action[10];
-    uint16_t timer;
+    Action_t action[MAX_ACTION_MODBUS];
 } ModbusConfigAlias_t;
 
 typedef struct __ModbusWriteOption_t {
@@ -131,6 +137,7 @@ public:
         : id(0UL)
         , prevId(0UL)
         , baudSpeed(DEFAULT_MODBUS_BAUD_SPEED)
+        , isJson(false)
         , isWiFi(false)
         , ssid {}
         , pass {}
@@ -179,6 +186,7 @@ public:
     ERaUInt_t id;
     ERaUInt_t prevId;
     ERaUInt_t baudSpeed;
+    bool isJson;
     bool isWiFi;
     char ssid[64];
     char pass[64];
@@ -255,8 +263,15 @@ private:
     void processParseConfigJson(const void* ptr);
     void processParseConfigSensorDelayJson(const cJSON* const root, uint8_t addr);
     void processParseConfigSensorIpJson(const cJSON* const root, uint8_t type, IPSlave_t& ipSlave);
+
     ModbusConfig_t* processParseConfigSensorParamJson(const cJSON* const root, uint8_t addr, IPSlave_t& ipSlave, ModbusConfig_t* prevConfig);
     void processParseConfigSensorParamsJson(const cJSON* const root, uint8_t addr, IPSlave_t& ipSlave);
+
+    void processParseConfigSensorActionItemJson(const cJSON* const root, ModbusConfigAlias_t& config);
+    void processParseConfigSensorActionItemsJson(const cJSON* const root, ModbusConfigAlias_t& config);
+    void processParseConfigSensorActionJson(const cJSON* const root);
+    void processParseConfigSensorActionsJson(const cJSON* const root);
+
     void processParseConfigSensorJson(const cJSON* const root);
     void processParseConfigSensorsJson(const cJSON* const root);
 
@@ -404,6 +419,7 @@ void ERaModbusEntry::parseConfig(const void* ptr, bool json) {
         return;
     }
 
+    this->isJson = json;
     this->isWiFi = false;
     this->hasTcpIp = false;
     this->sensorCount = 0;
@@ -1050,7 +1066,7 @@ void ERaModbusEntry::processParseConfigJson(const void* ptr) {
     if (!cJSON_IsNumber(version)) {
         return;
     }
-    if (version->valueint != 10) {
+    if (version->valueint < MODBUS_VERSION_SUPPORT_JSON) {
         return;
     }
 
@@ -1229,6 +1245,107 @@ void ERaModbusEntry::processParseConfigSensorParamsJson(const cJSON* const root,
 }
 
 inline
+void ERaModbusEntry::processParseConfigSensorActionItemJson(const cJSON* const root, ModbusConfigAlias_t& config) {
+    if (config.readActionCount >= MAX_ACTION_MODBUS) {
+        return;
+    }
+    Action_t& action = config.action[config.readActionCount];
+
+    cJSON* id = cJSON_GetObjectItem(root, MODBUS_ACTION_ITEM_CONFIG_ID_KEY);
+    if (cJSON_IsNumber(id)) {
+        action.id = id->valueint;
+    }
+
+    cJSON* len = cJSON_GetObjectItem(root, MODBUS_ACTION_ITEM_LENGTH_KEY);
+    if (cJSON_IsNumber(len)) {
+        action.len1 = HI_WORD(len->valueint);
+        action.len2 = LO_WORD(len->valueint);
+    }
+
+    cJSON* extra = cJSON_GetObjectItem(root, MODBUS_ACTION_ITEM_EXTRA_KEY);
+    if (cJSON_IsString(extra)) {
+        ERaModbusEntry::stringToUint8(action.extra, extra->valuestring);
+    }
+
+    cJSON* delay = cJSON_GetObjectItem(root, MODBUS_ACTION_ITEM_DELAY_KEY);
+    if (cJSON_IsNumber(delay)) {
+        action.delay = delay->valueint;
+    }
+
+    config.readActionCount++;
+}
+
+inline
+void ERaModbusEntry::processParseConfigSensorActionItemsJson(const cJSON* const root, ModbusConfigAlias_t& config) {
+    size_t size = cJSON_GetArraySize(root);
+
+    config.readActionCount = 0;
+    for (size_t i = 0; i < size; ++i) {
+        cJSON* item = cJSON_GetArrayItem(root, i);
+        if (!cJSON_IsObject(item)) {
+            continue;
+        }
+        this->processParseConfigSensorActionItemJson(item, config);
+    }
+}
+
+inline
+void ERaModbusEntry::processParseConfigSensorActionJson(const cJSON* const root) {
+    if (this->readConfigAliasCount >= MAX_ALIAS_MODBUS) {
+        return;
+    }
+
+    bool newItem {false};
+    ModbusConfigAlias_t* config = nullptr;
+    ERaList<ModbusConfigAlias_t*>::iterator* it = nullptr;
+
+    it = this->modbusConfigAliasParam.get(this->readConfigAliasCount);
+    if (it != nullptr) {
+        config = it->get();
+    }
+    if (config == nullptr) {
+        newItem = true;
+        config = this->create<ModbusConfigAlias_t>();
+    }
+    if (config == nullptr) {
+        return;
+    }
+
+    cJSON* id = cJSON_GetObjectItem(root, MODBUS_ACTION_ID_KEY);
+    if (cJSON_IsNumber(id)) {
+        config->id = id->valueint;
+    }
+
+    cJSON* key = cJSON_GetObjectItem(root, MODBUS_ACTION_KEY_KEY);
+    if (cJSON_IsString(key) && (strlen(key->valuestring) == 36)) {
+        memcpy(config->key, key->valuestring, 36);
+    }
+
+    cJSON* items = cJSON_GetObjectItem(root, MODBUS_ACTION_ITEMS_KEY);
+    if (cJSON_IsArray(items)) {
+        this->processParseConfigSensorActionItemsJson(items, *config);
+    }
+
+    if (newItem) {
+        this->modbusConfigAliasParam.put(config);
+    }
+    this->readConfigAliasCount++;
+}
+
+inline
+void ERaModbusEntry::processParseConfigSensorActionsJson(const cJSON* const root) {
+    size_t size = cJSON_GetArraySize(root);
+
+    for (size_t i = 0; i < size; ++i) {
+        cJSON* action = cJSON_GetArrayItem(root, i);
+        if (!cJSON_IsObject(action)) {
+            continue;
+        }
+        this->processParseConfigSensorActionJson(action);
+    }
+}
+
+inline
 void ERaModbusEntry::processParseConfigSensorJson(const cJSON* const root) {
     cJSON* type = cJSON_GetObjectItem(root, MODBUS_SENSOR_TYPE_KEY);
     if (!cJSON_IsNumber(type)) {
@@ -1249,6 +1366,12 @@ void ERaModbusEntry::processParseConfigSensorJson(const cJSON* const root) {
         return;
     }
     this->processParseConfigSensorParamsJson(configs, address->valueint, ipSlave);
+
+    cJSON* actions = cJSON_GetObjectItem(root, MODBUS_SENSOR_ALIAS_CONFIGS_KEY);
+    if (!cJSON_IsArray(actions)) {
+        return;
+    }
+    this->processParseConfigSensorActionsJson(actions);
 }
 
 inline

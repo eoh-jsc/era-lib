@@ -622,6 +622,11 @@ bool ERaProto<Transp, Flash>::processActionChip(const char* payload, cJSON* root
             item = cJSON_GetObjectItem(dataItem, "control");
             if (cJSON_IsString(item)) {
                 Base::Modbus::parseModbusConfig(item->valuestring, hash, payload, true, false);
+                break;
+            }
+            item = cJSON_GetObjectItem(dataItem, "modbus_control");
+            if (cJSON_IsObject(item)) {
+                Base::Modbus::parseModbusConfig(item, hash, payload, true, true);
             }
             break;
         case ERaChipCfgT::CHIP_CONTROL_ALIAS: {
@@ -645,7 +650,7 @@ bool ERaProto<Transp, Flash>::processActionChip(const char* payload, cJSON* root
                     if (cJSON_IsString(keyItem)) {
                         // Handle command
                         Base::Modbus::addModbusAction(keyItem->valuestring,
-                                                        typeAction, paramAction);
+                                                    typeAction, paramAction);
                     }
                 }
             }

@@ -274,6 +274,9 @@ public:
     }
 
     void updateCRC() {
+        if (!this->request->isRTU()) {
+            return;
+        }
         uint16_t crc = this->request->modbusCRC(this->buffer, this->length - 2);
         this->buffer[this->length - 1] = HI_WORD(crc);
         this->buffer[this->length - 2] = LO_WORD(crc);

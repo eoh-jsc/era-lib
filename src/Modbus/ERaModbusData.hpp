@@ -486,24 +486,24 @@ void ERaModbusData::processParseConfigSensorParam(const cJSON* const root, uint8
                 it.setInt16();
             }
             else if (ERaStrCmp(transformer->valuestring, "uint_32")) {
-                it.setUint32().setLength(2);
+                it.setUint32().setMidLittleEndian().setLength(2);
             }
             else if (ERaStrCmp(transformer->valuestring, "int_first4") ||
                      ERaStrCmp(transformer->valuestring, "int_last4")) {
                 it.setInt32().setLength(2);
             }
             else if (ERaStrCmp(transformer->valuestring, "float_abcd")) {
-                it.setBigEndian().setLength(2);
+                it.setFloat().setBigEndian().setLength(2);
             }
             else if (ERaStrCmp(transformer->valuestring, "float_dcba")) {
-                it.setLittleEndian().setLength(2);
+                it.setFloat().setLittleEndian().setLength(2);
             }
             else if (ERaStrCmp(transformer->valuestring, "float_badc")) {
-                it.setMidBigEndian().setLength(2);
+                it.setFloat().setMidBigEndian().setLength(2);
             }
             else if (ERaStrCmp(transformer->valuestring, "float_cdab") ||
                      ERaStrCmp(transformer->valuestring, "float_cdba")) {
-                it.setMidLittleEndian().setLength(2);
+                it.setFloat().setMidLittleEndian().setLength(2);
             }
             else if (ERaStrCmp(transformer->valuestring, "convert_ai")) {
                 it.setUint16();
@@ -575,7 +575,7 @@ void ERaModbusData::parseConfig(const void* ptr, bool json) {
     if (!cJSON_IsNumber(version)) {
         return;
     }
-    if (version->valueint != 10) {
+    if (version->valueint < MODBUS_VERSION_SUPPORT_JSON) {
         return;
     }
 
@@ -694,7 +694,7 @@ bool ERaModbusData::handlerBytes(ERaModbusRequest* request, ERaModbusResponse* r
 
         uint8_t expectedLen {0};
         uint8_t byteIndex = (BUILD_WORD(pReg->sa1, pReg->sa2) - request->getAddress());
-                byteIndex = ((byteIndex + BUILD_WORD(pReg->len1, pReg->len2) - 1) * 2);
+                byteIndex *= 2;
         uint8_t* pData = response->getData();
         switch (pReg->type) {
             case ModbusDataT::MODBUS_INT16:
