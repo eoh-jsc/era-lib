@@ -290,6 +290,10 @@ protected:
         this->thisApi().configIdWrite(configId, value);
     }
 
+    void configIdModbusRemove(ERaInt_t configId) override {
+        this->thisApi().configIdRemove(configId);
+    }
+
     void clearDataBuff() {
         this->dataBuff.clearBuffer();
     }
@@ -413,6 +417,13 @@ private:
             this->modbusConfig->resize();
             this->modbusControl->resize();
             this->initModbus(true);
+            ERaDelay(500);
+            if (ModbusTransp::isNewReport()) {
+                this->thisApi().modbusDataRemove();
+            }
+            else {
+                ModbusTransp::removeConfigId();
+            }
         }
         ModbusState::set(ModbusStateT::STATE_MB_RUNNING);
     }

@@ -271,6 +271,7 @@ protected:
     bool sendChangeResultWiFi(const char* payload);
     bool publishData(const char* prefixTopic, const char* payload,
                             bool retained, bool extended = false);
+    bool removeRetainedData(const char* prefixTopic);
     bool isConfigMode();
     void onConnected();
     void onDisconnected();
@@ -322,7 +323,9 @@ private:
     void sendCommandVirtual(ERaRsp_t& rsp, ERaDataJson* data);
 #if defined(ERA_MODBUS)
     void sendCommandModbus(ERaRsp_t& rsp, ERaDataBuff* data);
+    void removeRetainedModbusData();
 #endif
+    void removeRetainedConfigIdData(ERaInt_t configId);
 
     void processRequest(const char* topic, const char* payload);
 #if !defined(ERA_HAS_FUNCTIONAL_H)
@@ -1021,6 +1024,11 @@ bool ERaProto<Transp, Flash>::publishData(const char* prefixTopic, const char* p
 }
 
 template <class Transp, class Flash>
+bool ERaProto<Transp, Flash>::removeRetainedData(const char* prefixTopic) {
+    return this->publishData(prefixTopic, "", true);
+}
+
+template <class Transp, class Flash>
 bool ERaProto<Transp, Flash>::sendListWiFi(const char* payload) {
     return this->publishData(ERA_PUB_PREFIX_LIST_WIFI_TOPIC,
                                             payload, false);
@@ -1640,7 +1648,20 @@ void ERaProto<Transp, Flash>::sendCommandVirtual(ERaRsp_t& rsp, ERaDataJson* dat
         cJSON_Delete(root);
         root = nullptr;
     }
+
+    template <class Transp, class Flash>
+    void ERaProto<Transp, Flash>::removeRetainedModbusData() {
+        this->removeRetainedData(ERA_PUB_PREFIX_MODBUS_DATA_TOPIC);
+    }
 #endif
+
+template <class Transp, class Flash>
+void ERaProto<Transp, Flash>::removeRetainedConfigIdData(ERaInt_t configId) {
+    char topicName[MAX_TOPIC_LENGTH] {0};
+    FormatString(topicName, this->ERA_TOPIC);
+    FormatString(topicName, ERA_PUB_PREFIX_CONFIG_DATA_TOPIC, configId);
+    this->transp.publishData(topicName, "", true);
+}
 
 template <class Transp, class Flash>
 size_t ERaProto<Transp, Flash>::splitString(char* strInput, const char* delims) {

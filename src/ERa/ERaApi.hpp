@@ -454,6 +454,10 @@ protected:
 #endif
     }
 
+    void configIdRemove(ERaInt_t configId) {
+        this->thisProto().removeRetainedConfigIdData(configId);
+    }
+
 #if defined(ERA_MODBUS)
     void modbusDataWrite(ERaDataBuff* value) {
 #if ERA_MAX_EVENTS
@@ -467,6 +471,10 @@ protected:
         rsp.param = 0;
         this->thisProto().sendCommand(rsp, value);
 #endif
+    }
+
+    void modbusDataRemove() {
+        this->thisProto().removeRetainedModbusData();
     }
 #endif
 

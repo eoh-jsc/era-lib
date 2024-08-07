@@ -273,6 +273,7 @@ protected:
         return this->enableReport;
     }
 
+    void removeConfigId();
     void updateRegister();
     void parseConfig(const void* ptr, bool json);
     void processParseParamConvertAi(const cJSON* const root, iterator& it);
@@ -286,6 +287,11 @@ protected:
         ERA_FORCE_UNUSED(configId);
         ERA_FORCE_UNUSED(value);
         ERA_LOG_WARNING(TAG, ERA_PSTR("configIdModbusWrite default."));
+    }
+
+    virtual void configIdModbusRemove(ERaInt_t configId) {
+        ERA_FORCE_UNUSED(configId);
+        ERA_LOG_WARNING(TAG, ERA_PSTR("configIdModbusRemove default."));
     }
 
 private:
@@ -328,6 +334,7 @@ private:
     }
 
     ERaList<Register_t*> ERaReg;
+    ERaList<ERaInt_t> ERaRegId;
     ERaReport ERaRegRp;
     unsigned int numRegister;
 
@@ -387,6 +394,7 @@ ERaModbusData::Register_t* ERaModbusData::setupRegister(WrapperBase* value, uint
 
 inline
 void ERaModbusData::updateRegister() {
+    this->ERaRegId.clear();
     Register_t* pReg = nullptr;
     ModbusDataIterator* next = nullptr;
     const ModbusDataIterator* e = this->ERaReg.end();
@@ -399,6 +407,7 @@ void ERaModbusData::updateRegister() {
         if (!pReg->configId) {
             continue;
         }
+        this->ERaRegId.put(pReg->configId);
         if (pReg->value != nullptr) {
             delete pReg->value;
             pReg->value = nullptr;
@@ -614,6 +623,19 @@ bool ERaModbusData::handler(ERaModbusRequest* request, ERaModbusResponse* respon
     this->ERaRegRp.run();
 
     return found;
+}
+
+inline
+void ERaModbusData::removeConfigId() {
+    const ERaList<ERaInt_t>::iterator* e = this->ERaRegId.end();
+    for (ERaList<ERaInt_t>::iterator* it = this->ERaRegId.begin(); it != e; it = it->getNext()) {
+        ERaInt_t configId = it->get();
+        if (!configId) {
+            continue;
+        }
+        this->configIdModbusRemove(configId);
+    }
+    this->ERaRegId.clear();
 }
 
 inline

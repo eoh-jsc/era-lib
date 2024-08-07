@@ -3,7 +3,7 @@
 
 #define ERA_MAJOR                   1
 #define ERA_MINOR                   4
-#define ERA_PATCH                   0
+#define ERA_PATCH                   1
 
 #define ERA_VERSION_TO_STR_2(val)   # val
 #define ERA_VERSION_TO_STR(val)     ERA_VERSION_TO_STR_2(val)
@@ -17,7 +17,7 @@
 #define ERA_VERSION                 ERA_VERSION_TO_STR(ERA_MAJOR) "."   \
                                     ERA_VERSION_TO_STR(ERA_MINOR) "."   \
                                     ERA_VERSION_TO_STR(ERA_PATCH)
-#define ERA_VERSION_1_4_0
+#define ERA_VERSION_1_4_1
 
 #if !defined(ERA_FIRMWARE_VERSION)
     #define ERA_FIRMWARE_VERSION    ERA_VERSION
