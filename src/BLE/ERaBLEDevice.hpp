@@ -5,15 +5,15 @@
 #include <MD5Builder.h>
 #include <LinkedList.h>
 
-const int ledPin = 2;
+const int ledPin = 2;  // this is for debug, can remove
 
-#define CODE "1d91d980-bbe4-4db4-8790-829a2fc62450"
-#define DEVICE_NAME "E-Ra - Trung Thu"
+#define CODE "1d91d980-bbe4-4db4-8790-829a2fc62450"  // this is chip code, keeping there
+#define DEVICE_NAME "E-Ra - Trung Thu"  // this is nothing
 
-#define SERVICE_UUID "c459d382-3ecd-41a2-8769-c502dbb88648"
-#define PASSWORD "f01f1e6b-e404-4534-bdfd-58af0e1fbb59"
-#define CHARACTERISTIC_CONFIRM_CODE_UUID "6ee26cfb-b42f-43ae-9ecf-f70d84bbd64f"
-#define CHARACTERISTIC_CONTROL_UUID "f0e7aa38-e466-42af-b4c7-5e6ec5c9a614"
+#define SERVICE_UUID "c459d382-3ecd-41a2-8769-c502dbb88648"  // this is bluetooth address
+#define PASSWORD "f01f1e6b-e404-4534-bdfd-58af0e1fbb59"  // this is bluetooth password
+#define CHARACTERISTIC_CONFIRM_CODE_UUID "6ee26cfb-b42f-43ae-9ecf-f70d84bbd64f"  // this is E-Ra constant, not change
+#define CHARACTERISTIC_CONTROL_UUID "f0e7aa38-e466-42af-b4c7-5e6ec5c9a614"  // this is E-Ra constant, not change
 
 
 char** verifiedCodes = new char*[5];  // max
