@@ -26,19 +26,20 @@ class MyServerCallbacks: public BLEServerCallbacks {
   void onConnect(BLEServer* pServer, esp_ble_gatts_cb_param_t *param) {
     Serial.print("Connected BLE");
     Serial.println(param->connect.conn_id);
-    pServer->startAdvertising();
+    pServer->startAdvertising();  // accepting more than 1 connection
   };
   void onDisconnect(BLEServer* pServer, esp_ble_gatts_cb_param_t *param) {
     Serial.print("Disconnected BLE");
     Serial.println(param->connect.conn_id);
-    pServer->startAdvertising();
-    verifiedConnectionId.remove(param->connect.conn_id);
+    pServer->startAdvertising();  // accepting more than 1 connection
+    verifiedConnectionId.remove(param->connect.conn_id);  // remove trusted connection
   }
 };
 
 
 class ControlCallbacks: public BLECharacteristicCallbacks {
     void onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_param_t* param) {
+      // check permission before control
       int size = verifiedConnectionId.size();
       bool hasPermission = false;
       for (int i = 0; i < size; i++) {
@@ -50,6 +51,7 @@ class ControlCallbacks: public BLECharacteristicCallbacks {
       if (!hasPermission) {
         Serial.println("NO PERMISSION");
         return;
+
       }
       std::string message = pCharacteristic->getValue();
       Serial.println(message.c_str());
@@ -68,21 +70,18 @@ class ControlCallbacks: public BLECharacteristicCallbacks {
 class ConfirmCallbacks: public BLECharacteristicCallbacks {
   char currentVerificationCode[9];
   void onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_param_t* param) {
-    if (verifiedCount >= 5) {  // reach max
+    if (verifiedCount >= 5) {  // hardware define max connection accept, this is not a big problem
       pCharacteristic->setValue("Max connections.");
-      pCharacteristic->notify();
+      pCharacteristic->notify();  // no need to notify
       return;
     }
-
-
-
     
     std::string value = pCharacteristic->getValue();
 
     Serial.println(value.c_str());
 
     if (value == "start") {
-      // random and write back
+      // random code and write back
       currentVerificationCode[0] = (char) (esp_random() % 26 + '0');
       currentVerificationCode[1] = (char) (esp_random() % 26 + '0');
       currentVerificationCode[2] = (char) (esp_random() % 26 + '0');
@@ -98,7 +97,7 @@ class ConfirmCallbacks: public BLECharacteristicCallbacks {
       pCharacteristic->notify();
     }
 
-    if (value.substr(0, 7) == "confirm") {
+    if (value.substr(0, 7) == "confirm") {  // using string for shorten message
       char code[36 + 8 + 1]; // uuid4 + random + endstring
       for(int i = 0; i < 36; i++) {
         code[i] = PASSWORD[i];
@@ -113,7 +112,7 @@ class ConfirmCallbacks: public BLECharacteristicCallbacks {
       md5.add(code);
       md5.calculate();
 
-      char* output = new char[33];
+      char* output = new char[33];  // can use char output[33] instead
       md5.getChars(output);
 
       Serial.println("verified code");
@@ -121,28 +120,16 @@ class ConfirmCallbacks: public BLECharacteristicCallbacks {
 
       if (value.substr(7, 32) == output) {
         digitalWrite(ledPin, HIGH);
-        char* confirmText = new char[11];
-        confirmText[0] ='c';
-        confirmText[1] ='o';
-        confirmText[2] ='n';
-        confirmText[3] ='f';
-        confirmText[4] ='i';
-        confirmText[5] ='r';
-        confirmText[6] ='m';
-        confirmText[7] ='e';
-        confirmText[8] ='d';
-        confirmText[9] = verifiedCount + '0';
-        confirmText[10] = 0;
-        pCharacteristic->setValue(confirmText);  // confirmed<id>
+        pCharacteristic->setValue("confirmed");
         verifiedConnectionId.add(param->connect.conn_id);
       } else {
         digitalWrite(ledPin, LOW);
         
-        Serial.print("Disconnecting BLE");
+        Serial.print("Disconnecting BLE");  // not correct then disconnect
         Serial.println(param->disconnect.conn_id);
         pServer->disconnect(param->disconnect.conn_id);
-        delete output;
       }
+      delete output;
     }
   }
 };
