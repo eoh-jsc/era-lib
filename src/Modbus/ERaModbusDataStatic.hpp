@@ -7,8 +7,8 @@
 
     #if !defined(ERA_HAS_FUNCTIONAL_H)
         inline
-        void ERaModbusData::_onCallback(const char* topic, const char* payload) {
-            ERa.ERaModbusData::onCallback(topic, payload);
+        void ERaModbusData::_onCallback(void* args) {
+            ERa.ERaModbusData::onCallback(args);
         }
     #endif
 

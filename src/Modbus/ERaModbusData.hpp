@@ -345,7 +345,7 @@ private:
         this->onCallback(args);
     };
 #else
-    ReportCallback_t reportCallback = [&, this](void* args) {
+    ReportCallback_t reportCallback = [](void* args) {
         ERaModbusData::_onCallback(args);
     };
 #endif

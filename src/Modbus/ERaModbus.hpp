@@ -1024,8 +1024,10 @@ bool ERaModbus<Api>::eachActionModbus(ModbusAction_t& request, Action_t& action,
 
     memcpy(config->extra, action.extra, sizeof(config->extra));
 
-    if (this->pModbusCallbacks != nullptr) {
-        this->pModbusCallbacks->onAction(&request, &action, config);
+    if (this->pModbusCallbacks == nullptr) {
+    }
+    else if (this->pModbusCallbacks->onAction(&request, &action, config)) {
+        return true;
     }
 
     return this->sendModbusWrite(*config);
