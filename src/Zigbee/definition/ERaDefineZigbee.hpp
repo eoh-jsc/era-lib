@@ -295,6 +295,8 @@ namespace ZigbeeNamespace {
         char modelName[50];
         ZigbeeData_t data;
         uint8_t receiveId;
+        bool configReport;
+        bool prevConfigReport;
         uint8_t numConfigMap;
         ConfigIdMap_t configMap[MAX_CONFIG_MAP_ZIGBEE];
     } IdentDeviceAddr_t;
