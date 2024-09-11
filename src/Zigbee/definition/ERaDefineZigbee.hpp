@@ -500,20 +500,20 @@ namespace ZigbeeNamespace {
 
         void clearConfigMap() {
             for (size_t i = 0; i < this->deviceCount; ++i) {
-                this->deviceIdents[i].numConfigMap = 0;
-                memset(this->deviceIdents[i].configMap, 0, sizeof(this->deviceIdents[i].configMap));
+                this->deviceIdent[i].numConfigMap = 0;
+                memset(this->deviceIdent[i].configMap, 0, sizeof(this->deviceIdent[i].configMap));
             }
         }
 
         void loadConfigReport() {
             for (size_t i = 0; i < this->deviceCount; ++i) {
-                this->deviceIdents[i].configReport = !!this->deviceIdents[i].numConfigMap;
+                this->deviceIdent[i].configReport = !!this->deviceIdent[i].numConfigMap;
             }
         }
 
         void loadPrevConfigReport() {
             for (size_t i = 0; i < this->deviceCount; ++i) {
-                this->deviceIdents[i].prevConfigReport = this->deviceIdents[i].configReport;
+                this->deviceIdent[i].prevConfigReport = this->deviceIdent[i].configReport;
             }
         }
 
