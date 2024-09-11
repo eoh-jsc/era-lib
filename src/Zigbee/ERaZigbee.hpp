@@ -523,6 +523,55 @@ void ERaZigbee<Api>::publishZigbeeData(const IdentDeviceAddr_t* deviceInfo, bool
         (deviceInfo->data.payload == nullptr)) {
         return;
     }
+
+    cJSON* data = cJSON_GetObjectItem(deviceInfo->data.payload, "data");
+    if (!cJSON_IsObject(data)) {
+        return;
+    }
+
+    DBZigbee::lock();
+
+    bool found {false};
+    cJSON* current = cJSON_GetObjectItem(data, "radius");
+    if (current != nullptr) {
+        current = current->next;
+    }
+    for ( ; current != nullptr && current->string != nullptr; current = current->next) {
+        for (size_t i = 0; i < deviceInfo->numConfigMap; ++i) {
+            const ConfigIdMap_t& config = deviceInfo->configMap[i];
+            if (!CompareString(current->string, config.key)) {
+                continue;
+            }
+            if (cJSON_IsNumber(current)) {
+                this->thisApi().configIdEvent(config.configId, current->valuedouble);
+            }
+            else if (cJSON_IsBool(current)) {
+                this->thisApi().configIdEvent(config.configId, current->valueint);
+            }
+            else if (cJSON_IsString(current)) {
+                this->thisApi().configIdEvent(config.configId, current->valuestring);
+            }
+            else {
+                continue;
+            }
+            found = true;
+        }
+    }
+
+    DBZigbee::unlock();
+
+    if (!found) {
+        DBZigbee::isChangedReport(const_cast<IdentDeviceAddr_t*>(deviceInfo));
+    }
+    else if (!DBZigbee::isChangedReport(const_cast<IdentDeviceAddr_t*>(deviceInfo))) {
+        return;
+    }
+    else if (DBZigbee::isNewReport(deviceInfo)) {
+        return this->thisApi().zigbeeDataClear(deviceInfo->data.topic);
+    }
+    else {
+        return;
+    }
     this->thisApi().zigbeeDataWrite(deviceInfo->data.topic, deviceInfo->data.payload, specific, retained);
 }
 

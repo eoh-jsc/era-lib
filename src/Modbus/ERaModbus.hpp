@@ -232,6 +232,7 @@ protected:
             this->modbusControl->parseConfig(config, json);
             if (this->modbusControl->updateHashID(hash)) {
                 this->thisApi().writeToFlash(FILENAME_CONTROL, buf);
+                ERA_LOG(TAG, ERA_PSTR("Modbus control stored to flash"));
                 ERaWriteConfig(ERaConfigTypeT::ERA_MODBUS_CONTROL);
 #if !defined(ERA_PNP_MODBUS)
                 this->modbusControl->updated();
@@ -248,6 +249,7 @@ protected:
             if (this->modbusConfig->updateHashID(hash)) {
                 this->clearDataBuff();
                 this->thisApi().writeToFlash(FILENAME_CONFIG, buf);
+                ERA_LOG(TAG, ERA_PSTR("Modbus configuration stored to flash"));
                 if (this->wifiConfig && this->modbusConfig->isWiFi) {
                     this->thisApi().connectNewWiFi(this->modbusConfig->ssid,
                                                    this->modbusConfig->pass);
@@ -287,11 +289,11 @@ protected:
     }
 
     void configIdModbusWrite(ERaInt_t configId, float value) override {
-        this->thisApi().configIdWrite(configId, value);
+        this->thisApi().configIdEvent(configId, value);
     }
 
-    void configIdModbusRemove(ERaInt_t configId) override {
-        this->thisApi().configIdRemove(configId);
+    void configIdModbusClear(ERaInt_t configId) override {
+        this->thisApi().configIdClear(configId);
     }
 
     void clearDataBuff() {
@@ -396,6 +398,7 @@ private:
             config->parseConfig(item, true);
             if (!isControl) {
                 ModbusTransp::parseConfig(item, true);
+                ModbusTransp::isChangedReport();
             }
         }
 
@@ -409,6 +412,8 @@ private:
         data = nullptr;
         item = nullptr;
 
+        ERA_LOG(TAG, ERA_PSTR("Modbus %s loaded from flash"), name);
+
         this->initModbus();
     }
 
@@ -417,12 +422,13 @@ private:
             this->modbusConfig->resize();
             this->modbusControl->resize();
             this->initModbus(true);
-            ERaDelay(500);
-            if (ModbusTransp::isNewReport()) {
-                this->thisApi().modbusDataRemove();
+            if (!ModbusTransp::isChangedReport()) {
+            }
+            else if (ModbusTransp::isNewReport()) {
+                this->thisApi().modbusDataClear();
             }
             else {
-                ModbusTransp::removeConfigId();
+                ModbusTransp::clearConfigId();
             }
         }
         ModbusState::set(ModbusStateT::STATE_MB_RUNNING);
@@ -944,9 +950,6 @@ bool ERaModbus<Api>::actionModbus(ModbusAction_t& request) {
     if (request.key == nullptr) {
         return false;
     }
-    if (strlen(request.key) != 36) {
-        return false;
-    }
 
     ModbusConfigAlias_t* alias = this->getModbusAlias(request.key);
     if (alias == nullptr) {
@@ -1015,6 +1018,7 @@ bool ERaModbus<Api>::eachActionModbus(ModbusAction_t& request, Action_t& action,
             config->len2 = action.len2;
             break;
         case ModbusActionTypeT::MODBUS_ACTION_PARAMS:
+            request.param *= config->scaleWrite;
             config->len1 = HI_WORD(request.param);
             config->len2 = LO_WORD(request.param);
             break;
@@ -1517,10 +1521,8 @@ void ERaModbus<Api>::setModbusDEPin(int _pin) {
     }
 
     this->dePin = _pin;
-#if defined(ARDUINO) ||      \
-    defined(RASPBERRY) ||    \
-    defined(TINKER_BOARD) || \
-    defined(ORANGE_PI)
+#if defined(ARDUINO) || \
+    defined(WIRING_PI)
     pinMode(this->dePin, OUTPUT);
     ::digitalWrite(this->dePin, LOW);
 #endif
@@ -1532,10 +1534,8 @@ void ERaModbus<Api>::switchToTransmit() {
         return;
     }
 
-#if defined(ARDUINO) ||      \
-    defined(RASPBERRY) ||    \
-    defined(TINKER_BOARD) || \
-    defined(ORANGE_PI)
+#if defined(ARDUINO) || \
+    defined(WIRING_PI)
     ::digitalWrite(this->dePin, HIGH);
     if (this->predelay) {
         ERaDelayUs(this->predelay);
@@ -1549,10 +1549,8 @@ void ERaModbus<Api>::switchToReceive() {
         return;
     }
 
-#if defined(ARDUINO) ||      \
-    defined(RASPBERRY) ||    \
-    defined(TINKER_BOARD) || \
-    defined(ORANGE_PI)
+#if defined(ARDUINO) || \
+    defined(WIRING_PI)
     if (this->postdelay) {
         ERaDelayUs(this->postdelay);
     }

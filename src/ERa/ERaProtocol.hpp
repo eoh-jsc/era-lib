@@ -97,8 +97,11 @@ public:
         this->transp.onMessage(this->messageCb);
         this->transp.onStateChange(this->connectedCb,
                                    this->disconnectedCb);
+        Handler::setAuth(auth);
         Handler::setTopic(this->ERA_TOPIC);
         Handler::onMessage(this->messageCb);
+        Handler::onStateChange(this->connectedCb,
+                               this->disconnectedCb);
     }
 
     void run() {
@@ -110,6 +113,9 @@ public:
             this->pLogger->run();
         }
         Base::runERaApiTask();
+        if (Base::isNeedSyncConfig()) {
+            this->syncConfig();
+        }
         this->publishHeartbeat();
         this->publishSelfInfo();
     }
@@ -271,7 +277,7 @@ protected:
     bool sendChangeResultWiFi(const char* payload);
     bool publishData(const char* prefixTopic, const char* payload,
                             bool retained, bool extended = false);
-    bool removeRetainedData(const char* prefixTopic);
+    bool clearRetainedData(const char* prefixTopic);
     bool isConfigMode();
     void onConnected();
     void onDisconnected();
@@ -307,9 +313,11 @@ private:
     bool sendConfigIdMultiData(ERaRsp_t& rsp);
 #if defined(ERA_MODBUS)
     bool sendModbusData(ERaRsp_t& rsp);
+    void clearRetainedModbusData();
 #endif
 #if defined(ERA_ZIGBEE)
     bool sendZigbeeData(ERaRsp_t& rsp);
+    void clearRetainedZigbeeData(const char* id);
 #endif
 #if defined(ERA_SPECIFIC)
     bool sendSpecificData(ERaRsp_t& rsp);
@@ -323,9 +331,8 @@ private:
     void sendCommandVirtual(ERaRsp_t& rsp, ERaDataJson* data);
 #if defined(ERA_MODBUS)
     void sendCommandModbus(ERaRsp_t& rsp, ERaDataBuff* data);
-    void removeRetainedModbusData();
 #endif
-    void removeRetainedConfigIdData(ERaInt_t configId);
+    void clearRetainedConfigIdData(ERaInt_t configId);
 
     void processRequest(const char* topic, const char* payload);
 #if !defined(ERA_HAS_FUNCTIONAL_H)
@@ -722,6 +729,16 @@ void ERaProto<Transp, Flash>::processConfiguration(const char* payload, const ch
             ERaWriteConfig(ERaConfigTypeT::ERA_PIN_CONFIG);
         }
     }
+#if defined(ERA_ZIGBEE)
+    item = cJSON_GetObjectItem(root, "zigbee");
+    if (cJSON_IsObject(item)) {
+        Base::Zigbee::parseConfigMapDevices(item);
+        if (Base::Zigbee::updateHashID(hash, true)) {
+            Base::Zigbee::storeZigbeeConfig(payload);
+            ERaWriteConfig(ERaConfigTypeT::ERA_ZIGBEE_CONFIG);
+        }
+    }
+#endif
 }
 
 template <class Transp, class Flash>
@@ -1024,7 +1041,7 @@ bool ERaProto<Transp, Flash>::publishData(const char* prefixTopic, const char* p
 }
 
 template <class Transp, class Flash>
-bool ERaProto<Transp, Flash>::removeRetainedData(const char* prefixTopic) {
+bool ERaProto<Transp, Flash>::clearRetainedData(const char* prefixTopic) {
     return this->publishData(prefixTopic, "", true);
 }
 
@@ -1300,6 +1317,7 @@ bool ERaProto<Transp, Flash>::sendConfigIdData(ERaRsp_t& rsp) {
     payload = cJSON_PrintUnformatted(root);
     if (payload != nullptr) {
         status = this->transp.publishData(topicName, payload, rsp.retained);
+        Handler::publishData(topicName, payload);
     }
     cJSON_Delete(root);
     free(payload);
@@ -1330,6 +1348,11 @@ bool ERaProto<Transp, Flash>::sendConfigIdMultiData(ERaRsp_t& rsp) {
         payload = nullptr;
         return status;
     }
+
+    template <class Transp, class Flash>
+    void ERaProto<Transp, Flash>::clearRetainedModbusData() {
+        this->clearRetainedData(ERA_PUB_PREFIX_MODBUS_DATA_TOPIC);
+    }
 #endif
 
 #if defined(ERA_ZIGBEE)
@@ -1353,6 +1376,11 @@ bool ERaProto<Transp, Flash>::sendConfigIdMultiData(ERaRsp_t& rsp) {
         id = nullptr;
         payload = nullptr;
         return status;
+    }
+
+    template <class Transp, class Flash>
+    void ERaProto<Transp, Flash>::clearRetainedZigbeeData(const char* id) {
+        this->clearRetainedData(id);
     }
 #endif
 
@@ -1648,15 +1676,10 @@ void ERaProto<Transp, Flash>::sendCommandVirtual(ERaRsp_t& rsp, ERaDataJson* dat
         cJSON_Delete(root);
         root = nullptr;
     }
-
-    template <class Transp, class Flash>
-    void ERaProto<Transp, Flash>::removeRetainedModbusData() {
-        this->removeRetainedData(ERA_PUB_PREFIX_MODBUS_DATA_TOPIC);
-    }
 #endif
 
 template <class Transp, class Flash>
-void ERaProto<Transp, Flash>::removeRetainedConfigIdData(ERaInt_t configId) {
+void ERaProto<Transp, Flash>::clearRetainedConfigIdData(ERaInt_t configId) {
     char topicName[MAX_TOPIC_LENGTH] {0};
     FormatString(topicName, this->ERA_TOPIC);
     FormatString(topicName, ERA_PUB_PREFIX_CONFIG_DATA_TOPIC, configId);

@@ -67,6 +67,7 @@ typedef struct __ModbusConfig_t {
     uint16_t delay;
     IPSlave_t ipSlave;
     uint8_t totalFail;
+    float scaleWrite;
 } ModbusConfig_t;
 
 typedef struct __Action_t {
@@ -754,6 +755,7 @@ void ERaModbusEntry::actOneConfigSensorReadWrite(const int* ptr, size_t len, Mod
         config.extra[i] = ptr[i + 7];
     }
 
+    config.scaleWrite = 1.0f;
     config.ipSlave.ip.dword = 0UL;
     config.ipSlave.port = 0;
 }
@@ -891,10 +893,6 @@ void ERaModbusEntry::processOneConfigAlias(const char* ptr, size_t len, ModbusCo
 
 inline
 void ERaModbusEntry::parseOneConfigAlias(const char* ptr, size_t len, ModbusConfigAlias_t& config) {
-    if (len < 36) {
-        return;
-    }
-
     LOC_BUFFER_PARSE
 
     size_t position {0};
@@ -907,8 +905,11 @@ void ERaModbusEntry::parseOneConfigAlias(const char* ptr, size_t len, ModbusConf
         buf[position++] = ptr[i];
         if (ptr[i] == ',') {
             buf[--position] = '\0';
+            if (position > 36) {
+                break;
+            }
             if (isAlias) {
-                memcpy(key, buf, 36);
+                memcpy(key, buf, strlen(buf) + 1);
             }
             else {
                 configParam[configIndex++] = atoi(buf);
@@ -930,11 +931,11 @@ void ERaModbusEntry::actOneConfigAlias(const int* ptr, size_t len, ModbusConfigA
     if (!len) {
         return;
     }
-    if (strlen(key) != 36) {
+    if (strlen(key) > 36) {
         return;
     }
     config.id = ptr[0];
-    memcpy(config.key, key, 36);
+    memcpy(config.key, key, strlen(key) + 1);
 }
 
 inline
@@ -1200,6 +1201,14 @@ ModbusConfig_t* ERaModbusEntry::processParseConfigSensorParamJson(const cJSON* c
         ERaModbusEntry::stringToUint8(newConfig.extra, extra->valuestring);
     }
 
+    cJSON* scaleWrite = cJSON_GetObjectItem(root, MODBUS_PARAM_SCALE_WRITE_KEY);
+    if (cJSON_IsNumber(scaleWrite)) {
+        newConfig.scaleWrite = scaleWrite->valuedouble;
+    }
+    else {
+        newConfig.scaleWrite = 1.0f;
+    }
+
     newConfig.ipSlave.port = ipSlave.port;
     newConfig.ipSlave.ip.dword = ipSlave.ip.dword;
 
@@ -1317,8 +1326,8 @@ void ERaModbusEntry::processParseConfigSensorActionJson(const cJSON* const root)
     }
 
     cJSON* key = cJSON_GetObjectItem(root, MODBUS_ACTION_KEY_KEY);
-    if (cJSON_IsString(key) && (strlen(key->valuestring) == 36)) {
-        memcpy(config->key, key->valuestring, 36);
+    if (cJSON_IsString(key) && (strlen(key->valuestring) <= 36)) {
+        memcpy(config->key, key->valuestring, strlen(key->valuestring) + 1);
     }
 
     cJSON* items = cJSON_GetObjectItem(root, MODBUS_ACTION_ITEMS_KEY);

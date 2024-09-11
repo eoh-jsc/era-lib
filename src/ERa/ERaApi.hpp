@@ -38,6 +38,7 @@ class ERaApi
     typedef void (*FunctionCallback_t)(void);
     typedef void (*ReportPinCallback_t)(void*);
 #endif
+    const char* TAG = "Api";
     const char* FILENAME_BT_CFG = FILENAME_BT_CONFIG;
     const char* FILENAME_PIN_CFG = FILENAME_PIN_CONFIG;
 
@@ -183,6 +184,16 @@ public:
         this->configIdMultiWrite(configId, value, tail...);
     }
 
+    template <typename T>
+    void configIdEvent(ERaInt_t configId, const T& value) {
+#if ERA_MAX_EVENTS
+        if (this->eventConfigIdAdd(configId, value)) {
+            return;
+        }
+#endif
+        this->configIdWrite(configId, value);
+    }
+
 #if defined(ERA_SPECIFIC)
     void specificWrite(const char* id, cJSON* value) override {
         return this->specificDataWrite(id, value, true, false);
@@ -196,8 +207,10 @@ public:
                            bool specific = false,
                            bool retained = ERA_MQTT_PUBLISH_RETAINED) override {
 #if ERA_MAX_EVENTS
-        this->eventSpecificAdd(id, value, specific, retained);
-#else
+        if (this->eventSpecificAdd(id, value, specific, retained)) {
+            return;
+        }
+#endif
         ERaRsp_t rsp;
         rsp.type = ERaTypeWriteT::ERA_WRITE_SPECIFIC_DATA;
         rsp.json = false;
@@ -206,15 +219,16 @@ public:
         rsp.param = value;
         this->thisProto().sendCommand(rsp);
         ERA_FORCE_UNUSED(specific);
-#endif
     }
 
     void specificDataWrite(const char* id, const char* value,
                            bool specific = false,
                            bool retained = ERA_MQTT_PUBLISH_RETAINED) override {
 #if ERA_MAX_EVENTS
-        this->eventSpecificAdd(id, value, specific, retained);
-#else
+        if (this->eventSpecificAdd(id, value, specific, retained)) {
+            return;
+        }
+#endif
         ERaRsp_t rsp;
         rsp.type = ERaTypeWriteT::ERA_WRITE_SPECIFIC_DATA;
         rsp.json = false;
@@ -223,7 +237,6 @@ public:
         rsp.param = value;
         this->thisProto().sendCommand(rsp);
         ERA_FORCE_UNUSED(specific);
-#endif
     }
 #endif
 
@@ -351,7 +364,6 @@ protected:
     void handlePinRequest(const ERaDataBuff& arrayTopic, const char* payload);
     void processArduinoPinRequest(const ERaDataBuff& arrayTopic, const char* payload);
     void processVirtualPinRequest(const ERaDataBuff& arrayTopic, const char* payload);
-    void processWifiRequest(const ERaDataBuff& arrayTopic, const char* payload);
     void initPinConfig();
     void parsePinConfig(const char* str);
     void storePinConfig(const char* str);
@@ -408,6 +420,9 @@ protected:
 #if ERA_MAX_EVENTS
         this->eventsWrite();
 #endif
+#if ERA_MAX_CLEARS
+        this->clearsWrite();
+#endif
 
         ERaWatchdogFeed();
 
@@ -454,15 +469,22 @@ protected:
 #endif
     }
 
-    void configIdRemove(ERaInt_t configId) {
-        this->thisProto().removeRetainedConfigIdData(configId);
+    void configIdClear(ERaInt_t configId) {
+#if ERA_MAX_CLEARS
+        if (this->clearConfigIdAdd(configId)) {
+            return;
+        }
+#endif
+        this->thisProto().clearRetainedConfigIdData(configId);
     }
 
 #if defined(ERA_MODBUS)
     void modbusDataWrite(ERaDataBuff* value) {
 #if ERA_MAX_EVENTS
-        this->eventModbusAdd(value);
-#else
+        if (this->eventModbusAdd(value)) {
+            return;
+        }
+#endif
         ERaRsp_t rsp;
         rsp.type = ERaTypeWriteT::ERA_WRITE_MODBUS_DATA;
         rsp.json = false;
@@ -470,11 +492,15 @@ protected:
         rsp.id = 0;
         rsp.param = 0;
         this->thisProto().sendCommand(rsp, value);
-#endif
     }
 
-    void modbusDataRemove() {
-        this->thisProto().removeRetainedModbusData();
+    void modbusDataClear() {
+#if ERA_MAX_CLEARS
+        if (this->clearModbusAdd()) {
+            return;
+        }
+#endif
+        this->thisProto().clearRetainedModbusData();
     }
 #endif
 
@@ -483,8 +509,10 @@ protected:
                          bool specific = false,
                          bool retained = ERA_MQTT_PUBLISH_RETAINED) {
 #if ERA_MAX_EVENTS
-        this->eventZigbeeAdd(id, value, specific, retained);
-#else
+        if (this->eventZigbeeAdd(id, value, specific, retained)) {
+            return;
+        }
+#endif
         ERaRsp_t rsp;
         rsp.type = ERaTypeWriteT::ERA_WRITE_ZIGBEE_DATA;
         rsp.json = false;
@@ -493,7 +521,15 @@ protected:
         rsp.param = value;
         this->thisProto().sendCommand(rsp);
         ERA_FORCE_UNUSED(specific);
+    }
+
+    void zigbeeDataClear(const char* id) {
+#if ERA_MAX_CLEARS
+        if (this->clearZigbeeAdd(id)) {
+            return;
+        }
 #endif
+        this->thisProto().clearRetainedZigbeeData(id);
     }
 #endif
 
@@ -592,6 +628,14 @@ protected:
         ERaApi::_appLoop();
     };
 #endif
+
+    bool isNeedSyncConfig() const {
+        bool ret {false};
+#if defined(ERA_ZIGBEE)
+        ret |= Zigbee::isNeedFinalize();
+#endif
+        return ret;
+    }
 
 private:
     template <typename T>
@@ -704,21 +748,29 @@ private:
 #if ERA_MAX_EVENTS
     void eventsWrite();
 
+    bool eventConfigIdAdd(ERaInt_t configId, ERaInt_t value,
+                        bool retained = ERA_MQTT_PUBLISH_RETAINED);
+    bool eventConfigIdAdd(ERaInt_t configId, double value,
+                        bool retained = ERA_MQTT_PUBLISH_RETAINED);
+    bool eventConfigIdAdd(ERaInt_t configId, const char* value,
+                        bool retained = ERA_MQTT_PUBLISH_RETAINED);
+    void eventConfigIdWrite(ERaEvent_t& event);
+
 #if defined(ERA_MODBUS)
-    void eventModbusAdd(ERaDataBuff* value);
+    bool eventModbusAdd(ERaDataBuff* value);
     void eventModbusWrite(ERaEvent_t& event);
 #endif
 #if defined(ERA_ZIGBEE)
-    void eventZigbeeAdd(const char* id, cJSON* value,
+    bool eventZigbeeAdd(const char* id, cJSON* value,
                         bool specific = false,
                         bool retained = ERA_MQTT_PUBLISH_RETAINED);
     void eventZigbeeWrite(ERaEvent_t& event);
 #endif
 #if defined(ERA_SPECIFIC)
-    void eventSpecificAdd(const char* id, cJSON* value,
+    bool eventSpecificAdd(const char* id, cJSON* value,
                         bool specific = false,
                         bool retained = ERA_MQTT_PUBLISH_RETAINED);
-    void eventSpecificAdd(const char* id, const char* value,
+    bool eventSpecificAdd(const char* id, const char* value,
                         bool specific = false,
                         bool retained = ERA_MQTT_PUBLISH_RETAINED);
     void eventSpecificWrite(ERaEvent_t& event);
@@ -737,6 +789,36 @@ private:
     }
 
     ERaQueue<ERaEvent_t, ERA_MAX_EVENTS> queue;
+#endif
+
+#if ERA_MAX_CLEARS
+    void clearsWrite();
+
+    bool clearConfigIdAdd(ERaInt_t configId);
+    void clearConfigIdWrite(ERaClear_t& clear);
+
+#if defined(ERA_MODBUS)
+    bool clearModbusAdd();
+    void clearModbusWrite(ERaClear_t& clear);
+#endif
+#if defined(ERA_ZIGBEE)
+    bool clearZigbeeAdd(const char* id);
+    void clearZigbeeWrite(ERaClear_t& clear);
+#endif
+
+    bool isClear() {
+        return this->queueClear.readable();
+    }
+
+    ERaClear_t& getClear() {
+        return this->queueClear;
+    }
+
+    bool isEmptyClear() {
+        return this->queueClear.isEmpty();
+    }
+
+    ERaQueue<ERaClear_t, ERA_MAX_CLEARS> queueClear;
 #endif
 
     Flash& flash;
@@ -883,6 +965,8 @@ void ERaApi<Proto, Flash>::parsePinConfig(const char* str) {
     cJSON_Delete(root);
     root = nullptr;
     item = nullptr;
+
+    ERA_LOG(TAG, ERA_PSTR("Pin configuration loaded from flash"));
 }
 
 template <class Proto, class Flash>
@@ -893,6 +977,7 @@ void ERaApi<Proto, Flash>::storePinConfig(const char* str) {
     }
 
     this->writeToFlash(FILENAME_PIN_CFG, str);
+    ERA_LOG(TAG, ERA_PSTR("Pin configuration stored to flash"));
 }
 
 template <class Proto, class Flash>
@@ -933,6 +1018,8 @@ void ERaApi<Proto, Flash>::removePinConfig() {
         }
         cJSON_Delete(root);
         root = nullptr;
+
+        ERA_LOG(TAG, ERA_PSTR("Bluetooth configuration loaded from flash"));
     }
 
     template <class Proto, class Flash>
@@ -952,6 +1039,7 @@ void ERaApi<Proto, Flash>::removePinConfig() {
         }
 
         this->writeToFlash(FILENAME_BT_CFG, str);
+        ERA_LOG(TAG, ERA_PSTR("Bluetooth configuration stored to flash"));
     }
 
     template <class Proto, class Flash>
@@ -1186,10 +1274,8 @@ void ERaApi<Proto, Flash>::setSystemLED(int pin, bool invert) {
     this->ledPin = pin;
     this->invertLED = invert;
 
-#if defined(ARDUINO) ||      \
-    defined(RASPBERRY) ||    \
-    defined(TINKER_BOARD) || \
-    defined(ORANGE_PI)
+#if defined(ARDUINO) || \
+    defined(WIRING_PI)
     if (this->ledPin >= 0) {
         pinMode(this->ledPin, OUTPUT);
         ::digitalWrite(this->ledPin, !this->invertLED ? LOW : HIGH);
@@ -1202,10 +1288,8 @@ void ERaApi<Proto, Flash>::setSystemLED(int pin, bool invert) {
 template <class Proto, class Flash>
 inline
 void ERaApi<Proto, Flash>::onLED() {
-#if defined(ARDUINO) ||      \
-    defined(RASPBERRY) ||    \
-    defined(TINKER_BOARD) || \
-    defined(ORANGE_PI)
+#if defined(ARDUINO) || \
+    defined(WIRING_PI)
     if (this->ledPin >= 0) {
         ::digitalWrite(this->ledPin, !this->invertLED ? HIGH : LOW);
     }
@@ -1215,10 +1299,8 @@ void ERaApi<Proto, Flash>::onLED() {
 template <class Proto, class Flash>
 inline
 void ERaApi<Proto, Flash>::offLED() {
-#if defined(ARDUINO) ||      \
-    defined(RASPBERRY) ||    \
-    defined(TINKER_BOARD) || \
-    defined(ORANGE_PI)
+#if defined(ARDUINO) || \
+    defined(WIRING_PI)
     if (this->ledPin >= 0) {
         ::digitalWrite(this->ledPin, !this->invertLED ? LOW : HIGH);
     }
@@ -1271,6 +1353,9 @@ void ERaApi<Proto, Flash>::callERaProHandler(const char* deviceId, const cJSON* 
 
         ERaEvent_t& event = this->getEvent();
         switch (event.type) {
+            case ERaTypeWriteT::ERA_WRITE_CONFIG_ID:
+                this->eventConfigIdWrite(event);
+                break;
 #if defined(ERA_MODBUS)
             case ERaTypeWriteT::ERA_WRITE_MODBUS_DATA:
                 this->eventModbusWrite(event);
@@ -1291,12 +1376,107 @@ void ERaApi<Proto, Flash>::callERaProHandler(const char* deviceId, const cJSON* 
         }
     }
 
+template <class Proto, class Flash>
+inline
+bool ERaApi<Proto, Flash>::eventConfigIdAdd(ERaInt_t configId, ERaInt_t value, bool retained) {
+    return this->eventConfigIdAdd(configId, (double)value, retained);
+}
+
+template <class Proto, class Flash>
+inline
+bool ERaApi<Proto, Flash>::eventConfigIdAdd(ERaInt_t configId, double value, bool retained) {
+    if (!this->queue.writeable()) {
+        return false;
+    }
+
+    ERaInt_t* id = (ERaInt_t*)malloc(sizeof(ERaInt_t));
+    if (id == nullptr) {
+        return false;
+    }
+    (*id) = configId;
+
+    double* data = (double*)malloc(sizeof(double));
+    if (data == nullptr) {
+        free(id);
+        id = nullptr;
+        return false;
+    }
+    (*data) = value;
+
+    ERaEvent_t event;
+    event.type = ERaTypeWriteT::ERA_WRITE_CONFIG_ID;
+    event.specific = false;
+    event.json = false;
+    event.retained = retained;
+    event.id = (void*)id;
+    event.data = (void*)data;
+    this->queue += event;
+    return true;
+}
+
+template <class Proto, class Flash>
+inline
+bool ERaApi<Proto, Flash>::eventConfigIdAdd(ERaInt_t configId, const char* value, bool retained) {
+    if (!this->queue.writeable()) {
+        return false;
+    }
+
+    ERaInt_t* id = (ERaInt_t*)malloc(sizeof(ERaInt_t));
+    if (id == nullptr) {
+        return false;
+    }
+    (*id) = configId;
+
+    char* data = ERaStrdup(value);
+    if (data == nullptr) {
+        free(id);
+        id = nullptr;
+        return false;
+    }
+
+    ERaEvent_t event;
+    event.type = ERaTypeWriteT::ERA_WRITE_CONFIG_ID;
+    event.specific = true;
+    event.json = false;
+    event.retained = retained;
+    event.id = (void*)id;
+    event.data = (void*)data;
+    this->queue += event;
+    return true;
+}
+
+template <class Proto, class Flash>
+inline
+void ERaApi<Proto, Flash>::eventConfigIdWrite(ERaEvent_t& event) {
+    if ((event.id == nullptr) ||
+        (event.data == nullptr)) {
+        return;
+    }
+
+    ERaRsp_t rsp;
+    rsp.type = ERaTypeWriteT::ERA_WRITE_CONFIG_ID;
+    rsp.json = event.json;
+    rsp.retained = event.retained;
+    rsp.id = (*(static_cast<ERaInt_t*>(event.id)));
+    if (!event.specific) {
+        rsp.param = (*(static_cast<double*>(event.data)));
+    }
+    else {
+        rsp.param.add_static((char*)event.data);
+    }
+    this->thisProto().sendCommand(rsp);
+    free(event.id);
+    free(event.data);
+    event.id = nullptr;
+    event.data = nullptr;
+}
+
 #if defined(ERA_MODBUS)
     template <class Proto, class Flash>
     inline
-    void ERaApi<Proto, Flash>::eventModbusAdd(ERaDataBuff* value) {
+    bool ERaApi<Proto, Flash>::eventModbusAdd(ERaDataBuff* value) {
         if (!this->queue.writeable()) {
-            return;
+            return false;
         }
 
         ERaEvent_t event;
@@ -1307,6 +1487,7 @@ void ERaApi<Proto, Flash>::callERaProHandler(const char* deviceId, const cJSON* 
         event.id = nullptr;
         event.data = value;
         this->queue += event;
+        return true;
     }
 
     template <class Proto, class Flash>
@@ -1330,10 +1511,10 @@ void ERaApi<Proto, Flash>::callERaProHandler(const char* deviceId, const cJSON* 
 #if defined(ERA_ZIGBEE)
     template <class Proto, class Flash>
     inline
-    void ERaApi<Proto, Flash>::eventZigbeeAdd(const char* id, cJSON* value,
+    bool ERaApi<Proto, Flash>::eventZigbeeAdd(const char* id, cJSON* value,
                                             bool specific, bool retained) {
         if (!this->queue.writeable()) {
-            return;
+            return false;
         }
 
         ERaEvent_t event;
@@ -1344,12 +1525,23 @@ void ERaApi<Proto, Flash>::callERaProHandler(const char* deviceId, const cJSON* 
         if (!specific) {
             event.id = (void*)id;
             event.data = (void*)value;
+            this->queue += event;
+            return true;
         }
-        else {
-            event.id = ERaStrdup(id);
-            event.data = cJSON_PrintUnformatted(value);
+
+        event.id = ERaStrdup(id);
+        if (event.id == nullptr) {
+            return false;
         }
+        event.data = cJSON_PrintUnformatted(value);
+        if (event.data == nullptr) {
+            free(event.id);
+            event.id = nullptr;
+            return false;
+        }
+
         this->queue += event;
+        return true;
     }
 
     template <class Proto, class Flash>
@@ -1384,10 +1576,10 @@ void ERaApi<Proto, Flash>::callERaProHandler(const char* deviceId, const cJSON* 
 #if defined(ERA_SPECIFIC)
     template <class Proto, class Flash>
     inline
-    void ERaApi<Proto, Flash>::eventSpecificAdd(const char* id, cJSON* value,
+    bool ERaApi<Proto, Flash>::eventSpecificAdd(const char* id, cJSON* value,
                                                 bool specific, bool retained) {
         if (!this->queue.writeable()) {
-            return;
+            return false;
         }
 
         ERaEvent_t event;
@@ -1398,20 +1590,31 @@ void ERaApi<Proto, Flash>::callERaProHandler(const char* deviceId, const cJSON* 
         if (!specific) {
             event.id = (void*)id;
             event.data = (void*)value;
+            this->queue += event;
+            return true;
         }
-        else {
-            event.id = ERaStrdup(id);
-            event.data = cJSON_PrintUnformatted(value);
+
+        event.id = ERaStrdup(id);
+        if (event.id == nullptr) {
+            return false;
         }
+        event.data = cJSON_PrintUnformatted(value);
+        if (event.data == nullptr) {
+            free(event.id);
+            event.id = nullptr;
+            return false;
+        }
+
         this->queue += event;
+        return true;
     }
 
     template <class Proto, class Flash>
     inline
-    void ERaApi<Proto, Flash>::eventSpecificAdd(const char* id, const char* value,
+    bool ERaApi<Proto, Flash>::eventSpecificAdd(const char* id, const char* value,
                                                 bool specific, bool retained) {
         if (!this->queue.writeable()) {
-            return;
+            return false;
         }
 
         ERaEvent_t event;
@@ -1422,12 +1625,23 @@ void ERaApi<Proto, Flash>::callERaProHandler(const char* deviceId, const cJSON* 
         if (!specific) {
             event.id = (void*)id;
             event.data = (void*)value;
+            this->queue += event;
+            return true;
         }
-        else {
-            event.id = ERaStrdup(id);
-            event.data = ERaStrdup(value);
+
+        event.id = ERaStrdup(id);
+        if (event.id == nullptr) {
+            return false;
         }
+        event.data = ERaStrdup(value);
+        if (event.data == nullptr) {
+            free(event.id);
+            event.id = nullptr;
+            return false;
+        }
+
         this->queue += event;
+        return true;
     }
 
     template <class Proto, class Flash>
@@ -1456,6 +1670,105 @@ void ERaApi<Proto, Flash>::callERaProHandler(const char* deviceId, const cJSON* 
             event.id = nullptr;
             event.data = nullptr;
         }
+    }
+#endif
+
+#endif
+
+#if ERA_MAX_CLEARS
+
+    template <class Proto, class Flash>
+    inline
+    void ERaApi<Proto, Flash>::clearsWrite() {
+        if (!this->connected()) {
+            return;
+        }
+        if (!this->isClear()) {
+            return;
+        }
+
+        ERaClear_t& clear = this->getClear();
+        switch (clear.type) {
+            case ERaTypeWriteT::ERA_WRITE_CONFIG_ID:
+                this->clearConfigIdWrite(clear);
+                break;
+#if defined(ERA_MODBUS)
+            case ERaTypeWriteT::ERA_WRITE_MODBUS_DATA:
+                this->clearModbusWrite(clear);
+                break;
+#endif
+#if defined(ERA_ZIGBEE)
+            case ERaTypeWriteT::ERA_WRITE_ZIGBEE_DATA:
+                this->clearZigbeeWrite(clear);
+                break;
+#endif
+            default:
+                break;
+        }
+    }
+
+    template <class Proto, class Flash>
+    inline
+    bool ERaApi<Proto, Flash>::clearConfigIdAdd(ERaInt_t configId) {
+        if (!this->queueClear.writeable()) {
+            return false;
+        }
+
+        ERaClear_t clear;
+        clear.type = ERaTypeWriteT::ERA_WRITE_CONFIG_ID;
+        clear.configId = configId;
+        this->queueClear += clear;
+        return true;
+    }
+
+    template <class Proto, class Flash>
+    inline
+    void ERaApi<Proto, Flash>::clearConfigIdWrite(ERaClear_t& clear) {
+        this->thisProto().clearRetainedConfigIdData(clear.configId);
+    }
+
+#if defined(ERA_MODBUS)
+    template <class Proto, class Flash>
+    inline
+    bool ERaApi<Proto, Flash>::clearModbusAdd() {
+        if (!this->queueClear.writeable()) {
+            return false;
+        }
+
+        ERaClear_t clear;
+        clear.type = ERaTypeWriteT::ERA_WRITE_MODBUS_DATA;
+        clear.configId = 0L;
+        this->queueClear += clear;
+        return true;
+    }
+
+    template <class Proto, class Flash>
+    inline
+    void ERaApi<Proto, Flash>::clearModbusWrite(ERaClear_t& clear) {
+        this->thisProto().clearRetainedModbusData();
+        ERA_FORCE_UNUSED(clear);
+    }
+#endif
+
+#if defined(ERA_ZIGBEE)
+    template <class Proto, class Flash>
+    inline
+    bool ERaApi<Proto, Flash>::clearZigbeeAdd(const char* id) {
+        if (!this->queueClear.writeable()) {
+            return false;
+        }
+
+        ERaClear_t clear;
+        clear.type = ERaTypeWriteT::ERA_WRITE_ZIGBEE_DATA;
+        clear.rawId = id;
+        this->queueClear += clear;
+        return true;
+    }
+
+    template <class Proto, class Flash>
+    inline
+    void ERaApi<Proto, Flash>::clearZigbeeWrite(ERaClear_t& clear) {
+        this->thisProto().clearRetainedZigbeeData(clear.rawId);
     }
 #endif
 

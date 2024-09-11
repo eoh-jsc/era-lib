@@ -1217,6 +1217,8 @@ bool ERaPnP<Transport>::scanNetwork(const char* ssid) {
     }
     if (nets <= 0) {
         WiFi.scanDelete();
+        WiFi.disconnect();
+        ERA_LOG_WARNING(TAG, ERA_PSTR("Not found any SSID"));
         return false;
     }
 

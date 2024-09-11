@@ -27,6 +27,10 @@
     #define MAX_DEVICE_ZIGBEE           20
 #endif
 
+#if !defined(MAX_CONFIG_MAP_ZIGBEE)
+    #define MAX_CONFIG_MAP_ZIGBEE       5
+#endif
+
 #if !defined(DISABLE_SCALE_ZIGBEE_DATA)
     #define ENABLE_SCALE_ZIGBEE_DATA
 #endif
@@ -278,6 +282,11 @@ namespace ZigbeeNamespace {
         cJSON* payload;
     } ZigbeeAction_t;
 
+    typedef struct __ConfigIdMap_t {
+        char key[LENGTH_BUFFER];
+        ERaUInt_t configId;
+    } ConfigIdMap_t;
+
     typedef struct __IdentDeviceAddr_t {
         uint8_t typeDevice;
         AFAddrType_t address;
@@ -286,6 +295,8 @@ namespace ZigbeeNamespace {
         char modelName[50];
         ZigbeeData_t data;
         uint8_t receiveId;
+        uint8_t numConfigMap;
+        ConfigIdMap_t configMap[MAX_CONFIG_MAP_ZIGBEE];
     } IdentDeviceAddr_t;
 
     typedef struct __DataAFMsg_t {

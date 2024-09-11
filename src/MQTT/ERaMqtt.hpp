@@ -259,8 +259,8 @@ private:
     bool publishLWT(bool sync, bool retained, QoST qos);
     void onConnected();
     void onDisconnected();
-    void lockMQTT();
-    void unlockMQTT();
+    void lock();
+    void unlock();
 
     Client* client;
     MQTT mqtt;
@@ -331,9 +331,14 @@ bool ERaMqtt<Client, MQTT>::connect(FunctionCallback_t fn) {
 
         ERA_LOG_ERROR(TAG, ERA_PSTR("MQTT(%d): Connect failed (%d), retrying in 5 seconds"),
                                     count, this->mqtt.lastError());
+
         this->delays(5000);
 
         ERaWatchdogFeed();
+
+        if (this->mqtt.lastError() == lwmqtt_err_t::LWMQTT_NETWORK_FAILED_CONNECT) {
+            return false;
+        }
     }
 
     ERaWatchdogFeed();
@@ -438,12 +443,12 @@ bool ERaMqtt<Client, MQTT>::subscribeTopic(const char* baseTopic, const char* to
         FormatString(topicName, topic);
     }
 
-    this->lockMQTT();
+    this->lock();
     if (this->connected()) {
         status = this->mqtt.subscribe(topicName, qos);
         ERA_MQTT_SUB_LOG(status, this->mqtt.lastError())
     }
-    this->unlockMQTT();
+    this->unlock();
 
     return status;
 }
@@ -460,12 +465,12 @@ bool ERaMqtt<Client, MQTT>::unsubscribeTopic(const char* baseTopic, const char* 
         FormatString(topicName, topic);
     }
 
-    this->lockMQTT();
+    this->lock();
     if (this->connected()) {
         status = this->mqtt.unsubscribe(topicName);
         ERA_MQTT_UNSUB_LOG(status, this->mqtt.lastError())
     }
-    this->unlockMQTT();
+    this->unlock();
 
     return status;
 }
@@ -480,14 +485,14 @@ bool ERaMqtt<Client, MQTT>::publishData(const char* topic, const char* payload,
 
     bool status {false};
 
-    this->lockMQTT();
+    this->lock();
     if (this->connected()) {
         this->lastPublish = ERaMillis();
         status = this->mqtt.publish(topic, payload, retained, qos);
         this->ping = (ERaMillis() - this->lastPublish);
         ERA_MQTT_PUB_LOG(status, this->mqtt.lastError())
     }
-    this->unlockMQTT();
+    this->unlock();
 
     return status;
 }
@@ -546,14 +551,14 @@ bool ERaMqtt<Client, MQTT>::publishLWT(bool sync, bool retained, QoST qos) {
 
     FormatString(payload, ONLINE_MESSAGE, wifiInfo, sync ? ASK_CONFIG_INFO : "");
 
-    this->lockMQTT();
+    this->lock();
     if (this->connected()) {
         this->lastPublish = ERaMillis();
         status = this->mqtt.publish(topic, payload, retained, qos);
         this->ping = (ERaMillis() - this->lastPublish);
         ERA_MQTT_PUB_LOG(status, this->mqtt.lastError())
     }
-    this->unlockMQTT();
+    this->unlock();
 
     return status;
 }
@@ -586,19 +591,13 @@ void ERaMqtt<Client, MQTT>::onDisconnected() {
 
 template <class Client, class MQTT>
 inline
-void ERaMqtt<Client, MQTT>::lockMQTT() {
-    if (!this->mqtt.getSkipACK()) {
-        return;
-    }
+void ERaMqtt<Client, MQTT>::lock() {
     ERaGuardLock(this->mutex);
 }
 
 template <class Client, class MQTT>
 inline
-void ERaMqtt<Client, MQTT>::unlockMQTT() {
-    if (!this->mqtt.getSkipACK()) {
-        return;
-    }
+void ERaMqtt<Client, MQTT>::unlock() {
     ERaGuardUnlock(this->mutex);
 }
 

@@ -3,11 +3,21 @@
 
 #include <ERa/ERaTransp.hpp>
 
+#define ERA_TEMPLATABLE_TRANSP_LOOP(method, ...)    \
+    ERaTransp* transp = this->firstTransp;          \
+    while (transp != NULL) {                        \
+        ERaTransp* next = transp->getNext();        \
+        transp->method(__VA_ARGS__);                \
+        transp = next;                              \
+    }
+
 class ERaTranspHandler
 {
 #if defined(ERA_HAS_FUNCTIONAL_H)
+    typedef std::function<void(void)> StateCallback_t;
     typedef std::function<void(const char*, const char*)> MessageCallback_t;
 #else
+    typedef void (*StateCallback_t)(void);
     typedef void (*MessageCallback_t)(const char*, const char*);
 #endif
 
@@ -21,31 +31,16 @@ public:
 
 protected:
     void begin(void* args = NULL) {
-        ERaTransp* transp = this->firstTransp;
-        while (transp != NULL) {
-            ERaTransp* next = transp->getNext();
-            transp->begin(args);
-            transp = next;
-        }
+        ERA_TEMPLATABLE_TRANSP_LOOP(begin, args)
     }
 
     void run() {
-        ERaTransp* transp = this->firstTransp;
-        while (transp != NULL) {
-            ERaTransp* next = transp->getNext();
-            transp->run();
-            transp = next;
-        }
+        ERA_TEMPLATABLE_TRANSP_LOOP(run)
     }
 
     void publishData(const char* topic,
                     const char* payload) {
-        ERaTransp* transp = this->firstTransp;
-        while (transp != NULL) {
-            ERaTransp* next = transp->getNext();
-            transp->publish(topic, payload);
-            transp = next;
-        }
+        ERA_TEMPLATABLE_TRANSP_LOOP(publish, topic, payload)
     }
 
     void addTransp(ERaTransp& transp) {
@@ -62,22 +57,21 @@ protected:
         this->lastTransp = pTransp;
     }
 
+    void setAuth(const char* auth) {
+        ERA_TEMPLATABLE_TRANSP_LOOP(setAuth, auth)
+    }
+
     void setTopic(const char* topic) {
-        ERaTransp* transp = this->firstTransp;
-        while (transp != NULL) {
-            ERaTransp* next = transp->getNext();
-            transp->setTopic(topic);
-            transp = next;
-        }
+        ERA_TEMPLATABLE_TRANSP_LOOP(setTopic, topic)
     }
 
     void onMessage(MessageCallback_t cb) {
-        ERaTransp* transp = this->firstTransp;
-        while (transp != NULL) {
-            ERaTransp* next = transp->getNext();
-            transp->onMessage(cb);
-            transp = next;
-        }
+        ERA_TEMPLATABLE_TRANSP_LOOP(onMessage, cb)
+    }
+
+    void onStateChange(StateCallback_t onCb,
+                       StateCallback_t offCb) {
+        ERA_TEMPLATABLE_TRANSP_LOOP(onStateChange, onCb, offCb)
     }
 
 private:

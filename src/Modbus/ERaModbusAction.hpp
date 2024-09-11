@@ -121,13 +121,17 @@ bool ERaModbusAction::addModbusActionRaw(uint8_t addr, uint8_t func, uint8_t sa1
 
 inline
 bool ERaModbusAction::addModbusAction(const char* ptr, uint8_t type, uint16_t param) {
-    if (strlen(ptr) != 36) {
+    if (ptr == nullptr) {
+        return false;
+    }
+    if (strlen(ptr) > 36) {
         return false;
     }
     if (!this->queue.writeable()) {
         return false;
     }
-    char* buf = (char*)ERA_MALLOC(37 * sizeof(char));
+    size_t size = strlen(ptr) + 1;
+    char* buf = (char*)ERA_MALLOC(size);
     if (buf == nullptr) {
         return false;
     }
@@ -135,7 +139,7 @@ bool ERaModbusAction::addModbusAction(const char* ptr, uint8_t type, uint16_t pa
     req.key = buf;
     req.type = type;
     req.param = param;
-    memset(req.key, 0, 37 * sizeof(char));
+    memset(req.key, 0, size);
     strcpy(req.key, ptr);
     this->queue += req;
     return true;

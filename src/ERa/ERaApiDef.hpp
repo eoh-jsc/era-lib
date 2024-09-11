@@ -51,6 +51,20 @@
     #endif
 #endif
 
+#if !defined(ERA_MAX_CLEARS)
+    #if defined(ERA_NO_RTOS)
+        #define ERA_MAX_CLEARS           0
+    #elif !ERA_MQTT_PUBLISH_RETAINED
+        #define ERA_MAX_CLEARS           0
+    #elif defined(ERA_MODBUS)
+        #define ERA_MAX_CLEARS           MAX_CONFIG_MODBUS
+    #elif defined(ERA_ZIGBEE)
+        #define ERA_MAX_CLEARS           10
+    #else
+        #define ERA_MAX_CLEARS           0
+    #endif
+#endif
+
 #if defined(analogInputToDigitalPin)
     #define ERA_DECODE_PIN(pin)          analogInputToDigitalPin(pin)
 #else
@@ -103,5 +117,13 @@ typedef struct __ERaEvent_t {
     void* id;
     void* data;
 } ERaEvent_t;
+
+typedef struct __ERaClear_t {
+    uint8_t type;
+    union {
+        const char* rawId;
+        ERaInt_t configId;
+    };
+} ERaClear_t;
 
 #endif /* INC_ERA_API_DEFINE_HPP_ */

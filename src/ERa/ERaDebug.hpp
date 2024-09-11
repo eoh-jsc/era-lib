@@ -180,9 +180,7 @@
             #define ERA_SERIAL                          stdout
         #endif
 
-        #if defined(RASPBERRY) ||       \
-            defined(TINKER_BOARD) ||    \
-            defined(ORANGE_PI)
+        #if defined(WIRING_PI)
             #include <wiringPi.h>
         #endif
 

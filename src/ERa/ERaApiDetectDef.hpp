@@ -9,10 +9,7 @@
     #include <ERa/ERaApiParticleDef.hpp>
 #elif defined(__MBED__)
     #include <ERa/ERaApiMbedDef.hpp>
-#elif defined(LINUX) &&      \
-    (defined(RASPBERRY) ||   \
-    defined(TINKER_BOARD) || \
-    defined(ORANGE_PI))
+#elif defined(WIRING_PI)
     #include <ERaApiWiringPiDef.hpp>
 #elif defined(LINUX)
     #include <ERaApiLinuxDef.hpp>

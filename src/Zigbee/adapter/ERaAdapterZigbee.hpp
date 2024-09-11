@@ -147,6 +147,8 @@ void ERaZigbee<Api>::startZigbee(bool& format, bool& invalid) {
     this->coordinator->clearAllDevice();
     DBZigbee::parseZigbeeDevice();
 
+    this->coordinator->lock = false;
+
     this->createInfoCoordinator();
 
     ZigbeeState::set(ZigbeeStateT::STATE_ZB_INIT_SUCCESSFUL);

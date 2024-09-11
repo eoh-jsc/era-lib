@@ -11,6 +11,12 @@
 #define REPORT_MAX_INTERVAL (unsigned long)0xFFFFFFFF
 #define WaitForever         REPORT_MAX_INTERVAL
 
+typedef struct ReportSettings_t {
+    float minChange;
+    unsigned long minInterval;
+    unsigned long maxInterval;
+} ReportSettings_t;
+
 class ERaReport
 {
 public:

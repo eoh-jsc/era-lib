@@ -130,13 +130,16 @@ SOURCES=main.cpp \
 	MQTT/MQTT/MQTTLinux.cpp
 
 ifeq ($(target),raspberry)
-	CXXFLAGS += -DRASPBERRY
+	CXXFLAGS += -DRASPBERRY \
+		-DWIRING_PI
 	LDFLAGS += -lwiringPi
 else ifeq ($(target),tinker)
-	CXXFLAGS += -DTINKER_BOARD
+	CXXFLAGS += -DTINKER_BOARD \
+		-DWIRING_PI
 	LDFLAGS += -lwiringPi
 else ifeq ($(target),orangepi)
-	CXXFLAGS += -DORANGE_PI
+	CXXFLAGS += -DORANGE_PI \
+		-DWIRING_PI
 	LDFLAGS += -lwiringPi
 else
 	SOURCES += Utility/Compat/SerialLinux.cpp

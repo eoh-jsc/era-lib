@@ -10,6 +10,10 @@
 #include <Utility/ERaUtility.hpp>
 #include <ERa/types/WrapperTypes.hpp>
 
+#define ERA_MODBUS_MIN_CHANGE   0.0f
+#define ERA_MODBUS_MIN_INTERVAL 1000UL
+#define ERA_MODBUS_MAX_INTERVAL 60000UL
+
 #define addDataRegister(...)    addModbusDataRegister(__VA_ARGS__)
 
 class ERaModbusData
@@ -172,6 +176,12 @@ public:
     ERaModbusData()
         : numRegister(0)
         , enableReport(false)
+        , prevEnableReport(false)
+        , publishSettings {
+            .minChange = ERA_MODBUS_MIN_CHANGE,
+            .minInterval = ERA_MODBUS_MIN_INTERVAL,
+            .maxInterval = ERA_MODBUS_MAX_INTERVAL
+        }
     {}
     ~ERaModbusData()
     {}
@@ -268,12 +278,32 @@ public:
         return iterator(this, this->setupRegister(wrapper, addr, func, sa1, sa2));
     }
 
+    void setModbusPublishSettings(float minChange = ERA_MODBUS_MIN_CHANGE,
+                                unsigned long minInterval = ERA_MODBUS_MIN_INTERVAL,
+                                unsigned long maxInterval = ERA_MODBUS_MAX_INTERVAL) {
+        if (minInterval < ERA_MODBUS_MIN_INTERVAL) {
+            minInterval = ERA_MODBUS_MIN_INTERVAL;
+        }
+        if (maxInterval < ERA_MODBUS_MAX_INTERVAL) {
+            maxInterval = ERA_MODBUS_MAX_INTERVAL;
+        }
+        this->publishSettings.minChange = minChange;
+        this->publishSettings.minInterval = minInterval;
+        this->publishSettings.maxInterval = maxInterval;
+    }
+
 protected:
     bool isNewReport() const {
         return this->enableReport;
     }
 
-    void removeConfigId();
+    bool isChangedReport() const {
+        bool ret = (this->enableReport != this->prevEnableReport);
+        this->prevEnableReport = this->enableReport;
+        return ret;
+    }
+
+    void clearConfigId();
     void updateRegister();
     void parseConfig(const void* ptr, bool json);
     void processParseParamConvertAi(const cJSON* const root, iterator& it);
@@ -289,9 +319,9 @@ protected:
         ERA_LOG_WARNING(TAG, ERA_PSTR("configIdModbusWrite default."));
     }
 
-    virtual void configIdModbusRemove(ERaInt_t configId) {
+    virtual void configIdModbusClear(ERaInt_t configId) {
         ERA_FORCE_UNUSED(configId);
-        ERA_LOG_WARNING(TAG, ERA_PSTR("configIdModbusRemove default."));
+        ERA_LOG_WARNING(TAG, ERA_PSTR("configIdModbusClear default."));
     }
 
 private:
@@ -339,6 +369,9 @@ private:
     unsigned int numRegister;
 
     bool enableReport;
+    mutable bool prevEnableReport;
+
+    ReportSettings_t publishSettings;
 
 #if defined(ERA_HAS_FUNCTIONAL_H)
     ReportCallback_t reportCallback = [&, this](void* args) {
@@ -480,7 +513,9 @@ void ERaModbusData::processParseConfigSensorParam(const cJSON* const root, uint8
 
     iterator it = this->addInternalRegister(
         configId->valueint, addr, func->valueint, reg->valueint
-    ).setScale(scale->valuedouble).publishOnChange(1.0f, 1000UL, 60000UL);
+    ).setScale(scale->valuedouble).publishOnChange(this->publishSettings.minChange,
+                                                   this->publishSettings.minInterval,
+                                                   this->publishSettings.maxInterval);
 
     switch (func->valueint) {
         case ModbusFunctionT::READ_COIL_STATUS:
@@ -626,14 +661,14 @@ bool ERaModbusData::handler(ERaModbusRequest* request, ERaModbusResponse* respon
 }
 
 inline
-void ERaModbusData::removeConfigId() {
+void ERaModbusData::clearConfigId() {
     const ERaList<ERaInt_t>::iterator* e = this->ERaRegId.end();
     for (ERaList<ERaInt_t>::iterator* it = this->ERaRegId.begin(); it != e; it = it->getNext()) {
         ERaInt_t configId = it->get();
         if (!configId) {
             continue;
         }
-        this->configIdModbusRemove(configId);
+        this->configIdModbusClear(configId);
     }
     this->ERaRegId.clear();
 }

@@ -11,15 +11,20 @@ class ERaTransp
 {
 protected:
 #if defined(ERA_HAS_FUNCTIONAL_H)
+    typedef std::function<void(void)> StateCallback_t;
     typedef std::function<void(const char*, const char*)> MessageCallback_t;
 #else
+    typedef void (*StateCallback_t)(void);
     typedef void (*MessageCallback_t)(const char*, const char*);
 #endif
 
 public:
     ERaTransp()
-        : topic(NULL)
+        : authToken(NULL)
+        , baseTopic(NULL)
         , callback(NULL)
+        , connectedCb(NULL)
+        , disconnectedCb(NULL)
         , next(NULL)
     {}
     virtual ~ERaTransp()
@@ -46,17 +51,30 @@ public:
         this->next = transp;
     }
 
-    void setTopic(const char* _topic) {
-        this->topic = _topic;
+    void setAuth(const char* auth) {
+        this->authToken = auth;
+    }
+
+    void setTopic(const char* topic) {
+        this->baseTopic = topic;
     }
 
     void onMessage(MessageCallback_t cb) {
         this->callback = cb;
     }
 
+    void onStateChange(StateCallback_t onCb,
+                       StateCallback_t offCb) {
+        this->connectedCb = onCb;
+        this->disconnectedCb = offCb;
+    }
+
 protected:
-    const char* topic;
+    const char* authToken;
+    const char* baseTopic;
     MessageCallback_t callback;
+    StateCallback_t connectedCb;
+    StateCallback_t disconnectedCb;
 
 private:
     ERaTransp* next;

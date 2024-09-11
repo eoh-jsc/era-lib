@@ -991,7 +991,7 @@
     #define ERA_USE_DEFAULT_RESET
     #define ERA_USE_DEFAULT_WATCHDOG
 
-#elif defined(LINUX) && (defined(RASPBERRY) || defined(TINKER_BOARD) || defined(ORANGE_PI))
+#elif defined(LINUX) && defined(WIRING_PI)
 
     #include <stdlib.h>
     #include <pthread.h>

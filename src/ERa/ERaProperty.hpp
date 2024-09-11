@@ -632,11 +632,7 @@ private:
     unsigned int numProperty;
     unsigned long timeout;
 
-    struct {
-        float minChange;
-        unsigned long minInterval;
-        unsigned long maxInterval;
-    } publishSettings;
+    ReportSettings_t publishSettings;
 
     using PropertyIterator = typename ERaList<Property_t*>::iterator;
 };

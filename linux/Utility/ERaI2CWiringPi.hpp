@@ -9,15 +9,10 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
+#include <linux/i2c-dev.h>
 
-#if defined(LINUX) &&        \
-    (defined(RASPBERRY) ||   \
-    defined(TINKER_BOARD) || \
-    defined(ORANGE_PI))
-    #include <linux/i2c-dev.h>
+#if defined(WIRING_PI)
     #include <wiringPiI2C.h>
-#else
-    #error "This code is intended to run on the Raspberry, Tinker Board or Orange Pi!"
 #endif
 
 #include "Compat/Stream.hpp"
@@ -72,7 +67,7 @@ public:
 
     void begin(const int devId) {
         this->end();
-        this->fd = wiringPiI2CSetup(devId);
+        this->fd = this->setup(devId);
         if (this->fd >= 0) {
             this->txLength = 0;
             this->txAddress = devId;
@@ -82,7 +77,7 @@ public:
 
     void begin(const char* device, int devId) {
         this->end();
-        this->fd = wiringPiI2CSetupInterface(device, devId);
+        this->fd = this->setupInterface(device, devId);
         if (this->fd >= 0) {
             this->txLength = 0;
             this->txAddress = devId;
@@ -265,6 +260,35 @@ public:
     }
 
 protected:
+#if defined(WIRING_PI)
+    int setup(const int devId) {
+        return wiringPiI2CSetup(devId);
+    }
+
+    int setupInterface(const char* device, int devId) {
+        return wiringPiI2CSetupInterface(device, devId);
+    }
+#else
+    int setup(const int devId) {
+        return this->setupInterface("/dev/i2c-1", devId);
+    }
+
+    int setupInterface(const char* device, int devId) {
+        int fd;
+
+        fd = ::open(device, O_RDWR);
+        if (fd < 0) {
+            return -1;
+        }
+        if (ioctl(fd, I2C_SLAVE, devId) < 0) {
+            ::close(fd);
+            return -1;
+        }
+
+        return fd;
+    }
+#endif
+
 #if defined(ERA_I2C_DEV)
     uint8_t endWriteData() {
         if (!this->connected()) {

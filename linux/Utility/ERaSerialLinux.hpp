@@ -1,10 +1,7 @@
 #ifndef INC_ERA_SERIAL_LINUX_HPP_
 #define INC_ERA_SERIAL_LINUX_HPP_
 
-#if defined(LINUX) &&        \
-    (defined(RASPBERRY) ||   \
-    defined(TINKER_BOARD) || \
-    defined(ORANGE_PI))
+#if defined(WIRING_PI)
     #include <wiringSerial.h>
 #elif defined(LINUX)
     #include "Compat/SerialLinux.hpp"

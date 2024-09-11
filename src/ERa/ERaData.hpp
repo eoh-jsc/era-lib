@@ -8,6 +8,8 @@
 #include <string.h>
 #include <ERa/ERaDefine.hpp>
 
+using namespace std;
+
 class ERaParam;
 class ERaString;
 class ERaDataJson;
@@ -101,6 +103,13 @@ public:
                 return 0.0;
             }
             return atof(this->ptr);
+        }
+
+        size_t length() const {
+            if (!this->isValid()) {
+                return 0;
+            }
+            return strlen(this->ptr);
         }
 
         ERaDataJson toJSON() const;
@@ -1082,9 +1091,9 @@ public:
         }
 
         iterator& shared(const iterator& it) {
-			this->item = it.item;
+            this->item = it.item;
             this->parent = it.parent;
-			return (*this);
+            return (*this);
         }
 
         ERaString type();

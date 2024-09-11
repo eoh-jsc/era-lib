@@ -15,19 +15,21 @@ class ERaOTP
 {
     typedef struct __OTP_t {
         bool enabled;
-        int otp;
+        ERaInt_t otp;
         unsigned long prevMillis;
     } OTP_t;
     const static int MAX_OTP = ERA_MAX_OTP;
 
 public:
     ERaOTP()
-        : numOTP(0)
-    {}
+        : numOTP(0U)
+    {
+        memset(this->otp, 0, sizeof(this->otp));
+    }
     ~ERaOTP()
     {}
 
-    bool run(int _otp) {
+    bool run(ERaInt_t _otp) {
         unsigned long currentMillis = ERaMillis();
         for (int i = 0; i < MAX_OTP; ++i) {
             if (!this->isValidOTP(i)) {
@@ -45,12 +47,8 @@ public:
         return false;
     }
 
-    int createOTP() {
+    ERaInt_t createOTP() {
         this->run(0);
-
-        if (this->numOTP >= MAX_OTP) {
-            return -1;
-        }
 
         int id = this->findOTPFree();
         if (id < 0) {
@@ -59,7 +57,7 @@ public:
 
         this->otp[id].enabled = true;
         this->otp[id].prevMillis = ERaMillis();
-        this->otp[id].otp = ERaRandomNumber(100000000, 999999999);
+        this->otp[id].otp = ERaRandomNumber(10000000, 99999999);
         this->numOTP++;
         return this->otp[id].otp;
     }

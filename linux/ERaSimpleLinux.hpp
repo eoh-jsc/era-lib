@@ -3,10 +3,7 @@
 
 #include <pthread.h>
 
-#if defined(LINUX) &&        \
-    (defined(RASPBERRY) ||   \
-    defined(TINKER_BOARD) || \
-    defined(ORANGE_PI))
+#if defined(WIRING_PI)
     #include <wiringPi.h>
     #include <Utility/ERaPwmWiringPi.hpp>
     #include <Utility/ERaPulseWiringPi.hpp>
@@ -24,10 +21,7 @@
 #include <Modbus/ERaModbusLinux.hpp>
 #include <Zigbee/ERaZigbeeLinux.hpp>
 
-#if defined(LINUX) &&        \
-    (defined(RASPBERRY) ||   \
-    defined(TINKER_BOARD) || \
-    defined(ORANGE_PI))
+#if defined(WIRING_PI)
     #include <Utility/ERaI2CWiringPi.hpp>
     #include <ERaApiWiringPi.hpp>
 #elif defined(LINUX)

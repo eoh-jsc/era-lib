@@ -58,6 +58,10 @@ public:
     virtual void begin() = 0;
     virtual void run() = 0;
 
+    virtual long getTimeZone() {
+        return 0L;
+    }
+
     void setSetTimeCallback(SetTimeCallback_t cb) {
         this->setTimeCb = cb;
     }
