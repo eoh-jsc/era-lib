@@ -464,6 +464,7 @@ namespace ZigbeeNamespace {
             static __InfoCoordinator_t* _instance = nullptr;
             return _instance;
         }
+
         static __InfoCoordinator_t* getInstance() {
             if (__InfoCoordinator_t::instance() == nullptr) {
                 void* ptr = ERA_CALLOC(1, sizeof(__InfoCoordinator_t));
@@ -471,11 +472,13 @@ namespace ZigbeeNamespace {
             }
             return __InfoCoordinator_t::instance();
         }
+
         void reset(__InfoCoordinator_t*& _instance = __InfoCoordinator_t::instance()) {
             _instance->freeAllDevice();
             memset((void*)_instance, 0, sizeof(__InfoCoordinator_t));
             new(_instance) __InfoCoordinator_t();
         }
+
         void freeAllDevice() {
             for (size_t i = 0; i < this->deviceCount; ++i) {
                 if (this->deviceIdent[i].data.topic != nullptr) {
@@ -488,10 +491,30 @@ namespace ZigbeeNamespace {
                 }
             }
         }
+
         void clearAllDevice() {
             this->freeAllDevice();
             this->deviceCount = 0;
             memset(this->deviceIdent, 0, sizeof(this->deviceIdent));
+        }
+
+        void clearConfigMap() {
+            for (size_t i = 0; i < this->deviceCount; ++i) {
+                this->deviceIdents[i].numConfigMap = 0;
+                memset(this->deviceIdents[i].configMap, 0, sizeof(this->deviceIdents[i].configMap));
+            }
+        }
+
+        void loadConfigReport() {
+            for (size_t i = 0; i < this->deviceCount; ++i) {
+                this->deviceIdents[i].configReport = !!this->deviceIdents[i].numConfigMap;
+            }
+        }
+
+        void loadPrevConfigReport() {
+            for (size_t i = 0; i < this->deviceCount; ++i) {
+                this->deviceIdents[i].prevConfigReport = this->deviceIdents[i].configReport;
+            }
         }
 
         bool lock;
@@ -578,6 +601,7 @@ namespace ZigbeeNamespace {
             static __InfoDevice_t* _instance = nullptr;
             return _instance;
         }
+
         static __InfoDevice_t* getInstance() {
             if (__InfoDevice_t::instance() == nullptr) {
                 void* ptr = ERA_CALLOC(1, sizeof(__InfoDevice_t));
@@ -585,6 +609,7 @@ namespace ZigbeeNamespace {
             }
             return __InfoDevice_t::instance();
         }
+
         void reset(__InfoDevice_t*& _instance = __InfoDevice_t::instance()) {
             memset((void*)_instance, 0, sizeof(__InfoDevice_t));
             new(_instance) __InfoDevice_t();
