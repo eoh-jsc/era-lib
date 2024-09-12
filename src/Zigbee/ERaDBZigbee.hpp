@@ -62,6 +62,10 @@ protected:
         return ret;
     }
 
+    void setConfigReport(IdentDeviceAddr_t* deviceInfo, bool enable) const {
+        deviceInfo->configReport = enable;
+    }
+
 private:
     void parseConfigMapDevice(const cJSON* const root);
     void parseConfigMapKey(IdentDeviceAddr_t* deviceInfo, const cJSON* const root);
