@@ -5,8 +5,8 @@ raspberry)
     sudo apt-get update
     sudo apt-get upgrade
     sudo apt-get install build-essential git-core
-    git clone git://git.drogon.net/wiringPi
-    cd wiringPi
+    git clone https://github.com/WiringPi/WiringPi.git
+    cd WiringPi
     git pull origin
     ./build
     gpio -v
@@ -15,12 +15,12 @@ raspberry)
     exec bash
     # exit 0
     ;;
-raspberry_fork)
+raspberry_original)
     sudo apt-get update
     sudo apt-get upgrade
     sudo apt-get install build-essential git-core
-    git clone https://github.com/WiringPi/WiringPi.git
-    cd WiringPi
+    git clone git://git.drogon.net/wiringPi
+    cd wiringPi
     git pull origin
     ./build
     gpio -v

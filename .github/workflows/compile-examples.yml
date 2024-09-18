@@ -208,7 +208,7 @@ jobs:
             platforms: |
               # Install ESP32 platform via Boards Manager
               - name: esp32:esp32
-                source-url: https://github.com/espressif/arduino-esp32/raw/gh-pages/package_esp32_dev_index.json
+                source-url: https://github.com/espressif/arduino-esp32/raw/gh-pages/package_esp32_index.json
           - board:
               platform-name: esp8266:esp8266
             platforms: |
@@ -246,7 +246,7 @@ jobs:
 
       - name: Save memory usage change report as artifact
         if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           if-no-files-found: error
           name: ${{ env.SKETCHES_REPORTS_PATH }}

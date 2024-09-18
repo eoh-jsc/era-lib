@@ -70,7 +70,6 @@ bool ERaZigbee<Api>::interviewDevice() {
             this->readAttrDevice(this->device->address, ClusterIDT::ZCL_CLUSTER_BASIC, {ZbZclBasicSvrAttrT::ZCL_BASIC_ATTR_MFR_NAME, /* Request a Manufacturer Name from the dest device */
                                                                                         ZbZclBasicSvrAttrT::ZCL_BASIC_ATTR_MODEL_NAME}); /* Request a Model Name from the dest device */
 
-            FromZigbee::createDeviceEvent(DeviceEventT::DEVICE_EVENT_INTERVIEW_BASIC_INFO);
             deviceInfo = DBZigbee::setDeviceToCoordinator(false);
             if (deviceInfo == nullptr) {
                 ERA_LOG(TAG, ERA_PSTR("Interview network address %s(%d) failed"), IEEEToString(this->device->address.addr.ieeeAddr).c_str(),
@@ -78,6 +77,8 @@ bool ERaZigbee<Api>::interviewDevice() {
                 FromZigbee::createDeviceEvent(DeviceEventT::DEVICE_EVENT_INTERVIEW_FAILED);
                 return false;
             }
+            FromZigbee::createDeviceEvent(DeviceEventT::DEVICE_EVENT_INTERVIEW_BASIC_INFO);
+
             this->publishZigbeeData(deviceInfo);
 
             this->readAttrDevice(this->device->address, ClusterIDT::ZCL_CLUSTER_BASIC, {ZbZclBasicSvrAttrT::ZCL_BASIC_ATTR_POWER_SOURCE, /* Request a Power Source from the dest device */
@@ -156,8 +157,8 @@ bool ERaZigbee<Api>::interviewDevice() {
 
     ERA_LOG(TAG, ERA_PSTR("Interview network address %s(%d) successful"), IEEEToString(this->device->address.addr.ieeeAddr).c_str(),
                                                                         this->device->address.addr.nwkAddr);
-    FromZigbee::createDeviceEvent(DeviceEventT::DEVICE_EVENT_INTERVIEW_SUCCESSFUL);
     deviceInfo = DBZigbee::setDeviceToCoordinator(true);
+    FromZigbee::createDeviceEvent(DeviceEventT::DEVICE_EVENT_INTERVIEW_SUCCESSFUL);
     this->publishZigbeeData(deviceInfo);
     return true;
 }

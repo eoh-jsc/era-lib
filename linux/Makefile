@@ -1,20 +1,20 @@
 # 
 # To build on RaspberryPi:
-# 1. Install WiringPi: http://wiringpi.com/download-and-install/
+# 1. Install WiringPi: https://github.com/WiringPi/WiringPi.git
 # 2. Run:
 #    make clean all target=raspberry
 #    sudo ./era --token=YourAuthToken
 #    sudo ./era --token=YourAuthToken --id=YourBoardID
 #
 # To build on TinkerBoard:
-# 1. Install WiringPi: https://github.com/TinkerBoard/gpio_lib_c/
+# 1. Install WiringPi: https://github.com/TinkerBoard/gpio_lib_c.git
 # 2. Run:
 #    make clean all target=tinker
 #    sudo ./era --token=YourAuthToken
 #    sudo ./era --token=YourAuthToken --id=YourBoardID
 #
 # To build on OrangePi:
-# 1. Install WiringPi: https://github.com/orangepi-xunlong/wiringOP/
+# 1. Install WiringPi: https://github.com/orangepi-xunlong/wiringOP.git
 # 2. Run:
 #    make clean all target=orangepi
 #    sudo ./era --token=YourAuthToken

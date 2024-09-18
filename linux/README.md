@@ -5,7 +5,7 @@ Step 1: Install Raspbian OS in your Raspberry Pi.
 Step 2: Connect your Raspberry Pi to the internet.
 
 Step 3: Install WiringPi library:
-    http://wiringpi.com/download-and-install/
+    https://github.com/WiringPi/WiringPi.git
 
 Step 4: Download library and build ERa:
 ```bash
