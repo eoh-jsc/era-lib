@@ -6,10 +6,12 @@
 #include <BLEUtils.h>
 #include <BLE2902.h>
 #include <BLE/ERaBLEConfig.hpp>
+#include <BLE/ERaBLEVerify.hpp>
 #include <BLE/ERaParse.hpp>
 #include <ERa/ERaOTP.hpp>
 #include <ERa/ERaTransp.hpp>
 #include <ERa/ERaProtocol.hpp>
+#include <Utility/MD5.hpp>
 #include <Utility/ERacJSON.hpp>
 #include <Utility/ERaQueue.hpp>
 #include <Utility/ERaUtility.hpp>
@@ -20,9 +22,13 @@
 #define CHARACTERISTIC_UUID_RSP "fba737c2-9f19-4779-9ef2-9446c29d0bf5"
 #define CHARACTERISTIC_UUID_CMD "b32f3620-2846-4d1c-88aa-5dd06c0ad15e"
 
+#define CHARACTERISTIC_UUID_AUT "6ee26cfb-b42f-43ae-9ecf-f70d84bbd64f"
+#define CHARACTERISTIC_UUID_CTR "f0e7aa38-e466-42af-b4c7-5e6ec5c9a614"
+
 class ERaBLETransp
     : public ERaTransp
     , public ERaOTP
+    , public ERaBLEVerify
     , public ERaEncryptMbedTLS
     , public BLEServerCallbacks
     , public BLECharacteristicCallbacks
@@ -31,20 +37,24 @@ class ERaBLETransp
 
 public:
     ERaBLETransp(ERaCallbacksHelper& helper,
-                bool _base64 = false,
-                bool _encrypt = true)
-        : ERaEncryptMbedTLS(_base64)
-        , transpProp(ERaBluetooth::instance())
-        , api(NULL)
-        , timeout(1000L)
-        , _connected(false)
-        , initialized(false)
-        , useEncrypt(_encrypt)
-        , pServer(NULL)
-        , pService(NULL)
-        , pCharacteristicTKN(NULL)
-        , pCharacteristicRSP(NULL)
-        , pCharacteristicCMD(NULL)
+                bool base64 = false,
+                bool encrypt = true)
+        : ERaEncryptMbedTLS(base64)
+        , mTranspProp(ERaBluetooth::instance())
+        , mApi(NULL)
+        , mTimeout(1000L)
+        , mConnected(false)
+        , mInitialized(false)
+        , mUseEncrypt(encrypt)
+        , mUserDeviceName(NULL)
+        , mServer(NULL)
+        , mService(NULL)
+        , mCharacteristicTKN(NULL)
+        , mCharacteristicRSP(NULL)
+        , mCharacteristicCMD(NULL)
+        , mNewService(NULL)
+        , mCharacteristicAUT(NULL)
+        , mCharacteristicCTR(NULL)
     {
         helper.setERaTransp(this);
         ERaBLETransp::instance() = this;
@@ -53,15 +63,15 @@ public:
     {}
 
     void setAPI(ERaApiHandler* api) {
-        this->api = api;
+        this->mApi = api;
     }
 
     void setAPI(ERaApiHandler& api) {
-        this->api = &api;
+        this->mApi = &api;
     }
 
-    void setEncrypt(bool _encrypt = true) {
-        this->useEncrypt = _encrypt;
+    void setEncrypt(bool encrypt = true) {
+        this->mUseEncrypt = encrypt;
     }
 
     void setTranspProperty(void* args) {
@@ -69,8 +79,16 @@ public:
             return;
         }
         char* ptr = (char*)args;
-        this->transpProp->getInstance();
-        this->transpProp->parseConfig(ptr);
+        this->mTranspProp->getInstance();
+        this->mTranspProp->parseConfig(ptr);
+    }
+
+    void begin(const char* address, const char* password, const char* name = NULL) {
+        this->mTranspProp->getInstance();
+        this->mTranspProp->setAddress(address);
+        this->mTranspProp->setPassword(password);
+        this->mUserDeviceName = name;
+        this->begin((void*)"");
     }
 
     void begin(void* args = NULL) override {
@@ -78,80 +96,113 @@ public:
             return;
         }
         this->setTranspProperty(args);
-        if (!strlen(this->transpProp->address)) {
+        if (!strlen(this->mTranspProp->address)) {
             return;
         }
 
-        ERaEncryptMbedTLS::begin(this->transpProp->secretKey);
+        ERaEncryptMbedTLS::begin(this->mTranspProp->secretKey);
 
-        if (this->initialized) {
-            esp_ble_gap_set_device_name(this->transpProp->address);
+        if (this->mInitialized) {
+            esp_ble_gap_set_device_name(this->getDeviceName());
             return;
         }
 
         if (BLEDevice::getInitialized()) {
             BLEDevice::deinit();
         }
-        BLEDevice::init(this->transpProp->address);
+        BLEDevice::init(this->getDeviceName());
 
-        this->pServer = BLEDevice::createServer();
-        this->pServer->setCallbacks(this);
+        this->mServer = BLEDevice::createServer();
+        this->mServer->setCallbacks(this);
 
-        this->pService = this->pServer->createService(SERVICE_UUID);
+        this->mService = this->mServer->createService(SERVICE_UUID);
 
-        this->pCharacteristicTKN = this->pService->createCharacteristic(
+        this->mCharacteristicTKN = this->mService->createCharacteristic(
                                 CHARACTERISTIC_UUID_TKN,
                                 BLECharacteristic::PROPERTY_READ
                             );
 
-        this->pCharacteristicTKN->setCallbacks(this);
+        this->mCharacteristicTKN->setCallbacks(this);
 
-        this->pCharacteristicRSP = this->pService->createCharacteristic(
+        this->mCharacteristicRSP = this->mService->createCharacteristic(
                                 CHARACTERISTIC_UUID_RSP,
                                 BLECharacteristic::PROPERTY_NOTIFY
                             );
 
-        this->pCharacteristicRSP->addDescriptor(new BLE2902());
+        this->mCharacteristicRSP->addDescriptor(new BLE2902());
 
-        this->pCharacteristicCMD = this->pService->createCharacteristic(
+        this->mCharacteristicCMD = this->mService->createCharacteristic(
                                 CHARACTERISTIC_UUID_CMD,
                                 BLECharacteristic::PROPERTY_WRITE
                             );
 
-        this->pCharacteristicCMD->setCallbacks(this);
+        this->mCharacteristicCMD->setCallbacks(this);
+
+        if (this->isNewService()) {
+            this->mNewService = this->mServer->createService(this->mTranspProp->address);
+
+            this->mCharacteristicAUT = this->mNewService->createCharacteristic(
+                                    CHARACTERISTIC_UUID_AUT,
+                                    BLECharacteristic::PROPERTY_READ |
+                                    BLECharacteristic::PROPERTY_WRITE |
+                                    BLECharacteristic::PROPERTY_WRITE_NR
+                                );
+
+            this->mCharacteristicAUT->setCallbacks(this);
+
+            this->mCharacteristicCTR = this->mNewService->createCharacteristic(
+                                    CHARACTERISTIC_UUID_CTR,
+                                    BLECharacteristic::PROPERTY_WRITE
+                                );
+
+            this->mCharacteristicCTR->setCallbacks(this);
+        }
 
         static BLESecurity* pSecurity = new BLESecurity();
         pSecurity->setAuthenticationMode(ESP_LE_AUTH_BOND);
 
-        this->pService->start();
+        if (this->isNewService()) {
+            this->mNewService->start();
+            this->mServer->getAdvertising()->addServiceUUID(this->mNewService->getUUID());
+        }
 
-        this->pServer->getAdvertising()->addServiceUUID(this->pService->getUUID());
-        this->pServer->getAdvertising()->setAppearance(0x00);
-        this->pServer->getAdvertising()->setScanResponse(true);
-        this->pServer->getAdvertising()->start();
+        this->mService->start();
+        this->mServer->getAdvertising()->addServiceUUID(this->mService->getUUID());
 
-        this->initialized = true;
+        this->mServer->getAdvertising()->setAppearance(0x00);
+        this->mServer->getAdvertising()->setScanResponse(true);
+        this->mServer->getAdvertising()->start();
+
+        this->mInitialized = true;
     }
 
     void run() override {
         if (!this->connected()) {
             return;
         }
+
+        if (!ERaBLEVerify::hasVerify()) {
+            return;
+        }
+        ERaInt_t connID = ERaBLEVerify::connTimeout();
+        if (connID >= 0) {
+            this->mServer->disconnect(connID);
+        }
     }
 
     int connect(IPAddress ip, uint16_t port) override {
         ERA_FORCE_UNUSED(ip);
         ERA_FORCE_UNUSED(port);
-        this->rxBuffer.clear();
-        this->_connected = true;
+        this->mRxBuffer.clear();
+        this->mConnected = true;
         return 1;
     }
 
     int connect(const char* host, uint16_t port) override {
         ERA_FORCE_UNUSED(host);
         ERA_FORCE_UNUSED(port);
-        this->rxBuffer.clear();
-        this->_connected = true;
+        this->mRxBuffer.clear();
+        this->mConnected = true;
         return 1;
     }
 
@@ -164,11 +215,11 @@ public:
     }
 
     size_t write(const uint8_t* buf, size_t size) override {
-        if (this->pCharacteristicRSP == NULL) {
+        if (this->mCharacteristicRSP == NULL) {
             return 0;
         }
-        this->pCharacteristicRSP->setValue((uint8_t*)buf, size);
-        this->pCharacteristicRSP->notify();
+        this->mCharacteristicRSP->setValue((uint8_t*)buf, size);
+        this->mCharacteristicRSP->notify();
         return size;
     }
 
@@ -177,19 +228,19 @@ public:
     }
 
     int available() override {
-        return this->rxBuffer.size();
+        return this->mRxBuffer.size();
     }
 
     int read() override {
-        if (this->rxBuffer.isEmpty()) {
+        if (this->mRxBuffer.isEmpty()) {
             return -1;
         }
-        return this->rxBuffer.get();
+        return this->mRxBuffer.get();
     }
 
     int read(uint8_t* buf, size_t size) override {
         MillisTime_t startMillis = ERaMillis();
-        while (ERaMillis() - startMillis < this->timeout) {
+        while (ERaMillis() - startMillis < this->mTimeout) {
             if (this->available() < (int)size) {
                 ERaDelay(1);
             }
@@ -197,30 +248,30 @@ public:
                 break;
             }
         }
-        return this->rxBuffer.get(buf, size);
+        return this->mRxBuffer.get(buf, size);
     }
 
     int peek() override {
-        if (this->rxBuffer.isEmpty()) {
+        if (this->mRxBuffer.isEmpty()) {
             return -1;
         }
-        return this->rxBuffer.peek();
+        return this->mRxBuffer.peek();
     }
 
     void flush() override {
-        this->rxBuffer.clear();
+        this->mRxBuffer.clear();
     }
 
     void stop() override {
-        this->_connected = false;
+        this->mConnected = false;
     }
 
     uint8_t connected() override {
-        return this->_connected;
+        return this->mConnected;
     }
 
     operator bool() override {
-        return this->_connected;
+        return this->mConnected;
     }
 
     static ERaBLETransp* getInstance() {
@@ -234,39 +285,55 @@ protected:
     }
 
 private:
-    void onConnect(BLEServer* pServer) override {
-        ERA_LOG(TAG, ERA_PSTR("BLE id %d connect"), pServer->getConnId());
-#if defined(ERA_BT_MULTI_CONNECT)
-        pServer->startAdvertising();
-#endif
-        this->_connected = true;
+    size_t write(BLECharacteristic* pCharacteristic, const char* buf) {
+        pCharacteristic->setValue((uint8_t*)buf, strlen(buf));
+        return strlen(buf);
     }
 
-    void onDisconnect(BLEServer* pServer) override {
-        ERA_LOG(TAG, ERA_PSTR("BLE id %d disconnect"), pServer->getConnId());
+    void onConnect(BLEServer* pServer, esp_ble_gatts_cb_param_t* param) override {
+        ERA_LOG(TAG, ERA_PSTR("BLE id %d connect"), param->connect.conn_id);
+        if (ERaBLEVerify::getVerifyCode(param->connect.conn_id, false) < 0) {
+            pServer->disconnect(param->connect.conn_id);
+        }
+#if defined(ERA_BT_MULTI_CONNECT)
+        pServer->getAdvertising()->start();
+#endif
+        this->mConnected = true;
+    }
+
+    void onDisconnect(BLEServer* pServer, esp_ble_gatts_cb_param_t* param) override {
+        ERaBLEVerify::removeVerify(param->disconnect.conn_id);
         if (pServer->getConnectedCount() > 1) {
+            ERA_LOG(TAG, ERA_PSTR("BLE id %d disconnect"), param->disconnect.conn_id);
             return;
         }
         ERA_LOG(TAG, ERA_PSTR("BLE disconnect all"));
         pServer->getAdvertising()->start();
-        this->_connected = false;
+        this->mConnected = false;
     }
 
-    void onRead(BLECharacteristic* pCharacteristic) override {
+    void onRead(BLECharacteristic* pCharacteristic, esp_ble_gatts_cb_param_t* param) override {
+        if (!pCharacteristic->getUUID().equals(BLEUUID(CHARACTERISTIC_UUID_TKN))) {
+            return;
+        }
+
         int otp = ERaOTP::createOTP();
         if (otp >= 0) {
             pCharacteristic->setValue(otp);
         }
+        else {
+            this->mServer->disconnect(param->read.conn_id);
+        }
     }
 
-    void onWrite(BLECharacteristic* pCharacteristic) override {
+    void onWrite(BLECharacteristic* pCharacteristic, esp_ble_gatts_cb_param_t* param) override {
         size_t size = pCharacteristic->getLength();
         const uint8_t* rxValue = pCharacteristic->getData();
 
         if (size) {
             size_t dataLen {0};
             uint8_t* data = nullptr;
-            if (this->useEncrypt) {
+            if (this->mUseEncrypt) {
                 ERaEncryptMbedTLS::decrypt(rxValue, size, data, dataLen);
             }
             else {
@@ -274,7 +341,12 @@ private:
                 dataLen = size;
             }
             if (dataLen && (data != nullptr)) {
-                this->progress((char*)data);
+                if (pCharacteristic->getUUID().equals(BLEUUID(CHARACTERISTIC_UUID_CMD))) {
+                    this->progress((char*)data);
+                }
+                else {
+                    this->progress((char*)data, pCharacteristic, param);
+                }
                 ERA_LOG(TAG, ERA_PSTR("BLE data (%d): %s"), dataLen, data);
                 if (data != rxValue) {
                     free(data);
@@ -284,7 +356,7 @@ private:
             else {
                 this->response("FAILED");
             }
-            rxBuffer.put(rxValue, size);
+            this->mRxBuffer.put(rxValue, size);
         }
     }
 
@@ -297,14 +369,14 @@ private:
             return;
         }
 
-        int otp {0};
+        ERaInt_t otp {0};
         bool status {false};
         cJSON* item = cJSON_GetObjectItem(root, "token");
         if (cJSON_IsNumber(item)) {
             otp = item->valueint;
         }
         if (ERaOTP::run(otp) ||
-            !this->useEncrypt) {
+            !this->mUseEncrypt) {
             status = this->onCallback(root);
         }
 
@@ -319,12 +391,117 @@ private:
         root = nullptr;
     }
 
+    void progress(const char* message, BLECharacteristic* pCharacteristic, esp_ble_gatts_cb_param_t* param) {
+        if (pCharacteristic->getUUID().equals(BLEUUID(CHARACTERISTIC_UUID_AUT))) {
+            this->progressAuth(message, pCharacteristic, param);
+        }
+        else {
+            this->progressControl(message, param);
+        }
+    }
+
+    void progressAuth(const char* message, BLECharacteristic* pCharacteristic, esp_ble_gatts_cb_param_t* param) {
+        if (ERaStrCmp(message, "start")) {
+            this->startAuthorization(pCharacteristic, param);
+        }
+        else if (ERaStrNCmp(message, "confirm")) {
+            this->confirmAuthorization(message + 7, pCharacteristic, param);
+        }
+    }
+
+    void progressControl(const char* message, esp_ble_gatts_cb_param_t* param) {
+        if ((this->baseTopic == nullptr) ||
+            (this->callback == nullptr)) {
+            return;
+        }
+        if (!ERaBLEVerify::isVerified(param->write.conn_id)) {
+            this->mServer->disconnect(param->write.conn_id);
+            ERaBLEVerify::removeVerify(param->write.conn_id);
+            return;
+        }
+        if (strchr(message, ';') == nullptr) {
+            return;
+        }
+
+        char* copy = ERaStrdup(message);
+        if (copy == nullptr) {
+            return;
+        }
+        ERaDataBuff data(copy, strlen(copy) + 1);
+        data.split(";");
+
+        char payload[30] {0};
+        char aTopic[MAX_TOPIC_LENGTH] {0};
+        FormatString(aTopic, this->baseTopic);
+        FormatString(aTopic, ERA_PUB_PREFIX_ARDUINO_DOWN_TOPIC, data.at(0).getInt());
+        FormatString(payload, R"json({"value":%.2f})json", data.at(1).getDouble());
+
+        this->callback(aTopic, payload);
+        free(copy);
+        copy = nullptr;
+    }
+
+    void startAuthorization(BLECharacteristic* pCharacteristic, esp_ble_gatts_cb_param_t* param) {
+        if (ERaBLEVerify::isVerified(param->write.conn_id)) {
+            return;
+        }
+        ERaInt_t verifyCode = ERaBLEVerify::getVerifyCode(param->write.conn_id, false);
+        if (verifyCode < 0) {
+            this->mServer->disconnect(param->write.conn_id);
+            return;
+        }
+        char code[20] {0};
+        FormatString(code, "%08d", verifyCode);
+        this->write(pCharacteristic, code);
+#if defined(ERA_BLE_DEBUG)
+        ERA_LOG(TAG, ERA_PSTR("Connection id: %d, Verify code: %s"), param->write.conn_id, code);
+#endif
+    }
+
+    void confirmAuthorization(const char* message, BLECharacteristic* pCharacteristic, esp_ble_gatts_cb_param_t* param) {
+        ERaInt_t verifyCode = ERaBLEVerify::getVerifyCode(param->write.conn_id, true);
+        if (verifyCode < 0) {
+            this->mServer->disconnect(param->write.conn_id);
+            return;
+        }
+        char code[20] {0};
+        char verify[50] {0};
+        FormatString(code, "%08d", verifyCode);
+        ERaStrConcat(verify, this->mTranspProp->password);
+        ERaStrConcat(verify, code);
+
+#if defined(ERA_BLE_DEBUG)
+        ERA_LOG(TAG, ERA_PSTR("Connection id: %d, Verify data: %s"), param->write.conn_id, verify);
+#endif
+
+        MD5 md5;
+        md5.begin();
+        md5.update((const char*)verify);
+        const char* encrypted = md5.finalize();
+        if (encrypted == nullptr) {
+        }
+        else if (ERaStrCmp(message, encrypted)) {
+            this->write(pCharacteristic, "confirmed");
+            ERaBLEVerify::setVerified(param->write.conn_id, true);
+#if defined(ERA_BLE_DEBUG)
+            ERA_LOG(TAG, ERA_PSTR("Connection id: %d, Verify match: %s"), param->write.conn_id, encrypted);
+#endif
+            return;
+        }
+        this->mServer->disconnect(param->write.conn_id);
+        ERaBLEVerify::removeVerify(param->write.conn_id);
+#if defined(ERA_BLE_DEBUG)
+        ERA_LOG_ERROR(TAG, ERA_PSTR("Connection id: %d, No MD5 match: Local = %s, Target = %s"),
+                                    param->write.conn_id, encrypted, message);
+#endif
+    }
+
     void response(const char* status) {
         this->write(status);
     }
 
     bool onCallback(cJSON* const root) {
-        if ((this->topic == nullptr) ||
+        if ((this->baseTopic == nullptr) ||
             (this->callback == nullptr)) {
             return false;
         }
@@ -342,7 +519,7 @@ private:
         if (!cJSON_IsString(item)) {
             return false;
         }
-        if (!ERaStrCmp(item->valuestring, this->transpProp->password)) {
+        if (!ERaStrCmp(item->valuestring, this->mTranspProp->password)) {
             return false;
         }
         item = cJSON_GetObjectItem(root, "user");
@@ -359,10 +536,10 @@ private:
 
         bool status {false};
         char* payload = nullptr;
-        char _topic[MAX_TOPIC_LENGTH] {0};
-        FormatString(_topic, this->topic);
+        char dTopic[MAX_TOPIC_LENGTH] {0};
+        FormatString(dTopic, this->baseTopic);
         // Now support only Modbus
-        FormatString(_topic, ERA_PUB_PREFIX_DOWN_TOPIC);
+        FormatString(dTopic, ERA_PUB_PREFIX_DOWN_TOPIC);
 
         cJSON* object = cJSON_CreateObject();
         if (object == nullptr) {
@@ -396,7 +573,7 @@ private:
 
         if (payload != nullptr) {
             status = true;
-            this->callback(_topic, payload);
+            this->callback(dTopic, payload);
             free(payload);
         }
 
@@ -416,30 +593,56 @@ private:
         if (alias == nullptr) {
             return;
         }
-        if (this->api == nullptr) {
+        if (this->mApi == nullptr) {
             return;
         }
 
         char message[256] {0};
         FormatString(message, MESSAGE_BLE_ACTION_LOG, userID, alias);
 #if defined(ERA_SPECIFIC)
-        this->api->specificDataWrite(TOPIC_BLE_ACTION_LOG, message, true, false);
+        this->mApi->specificDataWrite(TOPIC_BLE_ACTION_LOG, message, true, false);
 #endif
     }
 
-    ERaBluetooth*& transpProp;
-    ERaApiHandler* api;
-    unsigned long timeout;
-    bool _connected;
-    bool initialized;
-    bool useEncrypt;
-    ERaQueue<uint8_t, ERA_MAX_READ_BYTES> rxBuffer;
+    const char* getDeviceName() {
+        if (this->mUserDeviceName != NULL) {
+            return this->mUserDeviceName;
+        }
+        if (strlen(this->mTranspProp->address) == 16) {
+            return this->mTranspProp->address;
+        }
 
-    BLEServer* pServer;
-    BLEService* pService;
-    BLECharacteristic* pCharacteristicTKN;
-    BLECharacteristic* pCharacteristicRSP;
-    BLECharacteristic* pCharacteristicCMD;
+        uint32_t hash = ERaHash(this->mTranspProp->address);
+        ClearArray(this->mDeviceName);
+        FormatString(this->mDeviceName, "ERa-%08x", hash);
+        return this->mDeviceName;
+    }
+
+    bool isNewService() {
+        return (strlen(this->mTranspProp->address) == 36);
+    }
+
+    ERaBluetooth*& mTranspProp;
+    ERaApiHandler* mApi;
+    unsigned long mTimeout;
+    bool mConnected;
+    bool mInitialized;
+    bool mUseEncrypt;
+    ERaQueue<uint8_t, ERA_MAX_READ_BYTES> mRxBuffer;
+    char mDeviceName[33] {0};
+    const char* mUserDeviceName;
+
+    BLEServer* mServer;
+    BLEService* mService;
+    BLECharacteristic* mCharacteristicTKN;
+    BLECharacteristic* mCharacteristicRSP;
+    BLECharacteristic* mCharacteristicCMD;
+
+    BLEService* mNewService;
+    BLECharacteristic* mCharacteristicAUT;
+    BLECharacteristic* mCharacteristicCTR;
 };
+
+using ERaBLEPeripheral = ERaBLETransp;
 
 #endif /* INC_ERA_BLE_TRANSP_ESP32_HPP_ */

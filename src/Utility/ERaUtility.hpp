@@ -223,6 +223,8 @@ void ERaToUpperCase(char(&buf)[size]) {
     }
 }
 
+uint32_t ERaHash(const char* buf);
+
 #if defined(ESP32) && !_GLIBCXX_USE_C99_STDLIB
     #include <sstream>
 

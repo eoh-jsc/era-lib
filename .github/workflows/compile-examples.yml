@@ -116,11 +116,12 @@ jobs:
               - source-path: ./
               - name: TinyGSM
           - name: "Espressif32-S3"
-            fqbn: "esp32:esp32:esp32s3:PartitionScheme=min_spiffs"
+            fqbn: "esp32:esp32:esp32s3:PartitionScheme=default_8MB,FlashSize=8M"
             platform-name: esp32:esp32
             sketch-paths: |
               - examples/ESP32/ESP32_WiFi_Basic
               - examples/ESP32/ESP32_WiFi_SSL
+              - examples/ESP32/ESP32_WiFi_BLE
               - examples/ESP32/ESP32_PlugNPlay
               - examples/ESP32/ESP32_Ethernet_SPI
               - examples/ESP32/ESP32_Ethernet_SSL_SPI

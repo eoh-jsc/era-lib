@@ -17,15 +17,15 @@ class ERaBLETransp
 
 public:
     ERaBLETransp(ERaCallbacksHelper& helper,
-                Stream& _stream)
-        : stream(_stream)
-        , transpProp(ERaBluetooth::instance())
-        , api(NULL)
-        , timeout(1000L)
-        , _connected(false)
-        , initialized(false)
+                Stream& stream)
+        : mStream(stream)
+        , mTranspProp(ERaBluetooth::instance())
+        , mApi(NULL)
+        , mTimeout(1000L)
+        , mConnected(false)
+        , mInitialized(false)
 #if defined(ERA_HAS_RTOS)
-        , _bleTask(NULL)
+        , mBleTask(NULL)
 #endif
     {
         helper.setERaTransp(this);
@@ -35,11 +35,11 @@ public:
     {}
 
     void setAPI(ERaApiHandler* api) {
-        this->api = api;
+        this->mApi = api;
     }
 
     void setAPI(ERaApiHandler& api) {
-        this->api = &api;
+        this->mApi = &api;
     }
 
     void setTranspProperty(void* args) {
@@ -47,8 +47,8 @@ public:
             return;
         }
         char* ptr = (char*)args;
-        this->transpProp->getInstance();
-        this->transpProp->parseConfig(ptr);
+        this->mTranspProp->getInstance();
+        this->mTranspProp->parseConfig(ptr);
     }
 
     void begin(void* args = NULL) override {
@@ -56,13 +56,13 @@ public:
             return;
         }
         this->setTranspProperty(args);
-        if (!strlen(this->transpProp->address)) {
+        if (!strlen(this->mTranspProp->address)) {
             return;
         }
 
         this->onConfig();
 
-        if (this->initialized) {
+        if (this->mInitialized) {
             return;
         }
 #if defined(ERA_HAS_RTOS) && !defined(ERA_NO_RTOS)
@@ -72,11 +72,11 @@ public:
         #if !defined(ERA_BLE_TASK_PRIORITY)
             #define ERA_BLE_TASK_PRIORITY   (configMAX_PRIORITIES - 4)
         #endif
-        this->_bleTask = ERaOs::osThreadNew(this->bleTask, "bleTask", 1024 * 5, this,
+        this->mBleTask = ERaOs::osThreadNew(this->bleTask, "bleTask", 1024 * 5, this,
                                             ERA_BLE_TASK_PRIORITY, ERA_MCU_CORE);
 #endif
-        this->_connected = true;
-        this->initialized = true;
+        this->mConnected = true;
+        this->mInitialized = true;
     }
 
     void run() override {
@@ -92,14 +92,14 @@ public:
     int connect(IPAddress ip, uint16_t port) override {
         ERA_FORCE_UNUSED(ip);
         ERA_FORCE_UNUSED(port);
-        this->_connected = true;
+        this->mConnected = true;
         return 1;
     }
 
     int connect(const char* host, uint16_t port) override {
         ERA_FORCE_UNUSED(host);
         ERA_FORCE_UNUSED(port);
-        this->_connected = true;
+        this->mConnected = true;
         return 1;
     }
 
@@ -108,11 +108,11 @@ public:
     }
 
     size_t write(uint8_t value) override {
-        return this->stream.write(value);
+        return this->mStream.write(value);
     }
 
     size_t write(const uint8_t* buf, size_t size) override {
-        return this->stream.write(buf, size);
+        return this->mStream.write(buf, size);
     }
 
     size_t write(const char* buf) {
@@ -120,19 +120,19 @@ public:
     }
 
     int available() override {
-        return this->stream.available();
+        return this->mStream.available();
     }
 
     int read() override {
-        return this->stream.read();
+        return this->mStream.read();
     }
 
     int read(uint8_t* buf, size_t size) override {
         uint8_t* begin = buf;
         uint8_t* end = buf + size;
         MillisTime_t startMillis = ERaMillis();
-        while ((begin < end) && ((ERaMillis() - startMillis) < this->timeout)) {
-            int c = this->stream.read();
+        while ((begin < end) && ((ERaMillis() - startMillis) < this->mTimeout)) {
+            int c = this->mStream.read();
             if (c < 0) {
                 continue;
             }
@@ -174,23 +174,23 @@ public:
     }
 
     int peek() override {
-        return this->stream.peek();
+        return this->mStream.peek();
     }
 
     void flush() override {
-        this->stream.flush();
+        this->mStream.flush();
     }
 
     void stop() override {
-        this->_connected = false;
+        this->mConnected = false;
     }
 
     uint8_t connected() override {
-        return this->_connected;
+        return this->mConnected;
     }
 
     operator bool() override {
-        return this->_connected;
+        return this->mConnected;
     }
 
     static ERaBLETransp* getInstance() {
@@ -276,11 +276,11 @@ private:
         }
 
         char secretKey[17] {0};
-        memcpy(secretKey, this->transpProp->secretKey, sizeof(this->transpProp->secretKey));
+        memcpy(secretKey, this->mTranspProp->secretKey, sizeof(this->mTranspProp->secretKey));
 
         cJSON_AddStringToObject(root, "type", "config");
-        cJSON_AddStringToObject(root, "user_name", this->transpProp->address);
-        cJSON_AddStringToObject(root, "password", this->transpProp->password);
+        cJSON_AddStringToObject(root, "user_name", this->mTranspProp->address);
+        cJSON_AddStringToObject(root, "password", this->mTranspProp->password);
         cJSON_AddStringToObject(root, "secret_key", secretKey);
 
         char* config = cJSON_PrintUnformatted(root);
@@ -337,7 +337,7 @@ private:
     }
 
     bool onCallback(cJSON* const root) {
-        if ((this->topic == nullptr) ||
+        if ((this->baseTopic == nullptr) ||
             (this->callback == nullptr)) {
             return false;
         }
@@ -365,10 +365,10 @@ private:
 
         bool status {false};
         char* payload = nullptr;
-        char _topic[MAX_TOPIC_LENGTH] {0};
-        FormatString(_topic, this->topic);
+        char dTopic[MAX_TOPIC_LENGTH] {0};
+        FormatString(dTopic, this->baseTopic);
         // Now support only Modbus
-        FormatString(_topic, ERA_PUB_PREFIX_DOWN_TOPIC);
+        FormatString(dTopic, ERA_PUB_PREFIX_DOWN_TOPIC);
 
         cJSON* object = cJSON_CreateObject();
         if (object == nullptr) {
@@ -402,7 +402,7 @@ private:
 
         if (payload != nullptr) {
             status = true;
-            this->callback(_topic, payload);
+            this->callback(dTopic, payload);
             free(payload);
         }
 
@@ -422,26 +422,28 @@ private:
         if (alias == nullptr) {
             return;
         }
-        if (this->api == nullptr) {
+        if (this->mApi == nullptr) {
             return;
         }
 
         char message[256] {0};
         FormatString(message, MESSAGE_BLE_ACTION_LOG, userID, alias);
 #if defined(ERA_SPECIFIC)
-        this->api->specificDataWrite(TOPIC_BLE_ACTION_LOG, message, true, false);
+        this->mApi->specificDataWrite(TOPIC_BLE_ACTION_LOG, message, true, false);
 #endif
     }
 
-    Stream& stream;
-    ERaBluetooth*& transpProp;
-    ERaApiHandler* api;
-    unsigned long timeout;
-    bool _connected;
-    bool initialized;
+    Stream& mStream;
+    ERaBluetooth*& mTranspProp;
+    ERaApiHandler* mApi;
+    unsigned long mTimeout;
+    bool mConnected;
+    bool mInitialized;
 #if defined(ERA_HAS_RTOS)
-    TaskHandle_t _bleTask;
+    TaskHandle_t mBleTask;
 #endif
 };
+
+using ERaBLEPeripheral = ERaBLETransp;
 
 #endif /* INC_ERA_SERIAL_BLE_TRANSP_HPP_ */

@@ -839,7 +839,7 @@
     #if defined(ARDUINO_PORTENTA_H7_M4) ||  \
         defined(ARDUINO_PORTENTA_H7_M7) ||  \
         defined(ARDUINO_OPTA)
-        #include <Ethernet.h>
+        #include <PortentaEthernet.h>
     #endif
 #endif
 
@@ -1630,4 +1630,18 @@ char* ERaStrrChr(const char* str, int c, bool caseSensitive) {
         str++;
     }
     return (char*)last;
+}
+
+uint32_t ERaHash(const char* buf) {
+    if (buf == NULL) {
+        return 0UL;
+    }
+
+    size_t size = strlen(buf);
+    uint32_t hash = 0x811C9DC5UL;
+    for (size_t i = 0; i < size; ++i) {
+        hash *= 0x01000193UL;
+        hash ^= buf[i];
+    }
+    return hash;
 }
