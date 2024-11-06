@@ -68,6 +68,8 @@ public:
 private:
     typedef struct __VPin_t {
         uint8_t pin;
+        bool nextRetained;
+        bool hasNextRetained;
         VirtualTypeT type;
         ERaUInt_t configId;
     } VPin_t;
@@ -246,6 +248,7 @@ public:
     void enable(Pin_t* pPin);
     void disable(Pin_t* pPin);
     void setScale(Pin_t* pPin, float min, float max, float rawMin, float rawMax);
+    void restartAll();
     void enableAll();
     void disableAll();
 
@@ -259,6 +262,9 @@ public:
     ERaInt_t findVPinConfigId(uint8_t p, const ERaDataJson::iterator& param) const;
     int findChannelFree() const;
     bool isVPinExist(uint8_t p, const WrapperBase* param) const;
+
+    bool setVPinNextRetained(uint8_t p, bool nextRetained);
+    bool getVPinNextRetained(uint8_t p, bool& retained) const;
 
 protected:
 private:
@@ -803,14 +809,20 @@ void ERaPin<Report>::setScale(Pin_t* pPin, float min, float max, float rawMin, f
 }
 
 template <class Report>
+void ERaPin<Report>::restartAll() {
+    const PinIterator* e = this->pin.end();
+    for (PinIterator* it = this->pin.begin(); it != e; it = it->getNext()) {
+        Pin_t* pPin = it->get();
+        this->restartPin(pPin);
+    }
+}
+
+template <class Report>
 void ERaPin<Report>::enableAll() {
     const PinIterator* e = this->pin.end();
     for (PinIterator* it = this->pin.begin(); it != e; it = it->getNext()) {
         Pin_t* pPin = it->get();
-        if (this->isValidPin(pPin)) {
-            pPin->enable = true;
-            pPin->report.enable();
-        }
+        this->enable(pPin);
     }
 }
 
@@ -819,10 +831,7 @@ void ERaPin<Report>::disableAll() {
     const PinIterator* e = this->pin.end();
     for (PinIterator* it = this->pin.begin(); it != e; it = it->getNext()) {
         Pin_t* pPin = it->get();
-        if (this->isValidPin(pPin)) {
-            pPin->enable = false;
-            pPin->report.disable();
-        }
+        this->disable(pPin);
     }
 }
 
@@ -1093,6 +1102,45 @@ typename ERaPin<Report>::Pin_t* ERaPin<Report>::findPinOfChannel(uint8_t channel
     }
 
     return nullptr;
+}
+
+template <class Report>
+bool ERaPin<Report>::setVPinNextRetained(uint8_t p, bool nextRetained) {
+    const VPinIterator* e = this->vPin.end();
+    for (VPinIterator* it = this->vPin.begin(); it != e; it = it->getNext()) {
+        VPin_t* pVPin = it->get();
+        if (pVPin == nullptr) {
+            continue;
+        }
+        if (pVPin->pin != p) {
+            continue;
+        }
+        pVPin->hasNextRetained = true;
+        pVPin->nextRetained = nextRetained;
+        return true;
+    }
+    return false;
+}
+
+template <class Report>
+bool ERaPin<Report>::getVPinNextRetained(uint8_t p, bool& retained) const {
+    const VPinIterator* e = this->vPin.end();
+    for (VPinIterator* it = this->vPin.begin(); it != e; it = it->getNext()) {
+        VPin_t* pVPin = it->get();
+        if (pVPin == nullptr) {
+            continue;
+        }
+        if (pVPin->pin != p) {
+            continue;
+        }
+        if (!pVPin->hasNextRetained) {
+            return false;
+        }
+        pVPin->hasNextRetained = false;
+        retained = pVPin->nextRetained;
+        return true;
+    }
+    return false;
 }
 
 using PinEntry = ERaPin<ERaReport>::iterator;

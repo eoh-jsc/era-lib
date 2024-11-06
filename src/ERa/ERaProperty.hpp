@@ -37,16 +37,21 @@ class ERaProperty
     typedef std::function<void(void)> PropertyCallback_t;
     typedef std::function<void(void*)> PropertyCallback_p_t;
     typedef std::function<void(void*)> ReportPropertyCallback_t;
+    typedef std::function<bool(void)> OnPublishCallback_t;
 #else
     typedef void (*PropertyCallback_t)(void);
     typedef void (*PropertyCallback_p_t)(void*);
     typedef void (*ReportPropertyCallback_t)(void*);
+    typedef bool (*OnPublishCallback_t)(void);
 #endif
 
     const static int MAX_PROPERTIES = ERA_MAX_PROPERTIES;
     typedef struct __Property_t {
         ERaProperty::PropertyCallback_t callback;
         ERaProperty::PropertyCallback_p_t callback_p;
+#if defined(ERA_ON_PUBLISH_PROPERTY)
+        ERaProperty::OnPublishCallback_t onPublishCallback;
+#endif
         ERaReport::iterator report;
         unsigned long prevMillis;
         PermissionT permission;
@@ -97,9 +102,18 @@ public:
             return (*this);
         }
 
-        iterator& publish() {
+#if defined(ERA_ON_PUBLISH_PROPERTY)
+        iterator& onPublish(ERaProperty::OnPublishCallback_t cb) {
             if (this->isValid()) {
-                this->prop->publish(this->pProp);
+                this->prop->onPublish(this->pProp, cb);
+            }
+            return (*this);
+        }
+#endif
+
+        iterator& publish(bool send = false) {
+            if (this->isValid()) {
+                this->prop->publish(this->pProp, send);
             }
             return (*this);
         }
@@ -445,7 +459,7 @@ protected:
         this->addPropertyVirtual(pin, *wrapper, PermissionT::PERMISSION_CLOUD_READ_WRITE).
                                  publishOnChange(this->publishSettings.minChange,
                                  this->publishSettings.minInterval, this->publishSettings.maxInterval).
-                                 publish().allocatorPointer(pValue);
+                                 publish(false).allocatorPointer(pValue);
     }
 
     void virtualWriteProperty(uint8_t pin, const ERaParam& value, bool send) {
@@ -507,7 +521,7 @@ protected:
         this->addPropertyVirtual(pin, *wrapper, PermissionT::PERMISSION_CLOUD_READ_WRITE).
                                  publishOnChange(this->publishSettings.minChange,
                                  this->publishSettings.minInterval, this->publishSettings.maxInterval).
-                                 publish().allocatorPointer(pValue).resetUpdate();
+                                 publish(false).allocatorPointer(pValue).resetUpdate();
     }
 #endif
 
@@ -549,7 +563,7 @@ protected:
         this->addPropertyVirtual(pin, *wrapper, PermissionT::PERMISSION_CLOUD_READ_WRITE).
                                  publishOnChange(this->publishSettings.minChange,
                                  this->publishSettings.minInterval, this->publishSettings.maxInterval).
-                                 publish().allocatorPointer(pValue).resetUpdate();
+                                 publish(false).allocatorPointer(pValue).resetUpdate();
     }
 #endif
 
@@ -564,7 +578,10 @@ private:
     void getValue(Property_t* pProp, const ERaParam& param);
     bool onUpdate(Property_t* pProp, ERaProperty::PropertyCallback_t cb);
     bool onUpdate(Property_t* pProp, ERaProperty::PropertyCallback_p_t cb, void* args);
-    bool publish(Property_t* pProp);
+#if defined(ERA_ON_PUBLISH_PROPERTY)
+    bool onPublish(Property_t* pProp, ERaProperty::OnPublishCallback_t cb);
+#endif
+    bool publish(Property_t* pProp, bool send = false);
     bool publishEvery(Property_t* pProp, unsigned long interval = 1000UL);
     bool publishOnChange(Property_t* pProp, float minChange = 1.0f,
                         unsigned long minInterval = 1000UL,
@@ -581,6 +598,7 @@ private:
 
     void onCallbackVirtual(const Property_t* const pProp);
     void onCallbackReal(const Property_t* const pProp);
+    void onCallbackProperty(const Property_t* const pProp, bool send = false);
     void onCallback(void* args);
 #if !defined(ERA_HAS_FUNCTIONAL_H)
     static void _onCallback(void* args);
@@ -899,6 +917,9 @@ typename ERaProperty<Api>::Property_t* ERaProperty<Api>::setupProperty(uint8_t p
     pProp->value = value;
     pProp->callback = nullptr;
     pProp->callback_p = nullptr;
+#if defined(ERA_ON_PUBLISH_PROPERTY)
+    pProp->onPublishCallback = nullptr;
+#endif
     pProp->param = nullptr;
     pProp->allocPointer = nullptr;
     pProp->prevMillis = ERaMillis();
@@ -933,6 +954,9 @@ typename ERaProperty<Api>::Property_t* ERaProperty<Api>::setupProperty(const cha
     pProp->value = value;
     pProp->callback = nullptr;
     pProp->callback_p = nullptr;
+#if defined(ERA_ON_PUBLISH_PROPERTY)
+    pProp->onPublishCallback = nullptr;
+#endif
     pProp->param = nullptr;
     pProp->allocPointer = nullptr;
     pProp->prevMillis = ERaMillis();
@@ -989,13 +1013,28 @@ bool ERaProperty<Api>::onUpdate(Property_t* pProp, ERaProperty::PropertyCallback
     return true;
 }
 
+#if defined(ERA_ON_PUBLISH_PROPERTY)
+    template <class Api>
+    bool ERaProperty<Api>::onPublish(Property_t* pProp, ERaProperty::OnPublishCallback_t cb) {
+        if (pProp == nullptr) {
+            return false;
+        }
+        if (!this->getFlag(pProp->permission, PermissionT::PERMISSION_READ)) {
+            return false;
+        }
+
+        pProp->onPublishCallback = cb;
+        return true;
+    }
+#endif
+
 template <class Api>
-bool ERaProperty<Api>::publish(Property_t* pProp) {
+bool ERaProperty<Api>::publish(Property_t* pProp, bool send) {
     if (pProp == nullptr) {
         return false;
     }
 
-    this->onCallback(pProp);
+    this->onCallbackProperty(pProp, send);
     return true;
 }
 
@@ -1281,20 +1320,38 @@ void ERaProperty<Api>::onCallbackReal(const Property_t* const pProp) {
 }
 
 template <class Api>
-void ERaProperty<Api>::onCallback(void* args) {
-    ERaProperty::Property_t* pProp = (ERaProperty::Property_t*)args;
+void ERaProperty<Api>::onCallbackProperty(const Property_t* const pProp, bool send) {
     if (pProp == nullptr) {
         return;
     }
     if (pProp->value == nullptr) {
         return;
     }
+
+#if defined(ERA_ON_PUBLISH_PROPERTY)
+    if (send) {
+    }
+    else if (pProp->onPublishCallback == nullptr) {
+    }
+    else if (!pProp->onPublishCallback()) {
+        return;
+    }
+#else
+    ERA_FORCE_UNUSED(send);
+#endif
+
     if (pProp->id.isString()) {
         this->onCallbackReal(pProp);
     }
     else if (pProp->id.isNumber()) {
         this->onCallbackVirtual(pProp);
     }
+}
+
+template <class Api>
+void ERaProperty<Api>::onCallback(void* args) {
+    ERaProperty::Property_t* pProp = (ERaProperty::Property_t*)args;
+    this->onCallbackProperty(pProp, false);
 }
 
 template <class Api>

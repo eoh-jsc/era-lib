@@ -35,6 +35,8 @@ protected:
     void parseConfigMapZigbee(const cJSON* const root);
     void parseConfigMapDevices(const cJSON* const root);
 
+    void processConfigMapZigbee(cJSON* root, const char* hash, const char* buf);
+
     void parseZigbeeDevice();
     void storeZigbeeDevice();
     IdentDeviceAddr_t* getDeviceFromCoordinator();
@@ -253,6 +255,17 @@ void ERaDBZigbee<Zigbee>::parseZigbeeConfig(const char* str) {
     cJSON_Delete(root);
     root = nullptr;
     item = nullptr;
+}
+
+template <class Zigbee>
+void ERaDBZigbee<Zigbee>::processConfigMapZigbee(cJSON* root, const char* hash, const char* buf) {
+    if (!this->updateHashID(hash, true)) {
+        return;
+    }
+
+    this->parseConfigMapDevices(root);
+    this->storeZigbeeConfig(buf);
+    ERaWriteConfig(ERaConfigTypeT::ERA_ZIGBEE_CONFIG);
 }
 
 template <class Zigbee>

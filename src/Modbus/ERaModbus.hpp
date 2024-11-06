@@ -84,6 +84,8 @@ public:
         , wifiConfig(false)
         , actionWriteTask(true)
         , runApiResponse(true)
+        , legacyProcess(false)
+        , currentParam(NULL)
     {}
     ~ERaModbus()
     {
@@ -142,6 +144,10 @@ public:
         this->failCounter.start = start;
     }
 
+    void setModbusLegacyProcess(bool enable) {
+        this->legacyProcess = enable;
+    }
+
     void setSkipModbus(bool skip) {
         this->skipModbus = skip;
     }
@@ -187,17 +193,8 @@ protected:
         this->waitTCPIpReady(!forever);
         for (;;) {
             this->processModbusScan();
-            this->resizeConfig();
-            if (!ERaRemainingTime(this->modbusConfig->modbusInterval.prevMillis, this->modbusConfig->modbusInterval.delay)) {
-                this->modbusConfig->modbusInterval.prevMillis = ERaMillis();
-                this->readModbusConfig();
-                this->getModbusAction(false);
-                this->getModbusActionRaw(false);
-                ModbusStream::streamStart();
-            }
-            else {
-                this->waitRequest();
-            }
+            this->updateConfig();
+            this->handlerModbusRead();
 #if !defined(ERA_NO_RTOS)
             this->timer.run();
 #endif
@@ -224,47 +221,70 @@ protected:
         }
     }
 
+    void handlerModbusRead() {
+        this->readModbusConfig();
+        this->getModbusAction(false);
+        this->getModbusActionRaw(false);
+    }
+
     void parseModbusConfig(const void* config, const char* hash, const char* buf,
                                     bool isControl = false, bool json = false) {
         ModbusState::set(ModbusStateT::STATE_MB_PARSE);
         if (isControl) {
-            ERaGuardLock(this->mutex);
-            this->modbusControl->parseConfig(config, json);
-            if (this->modbusControl->updateHashID(hash)) {
-                this->thisApi().writeToFlash(FILENAME_CONTROL, buf);
-                ERA_LOG(TAG, ERA_PSTR("Modbus control stored to flash"));
-                ERaWriteConfig(ERaConfigTypeT::ERA_MODBUS_CONTROL);
-#if !defined(ERA_PNP_MODBUS)
-                this->modbusControl->updated();
-#endif
-            }
-            ModbusState::set(ModbusStateT::STATE_MB_PARSE);
-            ERaGuardUnlock(this->mutex);
-            this->initModbus();
+            this->processModbusControl(config, hash, buf, json);
         }
         else {
-            ERaGuardLock(this->mutex);
+            this->processModbusConfig(config, hash, buf, json);
+        }
+    }
+
+    void processModbusConfig(const void* config, const char* hash,
+                            const char* buf, bool json = false) {
+        ERaGuardLock(this->mutex);
+        if (this->modbusConfig->updateHashID(hash)) {
             this->modbusConfig->parseConfig(config, json);
             ModbusTransp::parseConfig(config, json);
-            if (this->modbusConfig->updateHashID(hash)) {
-                this->clearDataBuff();
-                this->thisApi().writeToFlash(FILENAME_CONFIG, buf);
-                ERA_LOG(TAG, ERA_PSTR("Modbus configuration stored to flash"));
-                if (this->wifiConfig && this->modbusConfig->isWiFi) {
-                    this->thisApi().connectNewWiFi(this->modbusConfig->ssid,
-                                                   this->modbusConfig->pass);
-                }
-                ERaWriteConfig(ERaConfigTypeT::ERA_MODBUS_CONFIG);
-                this->modbusConfig->updated();
+            this->clearDataBuff();
+            this->thisApi().writeToFlash(FILENAME_CONFIG, buf);
+            ERA_LOG(TAG, ERA_PSTR("Modbus configuration stored to flash"));
+            if (this->wifiConfig && this->modbusConfig->isWiFi) {
+                this->thisApi().connectNewWiFi(this->modbusConfig->ssid,
+                                               this->modbusConfig->pass);
             }
-            ModbusState::set(ModbusStateT::STATE_MB_PARSE);
-            ERaGuardUnlock(this->mutex);
-            this->initModbus();
-            if (this->initialized) {
-                ModbusStream::setBaudRate(this->modbusConfig->baudSpeed);
-            }
-            this->executeNow();
+            ERaWriteConfig(ERaConfigTypeT::ERA_MODBUS_CONFIG);
+            this->modbusConfig->updated();
         }
+        else if (hash == nullptr) {
+            this->modbusConfig->parseConfig(config, json);
+            ModbusTransp::parseConfig(config, json);
+            this->clearDataBuff();
+        }
+        ModbusState::set(ModbusStateT::STATE_MB_PARSE);
+        ERaGuardUnlock(this->mutex);
+        this->initModbus();
+        if (this->initialized) {
+            ModbusStream::setBaudRate(this->modbusConfig->baudSpeed);
+        }
+    }
+
+    void processModbusControl(const void* config, const char* hash,
+                            const char* buf, bool json = false) {
+        ERaGuardLock(this->mutex);
+        if (this->modbusControl->updateHashID(hash)) {
+            this->modbusControl->parseConfig(config, json);
+            this->thisApi().writeToFlash(FILENAME_CONTROL, buf);
+            ERA_LOG(TAG, ERA_PSTR("Modbus control stored to flash"));
+            ERaWriteConfig(ERaConfigTypeT::ERA_MODBUS_CONTROL);
+#if !defined(ERA_PNP_MODBUS)
+            this->modbusControl->updated();
+#endif
+        }
+        else if (hash == nullptr) {
+            this->modbusControl->parseConfig(config, json);
+        }
+        ModbusState::set(ModbusStateT::STATE_MB_PARSE);
+        ERaGuardUnlock(this->mutex);
+        this->initModbus();
     }
 
     void parseModbusScan(const char* config) {
@@ -387,7 +407,12 @@ private:
         }
 
         cJSON* data = cJSON_GetObjectItem(root, "data");
-        cJSON* item = cJSON_GetObjectItem(data, name);
+        cJSON* item = cJSON_GetObjectItem(data, "hash_id");
+        if (cJSON_IsString(item)) {
+            config->updateHashID(item->valuestring, true);
+        }
+
+        item = cJSON_GetObjectItem(data, name);
         if (item == nullptr) {
             item = cJSON_GetObjectItem(data, jsName);
         }
@@ -402,11 +427,6 @@ private:
             }
         }
 
-        item = cJSON_GetObjectItem(data, "hash_id");
-        if (cJSON_IsString(item)) {
-            config->updateHashID(item->valuestring, true);
-        }
-
         cJSON_Delete(root);
         root = nullptr;
         data = nullptr;
@@ -417,7 +437,7 @@ private:
         this->initModbus();
     }
 
-    void resizeConfig() {
+    void updateConfig() {
         if (ModbusState::is(ModbusStateT::STATE_MB_PARSE)) {
             this->modbusConfig->resize();
             this->modbusControl->resize();
@@ -430,6 +450,10 @@ private:
             else {
                 ModbusTransp::clearConfigId();
             }
+        }
+        if (this->isStateUpdate()) {
+            this->resetCurrentParam();
+            this->executeNow();
         }
         ModbusState::set(ModbusStateT::STATE_MB_RUNNING);
     }
@@ -503,7 +527,6 @@ private:
         }
         this->actionModbus(req);
         if (ModbusAction::isEmptyRequest()) {
-            this->executeNow();
             if (!ModbusState::is(ModbusStateT::STATE_MB_PARSE)) {
                 ModbusState::set(ModbusStateT::STATE_MB_CONTROLLED);
             }
@@ -525,7 +548,6 @@ private:
         ModbusActionRaw_t& req = ModbusAction::getRawRequest();
         this->actionModbusRaw(req);
         if (ModbusAction::isEmptyRawRequest()) {
-            this->executeNow();
             if (!ModbusState::is(ModbusStateT::STATE_MB_PARSE)) {
                 ModbusState::set(ModbusStateT::STATE_MB_CONTROLLED);
             }
@@ -536,6 +558,7 @@ private:
         }
     }
 
+    void publishModbusData();
     void readModbusConfig();
     bool checkPubDataInterval();
     void delayModbus(ERaUInt_t address, bool unlock = false, bool skip = false);
@@ -571,17 +594,22 @@ private:
     void switchToTransmit();
     void switchToReceive();
 
-    bool isRTU() {
+    bool isRTU() const {
         return (this->transp == ModbusTransportT::MODBUS_TRANSPORT_RTU);
     }
 
-    bool isEmptyConfig() {
+    bool isEmptyConfig() const {
         return (this->modbusConfig->modbusConfigParam.isEmpty() &&
                 this->modbusControl->modbusConfigParam.isEmpty());
     }
 
+    bool isStateUpdate() const {
+        return (ModbusState::is(ModbusStateT::STATE_MB_PARSE) ||
+                ModbusState::is(ModbusStateT::STATE_MB_CONTROLLED));
+    }
+
 #if !defined(ERA_NO_RTOS)
-    bool isTaskRunning() {
+    bool isTaskRunning() const {
         return ((this->_modbusTask != NULL) &&
                 (this->_writeModbusTask != NULL));
     }
@@ -626,7 +654,20 @@ private:
     }
 
     void executeNow() {
-        this->modbusConfig->modbusInterval.prevMillis = (ERaMillis() - this->modbusConfig->modbusInterval.delay + ERA_MODBUS_EXECUTE_MS);
+        this->modbusConfig->modbusInterval.prevMillis = (
+            ERaMillis() - this->modbusConfig->modbusInterval.delay + ERA_MODBUS_EXECUTE_MS
+        );
+    }
+
+    void nextCurrentParam() {
+        if (!ModbusTransp::canNextRequest()) {
+            return;
+        }
+        this->currentParam = this->currentParam->getNext();
+    }
+
+    void resetCurrentParam() {
+        this->currentParam = nullptr;
     }
 
     inline
@@ -683,21 +724,13 @@ private:
     bool wifiConfig;
     bool actionWriteTask;
     volatile bool runApiResponse;
+
+    bool legacyProcess;
+    ERaList<ModbusConfig_t*>::iterator* currentParam;
 };
 
 template <class Api>
-void ERaModbus<Api>::readModbusConfig() {
-    if (this->modbusConfig->modbusConfigParam.isEmpty()) {
-        return;
-    }
-    this->dataBuff.clear();
-    const ERaList<ModbusConfig_t*>::iterator* e = this->modbusConfig->modbusConfigParam.end();
-    for (ERaList<ModbusConfig_t*>::iterator* it = this->modbusConfig->modbusConfigParam.begin(); it != e; it = it->getNext()) {
-        ModbusConfig_t* param = it->get();
-        if (!this->handlerModbusRead(param)) {
-            return;
-        }
-    }
+void ERaModbus<Api>::publishModbusData() {
     if (this->dataBuff.isEmpty()) {
         return;
     }
@@ -710,9 +743,9 @@ void ERaModbus<Api>::readModbusConfig() {
     }
 #endif
     this->dataBuff.add_multi(ERA_F(MODBUS_STRING_FAIL_READ), this->failRead,
-                            ERA_F(MODBUS_STRING_FAIL_WRITE), this->failWrite,
-                            ERA_F(MODBUS_STRING_TOTAL_READ), this->totalRead,
-                            ERA_F(MODBUS_STRING_TOTAL_WRITE), this->totalWrite);
+                             ERA_F(MODBUS_STRING_FAIL_WRITE), this->failWrite,
+                             ERA_F(MODBUS_STRING_TOTAL_READ), this->totalRead,
+                             ERA_F(MODBUS_STRING_TOTAL_WRITE), this->totalWrite);
     this->addScanData();
     this->dataBuff.done();
 
@@ -720,6 +753,35 @@ void ERaModbus<Api>::readModbusConfig() {
         return;
     }
     this->thisApi().modbusDataWrite(&this->dataBuff);
+}
+
+template <class Api>
+void ERaModbus<Api>::readModbusConfig() {
+    if (this->modbusConfig->modbusConfigParam.isEmpty()) {
+        return this->waitRequest();
+    }
+
+    if (this->currentParam != nullptr) {
+        this->nextCurrentParam();
+    }
+    else if (ERaRemainingTime(this->modbusConfig->modbusInterval.prevMillis,
+                              this->modbusConfig->modbusInterval.delay)) {
+        return this->waitRequest();
+    }
+    else {
+        this->dataBuff.clear();
+        this->modbusConfig->modbusInterval.prevMillis = ERaMillis();
+        this->currentParam = this->modbusConfig->modbusConfigParam.begin();
+        ModbusTransp::reset();
+        ModbusStream::streamStart();
+    }
+
+    if (this->currentParam == nullptr) {
+        return this->publishModbusData();
+    }
+
+    ModbusConfig_t* param = this->currentParam->get();
+    this->handlerModbusRead(param);
 }
 
 template <class Api>
@@ -787,12 +849,11 @@ void ERaModbus<Api>::delays(MillisTime_t ms) {
     do {
 #if defined(ERA_NO_RTOS)
         if (this->runApiResponse) {
-            this->thisApi().run();
+            this->thisApi().run(true);
             this->thisApi().runZigbee();
         }
 #endif
-        if (ModbusState::is(ModbusStateT::STATE_MB_PARSE) ||
-            ModbusState::is(ModbusStateT::STATE_MB_CONTROLLED)) {
+        if (this->isStateUpdate()) {
             break;
         }
         this->waitRequest();
@@ -881,13 +942,16 @@ void ERaModbus<Api>::processModbusScan() {
         param.addr = i;
         ERaGuardLock(this->mutex);
         this->nextTransport(param);
-        if (ModbusTransp::readHoldingRegisters(this->transp, param, true)) {
+        if (ModbusTransp::readHoldingRegistersLegacy(this->transp, param, true)) {
             this->modbusScan->addr[this->modbusScan->numberDevice++] = i;
         }
         this->delays(100);
         ERaGuardUnlock(this->mutex);
         ERA_MODBUS_YIELD();
     }
+
+    this->resetCurrentParam();
+    this->executeNow();
 }
 
 #if defined(ERA_PNP_MODBUS)
@@ -1108,6 +1172,7 @@ template <class Api>
 void ERaModbus<Api>::sendModbusRead(ModbusConfig_t& param) {
     bool skip {false};
     bool status {false};
+    bool legacy {this->legacyProcess};
     this->nextTransport(param);
 
     if (!this->failCounter.min) {
@@ -1116,18 +1181,41 @@ void ERaModbus<Api>::sendModbusRead(ModbusConfig_t& param) {
         skip = true;
     }
 
+    if (!this->legacyProcess) {
+        legacy = !ModbusTransp::isNewReport();
+    }
     switch (param.func) {
         case ModbusFunctionT::READ_COIL_STATUS:
-            status = ModbusTransp::readCoilStatus(this->transp, param);
+            if (legacy) {
+                status = ModbusTransp::readCoilStatusLegacy(this->transp, param);
+            }
+            else {
+                status = ModbusTransp::readCoilStatus(this->transp, param);
+            }
             break;
         case ModbusFunctionT::READ_INPUT_STATUS:
-            status = ModbusTransp::readInputStatus(this->transp, param);
+            if (legacy) {
+                status = ModbusTransp::readInputStatusLegacy(this->transp, param);
+            }
+            else {
+                status = ModbusTransp::readInputStatus(this->transp, param);
+            }
             break;
         case ModbusFunctionT::READ_HOLDING_REGISTERS:
-            status = ModbusTransp::readHoldingRegisters(this->transp, param);
+            if (legacy) {
+                status = ModbusTransp::readHoldingRegistersLegacy(this->transp, param);
+            }
+            else {
+                status = ModbusTransp::readHoldingRegisters(this->transp, param);
+            }
             break;
         case ModbusFunctionT::READ_INPUT_REGISTERS:
-            status = ModbusTransp::readInputRegisters(this->transp, param);
+            if (legacy) {
+                status = ModbusTransp::readInputRegistersLegacy(this->transp, param);
+            }
+            else {
+                status = ModbusTransp::readInputRegisters(this->transp, param);
+            }
             break;
         default:
             return;
@@ -1138,6 +1226,8 @@ void ERaModbus<Api>::sendModbusRead(ModbusConfig_t& param) {
 #endif
 
     if (skip) {
+    }
+    else if (!ModbusTransp::canNextRequest()) {
     }
     else if (!status) {
         this->failRead++;
@@ -1150,17 +1240,13 @@ bool ERaModbus<Api>::handlerModbusRead(ModbusConfig_t* param) {
         return false;
     }
     ERaGuardLock(this->mutex);
-    if (ModbusState::is(ModbusStateT::STATE_MB_PARSE) ||
-        ModbusState::is(ModbusStateT::STATE_MB_CONTROLLED)) {
+    if (this->isStateUpdate()) {
         ERaGuardUnlock(this->mutex);
-        this->executeNow();
         return false;
     }
     this->sendModbusRead(*param);
     this->delayModbus(param->addr, true);
-    if (ModbusState::is(ModbusStateT::STATE_MB_PARSE) ||
-        ModbusState::is(ModbusStateT::STATE_MB_CONTROLLED)) {
-        this->executeNow();
+    if (this->isStateUpdate()) {
         return false;
     }
     return true;
@@ -1459,7 +1545,7 @@ bool ERaModbus<Api>::waitResponse(ERaModbusRequest* request, ERaModbusResponse* 
         if (!ModbusStream::availableBytes()) {
 #if defined(ERA_NO_RTOS)
             if (this->runApiResponse) {
-                this->thisApi().run();
+                this->thisApi().run(true);
                 this->thisApi().runZigbee();
             }
 #endif

@@ -350,6 +350,7 @@ public:
     void enable(Report_t* pReport);
     void disable(Report_t* pReport);
     void setScale(Report_t* pReport, float min, float max, float rawMin, float rawMax);
+    void restartAll();
     void enableAll();
     void disableAll();
 

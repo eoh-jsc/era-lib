@@ -17,6 +17,7 @@
 #include <ERa/ERaHandlers.hpp>
 #include <ERa/ERaState.hpp>
 #include <ERa/ERaApi.hpp>
+#include <ERa/ERaModel.hpp>
 #include <ERa/ERaTask.hpp>
 #include <ERa/ERaTranspHandler.hpp>
 #include <ERa/ERaLogger.hpp>
@@ -31,6 +32,7 @@ class ERaProto
 #if defined(ERA_OTA)
     , public ERaOTA< ERaProto<Transp, Flash>, Flash >
 #endif
+    , public ERaModel
     , public ERaTranspHandler
     , public ERaServerCallbacks
 {
@@ -75,8 +77,6 @@ public:
         , transp(_transp)
         , pLogger(nullptr)
         , pServerCallbacks(nullptr)
-        , pORG(ERA_ORG_NAME)
-        , pModel(ERA_MODEL_NAME)
         , _connected(false)
         , heartbeat(ERA_HEARTBEAT_INTERVAL * 12UL)
         , lastHeartbeat(0UL)
@@ -105,49 +105,14 @@ public:
     }
 
     void run() {
-        if (!Base::run() && !this->isConfigMode()) {
+        if (!Base::run(false) && !this->isConfigMode()) {
             ERaState::set(StateT::STATE_DISCONNECTED);
         }
-        Handler::run();
-        if (this->pLogger != nullptr) {
-            this->pLogger->run();
-        }
-        Base::runERaApiTask();
         if (Base::isNeedSyncConfig()) {
             this->syncConfig();
         }
         this->publishHeartbeat();
         this->publishSelfInfo();
-    }
-
-    void setERaORG(const char* org) {
-        if (org == nullptr) {
-            return;
-        }
-        this->pORG = org;
-    }
-
-    const char* getERaORG() const {
-        return this->pORG;
-    }
-
-    void setERaModel(const char* model) {
-        if (model == nullptr) {
-            return;
-        }
-        this->pModel = model;
-    }
-
-    const char* getERaModel() const {
-        return this->pModel;
-    }
-
-    void setVendorName(const char* name) {
-        this->setERaORG(name);
-    }
-
-    void setVendorPrefix(const char* prefix) {
-        this->setERaModel(prefix);
     }
 
     void sendCommand(const char* auth, ERaRsp_t& rsp, ApiData_t data = nullptr);
@@ -268,6 +233,14 @@ protected:
         return true;
     }
 
+    void runEdge() {
+        Handler::run();
+        if (this->pLogger == nullptr) {
+            return;
+        }
+        this->pLogger->run();
+    }
+
     virtual void requestListWiFi() override;
     virtual void responseListWiFi() override;
     virtual void connectNewWiFi(const char* ssid, const char* pass) override;
@@ -290,6 +263,7 @@ private:
     void processDownCommand(const char* payload, cJSON* root, cJSON* item);
     void processFinalize(const char* payload, cJSON* root);
     void processConfiguration(const char* payload, const char* hash, cJSON* root);
+    void processArduinoPinConfig(cJSON* root);
     void processDeviceConfig(cJSON* root, uint8_t type);
     void processIOPin(cJSON* root);
     void processPinRequest(const ERaDataBuff& arrayTopic, const char* payload, size_t index);
@@ -311,6 +285,7 @@ private:
     bool sendPinMultiData(ERaRsp_t& rsp);
     bool sendConfigIdData(ERaRsp_t& rsp);
     bool sendConfigIdMultiData(ERaRsp_t& rsp);
+    bool sendTransport(ERaRsp_t& rsp);
 #if defined(ERA_MODBUS)
     bool sendModbusData(ERaRsp_t& rsp);
     void clearRetainedModbusData();
@@ -372,8 +347,6 @@ private:
     Transp& transp;
     ERaLogger* pLogger;
     ERaServerCallbacks* pServerCallbacks;
-    const char* pORG;
-    const char* pModel;
     bool _connected;
 
     unsigned long heartbeat;
@@ -427,6 +400,7 @@ void ERaProto<Transp, Flash>::onDisconnected() {
     }
 
     this->_connected = false;
+    this->transp.setConnected(false);
     Base::switchTask();
     ERaOnDisconnected();
 }
@@ -719,26 +693,19 @@ template <class Transp, class Flash>
 void ERaProto<Transp, Flash>::processConfiguration(const char* payload, const char* hash, cJSON* root) {
     cJSON* item = cJSON_GetObjectItem(root, "arduino_pin");
     if (cJSON_IsObject(item)) {
-        Base::getPinRp().deleteAll();
-        this->processDeviceConfig(item, ERaChipCfgT::CHIP_IO_PIN);
-        if (Base::getPinRp().updateHashID(hash)) {
-#if !defined(ERA_ABBR)
-            Base::Property::updateProperty(Base::getPinRp());
-#endif
-            Base::storePinConfig(payload);
-            ERaWriteConfig(ERaConfigTypeT::ERA_PIN_CONFIG);
-        }
+        Base::processPinConfig(item, hash, payload);
     }
 #if defined(ERA_ZIGBEE)
     item = cJSON_GetObjectItem(root, "zigbee");
     if (cJSON_IsObject(item)) {
-        Base::Zigbee::parseConfigMapDevices(item);
-        if (Base::Zigbee::updateHashID(hash, true)) {
-            Base::Zigbee::storeZigbeeConfig(payload);
-            ERaWriteConfig(ERaConfigTypeT::ERA_ZIGBEE_CONFIG);
-        }
+        Base::Zigbee::processConfigMapZigbee(item, hash, payload);
     }
 #endif
+}
+
+template <class Transp, class Flash>
+void ERaProto<Transp, Flash>::processArduinoPinConfig(cJSON* root) {
+    this->processDeviceConfig(root, ERaChipCfgT::CHIP_IO_PIN);
 }
 
 template <class Transp, class Flash>
@@ -1177,6 +1144,7 @@ bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
     int pMode = Base::getPinRp().findPinMode(rsp.id.getInt());
     switch (rsp.type) {
         case ERaTypeWriteT::ERA_WRITE_VIRTUAL_PIN: {
+                Base::getVirtualNextRetained(rsp.id.getInt(), rsp.retained);
                 configId = Base::getPinRp().findVPinConfigId(rsp.id.getInt(), rsp.param);
                 if (configId < 0) {
                     break;
@@ -1262,7 +1230,7 @@ bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
         return false;
     }
     if (rsp.param.isNumber()) {
-        cJSON_AddNumberWithDecimalToObject(root, name, rsp.param.getDouble(), 5);
+        cJSON_AddNumberWithDecimalToObject(root, name, rsp.param.getDouble(), ERA_DECIMAL_DOUBLE);
     }
     else if (rsp.param.isString()) {
         cJSON_AddStringToObject(root, name, rsp.param.getString());
@@ -1303,7 +1271,7 @@ bool ERaProto<Transp, Flash>::sendConfigIdData(ERaRsp_t& rsp) {
         return false;
     }
     if (rsp.param.isNumber()) {
-        cJSON_AddNumberWithDecimalToObject(root, "v", rsp.param.getDouble(), 5);
+        cJSON_AddNumberWithDecimalToObject(root, "v", rsp.param.getDouble(), ERA_DECIMAL_DOUBLE);
     }
     else if (rsp.param.isString()) {
         cJSON_AddStringToObject(root, "v", rsp.param.getString());
@@ -1330,6 +1298,34 @@ template <class Transp, class Flash>
 bool ERaProto<Transp, Flash>::sendConfigIdMultiData(ERaRsp_t& rsp) {
     return this->publishData(ERA_PUB_PREFIX_MULTI_CONFIG_DATA_TOPIC,
                                             rsp.param, rsp.retained);
+}
+
+template <class Transp, class Flash>
+bool ERaProto<Transp, Flash>::sendTransport(ERaRsp_t& rsp) {
+    switch (rsp.type) {
+        case ERaTypeWriteT::ERA_WRITE_VIRTUAL_PIN: {
+            ERaInt_t configId = Base::getPinRp().findVPinConfigId(rsp.id.getInt(), rsp.param);
+            if (configId < 0) {
+                return false;
+            }
+            rsp.id = configId;
+        }
+            break;
+        case ERaTypeWriteT::ERA_WRITE_PIN: {
+            ERaInt_t configId = Base::getPinRp().findConfigId(rsp.id.getInt(), rsp.param);
+            if (configId < 0) {
+                return false;
+            }
+            rsp.id = configId;
+        }
+            break;
+        case ERaTypeWriteT::ERA_WRITE_CONFIG_ID:
+            break;
+        default:
+            return false;
+    }
+
+    return this->sendConfigIdData(rsp);
 }
 
 #if defined(ERA_MODBUS)
@@ -1456,7 +1452,7 @@ void ERaProto<Transp, Flash>::sendCommand(const char* auth, ERaRsp_t& rsp, ApiDa
         return;
     }
     if (rsp.param.isNumber()) {
-        cJSON_AddNumberWithDecimalToObject(root, "value", rsp.param.getDouble(), 5);
+        cJSON_AddNumberWithDecimalToObject(root, "value", rsp.param.getDouble(), ERA_DECIMAL_DOUBLE);
     }
     else if (rsp.param.isString()) {
         cJSON_AddStringToObject(root, "value", rsp.param.getString());
@@ -1529,6 +1525,7 @@ void ERaProto<Transp, Flash>::sendCommandVirtualMulti(const char* auth, ERaRsp_t
 template <class Transp, class Flash>
 void ERaProto<Transp, Flash>::sendCommand(ERaRsp_t& rsp, ApiData_t data) {
     if (!this->connected()) {
+        this->sendTransport(rsp);
         return;
     }
 

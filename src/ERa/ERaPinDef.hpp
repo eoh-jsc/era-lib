@@ -3,6 +3,12 @@
 
 #include <stdint.h>
 
+#if defined(ERA_REPORTABLE_CHANGE_PIN)
+    /* OK, use the specified value */
+#else
+    #define ERA_REPORTABLE_CHANGE_PIN   1.0f
+#endif
+
 typedef struct __PinConfig_t {
     uint8_t pin;
     uint8_t pinMode;
@@ -22,7 +28,7 @@ typedef struct __PinConfig_t {
             : interval(100UL)
             , minInterval(100UL)
             , maxInterval(60000UL)
-            , reportableChange(1.0f)
+            , reportableChange(ERA_REPORTABLE_CHANGE_PIN)
         {}
         __ReportConfig_t(unsigned long _interval, unsigned long _minInterval,
                         unsigned long _maxInterval, float _reportableChange)

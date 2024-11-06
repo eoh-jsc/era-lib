@@ -434,13 +434,19 @@ void ERaReport::setScale(Report_t* pReport, float min, float max, float rawMin, 
     */
 }
 
+void ERaReport::restartAll() {
+    const ReportIterator* e = this->report.end();
+    for (ReportIterator* it = this->report.begin(); it != e; it = it->getNext()) {
+        Report_t* pReport = it->get();
+        this->restartReport(pReport);
+    }
+}
+
 void ERaReport::enableAll() {
     const ReportIterator* e = this->report.end();
     for (ReportIterator* it = this->report.begin(); it != e; it = it->getNext()) {
         Report_t* pReport = it->get();
-        if (this->isValidReport(pReport)) {
-            pReport->enable = true;
-        }
+        this->enable(pReport);
     }
 }
 
@@ -448,9 +454,7 @@ void ERaReport::disableAll() {
     const ReportIterator* e = this->report.end();
     for (ReportIterator* it = this->report.begin(); it != e; it = it->getNext()) {
         Report_t* pReport = it->get();
-        if (this->isValidReport(pReport)) {
-            pReport->enable = false;
-        }
+        this->disable(pReport);
     }
 }
 

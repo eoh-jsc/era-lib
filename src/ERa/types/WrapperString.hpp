@@ -533,7 +533,7 @@ class WrapperString;
                 this->value.buffer = copy;
                 this->value.capacity = (newLen + 1);
             }
-            snprintf(this->value.buffer + oldLen, newLen - oldLen + 1, cstr);
+            snprintf(this->value.buffer + oldLen, newLen - oldLen + 1, "%s", cstr);
             this->value.buffer[newLen] = '\0';
             this->value.length = newLen;
             this->isUpdated = true;
@@ -1607,12 +1607,12 @@ class WrapperString;
                 if (copy == nullptr) {
                     return;
                 }
-                snprintf(copy, len + 1, cstr);
+                snprintf(copy, len + 1, "%s", cstr);
                 this->value.buffer = copy;
                 this->value.capacity = (len + 1);
             }
             else {
-                snprintf(this->value.buffer, this->value.capacity, cstr);
+                snprintf(this->value.buffer, this->value.capacity, "%s", cstr);
             }
             this->value.buffer[len] = '\0';
             this->value.length = len;

@@ -62,6 +62,8 @@
 
     #define ERA_LOG_SECRET(s)                           ERA_LOG_SECRET_BEGIN s ERA_LOG_SECRET_END
 
+    #include <ERa/ERaDefine.hpp>
+
     #if defined(ARDUINO) && defined(ESP32) &&   \
         (CORE_DEBUG_LEVEL >= ARDUHAL_LOG_LEVEL_INFO)
         #include <esp32-hal-log.h>
@@ -185,7 +187,9 @@
         #endif
 
         #include <iostream>
+
         using namespace std;
+
         #define ERA_LOG_TIME()                          cout << '[' << ERaMillis() << ']'
         #define ERA_LOG_TAG(tag)                        cout << '[' << tag << "] "
         #define ERA_LOG_FN()                            cout << '[' << ERaFileName(__FILE__) << ':' << __LINE__ << "] " << __FUNCTION__ << "(): "
@@ -281,6 +285,14 @@
     if (data == nullptr) {          \
         ERA_ASSERT(data != nullptr);\
         return rt;                  \
+    }
+
+#define ERA_ASSERT_NULL_DEL(data, rt, del)  \
+    if (data == nullptr) {                  \
+        ERA_ASSERT(data != nullptr);        \
+        delete del;                         \
+        del = nullptr;                      \
+        return rt;                          \
     }
 
 #include <stdio.h>

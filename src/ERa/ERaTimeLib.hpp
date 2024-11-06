@@ -58,6 +58,9 @@ public:
     virtual void begin() = 0;
     virtual void run() = 0;
 
+    virtual void setTimeZone(long) {
+    }
+
     virtual long getTimeZone() {
         return 0L;
     }

@@ -145,6 +145,10 @@ public:
     bool publishState(bool online);
     bool syncConfig();
 
+    void setConnected(bool enable) {
+        this->_connected = enable;
+    }
+
     void setTimeout(uint32_t timeout) {
         this->mqtt.setTimeout(timeout);
     }

@@ -7,6 +7,20 @@
 #include <stdint.h>
 #include <string.h>
 #include <ERa/ERaDefine.hpp>
+#include <Utility/ERacJSON.hpp>
+#include <Utility/ERaUtility.hpp>
+
+#if defined(ERA_DECIMAL_FLOAT)
+    /* OK, use the specified value */
+#else
+    #define ERA_DECIMAL_FLOAT   2
+#endif
+
+#if defined(ERA_DECIMAL_DOUBLE)
+    /* OK, use the specified value */
+#else
+    #define ERA_DECIMAL_DOUBLE  6
+#endif
 
 using namespace std;
 
@@ -797,7 +811,7 @@ ERaDataBuff::operator char* () const {
     memset(ptr, 0, this->len);
     const iterator e = this->end();
     for (iterator it = this->begin(); it < e; ++it) {
-        snprintf(ptr + strlen(ptr), this->len - strlen(ptr), it);
+        snprintf(ptr + strlen(ptr), this->len - strlen(ptr), "%s", it.getString());
     }
     return ptr;
 }
@@ -1141,12 +1155,12 @@ public:
         }
 
         iterator& operator = (float value) {
-            cJSON_SetNumberWithDecimal(this->parent, this->item, value, 2);
+            cJSON_SetNumberWithDecimal(this->parent, this->item, value, ERA_DECIMAL_FLOAT);
             return (*this);
         }
 
         iterator& operator = (double value) {
-            cJSON_SetNumberWithDecimal(this->parent, this->item, value, 5);
+            cJSON_SetNumberWithDecimal(this->parent, this->item, value, ERA_DECIMAL_DOUBLE);
             return (*this);
         }
 
@@ -1669,13 +1683,13 @@ void ERaDataJson::set(const char* name, bool value) {
 inline
 void ERaDataJson::set(const char* name, float value) {
     this->create();
-    this->setDouble(this->root, name, value, 2);
+    this->setDouble(this->root, name, value, ERA_DECIMAL_FLOAT);
 }
 
 inline
 void ERaDataJson::set(const char* name, double value) {
     this->create();
-    this->setDouble(this->root, name, value, 5);
+    this->setDouble(this->root, name, value, ERA_DECIMAL_DOUBLE);
 }
 
 inline
@@ -1706,13 +1720,13 @@ void ERaDataJson::add(const char* name, bool value) {
 inline
 void ERaDataJson::add(const char* name, float value) {
     this->create();
-    this->addDouble(this->root, name, value, 2);
+    this->addDouble(this->root, name, value, ERA_DECIMAL_FLOAT);
 }
 
 inline
 void ERaDataJson::add(const char* name, double value) {
     this->create();
-    this->addDouble(this->root, name, value, 5);
+    this->addDouble(this->root, name, value, ERA_DECIMAL_DOUBLE);
 }
 
 inline
@@ -1770,13 +1784,13 @@ void ERaDataJson::add(bool value) {
 inline
 void ERaDataJson::add(float value) {
     this->createArray();
-    this->addDoubleArray(this->root, value, 2);
+    this->addDoubleArray(this->root, value, ERA_DECIMAL_FLOAT);
 }
 
 inline
 void ERaDataJson::add(double value) {
     this->createArray();
-    this->addDoubleArray(this->root, value, 5);
+    this->addDoubleArray(this->root, value, ERA_DECIMAL_DOUBLE);
 }
 
 inline

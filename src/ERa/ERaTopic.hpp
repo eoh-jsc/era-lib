@@ -51,9 +51,6 @@ Topic format:
 #define ERA_PUB_PREFIX_ARDUINO_DOWN_TOPIC           "/arduino_pin/" ERA_INTEGER_C_TYPE
 #define ERA_PUB_PREFIX_VIRTUAL_DOWN_TOPIC           "/virtual_pin/" ERA_INTEGER_C_TYPE
 
-#if defined(ERA_ZIGBEE) ||  \
-    defined(ERA_SPECIFIC)
-    #define ERA_PUB_PREFIX_ZIGBEE_DOWN_TOPIC        "/zigbee/%s/down"
-#endif
+#define ERA_PUB_PREFIX_ZIGBEE_DOWN_TOPIC            "/zigbee/%s/down"
 
 #endif /* INC_ERA_TOPIC_HPP_ */

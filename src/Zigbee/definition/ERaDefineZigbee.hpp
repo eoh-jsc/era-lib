@@ -43,6 +43,12 @@
     #define ZIGBEE_PUBLISH_RETAINED     true
 #endif
 
+#if defined(ZIGBEE_DECIMAL_VALUE)
+    /* OK, use the specified value */
+#else
+    #define ZIGBEE_DECIMAL_VALUE        5
+#endif
+
 #define NO_NWK_ADDR                     (uint16_t)0x0000
 #define NO_LOAD_ENDPOINT                (uint8_t)0xFF
 #define ZCL_DATA_MIN                    3

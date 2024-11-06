@@ -259,11 +259,11 @@ void ERaFromZigbee<Zigbee>::addDataZigbee(const DataAFMsg_t& afMsg, cJSON* root,
             }
         }
         if (afMsg.srcAddr.endpoint == EndpointListT::ENDPOINT1) {
-            cJSON_SetNumberWithDecimalToObject(root, key, value * scale, 5);
+            cJSON_SetNumberWithDecimalToObject(root, key, value * scale, ZIGBEE_DECIMAL_VALUE);
         }
         else {
             StringPrint(name, "%s_%d", key, afMsg.srcAddr.endpoint);
-            cJSON_SetNumberWithDecimalToObject(root, name, value * scale, 5);
+            cJSON_SetNumberWithDecimalToObject(root, name, value * scale, ZIGBEE_DECIMAL_VALUE);
         }
         return;
     }
@@ -307,11 +307,11 @@ void ERaFromZigbee<Zigbee>::addDataZigbee(const DataAFMsg_t& afMsg, cJSON* root,
     }
 #endif
     if (afMsg.srcAddr.endpoint == EndpointListT::ENDPOINT1) {
-        cJSON_SetNumberWithDecimalToObject(root, key, value * scale, 5);
+        cJSON_SetNumberWithDecimalToObject(root, key, value * scale, ZIGBEE_DECIMAL_VALUE);
     }
     else {
         StringPrint(name, "%s_%d", key, afMsg.srcAddr.endpoint);
-        cJSON_SetNumberWithDecimalToObject(root, name, value * scale, 5);
+        cJSON_SetNumberWithDecimalToObject(root, name, value * scale, ZIGBEE_DECIMAL_VALUE);
     }
 }
 
@@ -345,11 +345,11 @@ void ERaFromZigbee<Zigbee>::addDataZigbee(const DataAFMsg_t& afMsg, cJSON* root,
     }
 #endif
     if (afMsg.srcAddr.endpoint == EndpointListT::ENDPOINT1) {
-        cJSON_SetNumberWithDecimalToObject(root, key, value * scale, 5);
+        cJSON_SetNumberWithDecimalToObject(root, key, value * scale, ZIGBEE_DECIMAL_VALUE);
     }
     else {
         StringPrint(name, "%s_%d", key, afMsg.srcAddr.endpoint);
-        cJSON_SetNumberWithDecimalToObject(root, name, value * scale, 5);
+        cJSON_SetNumberWithDecimalToObject(root, name, value * scale, ZIGBEE_DECIMAL_VALUE);
     }
 }
 

@@ -12,6 +12,7 @@
 #include <ERa/ERaTransp.hpp>
 #include <ERa/ERaTimer.hpp>
 #include <ERa/ERaApiHandler.hpp>
+#include <ERa/ERaComponentHandler.hpp>
 #include <Utility/ERaQueue.hpp>
 #include <Modbus/ERaModbusSimple.hpp>
 #include <Zigbee/ERaZigbeeSimple.hpp>
@@ -21,6 +22,7 @@
 template <class Proto, class Flash>
 class ERaApi
     : public ERaApiHandler
+    , public ERaComponentHandler
 #if !defined(ERA_ABBR)
     , public ERaProperty< ERaApi<Proto, Flash> >
 #endif
@@ -44,6 +46,7 @@ class ERaApi
 
     typedef void* TaskHandle_t;
     typedef ERaApiHandler Handler;
+    typedef ERaComponentHandler ComponentHandler;
 
 protected:
 #if !defined(ERA_ABBR)
@@ -181,7 +184,21 @@ public:
 
     template <typename T, typename... Args>
     void configIdWrite(ERaInt_t configId, const T& value, const Args&... tail) {
-        this->configIdMultiWrite(configId, value, tail...);
+        this->configIdWriteMulti(configId, value, tail...);
+    }
+
+    void configIdObject(const char* value) {
+        ERaDataJson data(value);
+        this->configIdObject(data);
+    }
+
+    void configIdObject(cJSON* value) {
+        ERaDataJson data(value);
+        this->configIdObject(data);
+    }
+
+    void configIdObject(ERaDataJson& value) {
+        this->configIdWriteMultiReal(value, false);
     }
 
     template <typename T>
@@ -319,6 +336,14 @@ public:
         }
     }
 
+    bool setVirtualNextRetained(int pin, bool nextRetained) {
+        return this->ERaPinRp.setVPinNextRetained(pin, nextRetained);
+    }
+
+    bool getVirtualNextRetained(int pin, bool& retained) {
+        return this->ERaPinRp.getVPinNextRetained(pin, retained);
+    }
+
     Flash& getFlash() const {
         return this->flash;
     }
@@ -347,6 +372,14 @@ public:
         this->enableAppLoop = enable;
     }
 
+    void setERaComponent(ERaComponent& _component) override {
+        ComponentHandler::addComponent(_component);
+    }
+
+    void setERaComponent(ERaComponent* _pComponent) override {
+        ComponentHandler::addComponent(_pComponent);
+    }
+
     void callERaProHandler(const char* deviceId, const cJSON* const root);
 
 protected:
@@ -365,7 +398,9 @@ protected:
     void processArduinoPinRequest(const ERaDataBuff& arrayTopic, const char* payload);
     void processVirtualPinRequest(const ERaDataBuff& arrayTopic, const char* payload);
     void initPinConfig();
+    void parseArduinoPinConfig(cJSON* root);
     void parsePinConfig(const char* str);
+    void processPinConfig(cJSON* root, const char* hash, const char* buf);
     void storePinConfig(const char* str);
     void removePinConfig();
 
@@ -395,13 +430,17 @@ protected:
         this->initERaApiTask();
 
         ERaWatchdogFeed();
+
+        ComponentHandler::begin();
+
+        ERaWatchdogFeed();
     }
 
-    bool run() {
+    bool run(bool skipTask) {
         ERA_RUN_YIELD();
 
         if (!this->isTaskRunning()) {
-            this->handlerAPI(true);
+            this->handlerAPI(true, skipTask);
         }
 
         ERaWatchdogFeed();
@@ -429,7 +468,7 @@ protected:
         return this->thisProto().getTransp().run();
     }
 
-    void handlerAPI(bool feed) {
+    void handlerAPI(bool feed, bool skipTask) {
 #if !defined(ERA_ABBR)
         Property::run();
 #endif
@@ -440,6 +479,23 @@ protected:
         }
 
         Handler::run();
+
+        if (feed) {
+            ERaWatchdogFeed();
+        }
+
+        this->thisProto().runEdge();
+
+        ComponentHandler::run();
+
+        if (feed) {
+            ERaWatchdogFeed();
+        }
+
+        if (skipTask) {
+            return;
+        }
+        this->runERaApiTask();
     }
 
     void switchTask() {
@@ -454,7 +510,7 @@ protected:
 
     void runAPI() {
         for (;;) {
-            this->handlerAPI(false);
+            this->handlerAPI(false, true);
             ERA_API_YIELD();
             if (this->autoSwitchTask &&
                 this->connected()) {
@@ -668,15 +724,19 @@ private:
     }
 
     template <typename... Args>
-    void configIdMultiWrite(const Args&... tail) {
-        ERaRsp_t rsp;
+    void configIdWriteMulti(const Args&... tail) {
         ERaDataJson data;
         data.add_multi(tail...);
+        this->configIdWriteMultiReal(data, false);
+    }
+
+    void configIdWriteMultiReal(ERaDataJson& value, bool json = false) {
+        ERaRsp_t rsp;
         rsp.type = ERaTypeWriteT::ERA_WRITE_CONFIG_ID_MULTI;
-        rsp.json = false;
+        rsp.json = json;
         rsp.retained = ERA_MQTT_PUBLISH_RETAINED;
         rsp.id = 0;
-        rsp.param = data.getObject();
+        rsp.param = value.getObject();
         this->thisProto().sendCommand(rsp);
     }
 
@@ -945,6 +1005,18 @@ void ERaApi<Proto, Flash>::initPinConfig() {
 
 template <class Proto, class Flash>
 inline
+void ERaApi<Proto, Flash>::parseArduinoPinConfig(cJSON* root) {
+    cJSON* item = cJSON_GetObjectItem(root, "arduino_pin");
+    if (!cJSON_IsObject(item)) {
+        return;
+    }
+
+    this->ERaPinRp.deleteAll();
+    this->thisProto().processArduinoPinConfig(item);
+}
+
+template <class Proto, class Flash>
+inline
 void ERaApi<Proto, Flash>::parsePinConfig(const char* str) {
     cJSON* root = cJSON_Parse(str);
     if (!cJSON_IsObject(root)) {
@@ -957,9 +1029,9 @@ void ERaApi<Proto, Flash>::parsePinConfig(const char* str) {
     if (cJSON_IsString(item)) {
         this->ERaPinRp.updateHashID(item->valuestring);
     }
-    item = cJSON_GetObjectItem(root, "command");
-    if (cJSON_IsString(item)) {
-        this->thisProto().processDownCommand(str, root, item);
+    item = cJSON_GetObjectItem(root, "configuration");
+    if (cJSON_IsObject(item)) {
+        this->parseArduinoPinConfig(item);
     }
 
     cJSON_Delete(root);
@@ -967,6 +1039,23 @@ void ERaApi<Proto, Flash>::parsePinConfig(const char* str) {
     item = nullptr;
 
     ERA_LOG(TAG, ERA_PSTR("Pin configuration loaded from flash"));
+}
+
+template <class Proto, class Flash>
+inline
+void ERaApi<Proto, Flash>::processPinConfig(cJSON* root, const char* hash, const char* buf) {
+    if (!this->ERaPinRp.updateHashID(hash)) {
+        this->ERaPinRp.restartAll();
+        return;
+    }
+
+    this->ERaPinRp.deleteAll();
+    this->thisProto().processArduinoPinConfig(root);
+#if !defined(ERA_ABBR)
+    Property::updateProperty(this->ERaPinRp);
+#endif
+    this->storePinConfig(buf);
+    ERaWriteConfig(ERaConfigTypeT::ERA_PIN_CONFIG);
 }
 
 template <class Proto, class Flash>
@@ -1007,6 +1096,7 @@ void ERaApi<Proto, Flash>::removePinConfig() {
             root = nullptr;
             return;
         }
+
         cJSON* data = cJSON_GetObjectItem(root, "data");
         cJSON* item = cJSON_GetObjectItem(data, "hash_id");
         if (cJSON_IsString(item)) {
@@ -1016,6 +1106,7 @@ void ERaApi<Proto, Flash>::removePinConfig() {
         if (cJSON_IsString(item)) {
             this->thisProto().Proto::Handler::begin(item->valuestring);
         }
+
         cJSON_Delete(root);
         root = nullptr;
 
@@ -1221,7 +1312,7 @@ void ERaApi<Proto, Flash>::appLoop() {
     if (this->isTaskRunning()) {
         return;
     }
-    this->handlerAPI(true);
+    this->handlerAPI(true, false);
 }
 
 template <class Proto, class Flash>
