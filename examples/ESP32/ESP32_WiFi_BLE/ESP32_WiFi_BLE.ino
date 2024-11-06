@@ -8,6 +8,9 @@
     ERa blog:                   https://iotasia.org
     ERa forum:                  https://forum.eoh.io
     Follow us:                  https://www.fb.com/EoHPlatform
+ *************************************************************
+ Note: The BLE library for ESP32 consumes a lot of memory, so
+       you can use the NimBLE library to optimize memory usage.
  *************************************************************/
 
 // Enable debug console
