@@ -685,7 +685,7 @@ void ERaPnP<Transport>::configApi() {
             content += ERA_F("</select>");
         }
         else {
-            content += ERA_F("<input name=ssid id=ssid placeholder='%SSID%'>");
+            content += ERA_F("<input name=ssid id=ssid placeholder='%SSID% (*)'>");
         }
         content += ERA_F("<input name=pass id=pass placeholder='%PASSWORD%' type=password>");
 
@@ -724,13 +724,16 @@ void ERaPnP<Transport>::configApi() {
             content += ERA_F("<input name=backup_ssid id=backup_ssid placeholder='%BACKUP_SSID%'>");
         }
         content += ERA_F("<input name=backup_pass id=backup_pass placeholder='%BACKUP_PASS%' type=password>");
+
+        /* MQTT Config */
+        content += ERA_F("<hr><h1>MQTT</h1>");
         content += ERA_F("<input name=host id=host value='");
         content += ERaConfig.host;
         content += ERA_F("'>");
         content += ERA_F("<input name=port id=port value='");
         content += String(ERaConfig.port);
         content += ERA_F("'>");
-        content += ERA_F("<input name=token id=token placeholder='%TOKEN%'>");
+        content += ERA_F("<input name=token id=token placeholder='%TOKEN% (*)'>");
         content += ERA_F("<input name=username id=username placeholder='%USERNAME%'>");
         content += ERA_F("<input name=password id=password placeholder='%PASSWORD%' type=password>");
         content += ERA_F("<input type=checkbox onclick=togglePass() class=checkbox> %SHOW_PASSWORD%");

@@ -35,9 +35,16 @@ static const char webScript[] ERA_PROGMEM =
 "x.type = 'password'; }}"
 "function clicked(e) {"
 "var id = document.getElementById('ssid');"
+"var pass = document.getElementById('pass');"
 "var auth = document.getElementById('token');"
+"let selected = undefined;"
+"if (id?.tagName === 'SELECT') {"
+"selected = id?.options[id.selectedIndex]; }"
 "if (id.value === '') {"
 "alert('%NONE_WIFI_MSG%');"
+"e.preventDefault();"
+"} else if (selected?.text.includes('*') && pass.value === '') {"
+"alert('%NONE_PASS_MSG%');"
 "e.preventDefault();"
 "} else if (auth.value === '') {"
 "alert('%NONE_AUTH_MSG%');"
@@ -296,6 +303,7 @@ enum LanguageWebT {
 #define LANGUAGE_SAVE_MSG(lang) (lang == LanguageWebT::LANGUAGE_EN) ? "Do you want force save?" : "Bạn có muốn lưu?"
 #define LANGUAGE_WIFI_MSG(lang) (lang == LanguageWebT::LANGUAGE_EN) ? "Do you want connect to" : "Bạn có muốn kết nối"
 #define LANGUAGE_NONE_WIFI_MSG(lang) (lang == LanguageWebT::LANGUAGE_EN) ? "Please choose WiFi!" : "Vui lòng chọn WiFi!"
+#define LANGUAGE_NONE_PASS_MSG(lang) (lang == LanguageWebT::LANGUAGE_EN) ? "Please enter the password!" : "Vui lòng nhập mật khẩu!"
 #define LANGUAGE_NONE_AUTH_MSG(lang) (lang == LanguageWebT::LANGUAGE_EN) ? "Please provide the token!" : "Vui lòng cung cấp mã token!"
 #define LANGUAGE_ONLINE(lang) (lang == LanguageWebT::LANGUAGE_EN) ? "Online" : "Trực tuyến"
 #define LANGUAGE_OFFLINE(lang) (lang == LanguageWebT::LANGUAGE_EN) ? "Offline" : "Ngoại tuyến"
@@ -344,6 +352,7 @@ static void WebProcessor(String& str, uint8_t language = LANGUAGE_EN) {
     str.replace("%SAVE_MSG%", LANGUAGE_SAVE_MSG(language));
     str.replace("%WIFI_MSG%", LANGUAGE_WIFI_MSG(language));
     str.replace("%NONE_WIFI_MSG%", LANGUAGE_NONE_WIFI_MSG(language));
+    str.replace("%NONE_PASS_MSG%", LANGUAGE_NONE_PASS_MSG(language));
     str.replace("%NONE_AUTH_MSG%", LANGUAGE_NONE_AUTH_MSG(language));
     str.replace("%RESET_NETWORK_MSG%", LANGUAGE_RESET_NETWORK_MSG(language));
     str.replace("%HOST%", LANGUAGE_HOST(language));
