@@ -3,9 +3,9 @@
 
 #if defined(ARDUINO) && defined(ESP32)
     #if defined(ERA_USE_SSL)
-        #include <ERaEsp32SSL.hpp>
+        #include <ERaSimpleMBEsp32SSL.hpp>
     #else
-        #include <ERaEsp32.hpp>
+        #include <ERaSimpleMBEsp32.hpp>
     #endif
 #elif defined(ARDUINO) && defined(ESP8266)
     #if defined(ERA_USE_SSL)
@@ -16,9 +16,9 @@
 #elif defined(ARDUINO) &&               \
     (defined(RTL8722DM) || defined(ARDUINO_AMEBA))
     #if defined(ERA_USE_SSL)
-        #include <ERaRealtekSSLWiFi.hpp>
+        #include <ERaRealtekSSL.hpp>
     #else
-        #include <ERaRealtekWiFi.hpp>
+        #include <ERaRealtek.hpp>
     #endif
 #elif defined(ARDUINO) && defined(ARDUINO_ARCH_STM32)
     #include <TinyGsmClient.hpp>

@@ -892,7 +892,7 @@ protected:
             }
         }
         ERA_FORCE_UNUSED(param);
-        ERA_FORCE_UNUSED(skip);
+        ERA_FORCE_UNUSED(processWrite);
         ERA_FORCE_UNUSED(skip);
         return status;
     }

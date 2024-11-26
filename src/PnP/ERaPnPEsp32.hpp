@@ -274,14 +274,17 @@ public:
         this->persistent = enable;
     }
 
-    void switchToConfig(bool erase = false) {
+    void switchToConfig(bool erase = false, bool execute = false) {
         ERaConfig.connected = false;
         ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_API, true);
-        if (erase) {
-            ERaState::set(StateT::STATE_RESET_CONFIG);
+        if (!erase) {
+            ERaState::set(StateT::STATE_SWITCH_TO_AP);
+        }
+        else if (execute) {
+            this->configReset();
         }
         else {
-            ERaState::set(StateT::STATE_SWITCH_TO_AP);
+            ERaState::set(StateT::STATE_RESET_CONFIG);
         }
         ERA_LOG(TAG, ERA_PSTR("Switch to config mode!"));
     }

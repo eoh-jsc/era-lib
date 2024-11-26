@@ -1,6 +1,6 @@
 {
   "name": "ERa",
-  "version": "1.4.4",
+  "version": "1.4.5",
   "description": "E-Ra by EoH. An IoT Market Enabler! It supports WiFi, Ethernet, Zigbee, Modbus, Serial. Works with boards like Arduino, ESP8266, ESP32, STM32, Raspberry Pi...",
   "keywords": "ERa, E-Ra, esp8266, esp32, stm32, raspberry-pi, http, mqtt, zigbee, modbus, sensors, control, device, smartphone, mobile, app, web, cloud, communication, protocol, iot, wifi, ethernet, serial",
   "authors":

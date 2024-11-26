@@ -121,12 +121,22 @@
         }
         esp_task_wdt_config_t twdt_config = {
             .timeout_ms = timeout,
-            .idle_core_mask = ((1 << portNUM_PROCESSORS) - 1),
+            .idle_core_mask = 0,
             .trigger_panic = true
         };
+
 #if !CONFIG_ESP_TASK_WDT_INIT
+        twdt_config.idle_core_mask |= ((1 << portNUM_PROCESSORS) - 1);
+
         esp_task_wdt_init(&twdt_config);
 #else
+    #if CONFIG_ESP_TASK_WDT_CHECK_IDLE_TASK_CPU0
+        twdt_config.idle_core_mask |= (1 << 0);
+    #endif
+    #if CONFIG_ESP_TASK_WDT_CHECK_IDLE_TASK_CPU1
+        twdt_config.idle_core_mask |= (1 << 1);
+    #endif
+
         esp_task_wdt_reconfigure(&twdt_config);
 #endif
         esp_task_wdt_add(NULL);

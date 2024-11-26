@@ -39,6 +39,7 @@
 
 #define WIFI_SCAN_MAX                 15
 #define WIFI_SCAN_TIMEOUT             20000
+#define WIFI_SCAN_CHANNEL_TIMEOUT     150
 #define WIFI_NET_CONNECT_TIMEOUT      60000
 #define WIFI_CLOUD_CONNECT_TIMEOUT    60000
 #define WIFI_NET_CHECK_TIMEOUT        (WIFI_NET_CONNECT_TIMEOUT * 3)
@@ -71,6 +72,9 @@ typedef struct __ERaConfig_t {
 
     bool connected;
     bool forceSave;
+
+    int32_t channel;
+    uint8_t bssid[6];
 
     void setFlag(uint8_t mask, bool value) {
         if (value) {
@@ -266,7 +270,9 @@ public:
     ERaPnP(Transport& _transp, ERaFlash& _flash)
         : Base(_transp, _flash)
         , authToken(nullptr)
+        , scanWiFiConnect(false)
         , persistent(false)
+        , scanWiFiRetry(1UL)
         , server(80)
         , newWiFi {}
         , prevMillis(0UL)
@@ -352,18 +358,28 @@ public:
                     ERA_MQTT_USERNAME, ERA_MQTT_PASSWORD);
     }
 
+    void setScanWiFi(bool enable, unsigned long retry = 2UL) {
+        this->scanWiFiConnect = enable;
+        if (retry) {
+            this->scanWiFiRetry = retry;
+        }
+    }
+
     void setPersistent(bool enable) {
         this->persistent = enable;
     }
 
-    void switchToConfig(bool erase = false) {
+    void switchToConfig(bool erase = false, bool execute = false) {
         ERaConfig.connected = false;
         ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_API, true);
-        if (erase) {
-            ERaState::set(StateT::STATE_RESET_CONFIG);
+        if (!erase) {
+            ERaState::set(StateT::STATE_SWITCH_TO_AP);
+        }
+        else if (execute) {
+            this->configReset();
         }
         else {
-            ERaState::set(StateT::STATE_SWITCH_TO_AP);
+            ERaState::set(StateT::STATE_RESET_CONFIG);
         }
         ERA_LOG(TAG, ERA_PSTR("Switch to config mode!"));
     }
@@ -383,6 +399,8 @@ private:
     void waitHandle(String& networks, unsigned long ms);
     void runServer(String& networks);
     String scanNetworks();
+    bool scanNetwork(const char* ssid);
+    bool scanNetworks(const char* ssid);
     cJSON* scanNetworksJson(int nets, bool compact = false);
     void addEncryptionType(uint8_t networkItem, cJSON* const item);
     String urlDecode(const String& text);
@@ -424,7 +442,9 @@ private:
 
     const char* authToken;
     const char  channelAP[2] = "1";
+    bool scanWiFiConnect;
     bool persistent;
+    unsigned long scanWiFiRetry;
     WiFiServer  server;
     WiFiConfig_t newWiFi;
 
@@ -1110,6 +1130,122 @@ String ERaPnP<Transport>::scanNetworks() {
 }
 
 template <class Transport>
+bool ERaPnP<Transport>::scanNetwork(const char* ssid) {
+    if (!this->scanWiFiConnect) {
+        return true;
+    }
+    if (!strlen(ssid)) {
+        return false;
+    }
+
+#if defined(ESP32) ||       \
+    defined(ESP8266)
+
+    ERA_LOG(TAG, ERA_PSTR("WiFi scan SSID: %s"), ssid);
+
+    bool found {false};
+
+#if defined(ESP32)
+    int nets = WiFi.scanNetworks(true, true, false,
+                        WIFI_SCAN_CHANNEL_TIMEOUT);
+#elif defined(ESP8266)
+    int nets = WiFi.scanNetworks(true, true);
+#else
+    int nets = WiFi.scanNetworks();
+    ERaWatchdogFeed();
+#endif
+
+    MillisTime_t tick = ERaMillis();
+    while ((nets < 0) && ERaRemainingTime(tick, WIFI_SCAN_TIMEOUT)) {
+        ERaDelay(100);
+        ERaWatchdogFeed();
+        Base::appLoop();
+        ERaWatchdogFeed();
+        nets = WiFi.scanComplete();
+    }
+    if (nets <= 0) {
+        WiFi.scanDelete();
+        WiFi.disconnect();
+        ERA_LOG_WARNING(TAG, ERA_PSTR("Not found any SSID"));
+        return false;
+    }
+
+    int32_t rssi {-9999};
+    for (int i = 0; i < nets; ++i) {
+        if (::getSSID(i) == ssid) {
+            found = true;
+            ERA_LOG(TAG, ERA_PSTR("Found SSID: %s, BSSID: %s, RSSI: %d, Channel: %d"),
+                        ::getSSID(i).c_str(), ::getBSSID(i).c_str(), WiFi.RSSI(i),
+                        WiFi.channel(i));
+            if (rssi > WiFi.RSSI(i)) {
+                continue;
+            }
+            rssi = WiFi.RSSI(i);
+            ERaConfig.channel = WiFi.channel(i);
+            const uint8_t* pbssid = WiFi.BSSID(i);
+            if (pbssid != nullptr) {
+                CopyToArray(*pbssid, ERaConfig.bssid);
+            }
+        }
+    }
+    if (found) {
+        char mac[20] {0};
+        FormatString(mac, "%02X:%02X:%02X:%02X:%02X:%02X", ERaConfig.bssid[0], ERaConfig.bssid[1],
+                                                        ERaConfig.bssid[2], ERaConfig.bssid[3],
+                                                        ERaConfig.bssid[4], ERaConfig.bssid[5]);
+        ERA_LOG(TAG, ERA_PSTR("Connecting SSID: %s, BSSID: %s, RSSI: %d, Channel: %d"),
+                                ssid, mac, rssi, ERaConfig.channel);
+    }
+    else {
+        ERA_LOG_WARNING(TAG, ERA_PSTR("Not Found SSID: %s"), ssid);
+    }
+    WiFi.scanDelete();
+
+    return found;
+
+#else
+
+    ERA_LOG(TAG, ERA_PSTR("WiFi scan SSID: %s"), ssid);
+
+    bool found {false};
+
+    int nets = WiFi.scanNetworks();
+    ERaWatchdogFeed();
+
+    if (nets <= 0) {
+        ERA_LOG_WARNING(TAG, ERA_PSTR("Not found any SSID"));
+        return false;
+    }
+
+    for (int i = 0; i < nets; ++i) {
+        if (::getSSID(i) == ssid) {
+            found = true;
+            break;
+        }
+    }
+    if (found) {
+        ERA_LOG(TAG, ERA_PSTR("Connecting SSID: %s"), ssid);
+    }
+    else {
+        ERA_LOG_WARNING(TAG, ERA_PSTR("Not Found SSID: %s"), ssid);
+    }
+
+    return found;
+
+#endif
+}
+
+template <class Transport>
+bool ERaPnP<Transport>::scanNetworks(const char* ssid) {
+    for (unsigned long i = 0; i < this->scanWiFiRetry; ++i) {
+        if (this->scanNetwork(ssid)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+template <class Transport>
 cJSON* ERaPnP<Transport>::scanNetworksJson(int nets, bool compact) {
     if (nets <= 0) {
         return nullptr;
@@ -1383,6 +1519,9 @@ void ERaPnP<Transport>::connectWiFi(const char* ssid, const char* pass) {
     if (!strlen(ssid)) {
         return;
     }
+    if (!this->scanNetworks(ssid)) {
+        return;
+    }
 
     int status = WiFi.status();
 
@@ -1395,16 +1534,41 @@ void ERaPnP<Transport>::connectWiFi(const char* ssid, const char* pass) {
         ERaWatchdogFeed();
 
         ERA_LOG(TAG, ERA_PSTR("Connecting to %s..."), ssid);
+
+#if defined(ESP32) ||           \
+    defined(ESP8266)
+
+        if (this->scanWiFiConnect) {
+            if (pass && strlen(pass)) {
+                WiFi.begin(ssid, pass, ERaConfig.channel, ERaConfig.bssid);
+            }
+            else {
+                WiFi.begin(ssid, nullptr, ERaConfig.channel, ERaConfig.bssid);
+            }
+        }
+        else {
+            if (pass && strlen(pass)) {
+                WiFi.begin(ssid, pass);
+            }
+            else {
+                WiFi.begin(ssid);
+            }
+        }
+
+#else
+
         if (pass && strlen(pass)) {
             WiFi.begin((char*)ssid, (char*)pass);
         }
         else {
-#if defined(ARDUINO_MBED_HAS_WIFI)
+    #if defined(ARDUINO_MBED_HAS_WIFI)
             WiFi.begin((char*)ssid, (char*)"");
-#else
+    #else
             WiFi.begin((char*)ssid);
-#endif
+    #endif
         }
+
+#endif
 
         ERaWatchdogFeed();
 

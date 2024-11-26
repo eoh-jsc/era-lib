@@ -21,11 +21,64 @@
 // You should get Auth Token in the ERa App or ERa Dashboard
 #define ERA_AUTH_TOKEN "ERA2706"
 
+/* Define setting button */
+// #define BUTTON_PIN              0
+
+#if defined(BUTTON_PIN)
+    // Active low (false), Active high (true)
+    #define BUTTON_INVERT       false
+    #define BUTTON_HOLD_TIMEOUT 5000UL
+
+    // This directive is used to specify whether the configuration should be erased.
+    // If it's set to true, the configuration will be erased.
+    #define ERA_ERASE_CONFIG    false
+#endif
+
 #include <Arduino.h>
 #include <ERa.hpp>
+#if defined(BUTTON_PIN)
+    #include <GTimer.h>
+    #include <ERa/ERaButton.hpp>
+#endif
 
 const char ssid[] = "YOUR_SSID";
 const char pass[] = "YOUR_PASSWORD";
+
+WiFiClient mbTcpClient;
+
+#if defined(BUTTON_PIN)
+    ERaButton button;
+    const uint32_t timerIdButton {0};
+
+    static void handlerButton(uint32_t data) {
+        button.run();
+        (void)data;
+    }
+
+#if ERA_VERSION_NUMBER >= ERA_VERSION_VAL(1, 2, 0)
+    static void eventButton(uint8_t pin, ButtonEventT event) {
+        if (event != ButtonEventT::BUTTON_ON_HOLD) {
+            return;
+        }
+        ERa.switchToConfig(ERA_ERASE_CONFIG);
+        (void)pin;
+    }
+#else
+    static void eventButton(ButtonEventT event) {
+        if (event != ButtonEventT::BUTTON_ON_HOLD) {
+            return;
+        }
+        ERa.switchToConfig(ERA_ERASE_CONFIG);
+    }
+#endif
+
+    void initButton() {
+        pinMode(BUTTON_PIN, INPUT);
+        button.setButton(BUTTON_PIN, digitalReadArduino, eventButton,
+                        BUTTON_INVERT).onHold(BUTTON_HOLD_TIMEOUT);
+        GTimer.begin(timerIdButton, (100 * 1000), handlerButton);
+    }
+#endif
 
 /* This function will run every time ERa is connected */
 ERA_CONNECTED() {
@@ -48,8 +101,23 @@ void setup() {
     Serial.begin(115200);
 #endif
 
+#if defined(BUTTON_PIN)
+    /* Initializing button. */
+    initButton();
+    /* Enable read/write WiFi credentials */
+    ERa.setPersistent(true);
+#endif
+
     /* Set board id */
     // ERa.setBoardID("Board_1");
+
+    /* Setup Client for Modbus TCP/IP */
+    ERa.setModbusClient(mbTcpClient);
+
+    /* Set scan WiFi. If activated, the board will
+       check WiFi before connect. */
+    ERa.setScanWiFi(true);
+
     /* Initializing the ERa library. */
     ERa.begin(ssid, pass);
 
