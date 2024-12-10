@@ -80,6 +80,7 @@ jobs:
             sketch-paths: |
               - examples/ESP32/ESP32_WiFi_Basic
               - examples/ESP32/ESP32_WiFi_SSL
+              - examples/ESP32/ESP32_WiFi_Ethernet
               - examples/ESP32/ESP32_PlugNPlay
               - examples/ESP32/ESP32_Ethernet
               - examples/ESP32/ESP32_Ethernet_SSL
