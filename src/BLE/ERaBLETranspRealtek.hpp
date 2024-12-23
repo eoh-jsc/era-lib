@@ -31,7 +31,7 @@ class ERaBLETransp
     const char* TAG = "BLETransp";
 
 public:
-    ERaBLETransp(ERaCallbacksHelper& helper,
+    ERaBLETransp(ERaCallbackSetter& setter,
                 bool base64 = false,
                 bool encrypt = true)
         : ERaEncryptMbedTLS(base64)
@@ -53,7 +53,7 @@ public:
         , mScanData(NULL)
         , mBleTask(NULL)
     {
-        helper.setERaTransp(this);
+        setter.setERaTransp(this);
         ERaBLETransp::instance() = this;
     }
     ~ERaBLETransp()
@@ -106,6 +106,10 @@ public:
         this->mAdvertData->clear();
         this->mAdvertData->addFlags(GAP_ADTYPE_FLAGS_LIMITED | GAP_ADTYPE_FLAGS_BREDR_NOT_SUPPORTED);
         this->mAdvertData->addCompleteName(this->getDeviceName());
+        if (this->isNewService()) {
+            this->mAdvertData->addCompleteServices(BLEUUID(this->mTranspProp->address));
+        }
+        this->mAdvertData->addCompleteServices(BLEUUID(SERVICE_UUID));
 
         if (this->mInitialized) {
             BLE.configAdvert()->setAdvData(*this->mAdvertData);
@@ -165,6 +169,8 @@ public:
         BLE.init();
         BLE.configAdvert()->setAdvData(*this->mAdvertData);
         BLE.configAdvert()->setScanRspData(*this->mScanData);
+        BLE.configSecurity()->setPairable(true);
+        BLE.configSecurity()->setAuthFlags(GAP_AUTHEN_BIT_BONDING_FLAG);
         if (this->isNewService()) {
             BLE.configServer(2);
             BLE.addService(*this->mNewService);

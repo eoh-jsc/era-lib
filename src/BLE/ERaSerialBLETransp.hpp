@@ -16,7 +16,7 @@ class ERaBLETransp
     const char* TAG = "BLETransp";
 
 public:
-    ERaBLETransp(ERaCallbacksHelper& helper,
+    ERaBLETransp(ERaCallbackSetter& setter,
                 Stream& stream)
         : mStream(stream)
         , mTranspProp(ERaBluetooth::instance())
@@ -28,7 +28,7 @@ public:
         , mBleTask(NULL)
 #endif
     {
-        helper.setERaTransp(this);
+        setter.setERaTransp(this);
         ERaBLETransp::instance() = this;
     }
     ~ERaBLETransp()
@@ -69,11 +69,14 @@ public:
         #if !defined(ERA_MCU_CORE)
             #define ERA_MCU_CORE            0
         #endif
+        #if !defined(ERA_BLE_TASK_SIZE)
+            #define ERA_BLE_TASK_SIZE       (1024 * 5)
+        #endif
         #if !defined(ERA_BLE_TASK_PRIORITY)
             #define ERA_BLE_TASK_PRIORITY   (configMAX_PRIORITIES - 4)
         #endif
-        this->mBleTask = ERaOs::osThreadNew(this->bleTask, "bleTask", 1024 * 5, this,
-                                            ERA_BLE_TASK_PRIORITY, ERA_MCU_CORE);
+        this->mBleTask = ERaOs::osThreadNew(this->bleTask, "bleTask", ERA_BLE_TASK_SIZE,
+                                            this, ERA_BLE_TASK_PRIORITY, ERA_MCU_CORE);
 #endif
         this->mConnected = true;
         this->mInitialized = true;
@@ -138,7 +141,7 @@ public:
             }
             *begin++ = (uint8_t)c;
         }
-        return begin - buf;
+        return ((int)(begin - buf));
     }
 
     int timedRead() {

@@ -32,7 +32,7 @@ class ERaBLETransp
     const char* TAG = "BLETransp";
 
 public:
-    ERaBLETransp(ERaCallbacksHelper& helper,
+    ERaBLETransp(ERaCallbackSetter& setter,
                 bool base64 = false,
                 bool encrypt = true)
         : ERaEncryptBearSSL(base64)
@@ -51,7 +51,7 @@ public:
         , mCharacteristicAUT(NULL)
         , mCharacteristicCTR(NULL)
     {
-        helper.setERaTransp(this);
+        setter.setERaTransp(this);
         ERaBLETransp::instance() = this;
     }
     ~ERaBLETransp()

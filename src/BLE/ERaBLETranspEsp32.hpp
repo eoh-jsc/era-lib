@@ -36,7 +36,7 @@ class ERaBLETransp
     const char* TAG = "BLETransp";
 
 public:
-    ERaBLETransp(ERaCallbacksHelper& helper,
+    ERaBLETransp(ERaCallbackSetter& setter,
                 bool base64 = false,
                 bool encrypt = true)
         : ERaEncryptMbedTLS(base64)
@@ -56,7 +56,7 @@ public:
         , mCharacteristicAUT(NULL)
         , mCharacteristicCTR(NULL)
     {
-        helper.setERaTransp(this);
+        setter.setERaTransp(this);
         ERaBLETransp::instance() = this;
     }
     ~ERaBLETransp()
@@ -107,10 +107,10 @@ public:
             return;
         }
 
-        if (BLEDevice::getInitialized()) {
-            BLEDevice::deinit();
+        if (!BLEDevice::getInitialized()) {
+            /* BLEDevice::deinit(); */
+            BLEDevice::init(this->getDeviceName());
         }
-        BLEDevice::init(this->getDeviceName());
 
         this->mServer = BLEDevice::createServer();
         this->mServer->setCallbacks(this);
