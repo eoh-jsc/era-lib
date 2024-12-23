@@ -9,6 +9,7 @@
 #include <ERa/ERaHooks.hpp>
 #include <ERa/ERaHelpers.hpp>
 #include <ERa/ERaPropertyDet.hpp>
+#include <ERa/ERaAutomationDet.hpp>
 #include <ERa/ERaTransp.hpp>
 #include <ERa/ERaTimer.hpp>
 #include <ERa/ERaApiHandler.hpp>
@@ -36,11 +37,14 @@ class ERaApi
 #if defined(ERA_HAS_FUNCTIONAL_H)
     typedef std::function<void(void)> FunctionCallback_t;
     typedef std::function<void(void*)> ReportPinCallback_t;
+    typedef std::function<void(const char*, const char*)> MessageCallback_t;
 #else
     typedef void (*FunctionCallback_t)(void);
     typedef void (*ReportPinCallback_t)(void*);
+    typedef void (*MessageCallback_t)(const char*, const char*);
 #endif
     const char* TAG = "Api";
+    const char* FILENAME_AUTO_CFG = FILENAME_AUTO_CONFIG;
     const char* FILENAME_BT_CFG = FILENAME_BT_CONFIG;
     const char* FILENAME_PIN_CFG = FILENAME_PIN_CONFIG;
 
@@ -70,11 +74,18 @@ public:
         , invertLED(false)
         , skipPinWrite(false)
         , skipPinReport(false)
+#if defined(ERA_AUTOMATION)
+        , enableAppLoop(true)
+#else
         , enableAppLoop(false)
+#endif
         , taskSize(0UL)
         , autoSwitchTask(false)
 #if !defined(ERA_NO_RTOS)
         , _apiTask(NULL)
+#endif
+#if defined(ERA_AUTOMATION)
+        , automation(NULL)
 #endif
     {}
     ~ERaApi()
@@ -172,9 +183,9 @@ public:
     }
 
     template <typename T>
-    void configIdWrite(ERaInt_t configId, const T& value) {
+    void configIdWrite(ERaInt_t configId, const T& value, bool trigger = false) {
         ERaRsp_t rsp;
-        rsp.type = ERaTypeWriteT::ERA_WRITE_CONFIG_ID;
+        rsp.type = this->getTypeConfigId(trigger);
         rsp.json = false;
         rsp.retained = ERA_MQTT_PUBLISH_RETAINED;
         rsp.id = configId;
@@ -202,13 +213,31 @@ public:
     }
 
     template <typename T>
-    void configIdEvent(ERaInt_t configId, const T& value) {
+    void configIdEvent(ERaInt_t configId, const T& value, bool trigger = false) {
 #if ERA_MAX_EVENTS
-        if (this->eventConfigIdAdd(configId, value)) {
+        if (this->eventConfigIdAdd(configId, value, trigger)) {
             return;
         }
 #endif
-        this->configIdWrite(configId, value);
+        this->configIdWrite(configId, value, trigger);
+    }
+
+    void sendNotify(ERaUInt_t automateId, ERaUInt_t notifyId) override {
+#if ERA_MAX_EVENTS
+        if (this->eventNotifyAdd(automateId, notifyId)) {
+            return;
+        }
+#endif
+        this->notifyWrite(automateId, notifyId);
+    }
+
+    void sendEmail(ERaUInt_t automateId, ERaUInt_t emailId) override {
+#if ERA_MAX_EVENTS
+        if (this->eventEmailAdd(automateId, emailId)) {
+            return;
+        }
+#endif
+        this->emailWrite(automateId, emailId);
     }
 
 #if defined(ERA_SPECIFIC)
@@ -267,6 +296,9 @@ public:
     void eraseAllConfigs() {
         this->beginFlash();
         this->removePinConfig();
+#if defined(ERA_AUTOMATION)
+        this->removeAutomationConfig();
+#endif
 #if defined(ERA_BT)
         this->removeBluetoothConfig();
 #endif
@@ -372,6 +404,16 @@ public:
         this->enableAppLoop = enable;
     }
 
+#if defined(ERA_AUTOMATION)
+    void setERaAutomation(ERaAutomation& _automation) override {
+        this->automation = &_automation;
+    }
+
+    void setERaAutomation(ERaAutomation* _pAutomation) override {
+        this->automation = _pAutomation;
+    }
+#endif
+
     void setERaComponent(ERaComponent& _component) override {
         ComponentHandler::addComponent(_component);
     }
@@ -404,10 +446,18 @@ protected:
     void storePinConfig(const char* str);
     void removePinConfig();
 
-#if defined(LINUX)
-    static void* apiTask(void* args);
-#else
-    static void apiTask(void* args);
+    virtual void sendSMS(const char* to, const char* message) override;
+
+#if defined(ERA_AUTOMATION)
+    bool hasAutomation() const;
+    void updateValueAutomation(ERaRsp_t& rsp);
+    void initAutomation(const char* auth, const char* topic, MessageCallback_t cb);
+    void initAutomationConfig();
+    void parseAutomationConfiguration(cJSON* root);
+    void parseAutomationConfig(const char* str);
+    void processAutomationConfig(cJSON* root, const char* hash, const char* buf);
+    void storeAutomationConfig(const char* str);
+    void removeAutomationConfig();
 #endif
 
 #if defined(ERA_BT)
@@ -418,9 +468,18 @@ protected:
     void removeBluetoothConfig();
 #endif
 
+#if defined(LINUX)
+    static void* apiTask(void* args);
+#else
+    static void apiTask(void* args);
+#endif
+
     void begin() {
         this->flash.begin();
         this->initPinConfig();
+#if defined(ERA_AUTOMATION)
+        this->initAutomationConfig();
+#endif
 #if defined(ERA_BT)
         this->initBluetoothConfig();
 #endif
@@ -477,6 +536,12 @@ protected:
         if (feed) {
             ERaWatchdogFeed();
         }
+
+#if defined(ERA_AUTOMATION)
+        if (this->automation != nullptr) {
+            this->automation->run();
+        }
+#endif
 
         Handler::run();
 
@@ -750,6 +815,28 @@ private:
         this->thisProto().sendCommand(rsp);
     }
 
+    void notifyWrite(ERaUInt_t automateId, ERaUInt_t emailId,
+                     bool retained = ERA_MQTT_NOTIFY_RETAINED) {
+        ERaRsp_t rsp;
+        rsp.type = ERaTypeWriteT::ERA_WRITE_NOTIFY;
+        rsp.json = false;
+        rsp.retained = retained;
+        rsp.id = automateId;
+        rsp.param = emailId;
+        this->thisProto().sendCommand(rsp);
+    }
+
+    void emailWrite(ERaUInt_t automateId, ERaUInt_t emailId,
+                    bool retained = ERA_MQTT_EMAIL_RETAINED) {
+        ERaRsp_t rsp;
+        rsp.type = ERaTypeWriteT::ERA_WRITE_EMAIL;
+        rsp.json = false;
+        rsp.retained = retained;
+        rsp.id = automateId;
+        rsp.param = emailId;
+        this->thisProto().sendCommand(rsp);
+    }
+
     void onLED();
     void offLED();
 
@@ -759,6 +846,7 @@ private:
     uint8_t getPinMode(const cJSON* const root, const uint8_t defaultMode = VIRTUAL);
     bool isReadPinMode(uint8_t pMode);
     bool getGPIOPin(const cJSON* const root, const char* key, uint8_t& pin);
+    uint8_t getTypeConfigId(bool trigger);
 
     void sendPinEvent(void* args);
     void sendPinConfigEvent(void* args);
@@ -808,13 +896,19 @@ private:
 #if ERA_MAX_EVENTS
     void eventsWrite();
 
-    bool eventConfigIdAdd(ERaInt_t configId, ERaInt_t value,
+    bool eventConfigIdAdd(ERaInt_t configId, ERaInt_t value, bool trigger = false,
                         bool retained = ERA_MQTT_PUBLISH_RETAINED);
-    bool eventConfigIdAdd(ERaInt_t configId, double value,
+    bool eventConfigIdAdd(ERaInt_t configId, double value, bool trigger = false,
                         bool retained = ERA_MQTT_PUBLISH_RETAINED);
-    bool eventConfigIdAdd(ERaInt_t configId, const char* value,
+    bool eventConfigIdAdd(ERaInt_t configId, const char* value, bool trigger = false,
                         bool retained = ERA_MQTT_PUBLISH_RETAINED);
     void eventConfigIdWrite(ERaEvent_t& event);
+
+    bool eventNotifyAdd(ERaUInt_t automateId, ERaUInt_t notifyId);
+    void eventNotifyWrite(ERaEvent_t& event);
+
+    bool eventEmailAdd(ERaUInt_t automateId, ERaUInt_t emailId);
+    void eventEmailWrite(ERaEvent_t& event);
 
 #if defined(ERA_MODBUS)
     bool eventModbusAdd(ERaDataBuff* value);
@@ -897,6 +991,10 @@ private:
 
 #if !defined(ERA_NO_RTOS)
     TaskHandle_t _apiTask;
+#endif
+
+#if defined(ERA_AUTOMATION)
+    ERaAutomation* automation;
 #endif
 };
 
@@ -1046,6 +1144,9 @@ inline
 void ERaApi<Proto, Flash>::processPinConfig(cJSON* root, const char* hash, const char* buf) {
     if (!this->ERaPinRp.updateHashID(hash)) {
         this->ERaPinRp.restartAll();
+#if !defined(ERA_ABBR)
+        Property::publishAll(true);
+#endif
         return;
     }
 
@@ -1075,6 +1176,141 @@ void ERaApi<Proto, Flash>::removePinConfig() {
     this->ERaPinRp.deleteAll();
     this->removeFlash(FILENAME_PIN_CFG);
 }
+
+template <class Proto, class Flash>
+inline
+void ERaApi<Proto, Flash>::sendSMS(const char* to, const char* message) {
+    if ((to == nullptr) || (message == nullptr)) {
+        return;
+    }
+    ERaDataBuff arrayTo(to, strlen(to) + 1);
+    arrayTo.split(",");
+    size_t size = arrayTo.size();
+    for (size_t i = 0; i < size; ++i) {
+        if (arrayTo[i].isEmpty()) {
+            continue;
+        }
+        ERaWidgetWriteSMS(arrayTo[i].trim_str(), message);
+        ERaWatchdogFeed();
+    }
+}
+
+#if defined(ERA_AUTOMATION)
+    template <class Proto, class Flash>
+    inline
+    bool ERaApi<Proto, Flash>::hasAutomation() const {
+        return (this->automation != nullptr);
+    }
+
+    template <class Proto, class Flash>
+    inline
+    void ERaApi<Proto, Flash>::updateValueAutomation(ERaRsp_t& rsp) {
+        if (!rsp.param.isNumber()) {
+            return;
+        }
+
+        bool trigger = (rsp.type == ERaTypeWriteT::ERA_WRITE_CONFIG_ID_AND_TRIGGER);
+        this->automation->updateValue(rsp.id.getInt(), rsp.param.getDouble(), trigger);
+    }
+
+    template <class Proto, class Flash>
+    inline
+    void ERaApi<Proto, Flash>::initAutomation(const char* auth, const char* topic, MessageCallback_t cb) {
+        if (this->automation == nullptr) {
+            return;
+        }
+
+        this->automation->setAuth(auth);
+        this->automation->setTopic(topic);
+        this->automation->onMessage(cb);
+    }
+
+    template <class Proto, class Flash>
+    inline
+    void ERaApi<Proto, Flash>::initAutomationConfig() {
+        if (this->automation == nullptr) {
+            return;
+        }
+
+        char* ptr = nullptr;
+        ptr = this->readFromFlash(FILENAME_AUTO_CFG);
+        this->parseAutomationConfig(ptr);
+        free(ptr);
+        ptr = nullptr;
+    }
+
+    template <class Proto, class Flash>
+    inline
+    void ERaApi<Proto, Flash>::parseAutomationConfiguration(cJSON* root) {
+        cJSON* item = cJSON_GetObjectItem(root, "local_control");
+        if (!cJSON_IsArray(item)) {
+            return;
+        }
+
+        this->automation->begin(item);
+    }
+
+    template <class Proto, class Flash>
+    inline
+    void ERaApi<Proto, Flash>::parseAutomationConfig(const char* str) {
+        cJSON* root = cJSON_Parse(str);
+        if (!cJSON_IsObject(root)) {
+            cJSON_Delete(root);
+            root = nullptr;
+            return;
+        }
+
+        cJSON* item = cJSON_GetObjectItem(root, "hash_id");
+        if (cJSON_IsString(item)) {
+            this->automation->updateHashID(item->valuestring);
+        }
+        item = cJSON_GetObjectItem(root, "configuration");
+        if (cJSON_IsObject(item)) {
+            this->parseAutomationConfiguration(item);
+        }
+
+        cJSON_Delete(root);
+        root = nullptr;
+        item = nullptr;
+
+        ERA_LOG(TAG, ERA_PSTR("Automation configuration loaded from flash"));
+    }
+
+    template <class Proto, class Flash>
+    inline
+    void ERaApi<Proto, Flash>::processAutomationConfig(cJSON* root, const char* hash, const char* buf) {
+        if (this->automation == nullptr) {
+            return;
+        }
+
+        if (!this->automation->updateHashID(hash)) {
+            return;
+        }
+        this->automation->begin(root);
+        this->storeAutomationConfig(buf);
+        ERaWriteConfig(ERaConfigTypeT::ERA_AUTO_CONFIG);
+    }
+
+    template <class Proto, class Flash>
+    inline
+    void ERaApi<Proto, Flash>::storeAutomationConfig(const char* str) {
+        if (str == nullptr) {
+            return;
+        }
+
+        this->writeToFlash(FILENAME_AUTO_CFG, str);
+        ERA_LOG(TAG, ERA_PSTR("Automation configuration stored to flash"));
+    }
+
+    template <class Proto, class Flash>
+    inline
+    void ERaApi<Proto, Flash>::removeAutomationConfig() {
+        if (this->automation != nullptr) {
+            this->automation->deleteAll();
+        }
+        this->removeFlash(FILENAME_AUTO_CFG);
+    }
+#endif
 
 #if defined(ERA_BT)
     template <class Proto, class Flash>
@@ -1304,6 +1540,16 @@ bool ERaApi<Proto, Flash>::getGPIOPin(const cJSON* const root, const char* key, 
 
 template <class Proto, class Flash>
 inline
+uint8_t ERaApi<Proto, Flash>::getTypeConfigId(bool trigger) {
+    if (trigger) {
+        return ERaTypeWriteT::ERA_WRITE_CONFIG_ID_AND_TRIGGER;
+    }
+
+    return ERaTypeWriteT::ERA_WRITE_CONFIG_ID;
+}
+
+template <class Proto, class Flash>
+inline
 void ERaApi<Proto, Flash>::appLoop() {
     if (!this->enableAppLoop) {
         return;
@@ -1445,7 +1691,14 @@ void ERaApi<Proto, Flash>::callERaProHandler(const char* deviceId, const cJSON* 
         ERaEvent_t& event = this->getEvent();
         switch (event.type) {
             case ERaTypeWriteT::ERA_WRITE_CONFIG_ID:
+            case ERaTypeWriteT::ERA_WRITE_CONFIG_ID_AND_TRIGGER:
                 this->eventConfigIdWrite(event);
+                break;
+            case ERaTypeWriteT::ERA_WRITE_NOTIFY:
+                this->eventNotifyWrite(event);
+                break;
+            case ERaTypeWriteT::ERA_WRITE_EMAIL:
+                this->eventEmailWrite(event);
                 break;
 #if defined(ERA_MODBUS)
             case ERaTypeWriteT::ERA_WRITE_MODBUS_DATA:
@@ -1469,13 +1722,15 @@ void ERaApi<Proto, Flash>::callERaProHandler(const char* deviceId, const cJSON* 
 
 template <class Proto, class Flash>
 inline
-bool ERaApi<Proto, Flash>::eventConfigIdAdd(ERaInt_t configId, ERaInt_t value, bool retained) {
-    return this->eventConfigIdAdd(configId, (double)value, retained);
+bool ERaApi<Proto, Flash>::eventConfigIdAdd(ERaInt_t configId, ERaInt_t value,
+                                            bool trigger, bool retained) {
+    return this->eventConfigIdAdd(configId, (double)value, trigger, retained);
 }
 
 template <class Proto, class Flash>
 inline
-bool ERaApi<Proto, Flash>::eventConfigIdAdd(ERaInt_t configId, double value, bool retained) {
+bool ERaApi<Proto, Flash>::eventConfigIdAdd(ERaInt_t configId, double value,
+                                            bool trigger, bool retained) {
     if (!this->queue.writeable()) {
         return false;
     }
@@ -1495,7 +1750,7 @@ bool ERaApi<Proto, Flash>::eventConfigIdAdd(ERaInt_t configId, double value, boo
     (*data) = value;
 
     ERaEvent_t event;
-    event.type = ERaTypeWriteT::ERA_WRITE_CONFIG_ID;
+    event.type = this->getTypeConfigId(trigger);
     event.specific = false;
     event.json = false;
     event.retained = retained;
@@ -1507,7 +1762,8 @@ bool ERaApi<Proto, Flash>::eventConfigIdAdd(ERaInt_t configId, double value, boo
 
 template <class Proto, class Flash>
 inline
-bool ERaApi<Proto, Flash>::eventConfigIdAdd(ERaInt_t configId, const char* value, bool retained) {
+bool ERaApi<Proto, Flash>::eventConfigIdAdd(ERaInt_t configId, const char* value,
+                                            bool trigger, bool retained) {
     if (!this->queue.writeable()) {
         return false;
     }
@@ -1526,7 +1782,7 @@ bool ERaApi<Proto, Flash>::eventConfigIdAdd(ERaInt_t configId, const char* value
     }
 
     ERaEvent_t event;
-    event.type = ERaTypeWriteT::ERA_WRITE_CONFIG_ID;
+    event.type = this->getTypeConfigId(trigger);
     event.specific = true;
     event.json = false;
     event.retained = retained;
@@ -1545,7 +1801,7 @@ void ERaApi<Proto, Flash>::eventConfigIdWrite(ERaEvent_t& event) {
     }
 
     ERaRsp_t rsp;
-    rsp.type = ERaTypeWriteT::ERA_WRITE_CONFIG_ID;
+    rsp.type = event.type;
     rsp.json = event.json;
     rsp.retained = event.retained;
     rsp.id = (*(static_cast<ERaInt_t*>(event.id)));
@@ -1556,6 +1812,106 @@ void ERaApi<Proto, Flash>::eventConfigIdWrite(ERaEvent_t& event) {
         rsp.param.add_static((char*)event.data);
     }
     this->thisProto().sendCommand(rsp);
+    free(event.id);
+    free(event.data);
+    event.id = nullptr;
+    event.data = nullptr;
+}
+
+template <class Proto, class Flash>
+inline
+bool ERaApi<Proto, Flash>::eventNotifyAdd(ERaUInt_t automateId, ERaUInt_t notifyId) {
+    if (!this->queue.writeable()) {
+        return false;
+    }
+
+    ERaUInt_t* id = (ERaUInt_t*)malloc(sizeof(ERaUInt_t));
+    if (id == nullptr) {
+        return false;
+    }
+    (*id) = automateId;
+
+    ERaUInt_t* data = (ERaUInt_t*)malloc(sizeof(ERaUInt_t));
+    if (data == nullptr) {
+        free(id);
+        id = nullptr;
+        return false;
+    }
+    (*data) = notifyId;
+
+    ERaEvent_t event;
+    event.type = ERaTypeWriteT::ERA_WRITE_NOTIFY;
+    event.specific = false;
+    event.json = false;
+    event.retained = ERA_MQTT_NOTIFY_RETAINED;
+    event.id = (void*)id;
+    event.data = (void*)data;
+    this->queue += event;
+    return true;
+}
+
+template <class Proto, class Flash>
+inline
+void ERaApi<Proto, Flash>::eventNotifyWrite(ERaEvent_t& event) {
+    if ((event.id == nullptr) ||
+        (event.data == nullptr)) {
+        return;
+    }
+
+    this->notifyWrite((*(static_cast<ERaUInt_t*>(event.id))),
+                      (*(static_cast<ERaUInt_t*>(event.data))),
+                      event.retained);
+
+    free(event.id);
+    free(event.data);
+    event.id = nullptr;
+    event.data = nullptr;
+}
+
+template <class Proto, class Flash>
+inline
+bool ERaApi<Proto, Flash>::eventEmailAdd(ERaUInt_t automateId, ERaUInt_t emailId) {
+    if (!this->queue.writeable()) {
+        return false;
+    }
+
+    ERaUInt_t* id = (ERaUInt_t*)malloc(sizeof(ERaUInt_t));
+    if (id == nullptr) {
+        return false;
+    }
+    (*id) = automateId;
+
+    ERaUInt_t* data = (ERaUInt_t*)malloc(sizeof(ERaUInt_t));
+    if (data == nullptr) {
+        free(id);
+        id = nullptr;
+        return false;
+    }
+    (*data) = emailId;
+
+    ERaEvent_t event;
+    event.type = ERaTypeWriteT::ERA_WRITE_EMAIL;
+    event.specific = false;
+    event.json = false;
+    event.retained = ERA_MQTT_EMAIL_RETAINED;
+    event.id = (void*)id;
+    event.data = (void*)data;
+    this->queue += event;
+    return true;
+}
+
+template <class Proto, class Flash>
+inline
+void ERaApi<Proto, Flash>::eventEmailWrite(ERaEvent_t& event) {
+    if ((event.id == nullptr) ||
+        (event.data == nullptr)) {
+        return;
+    }
+
+    this->emailWrite((*(static_cast<ERaUInt_t*>(event.id))),
+                     (*(static_cast<ERaUInt_t*>(event.data))),
+                     event.retained);
+
     free(event.id);
     free(event.data);
     event.id = nullptr;

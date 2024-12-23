@@ -115,6 +115,7 @@
         defined(ARDUINO_ARCH_SAMD) ||           \
         defined(ARDUINO_ARCH_RENESAS) ||        \
         defined(ARDUINO_ARCH_ARM) ||            \
+        defined(ARDUINO_ARCH_OPENCPU) ||        \
         defined(ARDUINO_ARCH_ARC32))
         #ifndef ERA_SERIAL
             #define ERA_SERIAL                          Serial

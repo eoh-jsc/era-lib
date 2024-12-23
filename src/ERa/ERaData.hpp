@@ -57,6 +57,17 @@ public:
             return this->ptr;
         }
 
+        const char* trim_str() {
+            if (!this->isValid()) {
+                return "";
+            }
+            const char* begin = this->ptr;
+            while (isspace(*begin)) {
+                begin++;
+            }
+            return begin;
+        }
+
         int getInt() const {
             if (!this->isValid()) {
                 return 0;

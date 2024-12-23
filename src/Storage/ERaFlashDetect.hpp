@@ -18,7 +18,8 @@
     #include <Storage/ERaFlashRealtek.hpp>
 #elif defined(ARDUINO_ARCH_SAMD)
     #include <Storage/ERaFlashSAMD.hpp>
-#elif defined(ARDUINO_ARCH_ARM)
+#elif defined(ARDUINO_ARCH_ARM) ||      \
+    defined(ARDUINO_ARCH_OPENCPU)
     #include <Storage/ERaFlashLogicrom.hpp>
 #elif defined(__MBED__) ||              \
     defined(ERA_FLASH_MBED)

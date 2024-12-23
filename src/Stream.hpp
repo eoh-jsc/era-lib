@@ -3,8 +3,8 @@
 
 #if defined(LINUX)
     #include <Utility/Compat/Stream.hpp>
-#elif defined(ARDUINO) && \
-    defined(ARDUINO_ARCH_ARM)
+#elif defined(ARDUINO_ARCH_ARM) ||  \
+    defined(ARDUINO_ARCH_OPENCPU)
     #include <api/Stream.h>
 #else
     #include <Stream.h>

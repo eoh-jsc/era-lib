@@ -167,12 +167,12 @@ private:
 template <class Proto, class Flash>
 inline
 void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
+    const char* ssid = this->thisProto().getTransp().getSSID();
     int16_t signal = this->thisProto().getTransp().getSignalQuality();
 
     cJSON_AddNumberToObject(root, INFO_PLUG_AND_PLAY, 0);
     cJSON_AddStringToObject(root, INFO_NETWORK_PROTOCOL, ERA_NETWORK_TYPE);
-    cJSON_AddStringToObject(root, INFO_SSID, ((this->thisProto().getTransp().getSSID() == nullptr) ?
-                                            ERA_NETWORK_TYPE : this->thisProto().getTransp().getSSID()));
+    cJSON_AddStringToObject(root, INFO_SSID, ((ssid != nullptr) ? ssid : ERA_NETWORK_TYPE));
     cJSON_AddStringToObject(root, INFO_BSSID, ERA_NETWORK_TYPE);
     cJSON_AddNumberToObject(root, INFO_RSSI, signal);
     cJSON_AddNumberToObject(root, INFO_SIGNAL_STRENGTH, SignalToPercentage(signal));
@@ -204,6 +204,7 @@ void ERaApi<Proto, Flash>::addSelfInfo(cJSON* root) {
     template <class Proto, class Flash>
     inline
     void ERaApi<Proto, Flash>::addModbusInfo(cJSON* root) {
+        const char* ssid = this->thisProto().getTransp().getSSID();
         int16_t signal = this->thisProto().getTransp().getSignalQuality();
 
     #if defined(ESP32)
@@ -213,8 +214,7 @@ void ERaApi<Proto, Flash>::addSelfInfo(cJSON* root) {
     #endif
         cJSON_AddNumberToObject(root, INFO_MB_RSSI, signal);
         cJSON_AddNumberToObject(root, INFO_MB_SIGNAL_STRENGTH, SignalToPercentage(signal));
-        cJSON_AddStringToObject(root, INFO_MB_WIFI_USING, ((this->thisProto().getTransp().getSSID() == nullptr) ?
-                                                        ERA_NETWORK_TYPE : this->thisProto().getTransp().getSSID()));
+        cJSON_AddStringToObject(root, INFO_MB_WIFI_USING, ((ssid != nullptr) ? ssid : ERA_NETWORK_TYPE));
 
         /* Override modbus info */
         ERaModbusInfo(root);

@@ -3,8 +3,8 @@
 
 #if defined(LINUX)
     #include <Utility/Compat/Client.hpp>
-#elif defined(ARDUINO) && \
-    defined(ARDUINO_ARCH_ARM)
+#elif defined(ARDUINO_ARCH_ARM) ||  \
+    defined(ARDUINO_ARCH_OPENCPU)
     #include <api/Client.h>
 #else
     #include <Client.h>

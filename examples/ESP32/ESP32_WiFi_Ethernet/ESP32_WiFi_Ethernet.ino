@@ -45,6 +45,8 @@
 
 #include <Arduino.h>
 #include <ERa.hpp>
+#include <Automation/ERaSmart.hpp>
+#include <Time/ERaEspTime.hpp>
 #if defined(BUTTON_PIN)
     #include <pthread.h>
     #include <ERa/ERaButton.hpp>
@@ -55,6 +57,9 @@ const char ssid[] = "YOUR_SSID";
 const char pass[] = "YOUR_PASSWORD";
 
 WiFiClient mbTcpClient;
+
+ERaEspTime syncTime;
+ERaSmart smart(ERa, syncTime);
 
 #if defined(BUTTON_PIN)
     ERaButton button;
@@ -126,6 +131,11 @@ void setup() {
 
     /* Setup Client for Modbus TCP/IP */
     ERa.setModbusClient(mbTcpClient);
+
+    /* Set API task size. If this function is enabled,
+       the core API will run on a separate task after disconnecting from the server
+       (suitable for edge automation).*/
+    // ERa.setTaskSize(ERA_API_TASK_SIZE, true);
 
     /* Set scan WiFi. If activated, the board will scan
        and connect to the best quality WiFi. */

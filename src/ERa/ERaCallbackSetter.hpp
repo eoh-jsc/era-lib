@@ -3,19 +3,23 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <ERa/ERaAutomationDet.hpp>
 #include <ERa/ERaComponent.hpp>
 #include <ERa/ERaTransp.hpp>
 #include <ERa/ERaLogger.hpp>
 #include <ERa/ERaCallbacks.hpp>
 
-class ERaCallbacksHelper
+class ERaApiHandler;
+
+class ERaCallbackSetter
 {
     const char* TAG = "Callbacks";
 
 public:
-    ERaCallbacksHelper()
+    ERaCallbackSetter(ERaApiHandler& api)
+        : Api(api)
     {}
-    virtual ~ERaCallbacksHelper()
+    virtual ~ERaCallbackSetter()
     {}
 
     virtual void setServerCallbacks(ERaServerCallbacks& callbacks) {
@@ -27,6 +31,18 @@ public:
         ERA_LOG_WARNING(TAG, ERA_PSTR("setServerCallbacks callback default."));
         ERA_FORCE_UNUSED(pCallbacks);
     }
+
+#if defined(ERA_AUTOMATION)
+    virtual void setERaAutomation(ERaAutomation& _automation) {
+        ERA_LOG_WARNING(TAG, ERA_PSTR("setERaAutomation callback default."));
+        ERA_FORCE_UNUSED(_automation);
+    }
+
+    virtual void setERaAutomation(ERaAutomation* _pAutomation) {
+        ERA_LOG_WARNING(TAG, ERA_PSTR("setERaAutomation callback default."));
+        ERA_FORCE_UNUSED(_pAutomation);
+    }
+#endif
 
     virtual void setERaComponent(ERaComponent& _component) {
         ERA_LOG_WARNING(TAG, ERA_PSTR("setERaComponent callback default."));
@@ -57,6 +73,8 @@ public:
         ERA_LOG_WARNING(TAG, ERA_PSTR("setERaLogger callback default."));
         ERA_FORCE_UNUSED(_pLogger);
     }
+
+    ERaApiHandler& Api;
 };
 
 #endif /* INC_ERA_CALLBACKS_HELPER_HPP_ */

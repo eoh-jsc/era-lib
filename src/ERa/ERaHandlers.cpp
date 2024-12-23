@@ -29,6 +29,10 @@ bool ERaWidgetPinWrite(uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param
     return false;
 }
 
+void ERaNoWidgetWriteSMS(const char* to, const char* message) {
+    ERA_LOG(ERA_PSTR("ERa"), ERA_PSTR("No handler for writing SMS to %s: %s"), to, message);
+}
+
 #define ERA_ON_WRITE(Pin) void ERaWidgetWrite ## Pin (uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param) \
         __attribute__((weak, alias("ERaWidgetWrite")))
 
@@ -48,6 +52,7 @@ ERA_MODBUS_INFO()       __attribute__((weak, alias("ERaNoInfo")));
 ERA_SELF_INFO()         __attribute__((weak, alias("ERaNoInfo")));
 ERA_INFO()              __attribute__((weak, alias("ERaNoInfo")));
 ERA_WRITE_CONFIG()      __attribute__((weak, alias("ERaNoWriteConfig")));
+ERA_WRITE_SMS()         __attribute__((weak, alias("ERaNoWidgetWriteSMS")));
 
 ERA_ON_WRITE(Default);
 ERA_ON_PIN_READ(Default);

@@ -1701,12 +1701,12 @@ void ERaPnP<Transport>::replace(char* buf, char src, char dst) {
 template <class Proto, class Flash>
 inline
 void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
-    int16_t signal = ::getRSSI();
+    const char* ssid = this->thisProto().getTransp().getSSID();
+    int16_t signal = this->thisProto().getTransp().getSignalQuality();
 
     cJSON_AddNumberToObject(root, INFO_PLUG_AND_PLAY, ERaConfig.getFlag(ConfigFlagT::CONFIG_FLAG_PNP));
     cJSON_AddStringToObject(root, INFO_NETWORK_PROTOCOL, ERA_NETWORK_TYPE);
-    cJSON_AddStringToObject(root, INFO_SSID, ((this->thisProto().getTransp().getSSID() == nullptr) ?
-                                            ::getSSID().c_str() : this->thisProto().getTransp().getSSID()));
+    cJSON_AddStringToObject(root, INFO_SSID, ((ssid != nullptr) ? ssid : (::getSSID().c_str())));
     cJSON_AddStringToObject(root, INFO_BSSID, ::getBSSID().c_str());
     cJSON_AddNumberToObject(root, INFO_RSSI, signal);
     cJSON_AddNumberToObject(root, INFO_SIGNAL_STRENGTH, SignalToPercentage(signal));
@@ -1734,13 +1734,13 @@ void ERaApi<Proto, Flash>::addSelfInfo(cJSON* root) {
     template <class Proto, class Flash>
     inline
     void ERaApi<Proto, Flash>::addModbusInfo(cJSON* root) {
+        const char* ssid = this->thisProto().getTransp().getSSID();
         int16_t signal = this->thisProto().getTransp().getSignalQuality();
 
         cJSON_AddNumberToObject(root, INFO_MB_CHIP_TEMPERATURE, 5000);
         cJSON_AddNumberToObject(root, INFO_MB_RSSI, signal);
         cJSON_AddNumberToObject(root, INFO_MB_SIGNAL_STRENGTH, SignalToPercentage(signal));
-        cJSON_AddStringToObject(root, INFO_MB_WIFI_USING, ((this->thisProto().getTransp().getSSID() == nullptr) ?
-                                                        ::getSSID().c_str() : this->thisProto().getTransp().getSSID()));
+        cJSON_AddStringToObject(root, INFO_MB_WIFI_USING, ((ssid != nullptr) ? ssid : (::getSSID().c_str())));
 
         /* Override modbus info */
         ERaModbusInfo(root);

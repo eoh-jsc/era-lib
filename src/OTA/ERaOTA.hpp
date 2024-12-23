@@ -13,7 +13,8 @@
 #elif defined(RTL8722DM) ||                     \
     defined(ARDUINO_AMEBA)
     #include <OTA/ERaOTARealtek.hpp>
-#elif defined(ARDUINO_ARCH_ARM)
+#elif defined(ARDUINO_ARCH_ARM) ||              \
+    defined(ARDUINO_ARCH_OPENCPU)
     #include <OTA/ERaOTALogicrom.hpp>
 #elif defined(LINUX)
     #include <OTA/ERaOTALinux.hpp>

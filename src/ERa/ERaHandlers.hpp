@@ -113,7 +113,8 @@ typedef enum
     ERA_MODBUS_CONFIG = 0x01,
     ERA_MODBUS_CONTROL = 0x02,
     ERA_BLUETOOTH_CONFIG = 0x03,
-    ERA_ZIGBEE_CONFIG = 0x04
+    ERA_ZIGBEE_CONFIG = 0x04,
+    ERA_AUTO_CONFIG = 0x05
 } ERaConfigTypeT;
 
 #define ERA_CONNECTED()             void ERaOnConnected()
@@ -126,6 +127,9 @@ typedef enum
 #define ERA_SELF_INFO()             void ERaSelfInfo(cJSON ERA_UNUSED *root)
 #define ERA_INFO()                  void ERaInfo(cJSON ERA_UNUSED *root)
 #define ERA_WRITE_CONFIG()          void ERaWriteConfig(uint8_t ERA_UNUSED type)
+
+#define ERA_WRITE_SMS()             void ERaWidgetWriteSMS(const char* to, const char* message)
+#define ERA_ON_SMS()                ERA_WRITE_SMS()
 
 #define ERA_WRITE_2(Pin)            void ERaWidgetWrite ## Pin (uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param)
 #define ERA_WRITE(Pin)              ERA_WRITE_2(Pin)
@@ -154,6 +158,7 @@ void ERaNoInfo(cJSON ERA_UNUSED *root);
 void ERaNoOptConnected(void ERA_UNUSED *arg);
 void ERaNoModbusBaudrate(uint32_t ERA_UNUSED &baudrate);
 void ERaNoWriteConfig(uint8_t ERA_UNUSED type);
+void ERaNoWidgetWriteSMS(const char* to, const char* message);
 
 ERA_CONNECTED();
 ERA_DISCONNECTED();
@@ -165,6 +170,7 @@ ERA_MODBUS_INFO();
 ERA_SELF_INFO();
 ERA_INFO();
 ERA_WRITE_CONFIG();
+ERA_WRITE_SMS();
 
 ERA_WRITE_DEFAULT();
 ERA_PIN_READ_DEFAULT();

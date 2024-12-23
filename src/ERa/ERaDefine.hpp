@@ -30,6 +30,7 @@
 #define ERA_DEPRECATED          __attribute__((deprecated))
 #define ERA_CONSTRUCTOR         __attribute__((constructor))
 #define ERA_WEAK                __attribute__((weak))
+#define ERA_HOT                 __attribute__((hot))
 
 #define ERA_FORCE_INLINE        inline //__attribute__((always_inline))
 

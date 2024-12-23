@@ -8,16 +8,17 @@
 #include <ERa/ERaState.hpp>
 #include <ERa/ERaDebug.hpp>
 #include <ERa/ERaTimer.hpp>
-#include <ERa/ERaCallbacksHelper.hpp>
+#include <ERa/ERaCallbackSetter.hpp>
 #include <Utility/ERacJSON.hpp>
 
 class ERaApiHandler
-    : public ERaCallbacksHelper
+    : public ERaCallbackSetter
 {
     const char* TAG = "API";
 
 public:
     ERaApiHandler()
+        : ERaCallbackSetter(*this)
     {}
     virtual ~ERaApiHandler()
     {}
@@ -51,6 +52,18 @@ public:
         ERA_FORCE_UNUSED(retained);
     }
 #endif
+
+    virtual void sendNotify(ERaUInt_t automateId, ERaUInt_t notifyId) {
+        ERA_LOG_WARNING(TAG, ERA_PSTR("sendNotify default."));
+        ERA_FORCE_UNUSED(automateId);
+        ERA_FORCE_UNUSED(notifyId);
+    }
+
+    virtual void sendEmail(ERaUInt_t automateId, ERaUInt_t emailId) {
+        ERA_LOG_WARNING(TAG, ERA_PSTR("sendEmail default."));
+        ERA_FORCE_UNUSED(automateId);
+        ERA_FORCE_UNUSED(emailId);
+    }
 
     virtual void beginFlash() {
         ERA_LOG_WARNING(TAG, ERA_PSTR("beginFlash default."));
@@ -159,6 +172,12 @@ protected:
 
     virtual void connectNewNetworkResult() {
         ERA_LOG_WARNING(TAG, ERA_PSTR("connectNewNetworkResult default."));
+    }
+
+    virtual void sendSMS(const char* to, const char* message) {
+        ERA_LOG_WARNING(TAG, ERA_PSTR("sendSMS default."));
+        ERA_FORCE_UNUSED(to);
+        ERA_FORCE_UNUSED(message);
     }
 
 private:

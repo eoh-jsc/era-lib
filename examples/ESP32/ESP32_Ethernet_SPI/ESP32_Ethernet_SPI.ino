@@ -24,12 +24,17 @@
 
 #include <Arduino.h>
 #include <ERaEsp32Ethernet.hpp>
+#include <Automation/ERaSmart.hpp>
+#include <Time/ERaEspTime.hpp>
 #include <SPI.h>
 
 const int csPin = 9;
 const int irqPin = 13;
 const int rstPin = 14;
 const uint8_t phyAddr = 1;
+
+ERaEspTime syncTime;
+ERaSmart smart(ERa, syncTime);
 
 /* This function will run every time ERa is connected */
 ERA_CONNECTED() {
@@ -54,6 +59,12 @@ void setup() {
 
     /* Set board id */
     // ERa.setBoardID("Board_1");
+
+    /* Set API task size. If this function is enabled,
+       the core API will run on a separate task after disconnecting from the server
+       (suitable for edge automation).*/
+    // ERa.setTaskSize(ERA_API_TASK_SIZE, true);
+
     /* Initializing the ERa library. */
     ERa.begin(phyAddr, csPin, irqPin, rstPin, SPI);
 

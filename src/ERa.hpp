@@ -20,6 +20,14 @@
     #else
         #include <ERaRealtek.hpp>
     #endif
+#elif defined(ARDUINO) &&               \
+    (defined(ARDUINO_ARCH_ARM) ||       \
+    defined(ARDUINO_ARCH_OPENCPU))
+    #if defined(ERA_USE_SSL)
+        #include <ERaLogicromSSL.hpp>
+    #else
+        #include <ERaLogicrom.hpp>
+    #endif
 #elif defined(ARDUINO) && defined(ARDUINO_ARCH_STM32)
     #include <TinyGsmClient.hpp>
     #if defined(TINY_GSM_MODEM_HAS_WIFI_PNP)

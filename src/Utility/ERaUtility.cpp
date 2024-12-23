@@ -733,7 +733,8 @@
 
     #define ERA_USE_DEFAULT_MILLIS
 
-#elif defined(ARDUINO) && defined(ARDUINO_ARCH_ARM)
+#elif defined(ARDUINO) && (defined(ARDUINO_ARCH_ARM) || \
+    defined(ARDUINO_ARCH_OPENCPU))
 
 #if defined(ERA_NO_RTOS)
     void ERaDelay(MillisTime_t ms) {

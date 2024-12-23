@@ -27,7 +27,8 @@
         #endif
     #elif defined(ARDUINO_ARCH_SAMD)
         #define SerialMB     Serial1
-    #elif defined(ARDUINO_ARCH_ARM)
+    #elif defined(ARDUINO_ARCH_ARM) ||  \
+        defined(ARDUINO_ARCH_OPENCPU)
         #define SerialMB     Serial1
     #elif defined(PARTICLE) ||          \
         defined(SPARK)

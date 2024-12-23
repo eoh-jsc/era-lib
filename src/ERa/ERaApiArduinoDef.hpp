@@ -12,7 +12,8 @@
     #define OUTPUT_OPEN_DRAIN OUTPUT
 #elif defined(ARDUINO_ARCH_SAMD)
     #define OUTPUT_OPEN_DRAIN OUTPUT
-#elif defined(ARDUINO_ARCH_ARM)
+#elif defined(ARDUINO_ARCH_ARM) ||  \
+    defined(ARDUINO_ARCH_OPENCPU)
     #define OUTPUT_OPEN_DRAIN OUTPUT
 #elif !defined(__MBED__) &&         \
     defined(ARDUINO_ARCH_RP2040)

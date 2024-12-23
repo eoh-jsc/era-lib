@@ -36,6 +36,7 @@
         #endif
     #endif
 
+    #define ERA_AUTOMATION
     #define ERA_BT
     #define ERA_OTA
 
@@ -615,7 +616,8 @@
         #endif
     #endif
 
-#elif defined(ARDUINO) && defined(ARDUINO_ARCH_ARM)
+#elif defined(ARDUINO) && (defined(ARDUINO_ARCH_ARM) || \
+    defined(ARDUINO_ARCH_OPENCPU))
 
     #if !defined(ERA_MQTT_BUFFER_SIZE)
         #define ERA_MQTT_BUFFER_SIZE        2048
@@ -641,7 +643,10 @@
     #define ERA_IGNORE_STD_FUNCTIONAL_STRING
 
     #if !defined(ERA_BOARD_TYPE)
-        #if defined(ARDUINO_QUECTEL_EC200U)
+        #if defined(ARDUINO_WAYBYTE_LOIGCROM_SPARK) || \
+            defined(ARDUINO_WAYBYTE_LOGICROM_SPARK)
+            #define ERA_BOARD_TYPE          "Logicrom Spark"
+        #elif defined(ARDUINO_QUECTEL_EC200U)
             #define ERA_BOARD_TYPE          "Quectel EC200U"
         #elif defined(ARDUINO_QUECTEL_EC600U)
             #define ERA_BOARD_TYPE          "Quectel EC600U"
@@ -653,12 +658,16 @@
             #define ERA_BOARD_TYPE          "Quectel MC20"
         #elif defined(ARDUINO_QUECTEL_MC60TEA)
             #define ERA_BOARD_TYPE          "Quectel MC60"
+        #elif defined(ARDUINO_QUECTEL_MC65)
+            #define ERA_BOARD_TYPE          "Quectel MC65"
         #elif defined(ARDUINO_SIWI_S20GSM)
             #define ERA_BOARD_TYPE          "Quectel MC20UCB"
         #elif defined(ARDUINO_QUECTEL_M56TEA)
             #define ERA_BOARD_TYPE          "Quectel M56"
         #elif defined(ARDUINO_EC100N)
             #define ERA_BOARD_TYPE          "Quectel EC100N"
+        #elif defined(ARDUINO_EC100S)
+            #define ERA_BOARD_TYPE          "Quectel EC100S"
         #elif defined(ARDUINO_EC100Y)
             #define ERA_BOARD_TYPE          "Quectel EC100Y"
         #elif defined(ARDUINO_EC200N)
@@ -677,10 +686,16 @@
             #define ERA_BOARD_TYPE          "Neoway N716"
         #elif defined(ARDUINO_NEOWAY_N58)
             #define ERA_BOARD_TYPE          "Neoway N58"
+        #elif defined(ARDUINO_NEOWAY_M590)
+            #define ERA_BOARD_TYPE          "Neoway M590"
         #elif defined(ARDUINO_SIMCOM_SIM868)
             #define ERA_BOARD_TYPE          "Simcom SIM868"
         #elif defined(ARDUINO_A7670C)
             #define ERA_BOARD_TYPE          "Simcom SIMA7670C"
+        #elif defined(ARDUINO_AITHINKER_A9)
+            #define ERA_BOARD_TYPE          "AI-Thinker A9"
+        #elif defined(ARDUINO_AITHINKER_A9G)
+            #define ERA_BOARD_TYPE          "AI-Thinker A9G"
         #else
             #define ERA_BOARD_TYPE          "Logicrom"
         #endif
@@ -896,6 +911,7 @@
         #define ERA_STRING_CAPACITY_MAX     3145728
     #endif
 
+    #define ERA_AUTOMATION
     #define ERA_OTA
 
     #if !defined(ERA_BOARD_TYPE)
@@ -1046,6 +1062,10 @@
 
     #if defined(ERA_SPECIFIC)
         #undef ERA_SPECIFIC
+    #endif
+
+    #if defined(ERA_AUTOMATION)
+        #undef ERA_AUTOMATION
     #endif
 
     #if defined(ERA_PIN_DEBUG)

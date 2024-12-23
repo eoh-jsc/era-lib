@@ -5,12 +5,12 @@
     #define ERA_NETWORK_TYPE          "Ethernet"
 #endif
 
-#if !defined(ERA_AUTH_TOKEN)
-    #error "Please specify your ERA_AUTH_TOKEN"
-#endif
-
 #if !defined(ERA_ETHERNET_SPI)
     #define ERA_ETHERNET_SPI
+#endif
+
+#if !defined(ERA_AUTH_TOKEN)
+    #error "Please specify your ERA_AUTH_TOKEN"
 #endif
 
 #include <ERa/ERaProtocol.hpp>

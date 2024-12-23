@@ -5,6 +5,10 @@
     #define ERA_NETWORK_TYPE          "Ethernet"
 #endif
 
+#if !defined(ERA_ETHERNET_SPI)
+    #define ERA_ETHERNET_SPI
+#endif
+
 #if !defined(ERA_AUTH_TOKEN)
     #error "Please specify your ERA_AUTH_TOKEN"
 #endif
@@ -312,8 +316,8 @@ private:
     uint8_t* getMacAddress(const char* auth,
                         const uint8_t mac[]) {
         if (mac != nullptr) {
-            macUser = (uint8_t*)mac;
-            return macUser;
+            this->macUser = (uint8_t*)mac;
+            return this->macUser;
         }
 
         this->macAddress[0] = 0xFE;

@@ -80,7 +80,7 @@ public:
             }
             *begin++ = (uint8_t)c;
         }
-        return begin - buf;
+        return ((int)(begin - buf));
     }
 
     int peek() override {

@@ -114,6 +114,9 @@
     #define ERA_INFO_PUBLISH_RETAINED   false
 #endif
 
+#define ERA_MQTT_NOTIFY_RETAINED        false
+#define ERA_MQTT_EMAIL_RETAINED         false
+
 #if defined(DEFAULT_SOCKET_TIMEOUT)
     #define ERA_SOCKET_TIMEOUT          DEFAULT_SOCKET_TIMEOUT
 #else

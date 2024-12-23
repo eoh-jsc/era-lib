@@ -1,16 +1,17 @@
 #ifndef INC_ERA_LOGGER_DEFINE_HPP_
 #define INC_ERA_LOGGER_DEFINE_HPP_
 
-#if defined(ARDUINO) && \
-    (defined(ESP32) || defined(ESP8266) || \
+#if defined(ARDUINO) &&                     \
+    (defined(ESP32) || defined(ESP8266) ||  \
     (defined(ARDUINO_ARCH_RP2040) && !defined(__MBED__)))
     #define DIRECTORY_LOGGER  "/logger"
-#elif defined(__MBED__)
+#elif defined(ARDUINO_ARCH_STM32)
+    #define DIRECTORY_LOGGER  "logger"
+#elif defined(__MBED__) || defined(ARDUINO_ARCH_ARM) || \
+    defined(ARDUINO_ARCH_OPENCPU)
     #define DIRECTORY_LOGGER  "/fs/logger"
 #elif defined(LINUX)
     #define DIRECTORY_LOGGER  "database/logger"
-#elif defined(ARDUINO_ARCH_STM32)
-    #define DIRECTORY_LOGGER  "logger"
 #else
     #define DIRECTORY_LOGGER  "logger"
 #endif

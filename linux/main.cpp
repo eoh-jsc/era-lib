@@ -21,6 +21,9 @@
 #include <ERaLinux.hpp>
 #include <ERaOptionsArgs.hpp>
 
+#include <Automation/ERaSmart.hpp>
+#include <Time/ERaSyncTimeLinux.hpp>
+
 static const char* auth;
 static const char* boardID;
 static const char* host;
@@ -29,6 +32,9 @@ static const char* user;
 static const char* pass;
 
 ERaSocket mbTcpClient;
+
+ERaSyncTime syncTime;
+ERaSmart smart(ERa, syncTime);
 
 /* This function will run every time ERa is connected */
 ERA_CONNECTED() {

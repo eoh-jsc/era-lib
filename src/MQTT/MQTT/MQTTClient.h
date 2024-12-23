@@ -39,8 +39,8 @@
 #if defined(PARTICLE) || defined(SPARK)
   #include "application.h"
   #undef retained
-#elif defined(ARDUINO) && \
-  defined(ARDUINO_ARCH_ARM)
+#elif defined(ARDUINO_ARCH_ARM) ||  \
+      defined(ARDUINO_ARCH_OPENCPU)
   #include <Arduino.h>
 #else
   #include <Arduino.h>

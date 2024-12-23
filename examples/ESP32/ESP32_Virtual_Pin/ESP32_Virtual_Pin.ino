@@ -38,11 +38,16 @@
 
 #include <Arduino.h>
 #include <ERa.hpp>
+#include <Automation/ERaSmart.hpp>
+#include <Time/ERaEspTime.hpp>
 
 #define LED_PIN  2
 
 const char ssid[] = "YOUR_SSID";
 const char pass[] = "YOUR_PASSWORD";
+
+ERaEspTime syncTime;
+ERaSmart smart(ERa, syncTime);
 
 /* This function is called every time the Virtual Pin 0 state change */
 ERA_WRITE(V0) {
@@ -101,6 +106,11 @@ void setup() {
 
     /* Set board id */
     // ERa.setBoardID("Board_1");
+
+    /* Set API task size. If this function is enabled,
+       the core API will run on a separate task after disconnecting from the server
+       (suitable for edge automation).*/
+    // ERa.setTaskSize(ERA_API_TASK_SIZE, true);
 
     /* Set scan WiFi. If activated, the board will scan
        and connect to the best quality WiFi. */

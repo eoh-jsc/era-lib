@@ -161,6 +161,116 @@ public:
         tm.day = timestamp + 1;
     }
 
+    static inline
+    time_t getTimeFromStringNumber(const char* input, long timeZone = 0L) {
+        if (input == NULL) {
+            return 0;
+        }
+
+        struct tm t = {
+            0 /* tm_sec   */,
+            0 /* tm_min   */,
+            0 /* tm_hour  */,
+            0 /* tm_mday  */,
+            0 /* tm_mon   */,
+            0 /* tm_year  */,
+            0 /* tm_wday  */,
+            0 /* tm_yday  */,
+            0 /* tm_isdst */
+        };
+
+        int month {0};
+        int day   {0};
+        int year  {0};
+        int hour  {0};
+        int min   {0};
+        int sec   {0};
+        static const char* TAG = "Time";
+        static const int expectedLength = 19;
+        static const int expectedParameters = 6;
+        const int inputLength = strlen(input);
+
+        if (inputLength != expectedLength) {
+            ERA_LOG_ERROR(TAG, ERA_PSTR("Invalid input length: %d"), inputLength);
+            return 0;
+        }
+
+        int scannedParameters = sscanf(input, "%d-%d-%d %d:%d:%d", &year, &month, &day, &hour, &min, &sec);
+
+        if (scannedParameters != expectedParameters) {
+            ERA_LOG_ERROR(TAG, ERA_PSTR("Invalid input parameters number: %d"), scannedParameters);
+            return 0;
+        }
+
+        if ((month < 1) || (month > 12) || (day < 1) || (day > 31) || (year < 1900) ||
+            (hour  < 0) || (hour  > 23) || (min < 0) || (min > 59) || (sec  < 0) || (sec > 59)) {
+            ERA_LOG_ERROR(TAG, ERA_PSTR("Invalid date values"));
+            return 0;
+        }
+
+        t.tm_mon  = (month - 1);
+        t.tm_mday = day;
+        t.tm_year = (year - 1900);
+        t.tm_hour = hour;
+        t.tm_min  = min;
+        t.tm_sec  = sec;
+        t.tm_isdst = -1;
+
+        ERA_FORCE_UNUSED(TAG);
+
+        long offset = (timeZone * SECS_PER_HOUR);
+
+        return (mktime(&t) + offset);
+    }
+
+    static inline
+    time_t getTimeCompile(long timeZone = 0L) {
+        static const char* input = __DATE__ " " __TIME__;
+        static time_t buildTime {0};
+
+        if (buildTime) {
+            return buildTime;
+        }
+
+        struct tm t = {
+            0 /* tm_sec   */,
+            0 /* tm_min   */,
+            0 /* tm_hour  */,
+            0 /* tm_mday  */,
+            0 /* tm_mon   */,
+            0 /* tm_year  */,
+            0 /* tm_wday  */,
+            0 /* tm_yday  */,
+            0 /* tm_isdst */
+        };
+
+        char sMonth[16];
+        int month {0};
+        int day   {0};
+        int year  {0};
+        int hour  {0};
+        int min   {0};
+        int sec   {0};
+        static const char monthNames[] = "JanFebMarAprMayJunJulAugSepOctNovDec";
+
+        sscanf(input, "%s %d %d %d:%d:%d", sMonth, &day, &year, &hour, &min, &sec);
+
+        month = ((strstr(monthNames, sMonth) - monthNames) / 3);
+
+        t.tm_mon  = month;
+        t.tm_mday = day;
+        t.tm_year = (year - 1900);
+        t.tm_hour = hour;
+        t.tm_min  = min;
+        t.tm_sec  = sec;
+        t.tm_isdst = -1;
+
+        long offset = (timeZone * SECS_PER_HOUR);
+
+        buildTime = (mktime(&t) + offset);
+        return buildTime;
+    }
+
 protected:
     time_t makeTime() {
         time_t seconds {0};

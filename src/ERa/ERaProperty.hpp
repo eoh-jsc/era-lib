@@ -428,6 +428,7 @@ protected:
     void handler(uint8_t pin, const ERaParam& param);
     void handler(const char* id, const ERaParam& param);
     void updateProperty(const ERaPin<ERaReport>& pin);
+    void publishAll(bool onlyNumber = false);
 
 #if !defined(ERA_VIRTUAL_WRITE_LEGACY)
     template <typename T>
@@ -586,6 +587,7 @@ private:
     bool publishOnChange(Property_t* pProp, float minChange = 1.0f,
                         unsigned long minInterval = 1000UL,
                         unsigned long maxInterval = 60000UL);
+    bool publishProperty(Property_t* pProp, bool onlyNumber = false);
     bool allocatorPointer(Property_t* pProp, void* ptr);
     bool resetUpdate(Property_t* pProp);
     bool isPropertyFree();
@@ -792,6 +794,11 @@ void ERaProperty<Api>::handler(const char* id, const ERaParam& param) {
     void ERaProperty<Api>::updateProperty(const ERaPin<ERaReport>& pin) {
         ERA_FORCE_UNUSED(pin);
     }
+
+    template <class Api>
+    void ERaProperty<Api>::publishAll(bool onlyNumber) {
+        ERA_FORCE_UNUSED(onlyNumber);
+    }
 #else
     template <class Api>
     void ERaProperty<Api>::updateProperty(const ERaPin<ERaReport>& pin) {
@@ -805,7 +812,8 @@ void ERaProperty<Api>::handler(const char* id, const ERaParam& param) {
                 continue;
             }
             if (!this->getFlag(pProp->permission, PermissionT::PERMISSION_CLOUD)) {
-                return;
+                this->publishProperty(pProp, true);
+                continue;
             }
             if (!pProp->id.isNumber()) {
                 continue;
@@ -814,9 +822,7 @@ void ERaProperty<Api>::handler(const char* id, const ERaParam& param) {
                 continue;
             }
             if (pin.isVPinExist(pProp->id.getInt(), pProp->value)) {
-                if (pProp->report) {
-                    pProp->report.executeNow();
-                }
+                pProp->report.executeNow();
                 continue;
             }
             else {
@@ -837,6 +843,15 @@ void ERaProperty<Api>::handler(const char* id, const ERaParam& param) {
         }
 
         this->ERaPropRp.run();
+    }
+
+    template <class Api>
+    void ERaProperty<Api>::publishAll(bool onlyNumber) {
+        const PropertyIterator* e = this->ERaProp.end();
+        for (PropertyIterator* it = this->ERaProp.begin(); it != e; it = it->getNext()) {
+            Property_t* pProp = it->get();
+            this->publishProperty(pProp, onlyNumber);
+        }
     }
 #endif
 
@@ -1033,6 +1048,9 @@ bool ERaProperty<Api>::publish(Property_t* pProp, bool send) {
     if (pProp == nullptr) {
         return false;
     }
+    if (!this->getFlag(pProp->permission, PermissionT::PERMISSION_READ)) {
+        return false;
+    }
 
     this->onCallbackProperty(pProp, send);
     return true;
@@ -1081,6 +1099,29 @@ bool ERaProperty<Api>::publishOnChange(Property_t* pProp, float minChange,
         pProp->report.updateReport(0.0f, false, false);
 #endif
     }
+    return true;
+}
+
+template <class Api>
+bool ERaProperty<Api>::publishProperty(Property_t* pProp, bool onlyNumber) {
+    if (pProp == nullptr) {
+        return false;
+    }
+    if (!this->getFlag(pProp->permission, PermissionT::PERMISSION_READ)) {
+        return false;
+    }
+
+    if (!pProp->id.isNumber()) {
+        return false;
+    }
+    if (pProp->id.getInt() < 0) {
+        return false;
+    }
+    if (onlyNumber && !pProp->value->isNumber()) {
+        return false;
+    }
+
+    pProp->report.executeNow();
     return true;
 }
 

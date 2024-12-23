@@ -18,6 +18,9 @@
 // #define ERA_DEBUG
 // #define ERA_SERIAL Serial
 
+/* Enable bluetooth multi connect */
+#define ERA_BT_MULTI_CONNECT
+
 /* Select ERa host location (VN: Viet Nam, SG: Singapore) */
 #define ERA_LOCATION_VN
 // #define ERA_LOCATION_SG
@@ -40,6 +43,8 @@
 
 #include <Arduino.h>
 #include <ERa.hpp>
+#include <Automation/ERaSmart.hpp>
+#include <Time/ERaEspTime.hpp>
 #if defined(BUTTON_PIN)
     #include <pthread.h>
     #include <ERa/ERaButton.hpp>
@@ -54,6 +59,9 @@ const char bluetoothPassword[] = "YOUR_BLUETOOTH_PASSWORD";
 
 WiFiClient mbTcpClient;
 ERaBLETransp ERaBLE(ERa, false, false);
+
+ERaEspTime syncTime;
+ERaSmart smart(ERa, syncTime);
 
 #if defined(BUTTON_PIN)
     ERaButton button;
@@ -125,6 +133,11 @@ void setup() {
 
     /* Setup Client for Modbus TCP/IP */
     ERa.setModbusClient(mbTcpClient);
+
+    /* Set API task size. If this function is enabled,
+       the core API will run on a separate task after disconnecting from the server
+       (suitable for edge automation).*/
+    // ERa.setTaskSize(ERA_API_TASK_SIZE, true);
 
     /* Set scan WiFi. If activated, the board will scan
        and connect to the best quality WiFi. */

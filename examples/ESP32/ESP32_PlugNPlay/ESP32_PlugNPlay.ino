@@ -34,12 +34,17 @@
 
 #include <Arduino.h>
 #include <ERa.hpp>
+#include <Automation/ERaSmart.hpp>
+#include <Time/ERaEspTime.hpp>
 #if defined(BUTTON_PIN)
     #include <pthread.h>
     #include <ERa/ERaButton.hpp>
 #endif
 
 WiFiClient mbTcpClient;
+
+ERaEspTime syncTime;
+ERaSmart smart(ERa, syncTime);
 
 #if defined(BUTTON_PIN)
     ERaButton button;
@@ -109,6 +114,11 @@ void setup() {
 
     /* Setup Client for Modbus TCP/IP */
     ERa.setModbusClient(mbTcpClient);
+
+    /* Set API task size. If this function is enabled,
+       the core API will run on a separate task after disconnecting from the server
+       (suitable for edge automation).*/
+    // ERa.setTaskSize(ERA_API_TASK_SIZE, true);
 
     /* White labeling App (use this ONLY if you have a branded ERa App) */
     // ERa.setVendorName("MyORG");

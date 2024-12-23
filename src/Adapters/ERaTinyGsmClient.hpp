@@ -37,6 +37,13 @@ template <class Transport>
 class ERaGsm
     : public ERaProto<Transport, ERaFlash>
 {
+#if defined(TINY_GSM_MODEM_HAS_SMS)
+    typedef struct __SMSInfo_t {
+        char* to;
+        char* message;
+    } SMSInfo_t;
+#endif
+
     const char* TAG = "GSM";
     friend class ERaProto<Transport, ERaFlash>;
     typedef ERaProto<Transport, ERaFlash> Base;
@@ -69,7 +76,7 @@ public:
                 return false;
             }
         }
-        this->getTransp().setSSID(strlen(apn) ? apn : ERA_NETWORK_TYPE);
+        this->getTransp().setSSID(apn);
         return true;
     }
 
@@ -202,6 +209,9 @@ public:
             case StateT::STATE_RUNNING:
                 Base::run();
                 this->getSignalQuality();
+#if defined(TINY_GSM_MODEM_HAS_SMS)
+                this->sendSMS();
+#endif
                 break;
             case StateT::STATE_CONNECTING_NEW_NETWORK:
                 Base::connectNewNetworkResult();
@@ -226,6 +236,53 @@ public:
     }
 
 protected:
+#if defined(TINY_GSM_MODEM_HAS_SMS)
+    void sendSMS(const char* to, const char* message) override {
+        if ((to == nullptr) || (message == nullptr)) {
+            return;
+        }
+        if (!this->queue.writeable()) {
+            return;
+        }
+        SMSInfo_t req;
+        req.to = ERaStrdup(to);
+        req.message = ERaStrdup(message);
+        this->queue += req;
+    }
+
+    void sendEachSMS(const char* to, const char* message) {
+        if ((to == nullptr) || (message == nullptr)) {
+            return;
+        }
+        ERaDataBuff arrayTo(to, strlen(to) + 1);
+        arrayTo.split(",");
+        size_t size = arrayTo.size();
+        for (size_t i = 0; i < size; ++i) {
+            if (arrayTo[i].isEmpty()) {
+                continue;
+            }
+            this->modem->sendSMS(arrayTo[i].trim_str(), message);
+            ERaWatchdogFeed();
+        }
+    }
+
+    void sendSMS() {
+        if (!this->isRequest()) {
+            return;
+        }
+        SMSInfo_t& req = this->getRequest();
+        this->sendEachSMS(req.to, req.message);
+        if (req.to != nullptr) {
+            free(req.to);
+            req.to = nullptr;
+        }
+        if (req.message != nullptr) {
+            free(req.message);
+            req.message = nullptr;
+        }
+    }
+#endif
+
 private:
     void getSignalQuality() {
         unsigned long currentMillis = ERaMillis();
@@ -296,6 +353,22 @@ private:
         ::digitalWrite(this->powerPin, !this->invertPin ? HIGH : LOW);
     }
 
+#if defined(TINY_GSM_MODEM_HAS_SMS)
+    bool isRequest() {
+        return this->queue.readable();
+    }
+
+    SMSInfo_t& getRequest() {
+        return this->queue;
+    }
+
+    bool isEmptyRequest() {
+        return this->queue.isEmpty();
+    }
+
+    ERaQueue<SMSInfo_t, 10> queue;
+#endif
+
     TinyGsm* modem;
 #if defined(ERA_USE_SSL)
     TinyGsmClientSecure client;
@@ -314,12 +387,12 @@ private:
 template <class Proto, class Flash>
 inline
 void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
+    const char* ssid = this->thisProto().getTransp().getSSID();
     int16_t signal = this->thisProto().getTransp().getSignalQuality();
 
     cJSON_AddNumberToObject(root, INFO_PLUG_AND_PLAY, 0);
     cJSON_AddStringToObject(root, INFO_NETWORK_PROTOCOL, ERA_NETWORK_TYPE);
-    cJSON_AddStringToObject(root, INFO_SSID, ((this->thisProto().getTransp().getSSID() == nullptr) ?
-                                            ERA_NETWORK_TYPE : this->thisProto().getTransp().getSSID()));
+    cJSON_AddStringToObject(root, INFO_SSID, ((ssid != nullptr) ? ssid : ERA_NETWORK_TYPE));
     cJSON_AddStringToObject(root, INFO_BSSID, ERA_NETWORK_TYPE);
     cJSON_AddNumberToObject(root, INFO_RSSI, signal);
     cJSON_AddNumberToObject(root, INFO_SIGNAL_STRENGTH, SignalToPercentage(signal));
@@ -351,6 +424,7 @@ void ERaApi<Proto, Flash>::addSelfInfo(cJSON* root) {
     template <class Proto, class Flash>
     inline
     void ERaApi<Proto, Flash>::addModbusInfo(cJSON* root) {
+        const char* ssid = this->thisProto().getTransp().getSSID();
         int16_t signal = this->thisProto().getTransp().getSignalQuality();
 
     #if defined(ESP32)
@@ -360,8 +434,7 @@ void ERaApi<Proto, Flash>::addSelfInfo(cJSON* root) {
     #endif
         cJSON_AddNumberToObject(root, INFO_MB_RSSI, signal);
         cJSON_AddNumberToObject(root, INFO_MB_SIGNAL_STRENGTH, SignalToPercentage(signal));
-        cJSON_AddStringToObject(root, INFO_MB_WIFI_USING, ((this->thisProto().getTransp().getSSID() == nullptr) ?
-                                                        ERA_NETWORK_TYPE : this->thisProto().getTransp().getSSID()));
+        cJSON_AddStringToObject(root, INFO_MB_WIFI_USING, ((ssid != nullptr) ? ssid : ERA_NETWORK_TYPE));
 
         /* Override modbus info */
         ERaModbusInfo(root);
