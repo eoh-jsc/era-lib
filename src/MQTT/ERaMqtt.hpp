@@ -362,6 +362,10 @@ bool ERaMqtt<Client, MQTT>::connect(FunctionCallback_t fn) {
     this->subscribeTopic(this->ERaTopic, ERA_SUB_PREFIX_ASK_WIFI_TOPIC);
     this->subscribeTopic(this->ERaTopic, ERA_SUB_PREFIX_CHANGE_WIFI_TOPIC);
 
+#if defined(ERA_AUTOMATION)
+    this->subscribeTopic(this->ERaTopic, ERA_SUB_PREFIX_AUTOMATION_TOPIC);
+#endif
+
     ERaWatchdogFeed();
 
     if (fn != NULL) {
