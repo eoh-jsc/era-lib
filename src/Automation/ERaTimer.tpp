@@ -26,7 +26,7 @@ namespace eras {
         item->lastExecutionMajor = this->mMillisMajor;
         item->callback = std::move(func);
         item->remove = false;
-        this->push(std::move(item));
+        this->push(item);
     }
 
     bool Timer::cancelTimeout(Component* component, const std::string& name) {
@@ -37,19 +37,13 @@ namespace eras {
         const uint32_t now = this->millis();
         this->processToAdd();
 
-    #pragma GCC diagnostic push
-    #pragma GCC diagnostic ignored "-Wunused-variable"
-        auto toRemoveWas = this->mToRemove;
-        auto itemsWas = this->mItems.size();
-    #pragma GCC diagnostic pop
-
         if (this->mToRemove > MAX_LOGICALLY_DELETED_ITEMS) {
             std::vector<TimerItem*> validItems;
             while (!this->empty()) {
                 LockGuard guard {this->mLock};
-                auto item = std::move(this->mItems[0]);
+                auto item = this->mItems[0];
                 this->popRaw();
-                validItems.push_back(std::move(item));
+                validItems.push_back(item);
             }
 
             {
@@ -82,7 +76,7 @@ namespace eras {
             {
                 this->mLock.lock();
 
-                auto item = std::move(this->mItems[0]);
+                auto item = this->mItems[0];
                 this->popRaw();
 
                 this->mLock.unlock();
@@ -105,7 +99,7 @@ namespace eras {
                 continue;
             }
 
-            this->mItems.push_back(std::move(it));
+            this->mItems.push_back(it);
             std::push_heap(this->mItems.begin(), this->mItems.end(), TimerItem::cmp);
         }
         this->mToAdd.clear();
@@ -136,7 +130,7 @@ namespace eras {
 
     void Timer::push(TimerItem* item) {
         LockGuard guard {this->mLock};
-        this->mToAdd.push_back(std::move(item));
+        this->mToAdd.push_back(item);
     }
 
     bool Timer::cancelItem(Component* component, const std::string& name) {

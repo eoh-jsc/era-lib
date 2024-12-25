@@ -146,14 +146,14 @@ namespace eras {
         auto pTrigger = new Trigger();
 
         auto pCondition = new AndCondition();
-        pCondition->addConditions(std::move(this->mCurrentConditions));
+        pCondition->addConditions(this->mCurrentConditions);
 
         auto pSmart = new Smart();
-        pSmart->setTrigger(std::move(pTrigger));
-        pSmart->setCondition(std::move(pCondition));
-        pSmart->addActions(std::move(this->mCurrentActions));
+        pSmart->setTrigger(pTrigger);
+        pSmart->setCondition(pCondition);
+        pSmart->addActions(this->mCurrentActions);
 
-        this->mSmarts.push_back(std::move(pSmart));
+        this->mSmarts.push_back(pSmart);
 
         this->clearCurrentConditions(false);
         this->clearCurrentActions(false);
@@ -200,7 +200,7 @@ namespace eras {
             item = item->next;
         }
         pCondition->setConfigID(config->valueint);
-        this->mCurrentConditions.push_back(std::move(pCondition));
+        this->mCurrentConditions.push_back(pCondition);
     }
 
     void ERaSmart::parseRangeEvaluation(const cJSON* const root, const cJSON* const configuration) {
@@ -242,12 +242,12 @@ namespace eras {
             return;
         }
 
-        ValueCondition<double>* pCondition = nullptr;
+        RangeCondition<double>* pCondition = nullptr;
         pCondition = new RangeCondition<double>();
-        pCondition->addThreshold(start->valuedouble);
-        pCondition->addThresholdEnd(end->valuedouble);
+        pCondition->addPrimaryThreshold(start->valuedouble);
+        pCondition->addSecondaryThreshold(end->valuedouble);
         pCondition->setConfigID(config->valueint);
-        this->mCurrentConditions.push_back(std::move(pCondition));
+        this->mCurrentConditions.push_back(pCondition);
     }
 
     void ERaSmart::parseEvaluation(const cJSON* const root, const cJSON* const type,
@@ -316,7 +316,7 @@ namespace eras {
         }
         pCondition->addThreshold(threshold);
         pCondition->setConfigID(config->valueint);
-        this->mCurrentConditions.push_back(std::move(pCondition));
+        this->mCurrentConditions.push_back(pCondition);
     }
 
     void ERaSmart::parseScheduleOnce(const cJSON* const root, const std::string& dateTime) {
@@ -331,8 +331,8 @@ namespace eras {
         oneShot->setSchedule(startingFrom, until, activePeriod, scheduleConfiguration, activeRepeat);
 
         auto pCondition = new ScheduleCondition();
-        pCondition->setSchedule(std::move(oneShot));
-        this->mCurrentConditions.push_back(std::move(pCondition));
+        pCondition->setSchedule(oneShot);
+        this->mCurrentConditions.push_back(pCondition);
     }
 
     void ERaSmart::parseScheduleEveryDay(const cJSON* const root, const std::string& dateTime) {
@@ -348,8 +348,8 @@ namespace eras {
         daily->setSchedule(startingFrom, until, activePeriod, scheduleConfiguration, activeRepeat);
 
         auto pCondition = new ScheduleCondition();
-        pCondition->setSchedule(std::move(daily));
-        this->mCurrentConditions.push_back(std::move(pCondition));
+        pCondition->setSchedule(daily);
+        this->mCurrentConditions.push_back(pCondition);
     }
 
     void ERaSmart::parseScheduleEveryWeek(const cJSON* const root, const std::string& dateTime) {
@@ -389,8 +389,8 @@ namespace eras {
         weekly->setSchedule(startingFrom, until, executionPeriod, scheduleConfiguration, activeRepeat);
 
         auto pCondition = new ScheduleCondition();
-        pCondition->setSchedule(std::move(weekly));
-        this->mCurrentConditions.push_back(std::move(pCondition));
+        pCondition->setSchedule(weekly);
+        this->mCurrentConditions.push_back(pCondition);
     }
 
     void ERaSmart::parseSchedule(const cJSON* const root) {
@@ -466,7 +466,7 @@ namespace eras {
             return;
         }
 
-        auto action = new LambdaAction([&, this, pin, dValue, sValue]() {
+        auto pAction = new LambdaAction([&, this, pin, dValue, sValue]() {
             if (this->mBaseTopic == nullptr) {
                 return;
             }
@@ -495,7 +495,7 @@ namespace eras {
             object = nullptr;
             payload = nullptr;
         });
-        this->mCurrentActions.push_back(std::move(action));
+        this->mCurrentActions.push_back(pAction);
     }
 
     void ERaSmart::parseVirtualPinAction(const cJSON* const root, const cJSON* const value) {
@@ -517,7 +517,7 @@ namespace eras {
             return;
         }
 
-        auto action = new LambdaAction([&, this, pin, dValue, sValue]() {
+        auto pAction = new LambdaAction([&, this, pin, dValue, sValue]() {
             if (this->mBaseTopic == nullptr) {
                 return;
             }
@@ -546,7 +546,7 @@ namespace eras {
             object = nullptr;
             payload = nullptr;
         });
-        this->mCurrentActions.push_back(std::move(action));
+        this->mCurrentActions.push_back(pAction);
     }
 
     void ERaSmart::parseArduinoAction(const cJSON* const root, const cJSON* const data) {
@@ -593,7 +593,7 @@ namespace eras {
             hasValue = true;
         }
 
-        auto action = new LambdaAction([&, this, key, hasValue, dValue, sValue]() {
+        auto pAction = new LambdaAction([&, this, key, hasValue, dValue, sValue]() {
             if (this->mBaseTopic == nullptr) {
                 return;
             }
@@ -644,7 +644,7 @@ namespace eras {
             object = nullptr;
             payload = nullptr;
         });
-        this->mCurrentActions.push_back(std::move(action));
+        this->mCurrentActions.push_back(pAction);
     }
 
     void ERaSmart::parseZigbeeDevice(const cJSON* const root, const cJSON* const data, const char* controlPayload) {
@@ -667,7 +667,7 @@ namespace eras {
             StringReplace(payload, "%(value)s", value->valuestring);
         }
 
-        auto action = new LambdaAction([&, this, ieeeAddress, payload]() {
+        auto pAction = new LambdaAction([&, this, ieeeAddress, payload]() {
             if (this->mBaseTopic == nullptr) {
                 return;
             }
@@ -680,7 +680,7 @@ namespace eras {
 
             this->mCallback(topic, payload.c_str());
         });
-        this->mCurrentActions.push_back(std::move(action));
+        this->mCurrentActions.push_back(pAction);
     }
 
     void ERaSmart::parseZigbeeAction(const cJSON* const root, const cJSON* const data) {
@@ -704,7 +704,7 @@ namespace eras {
         std::string phone = phoneItem->valuestring;
         std::string message = messageItem->valuestring;
 
-        auto action = new LambdaAction([&, this, phone, message]() {
+        auto pAction = new LambdaAction([&, this, phone, message]() {
             if (this->mBaseTopic == nullptr) {
                 return;
             }
@@ -753,7 +753,7 @@ namespace eras {
             payload = nullptr;
             smsObject = nullptr;
         });
-        this->mCurrentActions.push_back(std::move(action));
+        this->mCurrentActions.push_back(pAction);
     }
 
     void ERaSmart::parseActionScript(const cJSON* const root, const cJSON* const data) {
@@ -775,28 +775,28 @@ namespace eras {
         if (!delay) {
             return;
         }
-        auto action = new DelayAction(delay * 1000L);
-        this->mCurrentActions.push_back(std::move(action));
+        auto pAction = new DelayAction(delay * 1000L);
+        this->mCurrentActions.push_back(pAction);
     }
 
     void ERaSmart::parseNotificationAction(uint32_t automateId, uint32_t id) {
         if (!id) {
             return;
         }
-        auto action = new NotifyAction();
-        action->setNotify(automateId, id);
-        action->setDelay(ERA_NOTIFY_DELAY);
-        this->mCurrentActions.push_back(std::move(action));
+        auto pAction = new NotifyAction();
+        pAction->setNotify(automateId, id);
+        pAction->setDelay(ERA_NOTIFY_DELAY);
+        this->mCurrentActions.push_back(pAction);
     }
 
     void ERaSmart::parseEmailAction(uint32_t automateId, uint32_t id) {
         if (!id) {
             return;
         }
-        auto action = new EmailAction();
-        action->setEmail(automateId, id);
-        action->setDelay(ERA_EMAIL_DELAY);
-        this->mCurrentActions.push_back(std::move(action));
+        auto pAction = new EmailAction();
+        pAction->setEmail(automateId, id);
+        pAction->setDelay(ERA_EMAIL_DELAY);
+        this->mCurrentActions.push_back(pAction);
     }
 
     void ERaSmart::parseActions(const cJSON* const root, uint32_t automateId) {

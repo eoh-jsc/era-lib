@@ -102,17 +102,17 @@ namespace eras {
 
         void addAction(Action* action) {
             if (this->mActionsEnd == nullptr) {
-                this->mActionsBegin = std::move(action);;
+                this->mActionsBegin = action;
             }
             else {
-                this->mActionsEnd->mNext = std::move(action);;
+                this->mActionsEnd->mNext = action;
             }
             this->mActionsEnd = action;
         }
 
         void addActions(const std::vector<Action*>& actions) {
             for (auto* action : actions) {
-                this->addAction(std::move(action));
+                this->addAction(action);
             }
         }
 
@@ -152,7 +152,7 @@ namespace eras {
         explicit Automation() = default;
 
         explicit Automation(Trigger* trigger)
-            : mTrigger(std::move(trigger))
+            : mTrigger(trigger)
         {
             this->mTrigger->setAutomationParent(this);
         }
@@ -163,7 +163,7 @@ namespace eras {
         }
 
         void setTrigger(Trigger* trigger) {
-            this->mTrigger = std::move(trigger);
+            this->mTrigger = trigger;
             this->mTrigger->setAutomationParent(this);
         }
 
@@ -172,11 +172,11 @@ namespace eras {
         }
 
         void addAction(Action* action) {
-            this->mActions.addAction(std::move(action));
+            this->mActions.addAction(action);
         }
 
         void addActions(const std::vector<Action*>& actions) {
-            this->mActions.addActions(std::move(actions));
+            this->mActions.addActions(actions);
         }
 
         void stop() {
@@ -228,7 +228,7 @@ namespace eras {
         explicit AndCondition() = default;
 
         explicit AndCondition(const std::vector<Condition*>& conditions)
-            : mConditions(std::move(conditions))
+            : mConditions(conditions)
         {}
 
         virtual ~AndCondition() override {
@@ -239,12 +239,12 @@ namespace eras {
         }
 
         void addCondition(Condition* condition) {
-            this->mConditions.push_back(std::move(condition));
+            this->mConditions.push_back(condition);
         }
 
         void addConditions(const std::vector<Condition*>& conditions) {
             for (auto* condition : conditions) {
-                this->addCondition(std::move(condition));
+                this->addCondition(condition);
             }
         }
 
@@ -277,11 +277,11 @@ namespace eras {
         explicit ValueCondition(std::function<T()>&& fn,
                                 const std::vector<T>& thresholds)
             : mFn(std::move(fn))
-            , mThresholds(std::move(thresholds))
+            , mPrimaryThresholds(thresholds)
         {}
 
         explicit ValueCondition(const std::vector<T>& thresholds)
-            : mThresholds(std::move(thresholds))
+            : mPrimaryThresholds(thresholds)
         {}
 
         void setValue(T value) {
@@ -293,19 +293,13 @@ namespace eras {
         }
 
         void addThreshold(const T& threshold) {
-            this->mThresholds.push_back(threshold);
+            this->mPrimaryThresholds.push_back(threshold);
         }
 
-        void setThreshold(const std::vector<T>& thresholds) {
-            this->mThresholds = std::move(thresholds);
-        }
-
-        void addThresholdEnd(const T& threshold) {
-            this->mThresholdsEnd.push_back(threshold);
-        }
-
-        void setThresholdEnd(const std::vector<T>& thresholds) {
-            this->mThresholdsEnd = std::move(thresholds);
+        void addThresholds(const std::vector<T>& thresholds) {
+            for (const auto& threshold : thresholds) {
+                this->addThreshold(threshold);
+            }
         }
 
         void setConfigID(ERaUInt_t configID) {
@@ -339,8 +333,7 @@ namespace eras {
         virtual bool checkThreshold(const T& value) = 0;
 
         std::function<T()> mFn;
-        std::vector<T> mThresholds {};
-        std::vector<T> mThresholdsEnd {};
+        std::vector<T> mPrimaryThresholds {};
         ERaUInt_t mConfigID {0};
         T mValue {};
         bool mHasValue {false};
@@ -352,7 +345,7 @@ namespace eras {
         : public ValueCondition<T>
     {
     public:
-        explicit HigherCondition() = default;
+        using ValueCondition<T>::ValueCondition;
 
     protected:
         bool checkThreshold(const T& value) override {
@@ -360,7 +353,10 @@ namespace eras {
                 this->mReset = false;
                 return false;
             }
-            for (const auto& threshold : this->mThresholds) {
+            if (this->mPrimaryThresholds.empty()) {
+                return false;
+            }
+            for (const auto& threshold : this->mPrimaryThresholds) {
                 if (value <= threshold) {
                     return false;
                 }
@@ -378,7 +374,7 @@ namespace eras {
         : public ValueCondition<T>
     {
     public:
-        explicit LowerCondition() = default;
+        using ValueCondition<T>::ValueCondition;
 
     protected:
         bool checkThreshold(const T& value) override {
@@ -386,10 +382,10 @@ namespace eras {
                 this->mReset = false;
                 return false;
             }
-            if (this->mThresholds.empty()) {
+            if (this->mPrimaryThresholds.empty()) {
                 return false;
             }
-            for (const auto& threshold : this->mThresholds) {
+            for (const auto& threshold : this->mPrimaryThresholds) {
                 if (value >= threshold) {
                     return false;
                 }
@@ -407,7 +403,7 @@ namespace eras {
         : public ValueCondition<T>
     {
     public:
-        explicit EqualsCondition() = default;
+        using ValueCondition<T>::ValueCondition;
 
     protected:
         bool checkThreshold(const T& value) override {
@@ -415,10 +411,10 @@ namespace eras {
                 this->mReset = false;
                 return false;
             }
-            if (this->mThresholds.empty()) {
+            if (this->mPrimaryThresholds.empty()) {
                 return false;
             }
-            for (const auto& threshold : this->mThresholds) {
+            for (const auto& threshold : this->mPrimaryThresholds) {
                 if (value != threshold) {
                     return false;
                 }
@@ -436,7 +432,7 @@ namespace eras {
         : public ValueCondition<T>
     {
     public:
-        explicit NotEqualsCondition() = default;
+        using ValueCondition<T>::ValueCondition;
 
     protected:
         bool checkThreshold(const T& value) override {
@@ -444,10 +440,10 @@ namespace eras {
                 this->mReset = false;
                 return false;
             }
-            if (this->mThresholds.empty()) {
+            if (this->mPrimaryThresholds.empty()) {
                 return false;
             }
-            for (const auto& threshold : this->mThresholds) {
+            for (const auto& threshold : this->mPrimaryThresholds) {
                 if (value == threshold) {
                     return false;
                 }
@@ -465,7 +461,40 @@ namespace eras {
         : public ValueCondition<T>
     {
     public:
-        explicit RangeCondition() = default;
+        using ValueCondition<T>::ValueCondition;
+
+        explicit RangeCondition(std::function<T()>&& fn,
+                                const std::vector<T>& primaryThresholds,
+                                const std::vector<T>& secondaryThresholds)
+            : ValueCondition<T>(std::move(fn), primaryThresholds)
+            , mSecondaryThresholds(secondaryThresholds)
+        {}
+
+        explicit RangeCondition(const std::vector<T>& primaryThresholds,
+                                const std::vector<T>& secondaryThresholds)
+            : ValueCondition<T>(primaryThresholds)
+            , mSecondaryThresholds(secondaryThresholds)
+        {}
+
+        void addPrimaryThreshold(const T& threshold) {
+            this->mPrimaryThresholds.push_back(threshold);
+        }
+
+        void addPrimaryThresholds(const std::vector<T>& thresholds) {
+            for (const auto& threshold : thresholds) {
+                this->addPrimaryThreshold(threshold);
+            }
+        }
+
+        void addSecondaryThreshold(const T& threshold) {
+            this->mSecondaryThresholds.push_back(threshold);
+        }
+
+        void addSecondaryThresholds(const std::vector<T>& thresholds) {
+            for (const auto& threshold : thresholds) {
+                this->addSecondaryThreshold(threshold);
+            }
+        }
 
     protected:
         bool checkThreshold(const T& value) override {
@@ -473,16 +502,16 @@ namespace eras {
                 this->mReset = false;
                 return false;
             }
-            if (this->mThresholds.empty() ||
-                this->mThresholdsEnd.empty()) {
+            if (this->mPrimaryThresholds.empty() ||
+                this->mSecondaryThresholds.empty()) {
                 return false;
             }
-            for (const auto& threshold : this->mThresholds) {
+            for (const auto& threshold : this->mPrimaryThresholds) {
                 if (value < threshold) {
                     return false;
                 }
             }
-            for (const auto& threshold : this->mThresholdsEnd) {
+            for (const auto& threshold : this->mSecondaryThresholds) {
                 if (value >= threshold) {
                     return false;
                 }
@@ -493,6 +522,8 @@ namespace eras {
         const char* getComponentSource() const override {
             return "RangeCondition";
         }
+
+        std::vector<T> mSecondaryThresholds {};
     };
 
     template <typename T>
@@ -508,7 +539,7 @@ namespace eras {
         explicit ScheduleCondition() = default;
 
         explicit ScheduleCondition(Schedule* schedule)
-            : mSchedule(std::move(schedule))
+            : mSchedule(schedule)
         {}
 
         virtual ~ScheduleCondition() override {
@@ -516,7 +547,7 @@ namespace eras {
         }
 
         void setSchedule(Schedule* schedule) {
-            this->mSchedule = std::move(schedule);
+            this->mSchedule = schedule;
         }
 
         bool check() override {
@@ -746,8 +777,8 @@ namespace eras {
         explicit Smart() = default;
 
         explicit Smart(Condition* condition, Trigger* trigger, bool valueChange)
-            : Automation(std::move(trigger))
-            , mCondition(std::move(condition))
+            : Automation(trigger)
+            , mCondition(condition)
             , mValueChange(valueChange)
         {}
 
@@ -756,7 +787,7 @@ namespace eras {
         }
 
         void setCondition(Condition* condition) {
-            this->mCondition = std::move(condition);
+            this->mCondition = condition;
         }
 
         void setValueChange(bool enable) {

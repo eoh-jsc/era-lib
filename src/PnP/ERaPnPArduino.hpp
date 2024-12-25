@@ -718,6 +718,8 @@ template <class Transport>
 void ERaPnP<Transport>::configInit() {
     this->configLoad();
     if (ERaConfig.getFlag(ConfigFlagT::CONFIG_FLAG_VALID)) {
+        this->config(ERaConfig.token, ERaConfig.host, ERaConfig.port,
+                     ERaConfig.username, ERaConfig.password);
         ERaState::set(StateT::STATE_CONNECTING_NETWORK);
     }
     else if (this->netConnected()) {
