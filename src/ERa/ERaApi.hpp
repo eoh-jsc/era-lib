@@ -752,6 +752,13 @@ protected:
 
     bool isNeedSyncConfig() const {
         bool ret {false};
+#if defined(ERA_MODBUS) && defined(ERA_AUTOMATION)
+        bool need {false};
+        if (this->automation != nullptr) {
+            need = this->automation->isConfigUpdated(true);
+        }
+        ret |= Modbus::isNeedFinalize(need);
+#endif
 #if defined(ERA_ZIGBEE)
         ret |= Zigbee::isNeedFinalize();
 #endif

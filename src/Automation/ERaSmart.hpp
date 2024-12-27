@@ -59,6 +59,7 @@ namespace eras {
         void run() override;
         void deleteAll() override;
         void updateValue(ERaUInt_t configID, double value, bool trigger = false) override;
+        bool isRunning() const override;
 
         static ERaSmart* getInstance() {
             return ERaSmart::instance();
@@ -157,6 +158,8 @@ namespace eras {
         std::vector<Smart*> mSmarts {};
 
         Mutex mLock;
+
+        bool mInitialized {false};
     };
 
 } /* namespace eras */

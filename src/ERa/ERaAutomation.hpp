@@ -21,6 +21,7 @@ public:
         : mAuthToken(NULL)
         , mBaseTopic(NULL)
         , mCallback(NULL)
+        , mConfigUpdated(false)
     {
         memset(this->mHashID, 0, sizeof(this->mHashID));
     }
@@ -31,6 +32,18 @@ public:
     virtual void run() = 0;
     virtual void deleteAll() = 0;
     virtual void updateValue(ERaUInt_t configID, double value, bool trigger = false) = 0;
+
+    virtual bool isRunning() const {
+        return false;
+    }
+
+    bool isConfigUpdated(bool reset = false) const {
+        bool ret = this->mConfigUpdated;
+        if (reset) {
+            this->mConfigUpdated = false;
+        }
+        return ret;
+    }
 
     void setAuth(const char* auth) {
         this->mAuthToken = auth;
@@ -49,6 +62,7 @@ public:
             return false;
         }
         if (strcmp(this->mHashID, hash)) {
+            this->mConfigUpdated = true;
             snprintf(this->mHashID, sizeof(this->mHashID), hash);
             return true;
         }
@@ -60,6 +74,7 @@ protected:
     const char* mBaseTopic;
     MessageCallback_t mCallback;
 
+    mutable bool mConfigUpdated;
     char mHashID[37];
 };
 

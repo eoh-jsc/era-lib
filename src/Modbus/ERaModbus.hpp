@@ -328,6 +328,16 @@ protected:
         return (this->totalRead + this->totalWrite);
     }
 
+    bool isNeedFinalize(bool need = false) const {
+        if (!this->initialized) {
+            return false;
+        }
+        if (!need) {
+            return false;
+        }
+        return !ModbusTransp::isNewReport();
+    }
+
     void initModbusTask();
 
 #if defined(LINUX)

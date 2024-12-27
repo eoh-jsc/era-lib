@@ -13,6 +13,8 @@ namespace eras {
 
         this->calculateRunningComponents();
         this->calculateValueComponents();
+
+        this->mInitialized = true;
     }
 
     void ERaSmart::run() {
@@ -98,6 +100,10 @@ namespace eras {
         for (auto* component : this->mValueComponents) {
             component->updateValue(configID, value, trigger);
         }
+    }
+
+    bool ERaSmart::isRunning() const {
+        return (this->mInitialized && !this->mSmarts.empty());
     }
 
     void ERaSmart::parseAutomations(const cJSON* const root) {

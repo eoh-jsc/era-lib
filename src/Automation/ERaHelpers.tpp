@@ -11,8 +11,9 @@ namespace eras {
         return true;
     }
 
-    Mutex::Mutex() {
-    }
+    Mutex::Mutex()
+        : mMutex(nullptr)
+    {}
 
     void Mutex::lock() {
         ERaGuardLock(this->mMutex);
