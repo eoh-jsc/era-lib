@@ -1458,6 +1458,7 @@ bool ERaProto<Transp, Flash>::sendTransport(ERaRsp_t& rsp) {
             return false;
         }
 
+        ERaInt_t prevId = rsp.id.getInt();
         switch (rsp.type) {
             case ERaTypeWriteT::ERA_WRITE_VIRTUAL_PIN: {
                 ERaInt_t configId = Base::getPinRp().findVPinConfigId(rsp.id.getInt(), rsp.param);
@@ -1483,6 +1484,7 @@ bool ERaProto<Transp, Flash>::sendTransport(ERaRsp_t& rsp) {
         }
 
         Base::updateValueAutomation(rsp);
+        rsp.id = prevId;
         return true;
     }
 #endif
