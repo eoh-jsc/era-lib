@@ -572,6 +572,7 @@ bool ERaProto<Transp, Flash>::processActionChip(const char* payload, cJSON* root
     if (!cJSON_IsObject(dataItem)) {
         return false;
     }
+
     cJSON* item = nullptr;
     const char* hash = nullptr;
     switch (type) {
@@ -794,6 +795,7 @@ void ERaProto<Transp, Flash>::processPinRequest(const ERaDataBuff& arrayTopic, c
     if (arrayTopic.size() <= index) {
         return;
     }
+
     if (arrayTopic.at(index) == "down") {
         Base::handlePinRequest(arrayTopic, payload);
     }
@@ -804,6 +806,7 @@ void ERaProto<Transp, Flash>::processWiFiRequest(const ERaDataBuff& arrayTopic, 
     if (arrayTopic.size() != 3) {
         return;
     }
+
     if (arrayTopic.at(2) == "ask") {
         this->requestListWiFi();
     }
@@ -899,9 +902,11 @@ void ERaProto<Transp, Flash>::processChangeWiFi(const char* payload) {
                 return;
             }
         }
+
         if (arrayTopic.size() < 4) {
             return;
         }
+
         if (arrayTopic.at(3) == "down") {
             this->processActionZigbee(arrayTopic.at(2).getString(), payload, ZigbeeActionT::ZIGBEE_ACTION_SET);
         }
@@ -1305,6 +1310,7 @@ bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
     if (root == nullptr) {
         return false;
     }
+
     switch (rsp.type) {
     case ERaTypeWriteT::ERA_WRITE_VIRTUAL_PIN:
         FormatString(name, "virtual_pin_" ERA_INTEGER_C_TYPE, rsp.id.getInt());
@@ -1326,6 +1332,7 @@ bool ERaProto<Transp, Flash>::sendPinData(ERaRsp_t& rsp) {
         root = nullptr;
         return false;
     }
+
     if (rsp.param.isNumber()) {
         cJSON_AddNumberWithDecimalToObject(root, name, rsp.param.getDouble(), ERA_DECIMAL_DOUBLE);
     }
@@ -1363,6 +1370,7 @@ bool ERaProto<Transp, Flash>::sendConfigIdData(ERaRsp_t& rsp) {
     char topicName[MAX_TOPIC_LENGTH] {0};
     FormatString(topicName, this->ERA_TOPIC);
     FormatString(topicName, ERA_PUB_PREFIX_CONFIG_DATA_TOPIC, rsp.id.getInt());
+
     cJSON* root = cJSON_CreateObject();
     if (root == nullptr) {
         return false;
@@ -1458,7 +1466,6 @@ bool ERaProto<Transp, Flash>::sendTransport(ERaRsp_t& rsp) {
             return false;
         }
 
-        ERaInt_t prevId = rsp.id.getInt();
         switch (rsp.type) {
             case ERaTypeWriteT::ERA_WRITE_VIRTUAL_PIN: {
                 ERaInt_t configId = Base::getPinRp().findVPinConfigId(rsp.id.getInt(), rsp.param);
@@ -1466,6 +1473,7 @@ bool ERaProto<Transp, Flash>::sendTransport(ERaRsp_t& rsp) {
                     return false;
                 }
                 rsp.id = configId;
+                rsp.type = ERaTypeWriteT::ERA_WRITE_CONFIG_ID;
             }
                 break;
             case ERaTypeWriteT::ERA_WRITE_PIN: {
@@ -1474,6 +1482,7 @@ bool ERaProto<Transp, Flash>::sendTransport(ERaRsp_t& rsp) {
                     return false;
                 }
                 rsp.id = configId;
+                rsp.type = ERaTypeWriteT::ERA_WRITE_CONFIG_ID;
             }
                 break;
             case ERaTypeWriteT::ERA_WRITE_CONFIG_ID:
@@ -1484,7 +1493,6 @@ bool ERaProto<Transp, Flash>::sendTransport(ERaRsp_t& rsp) {
         }
 
         Base::updateValueAutomation(rsp);
-        rsp.id = prevId;
         return true;
     }
 #endif
@@ -1497,6 +1505,7 @@ bool ERaProto<Transp, Flash>::sendTransport(ERaRsp_t& rsp) {
         if (payload == nullptr) {
             return false;
         }
+
         status = this->publishData(ERA_PUB_PREFIX_MODBUS_DATA_TOPIC,
                                             payload, rsp.retained);
         if (this->pLogger != nullptr) {
@@ -1632,6 +1641,7 @@ void ERaProto<Transp, Flash>::sendCommandVirtualMulti(const char* auth, ERaRsp_t
     if (data == nullptr) {
         return;
     }
+
     rsp.type = ERaTypeWriteT::ERA_WRITE_VIRTUAL_PIN;
     const ERaDataJson::iterator e = data->end();
     for (ERaDataJson::iterator it = data->begin(); it != e; ++it) {
@@ -1667,6 +1677,7 @@ void ERaProto<Transp, Flash>::sendCommandVirtualMulti(const char* auth, ERaRsp_t
             id = nullptr;
             return;
         }
+
         char topicName[MAX_TOPIC_LENGTH] {0};
         FormatString(topicName, "%s/%s", BASE_TOPIC, auth);
         FormatString(topicName, ERA_PUB_PREFIX_ZIGBEE_DOWN_TOPIC, id);
@@ -1711,6 +1722,7 @@ void ERaProto<Transp, Flash>::sendCommandVirtual(ERaRsp_t& rsp, ERaDataJson* dat
     if (data == nullptr) {
         return;
     }
+
     ERaDataJson dataNoConfig;
     ERaDataJson::iterator current;
     const ERaDataJson::iterator e = data->end();
@@ -1739,13 +1751,13 @@ void ERaProto<Transp, Flash>::sendCommandVirtual(ERaRsp_t& rsp, ERaDataJson* dat
         ++it;
     }
     if (dataNoConfig.isValid()) {
-        rsp.type = ERaTypeWriteT::ERA_WRITE_MAX;
         rsp.param = dataNoConfig.getObject();
+        rsp.type = ERaTypeWriteT::ERA_WRITE_MAX;
         this->sendPinMultiData(rsp);
     }
     if (current) {
-        rsp.type = ERaTypeWriteT::ERA_WRITE_VIRTUAL_PIN_MULTI;
         rsp.param = data->getObject();
+        rsp.type = ERaTypeWriteT::ERA_WRITE_VIRTUAL_PIN_MULTI;
     }
 }
 
@@ -1758,6 +1770,7 @@ void ERaProto<Transp, Flash>::sendCommandVirtual(ERaRsp_t& rsp, ERaDataJson* dat
         if (data->isEmpty()) {
             return;
         }
+
         cJSON* root = cJSON_CreateObject();
         if (root == nullptr) {
             return;
@@ -1776,6 +1789,7 @@ void ERaProto<Transp, Flash>::sendCommandVirtual(ERaRsp_t& rsp, ERaDataJson* dat
         if (mbAck == nullptr) {
             return;
         }
+
         const char* mbScan = nullptr;
         const ERaDataBuff::iterator e = data->end(data->getDataLen());
         for (ERaDataBuff::iterator it = data->begin(data->getDataLen()); it < e; ++it) {
@@ -1850,6 +1864,7 @@ size_t ERaProto<Transp, Flash>::splitString(char* strInput, const char* delims) 
     if (!strlen(strInput)) {
         return 0;
     }
+
     size_t size {0};
     char* token = strtok(strInput, delims);
     while (token != nullptr) {
