@@ -117,7 +117,11 @@ enum ModbusDataT
     MODBUS_UINT16 = 0x02,
     MODBUS_INT32 = 0x03,
     MODBUS_UINT32 = 0x04,
-    MODBUS_FLOAT = 0x05
+    MODBUS_FLOAT = 0x05,
+
+    /* Custom */
+    MODBUS_INT_4_NIBBLES_FIRST = 0x06,
+    MODBUS_INT_4_NIBBLES_LAST = 0x07
 };
 
 enum ModbusConvertT

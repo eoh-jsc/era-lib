@@ -42,12 +42,17 @@
 #include <ERaSimpleEsp32Gsm.hpp>
 /* GPIO, Virtual Pin and Modbus */
 // #include <ERaSimpleMBEsp32Gsm.hpp>
+#include <Automation/ERaSmart.hpp>
+#include <Time/ERaBaseTime.hpp>
 
 /* GPIO and Virtual Pin */
 HardwareSerial SerialGsm(1);
 /* GPIO, Virtual Pin and Modbus */
 // HardwareSerial SerialGsm(2);
 TinyGsm modem(SerialGsm);
+
+ERaBaseTime syncTime;
+ERaSmart smart(ERa, syncTime);
 
 #if defined(APN_VIETTEL)
     const char apn[] = "v-internet";
@@ -71,9 +76,28 @@ const int gsmRxPin = 18;
 const int gsmTxPin = 17;
 const int pwrPin = 1;
 
+void getTimeFromGsm() {
+    float timezone {0};
+    int year, month, day, hour, minute, second {0};
+    bool status = modem.getNetworkTime(
+        &year, &month, &day, &hour, &minute, &second, &timezone
+    );
+    if (status) {
+        syncTime.setTimeZone(DEFAULT_TIMEZONE - (long)timezone);
+        syncTime.setTime(hour, minute, second, day, month, year);
+    }
+}
+
+/* This function is triggered whenever an SMS is sent */
+ERA_WRITE_SMS() {
+    ERA_LOG("ERa", "Write SMS to %s: %s", to, message);
+    return false;
+}
+
 /* This function will run every time ERa is connected */
 ERA_CONNECTED() {
     ERA_LOG("ERa", "ERa connected!");
+    getTimeFromGsm();
 }
 
 /* This function will run every time ERa is disconnected */
@@ -86,17 +110,39 @@ void timerEvent() {
     ERA_LOG("Timer", "Uptime: %d", ERaMillis() / 1000L);
 }
 
+void setRTC(unsigned long time) {
+    const timeval epoch = {(time_t)time, 0};
+    settimeofday(&epoch, 0);
+}
+
+unsigned long getRTC() {
+    if (ERa.connected()) {
+        getTimeFromGsm();
+    }
+    return time(NULL);
+}
+
 void setup() {
     /* Setup debug console */
 #if defined(ERA_DEBUG)
     Serial.begin(115200);
 #endif
 
+    /* Set time callback */
+    syncTime.setSetTimeCallback(setRTC);
+    syncTime.setGetTimeCallback(getRTC);
+
     /* Set GSM module baud rate */
     SerialGsm.begin(115200, SERIAL_8N1, gsmRxPin, gsmTxPin);
 
     /* Set board id */
     // ERa.setBoardID("Board_1");
+
+    /* Set API task size. If this function is enabled,
+       the core API will run on a separate task after disconnecting from the server
+       (suitable for edge automation).*/
+    // ERa.setTaskSize(ERA_API_TASK_SIZE, true);
+
     /* Initializing the ERa library. */
     ERa.begin(modem, apn, user, pass, pwrPin);
 

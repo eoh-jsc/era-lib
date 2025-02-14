@@ -165,7 +165,7 @@ namespace eras {
         this->clearCurrentActions(false);
     }
 
-    void ERaSmart::parseBooleanEvaluation(const cJSON* const root, const cJSON* const configuration) {
+    void ERaSmart::parseBooleanEvaluation(const cJSON* const root, const cJSON* const id, const cJSON* const configuration) {
         cJSON* values = cJSON_GetObjectItem(root, AUTOMATION_VALUE_CHANGE_VALUE_KEY);
         if (!cJSON_IsArray(values)) {
             return;
@@ -173,6 +173,7 @@ namespace eras {
         if (cJSON_GetArraySize(values) < 2) {
             return;
         }
+        cJSON* scale = cJSON_GetObjectItem(root, AUTOMATION_VALUE_CHANGE_SCALE_KEY);
         cJSON* config = cJSON_GetObjectItem(root, AUTOMATION_VALUE_CHANGE_CONFIG_KEY);
         if (!cJSON_IsNumber(config)) {
             return;
@@ -206,10 +207,17 @@ namespace eras {
             item = item->next;
         }
         pCondition->setConfigID(config->valueint);
+        pCondition->setScale(1.0);
+        if (cJSON_IsNumber(id)) {
+            pCondition->setID(id->valueint);
+        }
+        if (cJSON_IsNumber(scale)) {
+            pCondition->setScale(scale->valuedouble);
+        }
         this->mCurrentConditions.push_back(pCondition);
     }
 
-    void ERaSmart::parseRangeEvaluation(const cJSON* const root, const cJSON* const configuration) {
+    void ERaSmart::parseRangeEvaluation(const cJSON* const root, const cJSON* const id, const cJSON* const configuration) {
         cJSON* values = cJSON_GetObjectItem(root, AUTOMATION_VALUE_CHANGE_VALUE_KEY);
         if (!cJSON_IsArray(values)) {
             return;
@@ -217,6 +225,7 @@ namespace eras {
         if (cJSON_GetArraySize(values) < 2) {
             return;
         }
+        cJSON* scale = cJSON_GetObjectItem(root, AUTOMATION_VALUE_CHANGE_SCALE_KEY);
         cJSON* config = cJSON_GetObjectItem(root, AUTOMATION_VALUE_CHANGE_CONFIG_KEY);
         if (!cJSON_IsNumber(config)) {
             return;
@@ -253,20 +262,27 @@ namespace eras {
         pCondition->addPrimaryThreshold(start->valuedouble);
         pCondition->addSecondaryThreshold(end->valuedouble);
         pCondition->setConfigID(config->valueint);
+        pCondition->setScale(1.0);
+        if (cJSON_IsNumber(id)) {
+            pCondition->setID(id->valueint);
+        }
+        if (cJSON_IsNumber(scale)) {
+            pCondition->setScale(scale->valuedouble);
+        }
         this->mCurrentConditions.push_back(pCondition);
     }
 
-    void ERaSmart::parseEvaluation(const cJSON* const root, const cJSON* const type,
-                                                    const cJSON* const configuration) {
+    void ERaSmart::parseEvaluation(const cJSON* const root, const cJSON* const id,
+                                   const cJSON* const type, const cJSON* const configuration) {
         if (ERaStrCmp(type->valuestring, "boolean")) {
-            this->parseBooleanEvaluation(root, configuration);
+            this->parseBooleanEvaluation(root, id, configuration);
         }
         else if (ERaStrCmp(type->valuestring, "range")) {
-            this->parseRangeEvaluation(root, configuration);
+            this->parseRangeEvaluation(root, id, configuration);
         }
     }
 
-    void ERaSmart::parseValueEvaluation(const cJSON* const root) {
+    void ERaSmart::parseValueEvaluation(const cJSON* const root, const cJSON* const id) {
         cJSON* evaluation = cJSON_GetObjectItem(root, AUTOMATION_VALUE_EVALUATION_KEY);
         if (!cJSON_IsObject(evaluation)) {
             return;
@@ -279,16 +295,16 @@ namespace eras {
         if (!cJSON_IsObject(configuration)) {
             return;
         }
-        this->parseEvaluation(root, type, configuration);
+        this->parseEvaluation(root, id, type, configuration);
     }
 
-    void ERaSmart::parseValueChange(const cJSON* const root) {
+    void ERaSmart::parseValueChange(const cJSON* const root, const cJSON* const id) {
         cJSON* condition = cJSON_GetObjectItem(root, AUTOMATION_VALUE_CHANGE_CONDITION_KEY);
         if (!cJSON_IsString(condition)) {
             return;
         }
         if (ERaStrCmp(condition->valuestring, "value_evaluation")) {
-            return this->parseValueEvaluation(root);
+            return this->parseValueEvaluation(root, id);
         }
 
         double threshold;
@@ -302,6 +318,7 @@ namespace eras {
         if (std::isnan(threshold)) {
             return;
         }
+        cJSON* scale = cJSON_GetObjectItem(root, AUTOMATION_VALUE_CHANGE_SCALE_KEY);
         cJSON* config = cJSON_GetObjectItem(root, AUTOMATION_VALUE_CHANGE_CONFIG_KEY);
         if (!cJSON_IsNumber(config)) {
             return;
@@ -322,43 +339,56 @@ namespace eras {
         }
         pCondition->addThreshold(threshold);
         pCondition->setConfigID(config->valueint);
+        pCondition->setScale(1.0);
+        if (cJSON_IsNumber(id)) {
+            pCondition->setID(id->valueint);
+        }
+        if (cJSON_IsNumber(scale)) {
+            pCondition->setScale(scale->valuedouble);
+        }
         this->mCurrentConditions.push_back(pCondition);
     }
 
-    void ERaSmart::parseScheduleOnce(const cJSON* const root, const std::string& dateTime) {
+    void ERaSmart::parseScheduleOnce(const cJSON* const root, const cJSON* const id, const std::string& dateTime) {
         ScheduleTimeType startingFrom = ERaTime::getTimeFromStringNumber(dateTime.c_str());
         ScheduleTimeType until = startingFrom + (Schedule::MINUTES * 10);
         ScheduleTimeType activePeriod = Schedule::MINUTES * 5;
         ScheduleConfigurationType activeRepeat = 1UL;
 
-        ScheduleConfigurationType scheduleConfiguration =  Schedule::createOneShotScheduleConfiguration();
+        ScheduleConfigurationType scheduleConfiguration = Schedule::createOneShotScheduleConfiguration();
 
         auto oneShot = new Schedule(*this->mTime);
         oneShot->setSchedule(startingFrom, until, activePeriod, scheduleConfiguration, activeRepeat);
 
         auto pCondition = new ScheduleCondition();
         pCondition->setSchedule(oneShot);
+        if (cJSON_IsNumber(id)) {
+            pCondition->setID(id->valueint);
+        }
         this->mCurrentConditions.push_back(pCondition);
     }
 
-    void ERaSmart::parseScheduleEveryDay(const cJSON* const root, const std::string& dateTime) {
+    void ERaSmart::parseScheduleEveryDay(const cJSON* const root, const cJSON* const id, const std::string& dateTime) {
         ScheduleTimeType startingFrom = ERaTime::getTimeFromStringNumber(dateTime.c_str());
         ScheduleTimeType until = 0UL; // Forever
         ScheduleTimeType activePeriod = Schedule::MINUTES * 5;
         ScheduleConfigurationType activeRepeat = 1UL;
         unsigned int repetitionPeriod = 1;
 
-        ScheduleConfigurationType scheduleConfiguration =  Schedule::createFixedDeltaScheduleConfiguration(ScheduleUnit::Days, repetitionPeriod);
+        ScheduleConfigurationType scheduleConfiguration = Schedule::createFixedDeltaScheduleConfiguration(ScheduleUnit::Days, repetitionPeriod);
 
         auto daily = new Schedule(*this->mTime);
         daily->setSchedule(startingFrom, until, activePeriod, scheduleConfiguration, activeRepeat);
 
         auto pCondition = new ScheduleCondition();
         pCondition->setSchedule(daily);
+        if (cJSON_IsNumber(id)) {
+            pCondition->setID(id->valueint);
+        }
         this->mCurrentConditions.push_back(pCondition);
     }
 
-    void ERaSmart::parseScheduleEveryWeek(const cJSON* const root, const std::string& dateTime) {
+    void ERaSmart::parseScheduleEveryWeek(const cJSON* const root, const cJSON* const id, const std::string& dateTime) {
         unsigned int startingFrom = ERaTime::getTimeFromStringNumber(dateTime.c_str());
         unsigned int until = 0UL; // Forever
         unsigned int executionPeriod = Schedule::MINUTES * 5;
@@ -389,17 +419,20 @@ namespace eras {
             item = item->next;
         }
 
-        ScheduleConfigurationType scheduleConfiguration =  Schedule::createWeeklyScheduleConfiguration(WeeklyMask);
+        ScheduleConfigurationType scheduleConfiguration = Schedule::createWeeklyScheduleConfiguration(WeeklyMask);
 
         auto weekly = new Schedule(*this->mTime);
         weekly->setSchedule(startingFrom, until, executionPeriod, scheduleConfiguration, activeRepeat);
 
         auto pCondition = new ScheduleCondition();
         pCondition->setSchedule(weekly);
+        if (cJSON_IsNumber(id)) {
+            pCondition->setID(id->valueint);
+        }
         this->mCurrentConditions.push_back(pCondition);
     }
 
-    void ERaSmart::parseSchedule(const cJSON* const root) {
+    void ERaSmart::parseSchedule(const cJSON* const root, const cJSON* const id) {
         if (this->mTime == nullptr) {
             return;
         }
@@ -420,13 +453,13 @@ namespace eras {
         }
 
         if (ERaStrCmp(type->valuestring, "once")) {
-            this->parseScheduleOnce(root, dateTime);
+            this->parseScheduleOnce(root, id, dateTime);
         }
         else if (ERaStrCmp(type->valuestring, "every_day")) {
-            this->parseScheduleEveryDay(root, dateTime);
+            this->parseScheduleEveryDay(root, id, dateTime);
         }
         else if (ERaStrCmp(type->valuestring, "every_week")) {
-            this->parseScheduleEveryWeek(root, dateTime);
+            this->parseScheduleEveryWeek(root, id, dateTime);
         }
     }
 
@@ -443,17 +476,18 @@ namespace eras {
             return;
         }
 
+        cJSON* id = cJSON_GetObjectItem(root, AUTOMATION_CONDITION_ID_KEY);
         cJSON* valueChange = cJSON_GetObjectItem(root, AUTOMATION_VALUE_CHANGE_KEY);
         if (cJSON_IsObject(valueChange)) {
-            this->parseValueChange(valueChange);
+            this->parseValueChange(valueChange, id);
         }
         cJSON* schedule = cJSON_GetObjectItem(root, AUTOMATION_SCHEDULE_KEY);
         if (cJSON_IsObject(schedule)) {
-            this->parseSchedule(schedule);
+            this->parseSchedule(schedule, id);
         }
     }
 
-    void ERaSmart::parseAduinoPinAction(const cJSON* const root, const cJSON* const value) {
+    void ERaSmart::parseAduinoPinAction(const cJSON* const root, const cJSON* const id, const cJSON* const value) {
         cJSON* pinNumber = cJSON_GetObjectItem(root, AUTOMATION_ARDUINO_PIN_NUMBER_KEY);
         if (!cJSON_IsNumber(pinNumber)) {
             return;
@@ -501,10 +535,13 @@ namespace eras {
             object = nullptr;
             payload = nullptr;
         });
+        if (cJSON_IsNumber(id)) {
+            pAction->setID(id->valueint);
+        }
         this->mCurrentActions.push_back(pAction);
     }
 
-    void ERaSmart::parseVirtualPinAction(const cJSON* const root, const cJSON* const value) {
+    void ERaSmart::parseVirtualPinAction(const cJSON* const root, const cJSON* const id, const cJSON* const value) {
         cJSON* pinNumber = cJSON_GetObjectItem(root, AUTOMATION_ARDUINO_PIN_NUMBER_KEY);
         if (!cJSON_IsNumber(pinNumber)) {
             return;
@@ -552,6 +589,9 @@ namespace eras {
             object = nullptr;
             payload = nullptr;
         });
+        if (cJSON_IsNumber(id)) {
+            pAction->setID(id->valueint);
+        }
         this->mCurrentActions.push_back(pAction);
     }
 
@@ -566,13 +606,14 @@ namespace eras {
         if (value == nullptr) {
             return;
         }
+        cJSON* id = cJSON_GetObjectItem(root, AUTOMATION_ARDUINO_ID_KEY);
         cJSON* arduinoPin = cJSON_GetObjectItem(root, AUTOMATION_ARDUINO_PIN_KEY);
         if (cJSON_IsObject(arduinoPin)) {
-            this->parseAduinoPinAction(arduinoPin, value);
+            this->parseAduinoPinAction(arduinoPin, id, value);
         }
         cJSON* virtualPin = cJSON_GetObjectItem(root, AUTOMATION_ARDUINO_VIRTUAL_PIN_KEY);
         if (cJSON_IsObject(virtualPin)) {
-            this->parseVirtualPinAction(virtualPin, value);
+            this->parseVirtualPinAction(virtualPin, id, value);
         }
     }
 
@@ -581,6 +622,7 @@ namespace eras {
         if (cJSON_IsObject(data)) {
             value = cJSON_GetObjectItem(data, AUTOMATION_MODBUS_VALUE_KEY);
         }
+        cJSON* id = cJSON_GetObjectItem(root, AUTOMATION_MODBUS_ID_KEY);
         cJSON* alias = cJSON_GetObjectItem(root, AUTOMATION_MODBUS_ALIAS_KEY);
         if (!cJSON_IsString(alias)) {
             return;
@@ -650,10 +692,14 @@ namespace eras {
             object = nullptr;
             payload = nullptr;
         });
+        if (cJSON_IsNumber(id)) {
+            pAction->setID(id->valueint);
+        }
         this->mCurrentActions.push_back(pAction);
     }
 
-    void ERaSmart::parseZigbeeDevice(const cJSON* const root, const cJSON* const data, const char* controlPayload) {
+    void ERaSmart::parseZigbeeDevice(const cJSON* const root, const cJSON* const data,
+                                     const cJSON* const actionID, const char* controlPayload) {
         cJSON* value {nullptr};
         if (cJSON_IsObject(data)) {
             value = cJSON_GetObjectItem(data, AUTOMATION_ZIGBEE_VALUE_KEY);
@@ -686,14 +732,18 @@ namespace eras {
 
             this->mCallback(topic, payload.c_str());
         });
+        if (cJSON_IsNumber(actionID)) {
+            pAction->setID(actionID->valueint);
+        }
         this->mCurrentActions.push_back(pAction);
     }
 
     void ERaSmart::parseZigbeeAction(const cJSON* const root, const cJSON* const data) {
+        cJSON* id = cJSON_GetObjectItem(root, AUTOMATION_ZIGBEE_ID_KEY);
         cJSON* device = cJSON_GetObjectItem(root, AUTOMATION_ZIGBEE_DEVICE_KEY);
         cJSON* controlPayload = cJSON_GetObjectItem(root, AUTOMATION_ZIGBEE_CONTROL_PAYLOAD_KEY);
         if (cJSON_IsObject(device) && cJSON_IsString(controlPayload)) {
-            this->parseZigbeeDevice(device, data, controlPayload->valuestring);
+            this->parseZigbeeDevice(device, data, id, controlPayload->valuestring);
         }
     }
 

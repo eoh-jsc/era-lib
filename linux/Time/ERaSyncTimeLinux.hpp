@@ -12,20 +12,11 @@ class ERaSyncTimeLinux
 {
 public:
     ERaSyncTimeLinux()
-        : timeZone(7L)
-        , syncInterval(300000L)
+        : syncInterval(300000L)
         , prevMillis(0L)
     {}
     virtual ~ERaSyncTimeLinux()
     {}
-
-    void setTimeZone(long tz = 7L) override {
-        this->timeZone = tz;
-    }
-
-    long getTimeZone() override {
-        return this->timeZone;
-    }
 
     void begin() override {
         this->getLocalTime();
@@ -63,7 +54,6 @@ private:
         this->setTime(timestamp);
     }
 
-    long timeZone;
     unsigned long syncInterval;
     unsigned long prevMillis;
 };

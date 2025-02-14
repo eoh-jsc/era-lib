@@ -106,7 +106,8 @@ static const ERaConfig_t ERaDefault = {
 enum WiFiFlagT {
     WIFI_FLAG_INVALID = 0x00,
     WIFI_FLAG_CONNECTED = 0x01,
-    WIFI_FLAG_FAILED = 0x02
+    WIFI_FLAG_CURRENT = 0x02,
+    WIFI_FLAG_FAILED = 0x04
 };
 
 enum ConfigFlagT {
@@ -277,6 +278,8 @@ private:
     bool scanNetwork(const char* ssid);
     bool scanNetworks(const char* ssid);
     cJSON* scanNetworksJson(int nets, bool compact = false);
+    void reFlagNewNetwork(const char* ssid);
+    void copyNewNetwork();
     void connectNetwork();
     void connectNewNetwork();
     void connectNewNetworkResult() override;
@@ -290,12 +293,16 @@ private:
     void switchToSTA();
     void switchToAPSTA();
 
+    void setupHostname();
+
+    String getChipID(size_t len = 0UL);
+
 #if defined(ERA_DETECT_SSL)
     void createClient(uint16_t port);
 #endif
 
     template <int size>
-    void getWiFiName(char(&ptr)[size], bool withPrefix = true);
+    void getWiFiName(char(&ptr)[size], bool withPrefix = true, size_t len = 0UL);
     template <int size>
     void getImeiChip(char(&ptr)[size]);
     void replace(char* buf, char src, char dst);
@@ -1352,11 +1359,36 @@ cJSON* ERaPnP<Transport>::scanNetworksJson(int nets, bool compact) {
 }
 
 template <class Transport>
+void ERaPnP<Transport>::reFlagNewNetwork(const char* ssid) {
+    if (this->newWiFi.flag == WiFiFlagT::WIFI_FLAG_INVALID) {
+        return;
+    }
+
+    if (ERaStrCmp(ssid, this->newWiFi.ssid)) {
+        return;
+    }
+    this->newWiFi.flag = WiFiFlagT::WIFI_FLAG_FAILED;
+}
+
+template <class Transport>
+void ERaPnP<Transport>::copyNewNetwork() {
+    ClearArray(ERaConfig.backupSSID);
+    ClearArray(ERaConfig.backupPass);
+    CopyToArray(ERaConfig.ssid, ERaConfig.backupSSID);
+    CopyToArray(ERaConfig.pass, ERaConfig.backupPass);
+    ClearArray(ERaConfig.ssid);
+    ClearArray(ERaConfig.pass);
+    CopyToArray(this->newWiFi.ssid, ERaConfig.ssid);
+    CopyToArray(this->newWiFi.pass, ERaConfig.pass);
+    ERaConfig.hasBackup = true;
+    ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_STORE, true);
+
+    this->getTransp().setSSID(ERaConfig.ssid);
+}
+
+template <class Transport>
 void ERaPnP<Transport>::connectNetwork() {
-    char ssidAP[64] {0};
-    this->getWiFiName(ssidAP);
-    this->replace(ssidAP, '.', '-');
-    WiFi.setHostname(ssidAP);
+    this->setupHostname();
 
     this->connectWiFi(ERaConfig.ssid, ERaConfig.pass);
     this->connectWiFiBackup();
@@ -1423,17 +1455,7 @@ void ERaPnP<Transport>::connectNewNetwork() {
 
     this->connectWiFi(this->newWiFi.ssid, this->newWiFi.pass);
     if (this->netConnected()) {
-        ClearArray(ERaConfig.backupSSID);
-        ClearArray(ERaConfig.backupPass);
-        CopyToArray(ERaConfig.ssid, ERaConfig.backupSSID);
-        CopyToArray(ERaConfig.pass, ERaConfig.backupPass);
-        ClearArray(ERaConfig.ssid);
-        ClearArray(ERaConfig.pass);
-        CopyToArray(this->newWiFi.ssid, ERaConfig.ssid);
-        CopyToArray(this->newWiFi.pass, ERaConfig.pass);
-        ERaConfig.hasBackup = true;
         this->newWiFi.flag = WiFiFlagT::WIFI_FLAG_CONNECTED;
-        ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_STORE, true);
         ERaState::set(StateT::STATE_CONNECTING_CLOUD);
     }
     else {
@@ -1447,6 +1469,13 @@ void ERaPnP<Transport>::connectNewNetworkResult() {
     bool status {false};
     switch (this->newWiFi.flag) {
         case WiFiFlagT::WIFI_FLAG_CONNECTED:
+            status = Base::sendChangeResultWiFi(R"json({"success":1})json");
+            if (status) {
+                this->copyNewNetwork();
+            }
+            ERA_LOG(TAG, ERA_PSTR("Connected to new WiFi: %s"), this->newWiFi.ssid);
+            break;
+        case WiFiFlagT::WIFI_FLAG_CURRENT:
             status = Base::sendChangeResultWiFi(R"json({"success":1})json");
             ERA_LOG(TAG, ERA_PSTR("Connected to new WiFi: %s"), this->newWiFi.ssid);
             break;
@@ -1490,6 +1519,9 @@ void ERaPnP<Transport>::connectCloud() {
 template <class Transport>
 void ERaPnP<Transport>::connectWiFi(const char* ssid, const char* pass) {
     if (this->netConnected()) {
+        return;
+    }
+    if (ssid == nullptr) {
         return;
     }
     if (!strlen(ssid)) {
@@ -1545,6 +1577,7 @@ void ERaPnP<Transport>::connectWiFi(const char* ssid, const char* pass) {
             }
         }
     }
+    this->reFlagNewNetwork(ssid);
     this->getTransp().setSSID(ssid);
     ERA_LOG(TAG, ERA_PSTR("Connected to WiFi"));
 
@@ -1571,7 +1604,7 @@ void ERaPnP<Transport>::connectNewWiFi(const char* ssid, const char* pass) {
     if (!ERaStrCmp(ERaConfig.ssid, ssid)) {
     }
     else if (ERaStrCmp(ERaConfig.pass, pass)) {
-        this->newWiFi.flag = WiFiFlagT::WIFI_FLAG_CONNECTED;
+        this->newWiFi.flag = WiFiFlagT::WIFI_FLAG_CURRENT;
     }
     else {
         this->newWiFi.flag = WiFiFlagT::WIFI_FLAG_FAILED;
@@ -1665,6 +1698,49 @@ void ERaPnP<Transport>::switchToAPSTA() {
     ERaState::set(StateT::STATE_CONNECTING_NETWORK);
 }
 
+template <class Transport>
+void ERaPnP<Transport>::setupHostname() {
+    char ssidAP[64] {0};
+    this->getWiFiName(ssidAP, true, 4UL);
+    this->replace(ssidAP, '.', '-');
+
+#if defined(ERA_HOSTNAME_IDF)
+    bool ret = wifi_station_set_hostname(const_cast<char*>(ssidAP));
+    if (!ret) {
+        ERA_LOG_ERROR(TAG, ERA_PSTR("Setting WiFi Hostname failed"));
+    }
+
+    for (netif* intf = netif_list; intf; intf = intf->next) {
+#if LWIP_VERSION_MAJOR == 1
+        intf->hostname = (char*)wifi_station_get_hostname();
+#else
+        intf->hostname = wifi_station_get_hostname();
+#endif
+        if (netif_dhcp_data(intf) != nullptr) {
+            err_t lwipret = dhcp_renew(intf);
+            if (lwipret != ERR_OK) {
+                ERA_LOG_ERROR(TAG, ERA_PSTR("wifi_apply_hostname_(%s): lwIP error %d on interface %c%c (index %d)"),
+                            intf->hostname, (int)lwipret, intf->name[0], intf->name[1], intf->num);
+                ret = false;
+            }
+        }
+    }
+#else
+    WiFi.setHostname(ssidAP);
+#endif
+}
+
+template <class Transport>
+String ERaPnP<Transport>::getChipID(size_t len) {
+    String macAddr = WiFi.macAddress();
+    macAddr.replace(":", "");
+    macAddr.toLowerCase();
+    if (len) {
+        macAddr = macAddr.substring(macAddr.length() - len);
+    }
+    return macAddr;
+}
+
 #if defined(ERA_DETECT_SSL)
     template <class Transport>
     void ERaPnP<Transport>::createClient(uint16_t port) {
@@ -1703,16 +1779,14 @@ void ERaPnP<Transport>::switchToAPSTA() {
 
 template <class Transport>
 template <int size>
-void ERaPnP<Transport>::getWiFiName(char(&ptr)[size], bool withPrefix) {
-    String macAddr = WiFi.macAddress();
-    macAddr.replace(":", "");
-    macAddr.toLowerCase();
+void ERaPnP<Transport>::getWiFiName(char(&ptr)[size], bool withPrefix, size_t len) {
     ClearArray(ptr);
     if (withPrefix) {
-        FormatString(ptr, "%s.%s.%s", Base::getERaORG(), Base::getERaModel(), macAddr.c_str());
+        FormatString(ptr, "%s.%s.%s", Base::getERaORG(), Base::getERaModel(),
+                                      this->getChipID(len).c_str());
     }
     else {
-        FormatString(ptr, "%s.%s", Base::getERaORG(), macAddr.c_str());
+        FormatString(ptr, "%s.%s", Base::getERaORG(), this->getChipID(len).c_str());
     }
     ERaToLowerCase(ptr);
 }
@@ -1720,9 +1794,6 @@ void ERaPnP<Transport>::getWiFiName(char(&ptr)[size], bool withPrefix) {
 template <class Transport>
 template <int size>
 void ERaPnP<Transport>::getImeiChip(char(&ptr)[size]) {
-    String macAddr = WiFi.macAddress();
-    macAddr.replace(":", "");
-    macAddr.toLowerCase();
     ClearArray(ptr);
 #if defined(ERA_AUTH_TOKEN)
     FormatString(ptr, ERA_AUTH_TOKEN);
@@ -1731,7 +1802,7 @@ void ERaPnP<Transport>::getImeiChip(char(&ptr)[size]) {
         FormatString(ptr, this->authToken);
     }
     else {
-        FormatString(ptr, "ERA-%s", macAddr.c_str());
+        FormatString(ptr, "ERA-%s", this->getChipID().c_str());
     }
 #endif
 }

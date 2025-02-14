@@ -67,7 +67,10 @@ typedef struct __ModbusConfig_t {
     uint16_t delay;
     IPSlave_t ipSlave;
     uint8_t totalFail;
-    float scaleWrite;
+    union {
+        float scale;
+        float scaleWrite;
+    };
 } ModbusConfig_t;
 
 typedef struct __Action_t {
@@ -717,9 +720,16 @@ void ERaModbusEntry::parseOneConfigSensorReadWrite(const char* ptr, size_t len, 
     size_t configIndex {0};
     int configParam[20] {0};
 
+    bool scaleItem {false};
+    config.scale = 1.0f;
+
     for (size_t i = 0; i < len; ++i) {
         buf[position++] = ptr[i];
-        if (ptr[i] == ',') {
+        if (!scaleItem && ptr[i] == '-') {
+            scaleItem = true;
+            position = 0;
+        }
+        if (!scaleItem && ptr[i] == ',') {
             buf[--position] = '\0';
             configParam[configIndex++] = atoi(buf);
             position = 0;
@@ -727,6 +737,15 @@ void ERaModbusEntry::parseOneConfigSensorReadWrite(const char* ptr, size_t len, 
                 break;
             }
         }
+    }
+    if (scaleItem && position && (buf[--position] == ',')) {
+        buf[position] = '\0';
+        for (size_t i = 0; i < position; ++i) {
+            if (buf[i] == ',') {
+                buf[i] = '.';
+            }
+        }
+        config.scale = atof(buf);
     }
     this->actOneConfigSensorReadWrite(configParam, configIndex, config);
 
@@ -755,7 +774,6 @@ void ERaModbusEntry::actOneConfigSensorReadWrite(const int* ptr, size_t len, Mod
         config.extra[i] = ptr[i + 7];
     }
 
-    config.scaleWrite = 1.0f;
     config.ipSlave.ip.dword = 0UL;
     config.ipSlave.port = 0;
 }
@@ -1201,12 +1219,17 @@ ModbusConfig_t* ERaModbusEntry::processParseConfigSensorParamJson(const cJSON* c
         ERaModbusEntry::stringToUint8(newConfig.extra, extra->valuestring);
     }
 
+    newConfig.scale = 1.0f;
+    newConfig.scaleWrite = 1.0f;
+
+    cJSON* scale = cJSON_GetObjectItem(root, MODBUS_PARAM_SCALE_KEY);
+    if (cJSON_IsNumber(scale)) {
+        newConfig.scale = scale->valuedouble;
+    }
+
     cJSON* scaleWrite = cJSON_GetObjectItem(root, MODBUS_PARAM_SCALE_WRITE_KEY);
     if (cJSON_IsNumber(scaleWrite)) {
         newConfig.scaleWrite = scaleWrite->valuedouble;
-    }
-    else {
-        newConfig.scaleWrite = 1.0f;
     }
 
     newConfig.ipSlave.port = ipSlave.port;

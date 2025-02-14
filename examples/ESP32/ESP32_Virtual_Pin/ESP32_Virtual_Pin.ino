@@ -79,6 +79,12 @@ ERA_WRITE(V1) {
     ERa.virtualWrite(V0, digitalRead(LED_PIN));
 }
 
+/* This function is triggered whenever an SMS is sent */
+ERA_WRITE_SMS() {
+    ERA_LOG("ERa", "Write SMS to %s: %s", to, message);
+    return true;
+}
+
 /* This function will run every time ERa is connected */
 ERA_CONNECTED() {
     ERA_LOG("ERa", "ERa connected!");

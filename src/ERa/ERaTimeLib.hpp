@@ -22,6 +22,8 @@
 #define OFFSET_TAI_UTC          ((unsigned long)(37UL))
 #define OFFSET_TAI_UNIX         ((unsigned long)(378777600UL)) // Offset 1958-01-01T00:00:00
 
+#define DEFAULT_TIMEZONE        ((long)(7L))
+
 typedef struct  {
     uint8_t second;
     uint8_t minute;
@@ -48,6 +50,7 @@ protected:
 public:
     ERaTime()
         : sysTime(0L)
+        , timeZone(DEFAULT_TIMEZONE)
         , prevMillis(0L)
         , setTimeCb(NULL)
         , getTimeCb(NULL)
@@ -55,14 +58,15 @@ public:
     virtual ~ERaTime()
     {}
 
-    virtual void begin() = 0;
-    virtual void run() = 0;
+    virtual void begin() {};
+    virtual void run() {};
 
-    virtual void setTimeZone(long) {
+    virtual void setTimeZone(long tz = DEFAULT_TIMEZONE) {
+        this->timeZone = tz;
     }
 
     virtual long getTimeZone() {
-        return 0L;
+        return this->timeZone;
     }
 
     void setSetTimeCallback(SetTimeCallback_t cb) {
@@ -78,14 +82,14 @@ public:
 
         unsigned long currentMillis = ERaMillis();
         if ((currentMillis - this->prevMillis) < 1000L) {
-            return this->getSysTime();
+            return this->getSysTime(false);
         }
 
         unsigned long skipTimes = (currentMillis - this->prevMillis) / 1000L;
         this->prevMillis += (1000L * skipTimes);
         this->sysTime += skipTimes;
 
-        return this->getSysTime();
+        return this->getSysTime(true);
     }
 
     void setTime(time_t _time) {
@@ -304,14 +308,17 @@ protected:
                 (((1970 + (year)) % 100) || !((1970 + (year)) % 400)));
     }
 
-    time_t getSysTime() {
-        if (this->getTimeCb != NULL) {
+    time_t getSysTime(bool call) {
+        if (!call) {
+        }
+        else if (this->getTimeCb != NULL) {
             return this->getTimeCb();
         }
         return this->sysTime;
     }
 
     time_t sysTime;
+    long timeZone;
     unsigned long prevMillis;
     TimeElement_t time;
     const uint8_t monthDays[12] {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};

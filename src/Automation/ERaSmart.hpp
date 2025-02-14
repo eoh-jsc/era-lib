@@ -69,23 +69,25 @@ namespace eras {
         void parseAutomations(const cJSON* const root);
         void parseAutomation(const cJSON* const root);
 
-        void parseBooleanEvaluation(const cJSON* const root, const cJSON* const configuration);
-        void parseRangeEvaluation(const cJSON* const root, const cJSON* const configuration);
-        void parseEvaluation(const cJSON* const root, const cJSON* const type, const cJSON* const configuration);
-        void parseValueEvaluation(const cJSON* const root);
-        void parseValueChange(const cJSON* const root);
-        void parseScheduleOnce(const cJSON* const root, const std::string& dateTime);
-        void parseScheduleEveryDay(const cJSON* const root, const std::string& dateTime);
-        void parseScheduleEveryWeek(const cJSON* const root, const std::string& dateTime);
-        void parseSchedule(const cJSON* const root);
+        void parseBooleanEvaluation(const cJSON* const root, const cJSON* const id, const cJSON* const configuration);
+        void parseRangeEvaluation(const cJSON* const root, const cJSON* const id, const cJSON* const configuration);
+        void parseEvaluation(const cJSON* const root, const cJSON* const id, const cJSON* const type,
+                                                                            const cJSON* const configuration);
+        void parseValueEvaluation(const cJSON* const root, const cJSON* const id);
+        void parseValueChange(const cJSON* const root, const cJSON* const id);
+        void parseScheduleOnce(const cJSON* const root, const cJSON* const id, const std::string& dateTime);
+        void parseScheduleEveryDay(const cJSON* const root, const cJSON* const id, const std::string& dateTime);
+        void parseScheduleEveryWeek(const cJSON* const root, const cJSON* const id, const std::string& dateTime);
+        void parseSchedule(const cJSON* const root, const cJSON* const id);
         void parseConditions(const cJSON* const root);
         void parseCondition(const cJSON* const root);
 
-        void parseAduinoPinAction(const cJSON* const root, const cJSON* const value);
-        void parseVirtualPinAction(const cJSON* const root, const cJSON* const value);
+        void parseAduinoPinAction(const cJSON* const root, const cJSON* const id, const cJSON* const value);
+        void parseVirtualPinAction(const cJSON* const root, const cJSON* const id, const cJSON* const value);
         void parseArduinoAction(const cJSON* const root, const cJSON* const data);
         void parseModbusAction(const cJSON* const root, const cJSON* const data);
-        void parseZigbeeDevice(const cJSON* const root, const cJSON* const data, const char* controlPayload);
+        void parseZigbeeDevice(const cJSON* const root, const cJSON* const data, const cJSON* const actionID,
+                                                                                const char* controlPayload);
         void parseZigbeeAction(const cJSON* const root, const cJSON* const data);
 
         void parseDelayAction(uint32_t delay);

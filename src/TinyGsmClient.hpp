@@ -13,7 +13,8 @@
     #if defined(ERA_GSM_RX_BUFFER)
         #define TINY_GSM_RX_BUFFER              ERA_GSM_RX_BUFFER
     #else
-        #define TINY_GSM_RX_BUFFER              ERA_MAX_READ_BYTES * 2
+        #define TINY_GSM_RX_BUFFER              1460
+        // #define TINY_GSM_RX_BUFFER              ERA_MAX_READ_BYTES * 2
     #endif
 #endif
 

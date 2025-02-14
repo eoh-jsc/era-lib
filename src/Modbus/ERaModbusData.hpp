@@ -146,6 +146,15 @@ public:
             return this->setType(ModbusDataT::MODBUS_FLOAT);            
         }
 
+        /* Custom */
+        iterator& setInt4NibblesFirst() {
+            return this->setType(ModbusDataT::MODBUS_INT_4_NIBBLES_FIRST);
+        }
+
+        iterator& setInt4NibblesLast() {
+            return this->setType(ModbusDataT::MODBUS_INT_4_NIBBLES_LAST);
+        }
+
         iterator& setBigEndian() {
             return this->setConvert(ModbusConvertT::MODBUS_BIG_ENDIAN);
         }
@@ -496,6 +505,11 @@ void ERaModbusData::processParseConfigSensorParam(const cJSON* const root, uint8
         return;
     }
 
+    cJSON* len = cJSON_GetObjectItem(root, MODBUS_PARAM_LENGTH_KEY);
+    if (!cJSON_IsNumber(len)) {
+        return;
+    }
+
     cJSON* configId = cJSON_GetObjectItem(root, MODBUS_PARAM_CONFIG_ID_KEY);
     if (!cJSON_IsNumber(configId)) {
         return;
@@ -526,16 +540,49 @@ void ERaModbusData::processParseConfigSensorParam(const cJSON* const root, uint8
             break;
         case ModbusFunctionT::READ_HOLDING_REGISTERS:
         case ModbusFunctionT::READ_INPUT_REGISTERS:
-            if (ERaStrCmp(transformer->valuestring, "int_all")) {
-                it.setInt16();
+            /* Integer 16 */
+            if (ERaStrCmp(transformer->valuestring, "int_16_ab") ||
+                ERaStrCmp(transformer->valuestring, "int_all")) {
+                it.setInt16().setBigEndian().setLength(1);
             }
-            else if (ERaStrCmp(transformer->valuestring, "uint_32")) {
+            else if (ERaStrCmp(transformer->valuestring, "int_16_ba")) {
+                it.setInt16().setLittleEndian().setLength(1);
+            }
+            /* Unsigned Integer 16 */
+            else if (ERaStrCmp(transformer->valuestring, "uint_16_ab")) {
+                it.setUint16().setBigEndian().setLength(1);
+            }
+            else if (ERaStrCmp(transformer->valuestring, "uint_16_ba")) {
+                it.setUint16().setLittleEndian().setLength(1);
+            }
+            /* Integer 32 */
+            else if (ERaStrCmp(transformer->valuestring, "int_32_abcd")) {
+                it.setInt32().setBigEndian().setLength(2);
+            }
+            else if (ERaStrCmp(transformer->valuestring, "int_32_dcba")) {
+                it.setInt32().setLittleEndian().setLength(2);
+            }
+            else if (ERaStrCmp(transformer->valuestring, "int_32_badc")) {
+                it.setInt32().setMidBigEndian().setLength(2);
+            }
+            else if (ERaStrCmp(transformer->valuestring, "int_32_cdab")) {
+                it.setInt32().setMidLittleEndian().setLength(2);
+            }
+            /* Unsigned Integer 32 */
+            else if (ERaStrCmp(transformer->valuestring, "uint_32_abcd") ||
+                     ERaStrCmp(transformer->valuestring, "uint_32")) {
+                it.setUint32().setBigEndian().setLength(2);
+            }
+            else if (ERaStrCmp(transformer->valuestring, "uint_32_dcba")) {
+                it.setUint32().setLittleEndian().setLength(2);
+            }
+            else if (ERaStrCmp(transformer->valuestring, "uint_32_badc")) {
+                it.setUint32().setMidBigEndian().setLength(2);
+            }
+            else if (ERaStrCmp(transformer->valuestring, "uint_32_cdab")) {
                 it.setUint32().setMidLittleEndian().setLength(2);
             }
-            else if (ERaStrCmp(transformer->valuestring, "int_first4") ||
-                     ERaStrCmp(transformer->valuestring, "int_last4")) {
-                it.setInt32().setLength(2);
-            }
+            /* Float */
             else if (ERaStrCmp(transformer->valuestring, "float_abcd")) {
                 it.setFloat().setBigEndian().setLength(2);
             }
@@ -549,9 +596,21 @@ void ERaModbusData::processParseConfigSensorParam(const cJSON* const root, uint8
                      ERaStrCmp(transformer->valuestring, "float_cdba")) {
                 it.setFloat().setMidLittleEndian().setLength(2);
             }
+            /* AI Convert */
             else if (ERaStrCmp(transformer->valuestring, "convert_ai")) {
-                it.setUint16();
+                it.setUint16().setBigEndian().setLength(1);
                 this->processParseParamConvertAi(root, it);
+            }
+            /* Custom */
+            else if (ERaStrCmp(transformer->valuestring, "int_first4")) {
+                it.setInt4NibblesFirst().setBigEndian().setLength(
+                    ERaMathClamp(len->valueint, (ERaInt_t)1, (ERaInt_t)125)
+                );
+            }
+            else if (ERaStrCmp(transformer->valuestring, "int_last4")) {
+                it.setInt4NibblesLast().setBigEndian().setLength(
+                    ERaMathClamp(len->valueint, (ERaInt_t)1, (ERaInt_t)125)
+                );
             }
             break;
         default:
@@ -763,6 +822,11 @@ bool ERaModbusData::handlerBytes(ERaModbusRequest* request, ERaModbusResponse* r
             case ModbusDataT::MODBUS_FLOAT:
                 expectedLen = 4;
                 break;
+            case ModbusDataT::MODBUS_INT_4_NIBBLES_FIRST:
+            case ModbusDataT::MODBUS_INT_4_NIBBLES_LAST:
+                expectedLen = BUILD_WORD(pReg->len1, pReg->len2);
+                expectedLen *= 2;
+                break;
             default:
                 continue;
         }
@@ -776,6 +840,9 @@ bool ERaModbusData::handlerBytes(ERaModbusRequest* request, ERaModbusResponse* r
                 continue;
         }
         switch (pReg->type) {
+            case ModbusDataT::MODBUS_INT_4_NIBBLES_LAST:
+                byteIndex += (expectedLen - 2);
+            case ModbusDataT::MODBUS_INT_4_NIBBLES_FIRST:
             case ModbusDataT::MODBUS_INT16:
                 if (pReg->convert == ModbusConvertT::MODBUS_BIG_ENDIAN) {
                     (*pReg->value) = (int16_t)BUILD_UINT16_BE(pData[byteIndex]);

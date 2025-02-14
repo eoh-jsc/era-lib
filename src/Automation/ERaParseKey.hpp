@@ -23,12 +23,15 @@
 
 #define AUTOMATION_VALUE_CHANGE_CONDITION_KEY           "c"
 #define AUTOMATION_VALUE_CHANGE_VALUE_KEY               "v"
+#define AUTOMATION_VALUE_CHANGE_SCALE_KEY               "s"
 #define AUTOMATION_VALUE_CHANGE_CONFIG_KEY              "c2"
 #define AUTOMATION_VALUE_CHANGE_KEY                     "vc"
 
+#define AUTOMATION_CONDITION_ID_KEY                     "i"
 #define AUTOMATION_CONDITIONS_KEY                       "c"
 
 
+#define AUTOMATION_ARDUINO_ID_KEY                       "i"
 #define AUTOMATION_ARDUINO_PIN_KEY                      "p"
 #define AUTOMATION_ARDUINO_PIN_NUMBER_KEY               "pn"
 #define AUTOMATION_ARDUINO_VALUE_KEY                    "v"
@@ -36,10 +39,12 @@
 #define AUTOMATION_ARDUINO_VIRTUAL_PIN_KEY              "vp"
 #define AUTOMATION_ARDUINO_ACTION_KEY                   "aa"
 
+#define AUTOMATION_MODBUS_ID_KEY                        "i"
 #define AUTOMATION_MODBUS_VALUE_KEY                     "v"
 #define AUTOMATION_MODBUS_ALIAS_KEY                     "k"
 #define AUTOMATION_MODBUS_ACTION_KEY                    "ma"
 
+#define AUTOMATION_ZIGBEE_ID_KEY                        "i"
 #define AUTOMATION_ZIGBEE_VALUE_KEY                     "v"
 #define AUTOMATION_ZIGBEE_CONTROL_PAYLOAD_KEY           "cp"
 #define AUTOMATION_ZIGBEE_IEEE_KEY                      "ia"

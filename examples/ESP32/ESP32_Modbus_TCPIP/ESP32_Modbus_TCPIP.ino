@@ -35,6 +35,12 @@ WiFiClient mbTcpClient;
 ERaEspTime syncTime;
 ERaSmart smart(ERa, syncTime);
 
+/* This function is triggered whenever an SMS is sent */
+ERA_WRITE_SMS() {
+    ERA_LOG("ERa", "Write SMS to %s: %s", to, message);
+    return true;
+}
+
 /* This function will run every time ERa is connected */
 ERA_CONNECTED() {
     ERA_LOG("ERa", "ERa connected!");

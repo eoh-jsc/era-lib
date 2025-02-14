@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cinttypes>
+
 #include <vector>
 #include <ERa/ERaDetect.hpp>
 #include <Automation/ERaSchedule.hpp>
@@ -8,7 +10,37 @@
 
 namespace eras {
 
+    class Log
+    {
+    protected:
+        const char* TAG = "Automation";
+
+    public:
+        explicit Log() = default;
+
+        void setID(ERaUInt_t id) {
+            this->mID = id;
+        }
+
+        ERaUInt_t getID() const {
+            return this->mID;
+        }
+
+        virtual void log() {
+            if (!this->mID) {
+                return;
+            }
+            this->print();
+        }
+
+    protected:
+        virtual void print() = 0;
+
+        ERaUInt_t mID {0};
+    };
+
     class Condition
+        : public Log
     {
     public:
         virtual ~Condition() = default;
@@ -16,6 +48,9 @@ namespace eras {
         virtual bool check() = 0;
 
     protected:
+        virtual void print() override {
+            ERA_LOG_WARNING(this->TAG, "Condition '%" PRIu32 "' actived!", this->mID);
+        }
     };
 
     class Automation;
@@ -40,6 +75,7 @@ namespace eras {
     class ActionList;
 
     class Action
+        : public Log
     {
     public:
         virtual ~Action() = default;
@@ -53,6 +89,7 @@ namespace eras {
 
         virtual void play() {
             this->mIsRunning = true;
+            this->log();
             this->playNext();
         }
 
@@ -82,6 +119,10 @@ namespace eras {
                 return false;
             }
             return this->mNext->isRunning();
+        }
+
+        virtual void print() override {
+            ERA_LOG_WARNING(this->TAG, "Action '%" PRIu32 "' triggered!", this->mID);
         }
 
         Action* mNext {nullptr};
@@ -259,6 +300,21 @@ namespace eras {
         }
 
     protected:
+        void log() override {
+            this->print();
+        }
+
+        void print() override {
+            std::string ids = "";
+            for (const auto& condition : this->mConditions) {
+                ids += to_string(condition->getID());
+                if (&condition != &this->mConditions.back()) {
+                    ids += ", ";
+                }
+            }
+            ERA_LOG_WARNING(this->TAG, "AndCondition actived with conditions: '%s'", ids.c_str());
+        }
+
         std::vector<Condition*> mConditions {};
     };
 
@@ -293,13 +349,17 @@ namespace eras {
         }
 
         void addThreshold(const T& threshold) {
-            this->mPrimaryThresholds.push_back(threshold);
+            this->mPrimaryThresholds.emplace_back(std::move(threshold));
         }
 
         void addThresholds(const std::vector<T>& thresholds) {
             for (const auto& threshold : thresholds) {
                 this->addThreshold(threshold);
             }
+        }
+
+        void setScale(const T& scale) {
+            this->mScale = scale;
         }
 
         void setConfigID(ERaUInt_t configID) {
@@ -335,6 +395,7 @@ namespace eras {
         std::function<T()> mFn;
         std::vector<T> mPrimaryThresholds {};
         ERaUInt_t mConfigID {0};
+        T mScale {};
         T mValue {};
         bool mHasValue {false};
         bool mReset {false};
@@ -415,11 +476,11 @@ namespace eras {
                 return false;
             }
             for (const auto& threshold : this->mPrimaryThresholds) {
-                if (value != threshold) {
-                    return false;
+                if (value == threshold) {
+                    return true;
                 }
             }
-            return true;
+            return false;
         }
 
         const char* getComponentSource() const override {
@@ -477,7 +538,7 @@ namespace eras {
         {}
 
         void addPrimaryThreshold(const T& threshold) {
-            this->mPrimaryThresholds.push_back(threshold);
+            this->mPrimaryThresholds.emplace_back(std::move(threshold));
         }
 
         void addPrimaryThresholds(const std::vector<T>& thresholds) {
@@ -487,7 +548,7 @@ namespace eras {
         }
 
         void addSecondaryThreshold(const T& threshold) {
-            this->mSecondaryThresholds.push_back(threshold);
+            this->mSecondaryThresholds.emplace_back(std::move(threshold));
         }
 
         void addSecondaryThresholds(const std::vector<T>& thresholds) {
@@ -577,6 +638,7 @@ namespace eras {
             auto fn = std::bind(&DelayAction::playNext, this);
             this->mIsRunning = true;
             this->setTimeout("", this->mDelay, fn);
+            this->log();
         }
 
         void stop() override {
@@ -588,6 +650,14 @@ namespace eras {
     protected:
         const char* getComponentSource() const override {
             return "DelayAction";
+        }
+
+        void log() override {
+            this->print();
+        }
+
+        void print() override {
+            ERA_LOG_WARNING(this->TAG, "Delay '%" PRIu32 "' triggered!", this->mDelay);
         }
 
         unsigned long mDelay {0};
@@ -610,6 +680,7 @@ namespace eras {
         void play() override {
             this->mFn();
             this->mIsRunning = true;
+            this->log();
             this->playNext();
         }
 
@@ -678,11 +749,21 @@ namespace eras {
     protected:
         void execute() {
             this->sendNotify(this->mAutomateId, this->mNotifyId);
+            this->log();
             this->playNext();
         }
 
         const char* getComponentSource() const override {
             return "NotifyAction";
+        }
+
+        void log() override {
+            this->print();
+        }
+
+        void print() override {
+            ERA_LOG_WARNING(this->TAG, "Notify '%" PRIu32 ": %" PRIu32 "' triggered!",
+                            this->mAutomateId, this->mNotifyId);
         }
 
         ERaUInt_t mAutomateId {0};
@@ -752,11 +833,21 @@ namespace eras {
     protected:
         void execute() {
             this->sendEmail(this->mAutomateId, this->mEmailId);
+            this->log();
             this->playNext();
         }
 
         const char* getComponentSource() const override {
             return "EmailAction";
+        }
+
+        void log() override {
+            this->print();
+        }
+
+        void print() override {
+            ERA_LOG_WARNING(this->TAG, "Email '%" PRIu32 ": %" PRIu32 "' triggered!",
+                            this->mAutomateId, this->mEmailId);
         }
 
         ERaUInt_t mAutomateId {0};
@@ -804,6 +895,7 @@ namespace eras {
             if (!cond) {
                 return;
             }
+            this->mCondition->log();
             this->check();
         }
 

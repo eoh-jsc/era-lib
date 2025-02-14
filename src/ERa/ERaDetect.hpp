@@ -19,7 +19,7 @@
         #define ERA_MAX_VIRTUAL_PINS        100
     #endif
 
-    #define ERA_100_PINS
+    #define ERA_255_PINS
 
     #if defined(CONFIG_FREERTOS_UNICORE) || \
         (portNUM_PROCESSORS == 1)
@@ -222,7 +222,7 @@
         #define ERA_MAX_VIRTUAL_PINS        100
     #endif
 
-    #define ERA_100_PINS
+    #define ERA_255_PINS
 
     #if defined(ERA_NO_RTOS)
         #define ERA_NO_YIELD
@@ -315,7 +315,7 @@
         #define ERA_MAX_VIRTUAL_PINS        100
     #endif
 
-    #define ERA_100_PINS
+    #define ERA_255_PINS
 
     #if !defined(__MBED__)
         #define ERA_OTA
@@ -544,7 +544,7 @@
         #define ERA_MAX_VIRTUAL_PINS        100
     #endif
 
-    #define ERA_100_PINS
+    #define ERA_255_PINS
 
     #define ERA_BT
     #define ERA_OTA
@@ -905,7 +905,7 @@
         #define ERA_MAX_VIRTUAL_PINS        100
     #endif
 
-    #define ERA_100_PINS
+    #define ERA_255_PINS
 
     #if !defined(ERA_STRING_CAPACITY_MAX)
         #define ERA_STRING_CAPACITY_MAX     3145728
@@ -948,6 +948,18 @@
         #define ERA_BOARD_TYPE              "Unknown"
     #endif
 
+#endif
+
+#if defined(ERA_255_PINS)
+    #if !defined(ERA_100_PINS)
+        #define ERA_100_PINS
+    #endif
+
+    #undef ERA_MAX_GPIO_PINS
+    #define ERA_MAX_GPIO_PINS               255
+
+    #undef ERA_MAX_VIRTUAL_PINS
+    #define ERA_MAX_VIRTUAL_PINS            255
 #endif
 
 #if !defined(ERA_MAX_PROPERTIES)
