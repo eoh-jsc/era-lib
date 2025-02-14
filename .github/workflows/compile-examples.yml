@@ -209,7 +209,7 @@ jobs:
               platform-name: esp32:esp32
             platforms: |
               # Install ESP32 platform via Boards Manager
-              - name: esp32:esp32@3.0.7
+              - name: esp32:esp32
                 source-url: https://github.com/espressif/arduino-esp32/raw/gh-pages/package_esp32_index.json
           - board:
               platform-name: esp8266:esp8266
