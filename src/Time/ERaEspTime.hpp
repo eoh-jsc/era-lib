@@ -37,8 +37,8 @@ public:
             return;
         }
         this->initialized = true;
-        ERaTime::setGetTimeCallback(std::bind(&ERaEspTime::getTimeRTC, this));
-        ERaTime::setSetTimeCallback(std::bind(&ERaEspTime::setTimeRTC, this, std::placeholders::_1));
+        ERaTime::setGetTimeCallback([&, this](void) -> time_t { return this->getTimeRTC(); });
+        ERaTime::setSetTimeCallback([&, this](time_t time) { this->setTimeRTC(time); });
         configTime(0, 0, this->server1, this->server2, this->server3);
     }
 
