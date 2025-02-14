@@ -312,7 +312,7 @@ protected:
         if (!call) {
         }
         else if (this->getTimeCb != NULL) {
-            return this->getTimeCb();
+            this->sysTime = this->getTimeCb();
         }
         return this->sysTime;
     }
