@@ -1092,7 +1092,9 @@ bool ERaModbus<Api>::eachActionModbus(ModbusAction_t& request, Action_t& action,
             config->len2 = action.len2;
             break;
         case ModbusActionTypeT::MODBUS_ACTION_PARAMS:
-            request.param *= config->scaleWrite;
+            if (config->func == ModbusFunctionT::PRESET_SINGLE_REGISTER) {
+                request.param *= config->scaleWrite;
+            }
             config->len1 = HI_WORD(request.param);
             config->len2 = LO_WORD(request.param);
             break;

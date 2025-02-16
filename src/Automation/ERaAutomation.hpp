@@ -382,6 +382,7 @@ namespace eras {
             }
             else if (this->mHasValue) {
                 value = this->mValue;
+                value *= this->mScale;
             }
             else {
                 return false;
