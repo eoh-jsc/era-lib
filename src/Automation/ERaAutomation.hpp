@@ -348,17 +348,17 @@ namespace eras {
             this->mFn = std::move(fn);
         }
 
-        void addThreshold(const T& threshold) {
-            this->mPrimaryThresholds.emplace_back(std::move(threshold));
+        void addThreshold(T threshold) {
+            this->mPrimaryThresholds.push_back(threshold);
         }
 
         void addThresholds(const std::vector<T>& thresholds) {
-            for (const auto& threshold : thresholds) {
+            for (auto& threshold : thresholds) {
                 this->addThreshold(threshold);
             }
         }
 
-        void setScale(const T& scale) {
+        void setScale(T scale) {
             this->mScale = scale;
         }
 
@@ -538,22 +538,22 @@ namespace eras {
             , mSecondaryThresholds(secondaryThresholds)
         {}
 
-        void addPrimaryThreshold(const T& threshold) {
-            this->mPrimaryThresholds.emplace_back(std::move(threshold));
+        void addPrimaryThreshold(T threshold) {
+            this->mPrimaryThresholds.push_back(threshold);
         }
 
         void addPrimaryThresholds(const std::vector<T>& thresholds) {
-            for (const auto& threshold : thresholds) {
+            for (auto& threshold : thresholds) {
                 this->addPrimaryThreshold(threshold);
             }
         }
 
-        void addSecondaryThreshold(const T& threshold) {
-            this->mSecondaryThresholds.emplace_back(std::move(threshold));
+        void addSecondaryThreshold(T threshold) {
+            this->mSecondaryThresholds.push_back(threshold);
         }
 
         void addSecondaryThresholds(const std::vector<T>& thresholds) {
-            for (const auto& threshold : thresholds) {
+            for (auto& threshold : thresholds) {
                 this->addSecondaryThreshold(threshold);
             }
         }

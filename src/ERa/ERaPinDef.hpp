@@ -6,7 +6,13 @@
 #if defined(ERA_REPORTABLE_CHANGE_PIN)
     /* OK, use the specified value */
 #else
-    #define ERA_REPORTABLE_CHANGE_PIN   1.0f
+    #define ERA_REPORTABLE_CHANGE_PIN   10.0f
+#endif
+
+#if defined(ERA_SETTING_REPORT_PIN)
+    /* OK, use the specified value */
+#else
+    #define ERA_SETTING_REPORT_PIN      1000, 1000, 60000, ERA_REPORTABLE_CHANGE_PIN
 #endif
 
 typedef struct __PinConfig_t {
@@ -28,7 +34,7 @@ typedef struct __PinConfig_t {
             : interval(100UL)
             , minInterval(100UL)
             , maxInterval(60000UL)
-            , reportableChange(ERA_REPORTABLE_CHANGE_PIN)
+            , reportableChange(1.0f)
         {}
         __ReportConfig_t(unsigned long _interval, unsigned long _minInterval,
                         unsigned long _maxInterval, float _reportableChange)

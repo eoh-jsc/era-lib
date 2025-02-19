@@ -158,7 +158,7 @@ void ERaApi<Proto, Flash>::handleReadPin(cJSON* root) {
                 ERA_SET_PIN_REPORT(pin.pinMode, digitalReadStm32);
             }
             else if (ERaStrCmp(item->valuestring, "integer")) {
-                pin.report = PinConfig_t::__ReportConfig_t(1000, 1000, 60000, 10.0f);
+                pin.report = PinConfig_t::__ReportConfig_t(ERA_SETTING_REPORT_PIN);
                 this->getPinConfig(current, pin);
                 this->getScaleConfig(current, pin);
                 if (!digitalpinIsAnalogInput(pin.pin)) {

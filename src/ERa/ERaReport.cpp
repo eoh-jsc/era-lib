@@ -425,13 +425,8 @@ void ERaReport::setScale(Report_t* pReport, float min, float max, float rawMin, 
     pReport->data.scale.rawMin = rawMin;
     pReport->data.scale.rawMax = rawMax;
 
-    /*
-    pReport->reportableChange = ERaMapNumberRange(pReport->reportableChange,
-                                        0.0f, max - min, 0.0f, rawMax - rawMin);
-
     pReport->reportableChange = ERaMapNumberRange(pReport->reportableChange,
                                         0.0f, rawMax - rawMin, 0.0f, max - min);
-    */
 }
 
 void ERaReport::restartAll() {
