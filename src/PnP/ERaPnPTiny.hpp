@@ -1352,10 +1352,10 @@ String ERaPnP<Transport>::bodyFindArg(const String& body, const String& arg) {
         data = item->valuestring;
     }
     else if (cJSON_IsNumber(item)) {
-        data = item->valueint;
+        data = String(item->valueint);
     }
     else if (cJSON_IsBool(item)) {
-        data = item->valueint;
+        data = String(item->valueint);
     }
 
     cJSON_Delete(root);
