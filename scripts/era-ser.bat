@@ -7,7 +7,7 @@ set COMM_PORT=COM1
 set COMM_BAUD=115200
 set SERV_ADDR_VN=mqtt1.eoh.io
 set SERV_ADDR_SG=remarkable-accountant.cloudmqtt.com
-set SERV_ADDR=%SERV_ADDR_SG%
+set SERV_ADDR=%SERV_ADDR_VN%
 set SERV_PORT=1883
 
 REM === Edit lines below only if absolutely sure what you're doing ===

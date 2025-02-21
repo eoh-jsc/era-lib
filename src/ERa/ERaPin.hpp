@@ -248,6 +248,7 @@ public:
     void enable(Pin_t* pPin);
     void disable(Pin_t* pPin);
     void setScale(Pin_t* pPin, float min, float max, float rawMin, float rawMax);
+    void setAverageSample(uint16_t count);
     void restartAll();
     void enableAll();
     void disableAll();
@@ -365,7 +366,10 @@ void ERaPin<Report>::run() {
         if (pPin->readPin == nullptr) {
             continue;
         }
-        if (pPin->pinMode != PWM) {
+        if (pPin->pinMode == ANALOG) {
+            pPin->report.updateReport(pPin->readPin(pPin->pin), false, true, false);
+        }
+        else if (pPin->pinMode != PWM) {
             pPin->report.updateReport(pPin->readPin(pPin->pin));
         }
         else {
@@ -806,6 +810,11 @@ void ERaPin<Report>::setScale(Pin_t* pPin, float min, float max, float rawMin, f
     if (this->isValidPin(pPin)) {
         pPin->report.setScale(min, max, rawMin, rawMax);
     }
+}
+
+template <class Report>
+void ERaPin<Report>::setAverageSample(uint16_t count) {
+    this->report.setAverageSample(count);
 }
 
 template <class Report>

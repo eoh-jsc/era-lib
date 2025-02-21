@@ -376,6 +376,10 @@ public:
         return this->ERaPinRp.getVPinNextRetained(pin, retained);
     }
 
+    void setPinAverageSample(uint16_t count) {
+        this->ERaPinRp.setAverageSample(count);
+    }
+
     Flash& getFlash() const {
         return this->flash;
     }

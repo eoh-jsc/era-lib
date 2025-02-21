@@ -115,11 +115,11 @@ public:
             this->rp->executeNow(this->pRp);
         }
 
-        void updateReport(double value, bool isRound = false, bool execute = true) const {
+        void updateReport(double value, bool isRound = false, bool execute = true, bool skipAverage = true) const {
             if (!this->isValid()) {
                 return;
             }
-            this->rp->updateReport(this->pRp, value, isRound, execute);
+            this->rp->updateReport(this->pRp, value, isRound, execute, skipAverage);
         }
 
         bool changeReportableChange(unsigned long minInterval, unsigned long maxInterval, float minChange) const {
@@ -320,7 +320,9 @@ public:
         return iterator(this, this->setupReport(minInterval, maxInterval, minChange, cb, pin, pinMode));
     }
 
-    void updateReport(Report_t* pReport, double value, bool isRound = false, bool execute = true);
+    void setAverageSample(uint16_t count);
+    void updateReport(Report_t* pReport, double value, bool isRound = false,
+                                bool execute = true, bool skipAverage = true);
     bool changeReportableChange(Report_t* pReport, unsigned long minInterval,
                                 unsigned long maxInterval, float minChange);
     bool changeReportableChange(Report_t* pReport, unsigned long minInterval,
@@ -378,6 +380,8 @@ private:
         return this->setupReport(minInterval, maxInterval, minChange, cb, pin, pinMode, 0);
     }
 
+    void averageSimple(Report_t* pReport, double value, bool skip = true);
+
     bool deleteHandler();
     bool isReportFree();
 
@@ -412,6 +416,7 @@ private:
 
     ERaList<Report_t*> report;
     unsigned int numReport;
+    uint16_t numSample;
 
     using ReportIterator = typename ERaList<Report_t*>::iterator;
 };

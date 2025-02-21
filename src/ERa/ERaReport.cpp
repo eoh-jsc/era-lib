@@ -5,6 +5,7 @@ using namespace std;
 
 ERaReport::ERaReport()
     : numReport(0)
+    , numSample(0)
 {}
 
 void ERaReport::run() {
@@ -80,6 +81,10 @@ bool ERaReport::deleteHandler() {
         return true;
     }
     return false;
+}
+
+void ERaReport::setAverageSample(uint16_t count) {
+    this->numSample = count;
 }
 
 ERaReport::Report_t* ERaReport::setupReport(unsigned long minInterval, unsigned long maxInterval,
@@ -256,7 +261,8 @@ bool ERaReport::changeReportableChange(Report_t* pReport, unsigned long minInter
     return true;
 }
 
-void ERaReport::updateReport(Report_t* pReport, double value, bool isRound, bool execute) {
+void ERaReport::updateReport(Report_t* pReport, double value, bool isRound,
+                            bool execute, bool skipAverage) {
     if (!this->isValidReport(pReport)) {
         return;
     }
@@ -273,9 +279,9 @@ void ERaReport::updateReport(Report_t* pReport, double value, bool isRound, bool
             value = round(value);
         }
     }
-    pReport->data.value = value;
+    this->averageSimple(pReport, value, skipAverage);
     if (!pReport->updated) {
-        pReport->data.prevValue = value;
+        pReport->data.prevValue = pReport->data.value;
         /* pReport->prevMillis = ERaMillis() - pReport->minInterval; */
         if (execute && (pReport->maxInterval != REPORT_MAX_INTERVAL)) {
             pReport->prevMillis = ERaMillis() - pReport->maxInterval;
@@ -450,6 +456,20 @@ void ERaReport::disableAll() {
     for (ReportIterator* it = this->report.begin(); it != e; it = it->getNext()) {
         Report_t* pReport = it->get();
         this->disable(pReport);
+    }
+}
+
+void ERaReport::averageSimple(Report_t* pReport, double value, bool skip) {
+    if (!this->isValidReport(pReport)) {
+        return;
+    }
+
+    if (!this->numSample || skip) {
+        pReport->data.value = value;
+    }
+    else {
+        pReport->data.value -= (pReport->data.value / this->numSample);
+        pReport->data.value += (value / this->numSample);
     }
 }
 
