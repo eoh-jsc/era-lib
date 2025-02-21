@@ -80,14 +80,9 @@ namespace eras {
         T mLastValue {};
     };
 
-    double ParseNumber(const char* str) {
-        char* end = nullptr;
-        double value = ::strtod(str, &end);
-        if ((end == str) || (*end != '\0') || (value == HUGE_VAL)) {
-            return NAN;
-        }
-        return value;
-    }
+    double ParseNumber(const char* str);
+
+    bool CompareNumbers(double a, double b);
 
 } /* namespace eras */
 

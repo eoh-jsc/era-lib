@@ -1,3 +1,4 @@
+#include <float.h>
 #include <Automation/ERaHelpers.hpp>
 
 namespace eras {
@@ -25,6 +26,20 @@ namespace eras {
 
     void Mutex::unlock() {
         ERaGuardUnlock(this->mMutex);
+    }
+
+    double ParseNumber(const char* str) {
+        char* end = nullptr;
+        double value = ::strtod(str, &end);
+        if ((end == str) || (*end != '\0') || (value == HUGE_VAL)) {
+            return NAN;
+        }
+        return value;
+    }
+
+    bool CompareNumbers(double a, double b) {
+        double maxVal = (fabs(a) > fabs(b)) ? fabs(a) : fabs(b);
+        return (fabs(a - b) <= (maxVal * DBL_EPSILON));
     }
 
 } /* namespace eras */

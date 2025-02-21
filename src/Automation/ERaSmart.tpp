@@ -134,6 +134,12 @@ namespace eras {
             return;
         }
 
+        bool areMet {false};
+        cJSON* isNeedAllConditions = cJSON_GetObjectItem(root, AUTOMATION_IS_NEED_ALL_CONDITIONS_KEY);
+        if (cJSON_IsBool(isNeedAllConditions)) {
+            areMet = isNeedAllConditions->valueint;
+        }
+
         cJSON* conditions = cJSON_GetObjectItem(root, AUTOMATION_CONDITIONS_KEY);
         if (cJSON_IsArray(conditions)) {
             this->parseConditions(conditions);
@@ -151,12 +157,21 @@ namespace eras {
 
         auto pTrigger = new Trigger();
 
-        auto pCondition = new AndCondition();
-        pCondition->addConditions(this->mCurrentConditions);
+        Condition* pConditions = nullptr;
+        if (areMet) {
+            auto pAll = new AndCondition();
+            pAll->addConditions(this->mCurrentConditions);
+            pConditions = pAll;
+        }
+        else {
+            auto pAny = new OrCondition();
+            pAny->addConditions(this->mCurrentConditions);
+            pConditions = pAny;
+        }
 
         auto pSmart = new Smart();
         pSmart->setTrigger(pTrigger);
-        pSmart->setCondition(pCondition);
+        pSmart->setCondition(pConditions);
         pSmart->addActions(this->mCurrentActions);
 
         this->mSmarts.push_back(pSmart);
@@ -257,10 +272,17 @@ namespace eras {
             return;
         }
 
-        RangeCondition<double>* pCondition = nullptr;
-        pCondition = new RangeCondition<double>();
-        pCondition->addPrimaryThreshold(start->valuedouble);
-        pCondition->addSecondaryThreshold(end->valuedouble);
+        ValueCondition<double>* pCondition = nullptr;
+        if (CompareNumbers(start->valuedouble, end->valuedouble)) {
+            pCondition = new EqualsCondition<double>();
+            pCondition->addThreshold(start->valuedouble);
+        }
+        else {
+            auto pRange = new RangeCondition<double>();
+            pRange->addPrimaryThreshold(start->valuedouble);
+            pRange->addSecondaryThreshold(end->valuedouble);
+            pCondition = pRange;
+        }
         pCondition->setConfigID(config->valueint);
         pCondition->setScale(1.0);
         if (cJSON_IsNumber(id)) {

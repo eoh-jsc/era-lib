@@ -306,13 +306,78 @@ namespace eras {
 
         void print() override {
             std::string ids = "";
-            for (const auto& condition : this->mConditions) {
+            for (const auto* condition : this->mConditions) {
                 ids += to_string(condition->getID());
-                if (&condition != &this->mConditions.back()) {
+                if (condition != this->mConditions.back()) {
                     ids += ", ";
                 }
             }
             ERA_LOG_WARNING(this->TAG, "AndCondition actived with conditions: '%s'", ids.c_str());
+        }
+
+        std::vector<Condition*> mConditions {};
+    };
+
+    class OrCondition
+        : public Condition
+    {
+    public:
+        explicit OrCondition() = default;
+
+        explicit OrCondition(const std::vector<Condition*>& conditions)
+            : mConditions(conditions)
+        {}
+
+        virtual ~OrCondition() override {
+            for (auto* condition : this->mConditions) {
+                delete condition;
+            }
+            this->mConditions.clear();
+        }
+
+        void addCondition(Condition* condition) {
+            this->mConditions.push_back(condition);
+        }
+
+        void addConditions(const std::vector<Condition*>& conditions) {
+            for (auto* condition : conditions) {
+                this->addCondition(condition);
+            }
+        }
+
+        bool check() override {
+            for (auto* condition : this->mConditions) {
+                if (condition->check()) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+    protected:
+        void log() override {
+            this->print();
+        }
+
+        void print() override {
+            std::string ids = "";
+            ERaUInt_t activedID {0};
+            for (const auto* condition : this->mConditions) {
+                ids += to_string(condition->getID());
+                if (condition != this->mConditions.back()) {
+                    ids += ", ";
+                }
+            }
+            for (auto* condition : this->mConditions) {
+                if (!condition->check()) {
+                    continue;
+                }
+                activedID = condition->getID();
+                break;
+            }
+            ERA_LOG_WARNING(this->TAG, "OrCondition actived with conditions: '%s' due to condition: '%" PRIu32 "'",
+                            ids.c_str(), activedID);
         }
 
         std::vector<Condition*> mConditions {};

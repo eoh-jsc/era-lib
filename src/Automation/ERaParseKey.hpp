@@ -2,6 +2,7 @@
 
 #define AUTOMATION_ID_KEY                               "i"
 #define AUTOMATION_ENABLE_KEY                           "e"
+#define AUTOMATION_IS_NEED_ALL_CONDITIONS_KEY           "inac"
 
 
 #define AUTOMATION_SCHEDULE_WEEKDAY_KEY                 "wr"
