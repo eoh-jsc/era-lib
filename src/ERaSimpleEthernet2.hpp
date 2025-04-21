@@ -3,6 +3,7 @@
 
 #include <Ethernet2.h>
 #include <EthernetClient.h>
+#include <EthernetUdp.h>
 #include <ERa/ERaApiArduinoDef.hpp>
 #include <Adapters/ERaEthernetClient.hpp>
 #include <ERa/ERaApiArduino.hpp>
@@ -14,10 +15,10 @@
 #if !defined(NO_GLOBAL_INSTANCES) && !defined(NO_GLOBAL_ERA)
     static ERaFlash flash;
     static EthernetClient ERaEthernetClient;
-    static ERaMqtt<EthernetClient, MQTTClient> mqtt(ERaEthernetClient);
-    ERaEthernet< ERaMqtt<EthernetClient, MQTTClient> > ERa(mqtt, flash);
+    static ERaMqtt<Client, MQTTClient> mqtt(ERaEthernetClient);
+    ERaEthernet< ERaMqtt<Client, MQTTClient> > ERa(mqtt, flash);
 #else
-    extern ERaEthernet< ERaMqtt<EthernetClient, MQTTClient> > ERa;
+    extern ERaEthernet< ERaMqtt<Client, MQTTClient> > ERa;
 #endif
 
 #include <ERa/ERaStatic.hpp>

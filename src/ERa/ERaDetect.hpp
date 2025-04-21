@@ -905,7 +905,7 @@
         #define ERA_MAX_VIRTUAL_PINS        100
     #endif
 
-    #define ERA_255_PINS
+    #define ERA_500_PINS
 
     #if !defined(ERA_STRING_CAPACITY_MAX)
         #define ERA_STRING_CAPACITY_MAX     3145728
@@ -960,6 +960,21 @@
 
     #undef ERA_MAX_VIRTUAL_PINS
     #define ERA_MAX_VIRTUAL_PINS            255
+#endif
+
+#if defined(ERA_500_PINS)
+    #if !defined(ERA_255_PINS)
+        #define ERA_255_PINS
+    #endif
+    #if !defined(ERA_100_PINS)
+        #define ERA_100_PINS
+    #endif
+
+    #undef ERA_MAX_GPIO_PINS
+    #define ERA_MAX_GPIO_PINS               500
+
+    #undef ERA_MAX_VIRTUAL_PINS
+    #define ERA_MAX_VIRTUAL_PINS            500
 #endif
 
 #if !defined(ERA_MAX_PROPERTIES)
@@ -1059,6 +1074,12 @@
     #if __has_include(<type_traits>)
         #include <type_traits>
         #define ERA_HAS_TYPE_TRAITS_H
+    #endif
+#endif
+
+#if defined(ERA_CUSTOM)
+    #if !defined(ERA_SPECIFIC)
+        #define ERA_SPECIFIC
     #endif
 #endif
 

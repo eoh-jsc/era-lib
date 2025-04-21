@@ -28,7 +28,7 @@
         void end();
         void beginRead(const char* filename);
         char* readLine();
-        void endRead() {};
+        void endRead() {}
         void beginWrite(const char* filename);
         void writeLine(const char* buf);
         void endWrite();
@@ -36,6 +36,7 @@
         size_t readFlash(const char* key, void* buf, size_t maxLen);
         void writeFlash(const char* filename, const char* buffer);
         size_t writeFlash(const char* key, const void* value, size_t len);
+        size_t getBytesSize(const char* key);
 
     protected:
     private:
@@ -50,7 +51,7 @@
         }
     #endif
 
-        size_t getSize(const char* filename);
+        size_t getFileSize(const char* filename);
 
         size_t mPosition;
         bool mInitialized;
@@ -190,7 +191,7 @@
         }
 
     #if defined(DATA_EEPROM_BASE)
-        size_t size = this->getSize(filename);
+        size_t size = this->getFileSize(filename);
         if (!size) {
             return nullptr;
         }
@@ -360,6 +361,26 @@
     }
 
     inline
+    size_t ERaFlash::getBytesSize(const char* key) {
+        if (!this->mInitialized) {
+            return 0;
+        }
+
+    #if defined(DATA_EEPROM_BASE)
+        char c {0};
+        size_t size {0};
+        uint16_t address = atof(key);
+        do {
+            c = EEPROM.read(address + size);
+        } while (c && c != 0xFF && ++size);
+        return size;
+    #else
+        ERA_FORCE_UNUSED(key);
+        return 0;
+    #endif
+    }
+
+    inline
     void ERaFlash::beginWriteWithMode(const char* filename, bool append) {
     #if defined(DATA_EEPROM_BASE)
         ERA_FORCE_UNUSED(filename);
@@ -482,7 +503,7 @@
     #endif
 
     inline
-    size_t ERaFlash::getSize(const char* filename) {
+    size_t ERaFlash::getFileSize(const char* filename) {
         char c {0};
         size_t size {0};
         uint16_t address = atof(filename);

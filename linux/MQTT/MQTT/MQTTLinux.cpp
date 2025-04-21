@@ -102,7 +102,12 @@ void MQTTLinuxClient::begin() {
 
   // set CA cert
 #if defined(ERA_MQTT_SSL)
-  if (this->isTLS) {
+  if (!this->isTLS) {
+  }
+  else if (this->rootCA != nullptr) {
+    lwmqtt_posix_tls_network_init(&this->networkTLS, true, (const uint8_t*)this->rootCA, strlen(this->rootCA) + 1);
+  }
+  else {
     lwmqtt_posix_tls_network_init(&this->networkTLS, false, nullptr, 0);
   }
 #endif
@@ -179,6 +184,14 @@ void MQTTLinuxClient::onMessageAdvanced(MQTTLinuxClientCallbackAdvancedFunction 
   this->callback.functionAdvanced = cb;
 }
 #endif
+
+void MQTTLinuxClient::setRootCA(const char *ca) {
+#if defined(ERA_MQTT_SSL)
+  this->rootCA = ca;
+#else
+  (void)ca;
+#endif
+}
 
 void MQTTLinuxClient::setTLS(bool _isTLS) {
 #if defined(ERA_MQTT_SSL)

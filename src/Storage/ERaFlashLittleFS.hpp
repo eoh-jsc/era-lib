@@ -27,6 +27,7 @@ public:
     size_t readFlash(const char* key, void* buf, size_t maxLen);
     void writeFlash(const char* filename, const char* buf);
     size_t writeFlash(const char* key, const void* value, size_t len);
+    size_t getBytesSize(const char* key);
 
 protected:
 private:
@@ -231,6 +232,21 @@ size_t ERaFlash::writeFlash(const char* key, const void* value, size_t len) {
     }
     size_t size {0};
     size = file.write((uint8_t*)value, len);
+    file.close();
+    return size;
+}
+
+inline
+size_t ERaFlash::getBytesSize(const char* key) {
+    if (!this->mInitialized) {
+        return 0;
+    }
+
+    File file = SPIFFS.open(key, "r");
+    if (!file) {
+        return 0;
+    }
+    size_t size = file.size();
     file.close();
     return size;
 }

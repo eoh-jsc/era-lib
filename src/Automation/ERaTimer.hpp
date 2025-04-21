@@ -22,32 +22,23 @@ namespace eras {
 
         void run();
         void processToAdd();
-        uint32_t millis();
+        uint64_t millis();
+        uint16_t millisMajor();
 
     protected:
         struct TimerItem {
             Component* component;
             std::string name;
             uint32_t timeout;
-            uint32_t lastExecution;
+            uint64_t nextExecution;
             TimerCallback_t callback;
             bool remove;
-            uint8_t lastExecutionMajor;
-
-            inline uint32_t nextExecution() {
-                return this->lastExecution + this->timeout;
-            }
-
-            inline uint8_t nextExecutionMajor() {
-                uint32_t nextExec = this->nextExecution();
-                uint8_t nextExecMajor = this->lastExecutionMajor;
-                if (nextExec < this->lastExecution) {
-                    nextExecMajor++;
-                }
-                return nextExecMajor;
-            }
 
             static bool cmp(TimerItem* a, TimerItem* b);
+
+            const char* getSource() {
+              return ((this->component != nullptr) ? this->component->getComponentSource() : "unknown");
+            }
         };
 
         void cleanup();
@@ -63,7 +54,7 @@ namespace eras {
         std::vector<TimerItem*> mItems;
         std::vector<TimerItem*> mToAdd;
         uint32_t mLastMillis {0};
-        uint8_t mMillisMajor {0};
+        uint16_t mMillisMajor {0};
         uint32_t mToRemove {0};
 
         static constexpr uint32_t TIMER_DONT_RUN = 4294967295UL;

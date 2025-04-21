@@ -27,6 +27,7 @@
 #define BUTTON_PIN     32
 
 // You should get Auth Token in the ERa App or ERa Dashboard
+// and not share this token with anyone.
 const char auth[] = "ERA2706";
 const char ssid[] = "WIFI_SSID";
 const char pass[] = "WIFI_PASS";
@@ -49,36 +50,36 @@ ERA_WRITE(V0) {
 /* This is a callback function that is called when the pin 15 is written. */
 ERA_PIN_WRITE(V15) {
     int pinValue = param.getInt();
-    Serial.print("Pin 15 write value: ");
-    Serial.println(pinValue);
+    ERA_LOG("Pin", "Pin 15 write value: %d", pinValue);
     return false;
 }
 
 /* This is a callback function that is called when the pin 0 is read. */
 ERA_PIN_READ(V0) {
     int pinValue = param.getInt();
-    Serial.print("Pin 0 value is: ");
-    Serial.println(pinValue);
+    ERA_LOG("Pin", "Pin 0 value is: %d", pinValue);
 }
 
 /* This is a callback function that is called when the ERa is connected to the server. */
 ERA_CONNECTED() {
     digitalWrite(LED_PIN, HIGH);
-    Serial.println("ERa connected!");
+    ERA_LOG("ERa", "ERa connected!");
 }
 
 /* This is a callback function that is called when the ERa is disconnected to the server. */
 ERA_DISCONNECTED() {
     digitalWrite(LED_PIN, LOW);
-    Serial.println("ERa disconnected!");
+    ERA_LOG("ERa", "ERa disconnected!");
 }
 
 /* This function is called every second by the timer.
 * It writes the current time in seconds to the Virtual pin 1 and
 * updates the report with the current value of the button. */
 void timerEvent() {
-    ERa.virtualWrite(V1, millis() / 1000L);
+    unsigned long uptime = ERaMillis() / 1000L;
+    ERa.virtualWrite(V1, uptime);
     reportIt.updateReport(digitalRead(BUTTON_PIN));
+    ERA_LOG("Timer", "Uptime: %d", uptime);
 }
 
 /* It writes the current value of the button to the configId Virtual pin 2. */
@@ -88,7 +89,9 @@ void reportEvent() {
 
 void setup() {
     /* Setup debug console */
+#if defined(ERA_DEBUG)
     Serial.begin(115200);
+#endif
 
     /* Setup pin mode pin */
     pinMode(RELAY_PIN, OUTPUT);

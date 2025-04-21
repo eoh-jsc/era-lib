@@ -39,6 +39,12 @@ Topic format:
                                                     "/send_notify/" ERA_INTEGER_C_TYPE
 #define ERA_PUB_PREFIX_EMAIL_DATA_TOPIC             "/automate/" ERA_INTEGER_C_TYPE \
                                                     "/send_email/" ERA_INTEGER_C_TYPE
+#define ERA_PUB_PREFIX_WEBHOOK_DATA_TOPIC           "/automate/" ERA_INTEGER_C_TYPE \
+                                                    "/send_webhook/" ERA_INTEGER_C_TYPE
+
+/* Zigbee topic */
+#define ERA_PUB_PREFIX_ZIGBEE_DATA_TOPIC            "/zigbee/%s/data"
+
 
 /* For debug */
 #if !defined(ERA_DEBUG_PREFIX)
@@ -56,6 +62,7 @@ Topic format:
 #define ERA_PUB_PREFIX_ARDUINO_DOWN_TOPIC           "/arduino_pin/" ERA_INTEGER_C_TYPE
 #define ERA_PUB_PREFIX_VIRTUAL_DOWN_TOPIC           "/virtual_pin/" ERA_INTEGER_C_TYPE
 
+/* Zigbee topic */
 #define ERA_PUB_PREFIX_ZIGBEE_DOWN_TOPIC            "/zigbee/%s/down"
 
 #endif /* INC_ERA_TOPIC_HPP_ */

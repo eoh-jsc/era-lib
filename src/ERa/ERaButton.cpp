@@ -169,7 +169,7 @@ bool ERaButton::deleteHandler() {
     return false;
 }
 
-ERaButton::Button_t* ERaButton::setupButton(uint8_t pin, ERaButton::ReadPinHandler_t readPin,
+ERaButton::Button_t* ERaButton::setupButton(uint16_t pin, ERaButton::ReadPinHandler_t readPin,
                                             ERaButton::ButtonCallback_t cb, bool invert) {
     if (!this->isButtonFree()) {
         return nullptr;
@@ -210,7 +210,7 @@ ERaButton::Button_t* ERaButton::setupButton(uint8_t pin, ERaButton::ReadPinHandl
     return pButton;
 }
 
-ERaButton::Button_t* ERaButton::setupButton(uint8_t pin, ERaButton::ReadPinHandler_t readPin,
+ERaButton::Button_t* ERaButton::setupButton(uint16_t pin, ERaButton::ReadPinHandler_t readPin,
                                             ERaButton::ButtonCallback_p_t cb, void* args, bool invert) {
     if (!this->isButtonFree()) {
         return nullptr;

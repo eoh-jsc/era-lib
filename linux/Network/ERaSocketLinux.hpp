@@ -7,7 +7,9 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <netdb.h>
+#include <fcntl.h>
 #include <stdio.h>
+#include <signal.h>
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -32,6 +34,9 @@ public:
     int connect(IPAddress ip, uint16_t port) override {
         this->disconnect();
 
+        // prepare network
+        this->netPrepare();
+
         // populate address struct
         uint32_t ip_addr = ip;
         struct sockaddr_in address;
@@ -45,9 +50,20 @@ public:
             return 0;
         }
 
+        // set socket to non-blocking mode
+        int flags = ::fcntl(this->fd, F_GETFL, 0);
+        if (flags < 0) {
+            this->stop();
+            return 0;
+        }
+        if (::fcntl(this->fd, F_SETFL, flags | O_NONBLOCK) < 0) {
+            this->stop();
+            return 0;
+        }
+
         // connect socket
         int rc = ::connect(this->fd, (struct sockaddr*)&address, sizeof(address));
-        if (rc < 0) {
+        if ((rc < 0) && (errno != EINPROGRESS)) {
             this->stop();
             return 0;
         }
@@ -64,6 +80,9 @@ public:
 
     int connect(const char* host, uint16_t port) override {
         this->disconnect();
+
+        // prepare network
+        this->netPrepare();
 
         // prepare resolver hints
         struct addrinfo hints;
@@ -97,6 +116,7 @@ public:
 
         // return error if none found
         if (selected == NULL) {
+            freeaddrinfo(result);
             return 0;
         }
 
@@ -115,9 +135,20 @@ public:
             return 0;
         }
 
+        // set socket to non-blocking mode
+        int flags = ::fcntl(this->fd, F_GETFL, 0);
+        if (flags < 0) {
+            this->stop();
+            return 0;
+        }
+        if (::fcntl(this->fd, F_SETFL, flags | O_NONBLOCK) < 0) {
+            this->stop();
+            return 0;
+        }
+
         // connect socket
         rc = ::connect(this->fd, (struct sockaddr*)&address, sizeof(address));
-        if (rc < 0) {
+        if ((rc < 0) && (errno != EINPROGRESS)) {
             this->stop();
             return 0;
         }
@@ -160,6 +191,15 @@ public:
         };
         int result = ::select(this->fd + 1, NULL, &set, &ex_set, &t);
         if ((result < 0) || FD_ISSET(this->fd, &ex_set)) {
+            return -1;
+        }
+
+        // set socket to blocking mode
+        int flags = ::fcntl(this->fd, F_GETFL, 0);
+        if (flags < 0) {
+            return -1;
+        }
+        if (::fcntl(this->fd, F_SETFL, flags & (~O_NONBLOCK)) < 0) {
             return -1;
         }
 
@@ -385,6 +425,10 @@ public:
     }
 
 private:
+    void netPrepare(void) {
+        signal(SIGPIPE, SIG_IGN);
+    }
+
     int fd;
     unsigned long timeout;
     bool _connected;

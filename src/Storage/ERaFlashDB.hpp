@@ -30,6 +30,9 @@ public:
     size_t readFlash(const char* key, void* buf, size_t maxLen);
     void writeFlash(const char* filename, const char* buf);
     size_t writeFlash(const char* key, const void* value, size_t len);
+    size_t getBytesSize(const char* key);
+
+    void reset();
 
 protected:
     String encodeUnique(uint32_t number, size_t len);
@@ -61,9 +64,14 @@ void ERaFlash::begin() {
 
 inline
 void ERaFlash::end() {
-    fdb_kv_set_default(&this->mDb);
     fdb_kvdb_deinit(&this->mDb);
     this->mInitialized = false;
+}
+
+inline
+void ERaFlash::reset() {
+    fdb_kv_set_default(&this->mDb);
+    fdb_kvdb_deinit(&this->mDb);
 }
 
 inline
@@ -193,6 +201,20 @@ size_t ERaFlash::writeFlash(const char* key, const void* value, size_t len) {
         return 0;
     }
     return len;
+}
+
+inline
+size_t ERaFlash::getBytesSize(const char* key) {
+    if (!this->mInitialized) {
+        return 0;
+    }
+
+    struct fdb_kv kv;
+    fdb_kv_t kvp = fdb_kv_get_obj(&this->mDb, key, &kv);
+    if (kvp == nullptr) {
+        return 0;
+    }
+    return kv.value_len;
 }
 
 inline

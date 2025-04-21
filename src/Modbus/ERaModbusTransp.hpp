@@ -836,6 +836,7 @@ protected:
         }
         else if ((ERaMillis() - this->lastRequestTime) >= this->thisModbus().timeout) {
             this->lastRequestTime = 0UL;
+            param.totalFail++;
             return false;
         }
         else {
@@ -914,6 +915,7 @@ private:
             this->thisModbus().updateTotalRead();
             this->thisModbus().sendRequest(request->getMessage(), request->getSize());
             this->lastRequestTime = ERaMillis();
+            status = true;
         }
         if (!sendOnly) {
             status = this->thisModbus().waitResponse(request, response);

@@ -1,7 +1,16 @@
 #ifndef INC_ERA_FLASH_DETECT_HPP_
 #define INC_ERA_FLASH_DETECT_HPP_
 
-#if defined(ESP32) ||                   \
+#if defined(__has_include)
+    #if __has_include("ERaInternalFlash.hpp")
+        #include "ERaInternalFlash.hpp"
+        #define ERA_HAS_INTERNAL_FLASH_H
+    #endif
+#endif
+
+#if defined(ERA_HAS_INTERNAL_FLASH_H)
+    /* OK, use the specified */
+#elif defined(ESP32) ||                 \
     defined(ERA_FLASH_ESP32)
     #include <Storage/ERaFlashEsp32.hpp>
 #elif defined(ESP8266) ||               \

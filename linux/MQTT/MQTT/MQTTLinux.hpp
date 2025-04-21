@@ -74,6 +74,7 @@ class MQTTLinuxClient {
 
 #if defined(ERA_MQTT_SSL)
   lwmqtt_posix_tls_network_t networkTLS = {0};
+  const char* rootCA = nullptr;
   bool isTLS = false;
 #endif
 
@@ -108,6 +109,7 @@ class MQTTLinuxClient {
   void onMessageAdvanced(MQTTLinuxClientCallbackAdvancedFunction cb);
 #endif
 
+  void setRootCA(const char *ca);
   void setTLS(bool _isTLS);
   void setTLSWithPort(int _port);
   void setSkipACK(bool skip);

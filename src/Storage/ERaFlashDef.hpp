@@ -1,8 +1,8 @@
 #ifndef INC_ERA_FLASH_DEFINE_HPP_
 #define INC_ERA_FLASH_DEFINE_HPP_
 
-#if defined(ARDUINO) && \
-    (defined(ESP32) || defined(ESP8266) || \
+#if defined(ARDUINO) &&                     \
+    (defined(ESP32) || defined(ESP8266) ||  \
     (defined(ARDUINO_ARCH_RP2040) && !defined(__MBED__)))
     #define FILENAME_AUTO_CONFIG            "/auto/config.txt"
     #define FILENAME_BT_CONFIG              "/bt/config.txt"

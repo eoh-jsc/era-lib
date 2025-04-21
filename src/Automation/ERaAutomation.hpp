@@ -754,18 +754,18 @@ namespace eras {
         std::function<void()> mFn;
     };
 
-    class NotifyAction
+    class AlertAction
         : public Action
         , public Component
     {
     public:
-        explicit NotifyAction() = default;
+        explicit AlertAction() = default;
 
-        explicit NotifyAction(ERaUInt_t automateId,
-                              ERaUInt_t notifyId,
+        explicit AlertAction(ERaUInt_t automateId,
+                              ERaUInt_t alertId,
                               unsigned long delay)
             : mAutomateId(automateId)
-            , mNotifyId(notifyId)
+            , mAlertId(alertId)
             , mDelay(delay)
         {}
 
@@ -773,35 +773,35 @@ namespace eras {
             this->mDelay = delay;
         }
 
-        void setNotify(ERaUInt_t automateId, ERaUInt_t notifyId) {
+        void setAlert(ERaUInt_t automateId, ERaUInt_t alertId) {
             this->mAutomateId = automateId;
-            this->mNotifyId = notifyId;
+            this->mAlertId = alertId;
         }
 
         void play() override {
             this->mIsRunning = true;
             const uint32_t now = this->millis();
             if (!this->mDelay) {
-                this->mLastNotify = now;
+                this->mLastAlert = now;
                 this->execute();
                 return;
             }
 
-            const uint32_t before = this->mLastNotify;
+            const uint32_t before = this->mLastAlert;
             const uint32_t elapsed = (now - before);
             const uint32_t delay = this->mDelay;
 
             const uint32_t amount = (elapsed / delay);
             if ((amount > 0) && (now > before)) {
-                this->mLastNotify += (amount * delay);
+                this->mLastAlert += (amount * delay);
                 this->execute();
             }
             else {
                 const uint32_t next = (before + delay);
                 const uint32_t remaining = (next - now);
 
-                auto fn = std::bind(&NotifyAction::execute, this);
-                this->mLastNotify = next;
+                auto fn = std::bind(&AlertAction::execute, this);
+                this->mLastAlert = next;
                 this->setTimeout("", remaining, fn);
             }
         }
@@ -814,112 +814,93 @@ namespace eras {
 
     protected:
         void execute() {
-            this->sendNotify(this->mAutomateId, this->mNotifyId);
+            this->sendAlert(this->mAutomateId, this->mAlertId);
             this->log();
             this->playNext();
+        }
+
+        virtual void sendAlert(ERaUInt_t automateId, ERaUInt_t alertId) = 0;
+
+        const char* getComponentSource() const override {
+            return "AlertAction";
+        }
+
+        void log() override {
+            this->print();
+        }
+
+        void print() override {
+            ERA_LOG_WARNING(this->TAG, "Alert '%" PRIu32 ": %" PRIu32 "' triggered!",
+                            this->mAutomateId, this->mAlertId);
+        }
+
+        ERaUInt_t mAutomateId {0};
+        ERaUInt_t mAlertId {0};
+        unsigned long mDelay {0};
+        unsigned long mLastAlert {0};
+    };
+
+    class NotifyAction
+        : public AlertAction
+    {
+    public:
+        using AlertAction::AlertAction;
+
+    protected:
+        void sendAlert(ERaUInt_t automateId, ERaUInt_t alertId) override {
+            this->sendNotify(automateId, alertId);
         }
 
         const char* getComponentSource() const override {
             return "NotifyAction";
         }
 
-        void log() override {
-            this->print();
-        }
-
         void print() override {
             ERA_LOG_WARNING(this->TAG, "Notify '%" PRIu32 ": %" PRIu32 "' triggered!",
-                            this->mAutomateId, this->mNotifyId);
+                            this->mAutomateId, this->mAlertId);
         }
-
-        ERaUInt_t mAutomateId {0};
-        ERaUInt_t mNotifyId {0};
-        unsigned long mDelay {0};
-        unsigned long mLastNotify {0};
     };
 
     class EmailAction
-        : public Action
-        , public Component
+        : public AlertAction
     {
     public:
-        explicit EmailAction() = default;
-
-        explicit EmailAction(ERaUInt_t automateId,
-                             ERaUInt_t emailId,
-                             unsigned long delay)
-            : mAutomateId(automateId)
-            , mEmailId(emailId)
-            , mDelay(delay)
-        {}
-
-        void setDelay(unsigned long delay) {
-            this->mDelay = delay;
-        }
-
-        void setEmail(ERaUInt_t automateId, ERaUInt_t emailId) {
-            this->mAutomateId = automateId;
-            this->mEmailId = emailId;
-        }
-
-        void play() override {
-            this->mIsRunning = true;
-            const uint32_t now = this->millis();
-            if (!this->mDelay) {
-                this->mLastEmail = now;
-                this->execute();
-                return;
-            }
-
-            const uint32_t before = this->mLastEmail;
-            const uint32_t elapsed = (now - before);
-            const uint32_t delay = this->mDelay;
-
-            const uint32_t amount = (elapsed / delay);
-            if ((amount > 0) && (now > before)) {
-                this->mLastEmail += (amount * delay);
-                this->execute();
-            }
-            else {
-                const uint32_t next = (before + delay);
-                const uint32_t remaining = (next - now);
-
-                auto fn = std::bind(&EmailAction::execute, this);
-                this->mLastEmail = next;
-                this->setTimeout("", remaining, fn);
-            }
-        }
-
-        void stop() override {
-            this->cancelTimeout("");
-            this->mIsRunning = false;
-            this->stopNext();
-        }
+        using AlertAction::AlertAction;
 
     protected:
-        void execute() {
-            this->sendEmail(this->mAutomateId, this->mEmailId);
-            this->log();
-            this->playNext();
+        void sendAlert(ERaUInt_t automateId, ERaUInt_t alertId) override {
+            this->sendEmail(automateId, alertId);
         }
 
         const char* getComponentSource() const override {
             return "EmailAction";
         }
 
-        void log() override {
-            this->print();
+        void print() override {
+            ERA_LOG_WARNING(this->TAG, "Email '%" PRIu32 ": %" PRIu32 "' triggered!",
+                            this->mAutomateId, this->mAlertId);
+        }
+    };
+
+    class WebhookAction
+        : public AlertAction
+    {
+    public:
+        using AlertAction::AlertAction;
+
+    protected:
+        void sendAlert(ERaUInt_t automateId, ERaUInt_t alertId) override {
+            this->sendWebhook(automateId, alertId);
+        }
+
+        const char* getComponentSource() const override {
+            return "WebhookAction";
         }
 
         void print() override {
-            ERA_LOG_WARNING(this->TAG, "Email '%" PRIu32 ": %" PRIu32 "' triggered!",
-                            this->mAutomateId, this->mEmailId);
+            ERA_LOG_WARNING(this->TAG, "Webhook '%" PRIu32 ": %" PRIu32 "' triggered!",
+                            this->mAutomateId, this->mAlertId);
         }
-
-        ERaUInt_t mAutomateId {0};
-        ERaUInt_t mEmailId {0};
-        unsigned long mDelay {0};
-        unsigned long mLastEmail {0};
     };
 
 } /* namespace eras */

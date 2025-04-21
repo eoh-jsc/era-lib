@@ -85,6 +85,8 @@
 #define ERA_DECODE_PIN_NAME(pin)         (((pin[0] == 'a') || (pin[0] == 'A')) ?     \
                                          ERA_DECODE_PIN(atoi(pin + 1)) : ERA_DECODE_PIN_NUMBER(atoi(pin)))
 
+#define customWrite(...)                 specificWrite(__VA_ARGS__)
+
 enum ERaTypeWriteT {
     ERA_WRITE_VIRTUAL_PIN = 0,
     ERA_WRITE_VIRTUAL_PIN_MULTI = 1,
@@ -102,6 +104,7 @@ enum ERaTypeWriteT {
     ERA_WRITE_SELF_DATA = 100,
     ERA_WRITE_NOTIFY = 101,
     ERA_WRITE_EMAIL = 102,
+    ERA_WRITE_WEBHOOK = 103,
 
     ERA_WRITE_MAX = 0xFF
 };

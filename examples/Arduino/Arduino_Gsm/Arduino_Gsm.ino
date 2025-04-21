@@ -24,6 +24,7 @@
 // #define ERA_LOCATION_SG
 
 // You should get Auth Token in the ERa App or ERa Dashboard
+// and not share this token with anyone.
 #define ERA_AUTH_TOKEN "ERA2706"
 
 #include <Arduino.h>

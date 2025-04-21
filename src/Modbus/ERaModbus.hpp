@@ -468,7 +468,7 @@ private:
         ModbusState::set(ModbusStateT::STATE_MB_RUNNING);
     }
 
-    void nextTransport(const ModbusConfig_t& param) {
+    void nextTransport(const ModbusConfig_t& param, bool skip = false) {
         this->switchToModbusRTU();
         if (this->clientTCP == nullptr) {
             return;
@@ -479,10 +479,10 @@ private:
         if (!param.ipSlave.port) {
             return;
         }
+        this->switchToModbusTCP();
         if (!this->thisApi().afterNetwork()) {
             return;
         }
-        this->switchToModbusTCP();
         if (this->ip.ip != IPAddress(param.ipSlave.ip.dword)) {
         }
         else if (this->clientTCP->connected()) {
@@ -491,12 +491,15 @@ private:
         this->ip.ip = param.ipSlave.ip.dword;
         this->ip.port = param.ipSlave.port;
         // TODO
-        this->connectTcpIp(2);
+        this->connectTcpIp(2, skip);
     }
 
-    void connectTcpIp(size_t retry) {
+    void connectTcpIp(size_t retry, bool skip = false) {
         if (this->clientTCP->connected()) {
             this->clientTCP->stop();
+        }
+        if (skip) {
+            return;
         }
 
         do {
@@ -507,7 +510,7 @@ private:
             ERA_LOG(TAG, "Connect to %d.%d.%d.%d:%d failed", this->ip.ip[0], this->ip.ip[1],
                                                              this->ip.ip[2], this->ip.ip[3],
                                                              this->ip.port);
-            ERaDelay(1000);
+            this->delays(1000);
         } while (--retry);
     }
 
@@ -1185,13 +1188,14 @@ void ERaModbus<Api>::sendModbusRead(ModbusConfig_t& param) {
     bool skip {false};
     bool status {false};
     bool legacy {this->legacyProcess};
-    this->nextTransport(param);
 
     if (!this->failCounter.min) {
     }
     else if (param.totalFail >= this->failCounter.min) {
         skip = true;
     }
+
+    this->nextTransport(param, skip);
 
     if (!this->legacyProcess) {
         legacy = !ModbusTransp::isNewReport();

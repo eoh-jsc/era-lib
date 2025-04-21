@@ -88,6 +88,12 @@ ERaTimer::Timer_t* ERaTimer::setupTimer(unsigned long interval, TimerCallback_t 
         return nullptr;
     }
 
+    unsigned long offset {0UL};
+    if (!limit) {
+        /* Random offset with interval timer */
+        offset = ERaRandomNumber(0, interval / 2);
+    }
+
     pTimer->delay = interval;
     pTimer->callback = cb;
     pTimer->callback_p = nullptr;
@@ -96,7 +102,7 @@ ERaTimer::Timer_t* ERaTimer::setupTimer(unsigned long interval, TimerCallback_t 
     pTimer->count = 0;
     pTimer->enable = true;
     pTimer->called = 0;
-    pTimer->prevMillis = ERaMillis();
+    pTimer->prevMillis = (ERaMillis() + offset);
     this->timer.put(pTimer);
     this->numTimer++;
     return pTimer;
@@ -115,6 +121,12 @@ ERaTimer::Timer_t* ERaTimer::setupTimer(unsigned long interval, TimerCallback_p_
         return nullptr;
     }
 
+    unsigned long offset {0UL};
+    if (!limit) {
+        /* Random offset with interval timer */
+        offset = ERaRandomNumber(0, interval / 2);
+    }
+
     pTimer->delay = interval;
     pTimer->callback = nullptr;
     pTimer->callback_p = cb;
@@ -123,7 +135,7 @@ ERaTimer::Timer_t* ERaTimer::setupTimer(unsigned long interval, TimerCallback_p_
     pTimer->count = 0;
     pTimer->enable = true;
     pTimer->called = 0;
-    pTimer->prevMillis = ERaMillis();
+    pTimer->prevMillis = (ERaMillis() + offset);
     this->timer.put(pTimer);
     this->numTimer++;
     return pTimer;
@@ -137,8 +149,14 @@ bool ERaTimer::changeInterval(Timer_t* pTimer, unsigned long interval) {
         interval = 1;
     }
 
+    unsigned long offset {0UL};
+    if (!pTimer->limit) {
+        /* Random offset with interval timer */
+        offset = ERaRandomNumber(0, interval / 2);
+    }
+
     pTimer->delay = interval;
-    pTimer->prevMillis = ERaMillis();
+    pTimer->prevMillis = (ERaMillis() + offset);
     return true;
 }
 

@@ -81,7 +81,7 @@ jobs:
               - examples/ESP32/ESP32_WiFi_Basic
               - examples/ESP32/ESP32_WiFi_SSL
               - examples/ESP32/ESP32_WiFi_Ethernet
-              - examples/ESP32/ESP32_PlugNPlay
+              - examples/ESP32/ESP32_Plug_And_Play
               - examples/ESP32/ESP32_Ethernet
               - examples/ESP32/ESP32_Ethernet_SSL
               - examples/ESP32/ESP32_Ethernet_SPI
@@ -96,7 +96,7 @@ jobs:
             sketch-paths: |
               - examples/ESP32/ESP32_WiFi_Basic
               - examples/ESP32/ESP32_WiFi_SSL
-              - examples/ESP32/ESP32_PlugNPlay
+              - examples/ESP32/ESP32_Plug_And_Play
               - examples/ESP32/ESP32_Ethernet_SPI
               - examples/ESP32/ESP32_Ethernet_SSL_SPI
               - examples/ESP32/ESP32_Gsm_Basic
@@ -109,7 +109,7 @@ jobs:
             sketch-paths: |
               - examples/ESP32/ESP32_WiFi_Basic
               - examples/ESP32/ESP32_WiFi_SSL
-              - examples/ESP32/ESP32_PlugNPlay
+              - examples/ESP32/ESP32_Plug_And_Play
               - examples/ESP32/ESP32_Ethernet_SPI
               - examples/ESP32/ESP32_Ethernet_SSL_SPI
               - examples/ESP32/ESP32_Gsm_Basic
@@ -123,7 +123,7 @@ jobs:
               - examples/ESP32/ESP32_WiFi_Basic
               - examples/ESP32/ESP32_WiFi_SSL
               - examples/ESP32/ESP32_WiFi_BLE
-              - examples/ESP32/ESP32_PlugNPlay
+              - examples/ESP32/ESP32_Plug_And_Play
               - examples/ESP32/ESP32_Ethernet_SPI
               - examples/ESP32/ESP32_Ethernet_SSL_SPI
               - examples/ESP32/ESP32_Gsm_Basic

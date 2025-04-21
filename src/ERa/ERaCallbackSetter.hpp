@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <ERa/ERaAutomationDet.hpp>
 #include <ERa/ERaComponent.hpp>
+#include <ERa/ERaSyncer.hpp>
 #include <ERa/ERaTransp.hpp>
 #include <ERa/ERaLogger.hpp>
 #include <ERa/ERaCallbacks.hpp>
@@ -22,9 +23,9 @@ public:
     virtual ~ERaCallbackSetter()
     {}
 
-    virtual void setServerCallbacks(ERaServerCallbacks& callbacks) {
+    virtual void setServerCallbacks(ERaServerCallbacks& rCallbacks) {
         ERA_LOG_WARNING(TAG, ERA_PSTR("setServerCallbacks callback default."));
-        ERA_FORCE_UNUSED(callbacks);
+        ERA_FORCE_UNUSED(rCallbacks);
     }
 
     virtual void setServerCallbacks(ERaServerCallbacks* pCallbacks) {
@@ -33,45 +34,55 @@ public:
     }
 
 #if defined(ERA_AUTOMATION)
-    virtual void setERaAutomation(ERaAutomation& _automation) {
+    virtual void setERaAutomation(ERaAutomation& rAutomation) {
         ERA_LOG_WARNING(TAG, ERA_PSTR("setERaAutomation callback default."));
-        ERA_FORCE_UNUSED(_automation);
+        ERA_FORCE_UNUSED(rAutomation);
     }
 
-    virtual void setERaAutomation(ERaAutomation* _pAutomation) {
+    virtual void setERaAutomation(ERaAutomation* pAutomation) {
         ERA_LOG_WARNING(TAG, ERA_PSTR("setERaAutomation callback default."));
-        ERA_FORCE_UNUSED(_pAutomation);
+        ERA_FORCE_UNUSED(pAutomation);
     }
 #endif
 
-    virtual void setERaComponent(ERaComponent& _component) {
-        ERA_LOG_WARNING(TAG, ERA_PSTR("setERaComponent callback default."));
-        ERA_FORCE_UNUSED(_component);
+    virtual void addERaComponent(ERaComponent& rComponent) {
+        ERA_LOG_WARNING(TAG, ERA_PSTR("addERaComponent callback default."));
+        ERA_FORCE_UNUSED(rComponent);
     }
 
-    virtual void setERaComponent(ERaComponent* _pComponent) {
-        ERA_LOG_WARNING(TAG, ERA_PSTR("setERaComponent callback default."));
-        ERA_FORCE_UNUSED(_pComponent);
+    virtual void addERaComponent(ERaComponent* pComponent) {
+        ERA_LOG_WARNING(TAG, ERA_PSTR("addERaComponent callback default."));
+        ERA_FORCE_UNUSED(pComponent);
     }
 
-    virtual void setERaTransp(ERaTransp& _transp) {
+    virtual void addERaSyncer(ERaSyncer& rSyncer) {
+        ERA_LOG_WARNING(TAG, ERA_PSTR("addERaSyncer callback default."));
+        ERA_FORCE_UNUSED(rSyncer);
+    }
+
+    virtual void addERaSyncer(ERaSyncer* pSyncer) {
+        ERA_LOG_WARNING(TAG, ERA_PSTR("addERaSyncer callback default."));
+        ERA_FORCE_UNUSED(pSyncer);
+    }
+
+    virtual void setERaTransp(ERaTransp& rTransp) {
         ERA_LOG_WARNING(TAG, ERA_PSTR("setERaTransp callback default."));
-        ERA_FORCE_UNUSED(_transp);
+        ERA_FORCE_UNUSED(rTransp);
     }
 
-    virtual void setERaTransp(ERaTransp* _pTransp) {
+    virtual void setERaTransp(ERaTransp* pTransp) {
         ERA_LOG_WARNING(TAG, ERA_PSTR("setERaTransp callback default."));
-        ERA_FORCE_UNUSED(_pTransp);
+        ERA_FORCE_UNUSED(pTransp);
     }
 
-    virtual void setERaLogger(ERaLogger& _logger) {
+    virtual void setERaLogger(ERaLogger& rLog) {
         ERA_LOG_WARNING(TAG, ERA_PSTR("setERaLogger callback default."));
-        ERA_FORCE_UNUSED(_logger);
+        ERA_FORCE_UNUSED(rLog);
     }
 
-    virtual void setERaLogger(ERaLogger* _pLogger) {
+    virtual void setERaLogger(ERaLogger* pLog) {
         ERA_LOG_WARNING(TAG, ERA_PSTR("setERaLogger callback default."));
-        ERA_FORCE_UNUSED(_pLogger);
+        ERA_FORCE_UNUSED(pLog);
     }
 
     ERaApiHandler& Api;

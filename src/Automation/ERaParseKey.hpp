@@ -60,5 +60,6 @@
 #define AUTOMATION_ACTION_DATA_KEY                      "da"
 #define AUTOMATION_ACTION_NOTIFICATION_KEY              "ns"
 #define AUTOMATION_ACTION_EMAIL_KEY                     "es"
+#define AUTOMATION_ACTION_WEBHOOK_KEY                   "ws"
 #define AUTOMATION_ACTION_SMS_KEY                       "ss"
 #define AUTOMATION_ACTIONS_KEY                          "a"

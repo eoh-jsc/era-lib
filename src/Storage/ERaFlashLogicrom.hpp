@@ -29,6 +29,7 @@ public:
     size_t readFlash(const char* key, void* buf, size_t maxLen);
     void writeFlash(const char* filename, const char* buf);
     size_t writeFlash(const char* key, const void* value, size_t len);
+    size_t getBytesSize(const char* key);
 
 protected:
 private:
@@ -175,6 +176,12 @@ size_t ERaFlash::writeFlash(const char* key, const void* value, size_t len) {
     }
     param_save(key, (void*)value, len);
     return len;
+}
+
+inline
+size_t ERaFlash::getBytesSize(const char* key) {
+    ERA_FORCE_UNUSED(key);
+    return 0;
 }
 
 inline

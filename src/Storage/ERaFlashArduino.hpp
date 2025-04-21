@@ -7,6 +7,10 @@
 
     #include <Storage/ERaFlashPreferences.hpp>
 
+#elif defined(ERA_HAS_FLASH_DB_H)
+
+    #include <Storage/ERaFlashDB.hpp>
+
 #else
 
     class ERaFlash
@@ -30,6 +34,7 @@
         size_t readFlash(const char ERA_UNUSED *key, void ERA_UNUSED *buf, size_t ERA_UNUSED maxLen) { return 0; }
         void writeFlash(const char ERA_UNUSED *filename, const char ERA_UNUSED *buf) {}
         size_t writeFlash(const char ERA_UNUSED *key, const void ERA_UNUSED *value, size_t ERA_UNUSED len) { return 0; }
+        size_t getBytesSize(const char ERA_UNUSED *key) { return 0; }
 
     protected:
     private:

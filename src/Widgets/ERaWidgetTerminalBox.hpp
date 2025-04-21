@@ -9,8 +9,8 @@ class ERaWidgetTerminalBox
 {
 public:
     ERaWidgetTerminalBox(ERaString& str,
-                        uint8_t fromVPin,
-                        uint8_t toVPin)
+                        uint16_t fromVPin,
+                        uint16_t toVPin)
         : estr(str)
         , callback(NULL)
         , fromPin(fromVPin)
@@ -21,12 +21,12 @@ public:
     virtual ~ERaWidgetTerminalBox()
     {}
 
-    void setPin(uint8_t fromVPin, uint8_t toVPin) {
+    void setPin(uint16_t fromVPin, uint16_t toVPin) {
         this->fromPin = fromVPin;
         this->toPin = toVPin;
     }
 
-    void begin(WidgetCallback_t cb, uint8_t fromVPin, uint8_t toVPin) {
+    void begin(WidgetCallback_t cb, uint16_t fromVPin, uint16_t toVPin) {
         this->setPin(fromVPin, toVPin);
         this->begin(cb);
     }
@@ -151,8 +151,8 @@ private:
     ERaString& estr;
     WidgetCallback_t callback;
 
-    uint8_t fromPin;
-    uint8_t toPin;
+    uint16_t fromPin;
+    uint16_t toPin;
 
     ERaQueue<uint8_t, ERA_TERMINAL_INPUT_BUFFER_SIZE> rxBuffer;
     uint8_t txBuffer[ERA_TERMINAL_OUTPUT_BUFFER_SIZE + 1];

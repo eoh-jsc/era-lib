@@ -58,7 +58,15 @@ ERaSmart smart(ERa, syncTime);
         pthread_exit(NULL);
     }
 
-#if ERA_VERSION_NUMBER >= ERA_VERSION_VAL(1, 2, 0)
+#if ERA_VERSION_NUMBER >= ERA_VERSION_VAL(1, 6, 0)
+    static void eventButton(uint16_t pin, ButtonEventT event) {
+        if (event != ButtonEventT::BUTTON_ON_HOLD) {
+            return;
+        }
+        ERa.switchToConfig(ERA_ERASE_CONFIG);
+        (void)pin;
+    }
+#elif ERA_VERSION_NUMBER >= ERA_VERSION_VAL(1, 2, 0)
     static void eventButton(uint8_t pin, ButtonEventT event) {
         if (event != ButtonEventT::BUTTON_ON_HOLD) {
             return;

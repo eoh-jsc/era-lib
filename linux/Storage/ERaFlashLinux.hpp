@@ -26,6 +26,7 @@ public:
     size_t readFlash(const char* key, void* buf, size_t maxLen);
     void writeFlash(const char *filename, const char* buf);
     size_t writeFlash(const char* key, const void* value, size_t len);
+    size_t getBytesSize(const char* key);
 
 protected:
 private:
@@ -130,9 +131,9 @@ char* ERaFlashLinux::readFlash(const char* filename) {
         return nullptr;
     }
     fseek(file, 0L, SEEK_END);
-    size_t size = ftell(file);
+    long size = ftell(file);
     fseek(file, 0L, SEEK_SET);
-    if (!size) {
+    if (size <= 0) {
         fclose(file);
         return nullptr;
     }
@@ -194,6 +195,18 @@ size_t ERaFlashLinux::writeFlash(const char* key, const void* value, size_t len)
     fwrite(value, 1, len, file);
     fclose(file);
     return len;
+}
+
+inline
+size_t ERaFlashLinux::getBytesSize(const char* key) {
+    FILE* file = fopen(key, "rb");
+    if (file == nullptr) {
+        return 0;
+    }
+    fseek(file, 0L, SEEK_END);
+    long size = ftell(file);
+    fclose(file);
+    return ((size >= 0) ? (size_t)size : 0);
 }
 
 inline

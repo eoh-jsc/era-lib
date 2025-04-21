@@ -20,11 +20,14 @@ public:
     virtual ~ERaLogger()
     {}
 
-    virtual void begin() = 0;
-    virtual void run() = 0;
     virtual void put(const char* subPath, const char* id,
                     const char* data, bool status, bool force = false) = 0;
-    virtual char* get(const char* subPath, const char* id) = 0;
+
+    virtual char* get(const char* subPath, const char* id) {
+        ERA_FORCE_UNUSED(subPath);
+        ERA_FORCE_UNUSED(id);
+        return nullptr;
+    }
 
     void put(const char* subPath, const char* id,
             const cJSON* const root, bool status, bool force = false) {

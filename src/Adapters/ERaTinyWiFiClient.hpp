@@ -241,6 +241,7 @@ private:
 
     void restart() {
         if (this->resetPin < 0) {
+            this->softwareReset();
             return;
         }
 
@@ -253,9 +254,14 @@ private:
 
         ERaWatchdogFeed();
 
-        if (this->softRestart) {
-            this->modem->restart();
+        this->softwareReset();
+    }
+
+    void softwareReset() {
+        if (!this->softRestart) {
+            return;
         }
+        this->modem->restart();
     }
 
     void powerOn() {

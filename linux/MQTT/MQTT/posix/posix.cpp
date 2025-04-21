@@ -3,11 +3,16 @@
 #include <memory.h>
 #include <netdb.h>
 #include <stdlib.h>
+#include <signal.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
 #include <fcntl.h>
 
 #include "posix.hpp"
+
+static void net_prepare(void) {
+  signal(SIGPIPE, SIG_IGN);
+}
 
 void lwmqtt_posix_timer_set(void *ref, uint32_t timeout) {
   // cast timer reference
@@ -44,6 +49,9 @@ lwmqtt_err_t lwmqtt_posix_network_connect(lwmqtt_posix_network_t *network, char 
   // close any open socket
   lwmqtt_posix_network_disconnect(network);
 
+  // prepare network
+  net_prepare();
+
   // prepare resolver hints
   struct addrinfo hints;
   memset(&hints, 0, sizeof(hints));
@@ -76,6 +84,7 @@ lwmqtt_err_t lwmqtt_posix_network_connect(lwmqtt_posix_network_t *network, char 
 
   // return error if none found
   if (selected == NULL) {
+    freeaddrinfo(result);
     return LWMQTT_NETWORK_FAILED_CONNECT;
   }
 
@@ -94,9 +103,15 @@ lwmqtt_err_t lwmqtt_posix_network_connect(lwmqtt_posix_network_t *network, char 
     return LWMQTT_NETWORK_FAILED_CONNECT;
   }
 
+  // set socket to non-blocking
+  rc = fcntl(network->socket, F_SETFL, fcntl(network->socket, F_GETFL, 0) | O_NONBLOCK);
+  if (rc < 0) {
+    return LWMQTT_NETWORK_FAILED_CONNECT;
+  }
+
   // connect socket
   rc = connect(network->socket, (struct sockaddr *)&address, sizeof(address));
-  if (rc < 0) {
+  if (rc < 0 && errno != EINPROGRESS) {
     return LWMQTT_NETWORK_FAILED_CONNECT;
   }
 

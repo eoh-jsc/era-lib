@@ -63,6 +63,7 @@ public:
         : mqtt(0)
         , host(ERA_MQTT_HOST)
         , port(ERA_MQTT_PORT)
+        , rootCA(NULL)
         , clientID(ERA_MQTT_CLIENT_ID)
         , username(ERA_MQTT_USERNAME)
         , password(ERA_MQTT_PASSWORD)
@@ -74,17 +75,29 @@ public:
         , signalQuality(0)
         , askConfig(false)
         , needPubState(false)
+        , nonBlocking(false)
+        , reachedLimit(false)
         , _connected(false)
         , mutex(NULL)
         , appCb(NULL)
         , connectedCb(NULL)
         , disconnectedCb(NULL)
     {
+#if defined(ERA_MQTT_SSL)
+        this->setRootCA(
+            #include <Certs/mqttRootCA.hpp>
+        );
+#endif
         this->mqtt.setKeepAlive(ERA_MQTT_KEEP_ALIVE);
         memset(this->willTopic, 0, sizeof(this->willTopic));
     }
     ~ERaMqttLinux()
     {}
+
+    void setRootCA(const char* ca) {
+        this->rootCA = ca;
+        this->mqtt.setRootCA(ca);
+    }
 
     void begin(const char* _host, uint16_t _port,
             const char* _username, const char* _password) {
@@ -110,6 +123,10 @@ public:
                     QoST qos = (QoST)ERA_MQTT_PUBLISH_QOS) override;
     bool publishState(bool online);
     bool syncConfig();
+
+    void setNonBlocking(bool enable) {
+        this->nonBlocking = enable;
+    }
 
     void setConnected(bool enable) {
         this->_connected = enable;
@@ -216,13 +233,22 @@ public:
         this->disconnectedCb = offCb;
     }
 
+    bool reachedConnectionLimit() {
+        return this->reachedLimit;
+    }
+
     bool connectionDenied() {
+        if (!this->reachedLimit) {
+            return false;
+        }
         return ((this->mqtt.lastError() == lwmqtt_err_t::LWMQTT_MISSING_OR_WRONG_PACKET) ||
                 (this->mqtt.lastError() == lwmqtt_err_t::LWMQTT_CONNECTION_DENIED));
     }
 
 protected:
 private:
+    bool connectBlocking(const char* id);
+    bool connectNonBlocking(const char* id);
     void delays(MillisTime_t ms);
     bool publishLWT(bool sync);
     bool publishLWT(bool sync, bool retained);
@@ -235,6 +261,7 @@ private:
     MQTT mqtt;
     const char* host;
     uint16_t port;
+    const char* rootCA;
     const char* clientID;
     const char* username;
     const char* password;
@@ -246,6 +273,8 @@ private:
     int16_t signalQuality;
     bool askConfig;
     bool needPubState;
+    bool nonBlocking;
+    bool reachedLimit;
     bool _connected;
     char willTopic[MAX_TOPIC_LENGTH];
     ERaMutex_t mutex;
@@ -274,30 +303,24 @@ void ERaMqttLinux<MQTT>::config(const char* _host, uint16_t _port,
 template <class MQTT>
 inline
 bool ERaMqttLinux<MQTT>::connect(FunctionCallback_t fn) {
-    size_t count {0};
-    char _clientID[74] {0};
+    bool status {false};
+    char id[74] {0};
     if (this->clientID != NULL) {
-        FormatString(_clientID, this->ERaAuth);
+        FormatString(id, this->ERaAuth);
         if (!ERaStrCmp(this->clientID, this->ERaAuth) &&
             strlen(this->clientID)) {
-            FormatString(_clientID, "_%s", this->clientID);
+            FormatString(id, "_%s", this->clientID);
         }
     }
 
-    this->mqtt.disconnect();
-    this->_connected = false;
-
-    while (this->mqtt.connect(_clientID, this->username, this->password) == false) {
-        if (++count >= LIMIT_CONNECT_BROKER_MQTT) {
-            return false;
-        }
-
-        ERA_LOG_ERROR(TAG, ERA_PSTR("MQTT(%d): Connect failed (%d), retrying in 5 seconds"),
-                                    count, this->mqtt.lastError());
-        this->delays(5000);
-        if (this->mqtt.lastError() == lwmqtt_err_t::LWMQTT_NETWORK_FAILED_CONNECT) {
-            return false;
-        }
+    if (this->nonBlocking) {
+        status = this->connectNonBlocking(id);
+    }
+    else {
+        status = this->connectBlocking(id);
+    }
+    if (!status) {
+        return false;
     }
 
 #if defined(ERA_ZIGBEE) ||  \
@@ -341,10 +364,71 @@ bool ERaMqttLinux<MQTT>::connect(FunctionCallback_t fn) {
 
     this->subscribeTopic(this->ERaTopic, LWT_TOPIC);
     ERA_LOG(TAG, ERA_PSTR(R"(Connected: "%s:%d", Client ID: "%s", Username: "%s", Password: "%s")"),
-                            this->host, this->port, _clientID, this->username, this->password);
+                            this->host, this->port, id, this->username, this->password);
 
     this->onConnected();
     return true;
+}
+
+template <class MQTT>
+inline
+bool ERaMqttLinux<MQTT>::connectBlocking(const char* id) {
+    size_t connectCount {0};
+
+    this->mqtt.disconnect();
+    this->_connected = false;
+    this->reachedLimit = false;
+
+    while (!this->mqtt.connect(id, this->username, this->password)) {
+        if (++connectCount >= LIMIT_CONNECT_BROKER_MQTT) {
+            this->reachedLimit = true;
+            return false;
+        }
+
+        ERA_LOG_ERROR(TAG, ERA_PSTR("MQTT(%d): Connect failed (%d), retrying in 5 seconds"),
+                                    connectCount, this->mqtt.lastError());
+        this->delays(5000);
+        if (this->mqtt.lastError() == lwmqtt_err_t::LWMQTT_NETWORK_FAILED_CONNECT) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+template <class MQTT>
+inline
+bool ERaMqttLinux<MQTT>::connectNonBlocking(const char* id) {
+    bool status {false};
+    static size_t connectCount {0};
+    static unsigned long lastMillis {0};
+    if (!this->reachedLimit && ((ERaMillis() - lastMillis) < 5000)) {
+        this->delays(10);
+        return false;
+    }
+
+    if (!connectCount) {
+        this->mqtt.disconnect();
+        this->_connected = false;
+        this->reachedLimit = false;
+    }
+
+    status = this->mqtt.connect(id, this->username, this->password);
+
+    if (status) {
+        connectCount = 0;
+    }
+    else if (++connectCount >= LIMIT_CONNECT_BROKER_MQTT) {
+        connectCount = 0;
+        this->reachedLimit = true;
+    }
+    else {
+        ERA_LOG_ERROR(TAG, ERA_PSTR("MQTT(%d): Connect failed (%d), retrying in 5 seconds"),
+                                    connectCount, this->mqtt.lastError());
+    }
+
+    lastMillis = ERaMillis();
+    return status;
 }
 
 template <class MQTT>

@@ -264,6 +264,252 @@
     #define V254 254
     #define V255 255
 #endif
+#if defined(ERA_500_PINS)
+    #define V256 256
+    #define V257 257
+    #define V258 258
+    #define V259 259
+    #define V260 260
+    #define V261 261
+    #define V262 262
+    #define V263 263
+    #define V264 264
+    #define V265 265
+    #define V266 266
+    #define V267 267
+    #define V268 268
+    #define V269 269
+    #define V270 270
+    #define V271 271
+    #define V272 272
+    #define V273 273
+    #define V274 274
+    #define V275 275
+    #define V276 276
+    #define V277 277
+    #define V278 278
+    #define V279 279
+    #define V280 280
+    #define V281 281
+    #define V282 282
+    #define V283 283
+    #define V284 284
+    #define V285 285
+    #define V286 286
+    #define V287 287
+    #define V288 288
+    #define V289 289
+    #define V290 290
+    #define V291 291
+    #define V292 292
+    #define V293 293
+    #define V294 294
+    #define V295 295
+    #define V296 296
+    #define V297 297
+    #define V298 298
+    #define V299 299
+    #define V300 300
+    #define V301 301
+    #define V302 302
+    #define V303 303
+    #define V304 304
+    #define V305 305
+    #define V306 306
+    #define V307 307
+    #define V308 308
+    #define V309 309
+    #define V310 310
+    #define V311 311
+    #define V312 312
+    #define V313 313
+    #define V314 314
+    #define V315 315
+    #define V316 316
+    #define V317 317
+    #define V318 318
+    #define V319 319
+    #define V320 320
+    #define V321 321
+    #define V322 322
+    #define V323 323
+    #define V324 324
+    #define V325 325
+    #define V326 326
+    #define V327 327
+    #define V328 328
+    #define V329 329
+    #define V330 330
+    #define V331 331
+    #define V332 332
+    #define V333 333
+    #define V334 334
+    #define V335 335
+    #define V336 336
+    #define V337 337
+    #define V338 338
+    #define V339 339
+    #define V340 340
+    #define V341 341
+    #define V342 342
+    #define V343 343
+    #define V344 344
+    #define V345 345
+    #define V346 346
+    #define V347 347
+    #define V348 348
+    #define V349 349
+    #define V350 350
+    #define V351 351
+    #define V352 352
+    #define V353 353
+    #define V354 354
+    #define V355 355
+    #define V356 356
+    #define V357 357
+    #define V358 358
+    #define V359 359
+    #define V360 360
+    #define V361 361
+    #define V362 362
+    #define V363 363
+    #define V364 364
+    #define V365 365
+    #define V366 366
+    #define V367 367
+    #define V368 368
+    #define V369 369
+    #define V370 370
+    #define V371 371
+    #define V372 372
+    #define V373 373
+    #define V374 374
+    #define V375 375
+    #define V376 376
+    #define V377 377
+    #define V378 378
+    #define V379 379
+    #define V380 380
+    #define V381 381
+    #define V382 382
+    #define V383 383
+    #define V384 384
+    #define V385 385
+    #define V386 386
+    #define V387 387
+    #define V388 388
+    #define V389 389
+    #define V390 390
+    #define V391 391
+    #define V392 392
+    #define V393 393
+    #define V394 394
+    #define V395 395
+    #define V396 396
+    #define V397 397
+    #define V398 398
+    #define V399 399
+    #define V400 400
+    #define V401 401
+    #define V402 402
+    #define V403 403
+    #define V404 404
+    #define V405 405
+    #define V406 406
+    #define V407 407
+    #define V408 408
+    #define V409 409
+    #define V410 410
+    #define V411 411
+    #define V412 412
+    #define V413 413
+    #define V414 414
+    #define V415 415
+    #define V416 416
+    #define V417 417
+    #define V418 418
+    #define V419 419
+    #define V420 420
+    #define V421 421
+    #define V422 422
+    #define V423 423
+    #define V424 424
+    #define V425 425
+    #define V426 426
+    #define V427 427
+    #define V428 428
+    #define V429 429
+    #define V430 430
+    #define V431 431
+    #define V432 432
+    #define V433 433
+    #define V434 434
+    #define V435 435
+    #define V436 436
+    #define V437 437
+    #define V438 438
+    #define V439 439
+    #define V440 440
+    #define V441 441
+    #define V442 442
+    #define V443 443
+    #define V444 444
+    #define V445 445
+    #define V446 446
+    #define V447 447
+    #define V448 448
+    #define V449 449
+    #define V450 450
+    #define V451 451
+    #define V452 452
+    #define V453 453
+    #define V454 454
+    #define V455 455
+    #define V456 456
+    #define V457 457
+    #define V458 458
+    #define V459 459
+    #define V460 460
+    #define V461 461
+    #define V462 462
+    #define V463 463
+    #define V464 464
+    #define V465 465
+    #define V466 466
+    #define V467 467
+    #define V468 468
+    #define V469 469
+    #define V470 470
+    #define V471 471
+    #define V472 472
+    #define V473 473
+    #define V474 474
+    #define V475 475
+    #define V476 476
+    #define V477 477
+    #define V478 478
+    #define V479 479
+    #define V480 480
+    #define V481 481
+    #define V482 482
+    #define V483 483
+    #define V484 484
+    #define V485 485
+    #define V486 486
+    #define V487 487
+    #define V488 488
+    #define V489 489
+    #define V490 490
+    #define V491 491
+    #define V492 492
+    #define V493 493
+    #define V494 494
+    #define V495 495
+    #define V496 496
+    #define V497 497
+    #define V498 498
+    #define V499 499
+#endif
 
 typedef enum
     : uint8_t {
@@ -289,13 +535,13 @@ typedef enum
 #define ERA_WRITE_SMS()             bool ERaWidgetWriteSMS(const char* to, const char* message)
 #define ERA_ON_SMS()                ERA_WRITE_SMS()
 
-#define ERA_WRITE_2(Pin)            void ERaWidgetWrite ## Pin (uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param)
+#define ERA_WRITE_2(Pin)            void ERaWidgetWrite ## Pin (uint16_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param)
 #define ERA_WRITE(Pin)              ERA_WRITE_2(Pin)
 
-#define ERA_PIN_READ_2(Pin)         void ERaWidgetPinRead ## Pin (uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param, const ERaParam ERA_UNUSED &raw)
+#define ERA_PIN_READ_2(Pin)         void ERaWidgetPinRead ## Pin (uint16_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param, const ERaParam ERA_UNUSED &raw)
 #define ERA_PIN_READ(Pin)           ERA_PIN_READ_2(Pin)
 
-#define ERA_PIN_WRITE_2(Pin)        bool ERaWidgetPinWrite ## Pin (uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param, const ERaParam ERA_UNUSED &raw)
+#define ERA_PIN_WRITE_2(Pin)        bool ERaWidgetPinWrite ## Pin (uint16_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param, const ERaParam ERA_UNUSED &raw)
 #define ERA_PIN_WRITE(Pin)          ERA_PIN_WRITE_2(Pin)
 
 #define ERA_WRITE_DEFAULT()         ERA_WRITE_2(Default)
@@ -595,6 +841,252 @@ ERA_WRITE(49);
     ERA_WRITE(254);
     ERA_WRITE(255);
 #endif
+#if defined(ERA_500_PINS)
+    ERA_WRITE(256);
+    ERA_WRITE(257);
+    ERA_WRITE(258);
+    ERA_WRITE(259);
+    ERA_WRITE(260);
+    ERA_WRITE(261);
+    ERA_WRITE(262);
+    ERA_WRITE(263);
+    ERA_WRITE(264);
+    ERA_WRITE(265);
+    ERA_WRITE(266);
+    ERA_WRITE(267);
+    ERA_WRITE(268);
+    ERA_WRITE(269);
+    ERA_WRITE(270);
+    ERA_WRITE(271);
+    ERA_WRITE(272);
+    ERA_WRITE(273);
+    ERA_WRITE(274);
+    ERA_WRITE(275);
+    ERA_WRITE(276);
+    ERA_WRITE(277);
+    ERA_WRITE(278);
+    ERA_WRITE(279);
+    ERA_WRITE(280);
+    ERA_WRITE(281);
+    ERA_WRITE(282);
+    ERA_WRITE(283);
+    ERA_WRITE(284);
+    ERA_WRITE(285);
+    ERA_WRITE(286);
+    ERA_WRITE(287);
+    ERA_WRITE(288);
+    ERA_WRITE(289);
+    ERA_WRITE(290);
+    ERA_WRITE(291);
+    ERA_WRITE(292);
+    ERA_WRITE(293);
+    ERA_WRITE(294);
+    ERA_WRITE(295);
+    ERA_WRITE(296);
+    ERA_WRITE(297);
+    ERA_WRITE(298);
+    ERA_WRITE(299);
+    ERA_WRITE(300);
+    ERA_WRITE(301);
+    ERA_WRITE(302);
+    ERA_WRITE(303);
+    ERA_WRITE(304);
+    ERA_WRITE(305);
+    ERA_WRITE(306);
+    ERA_WRITE(307);
+    ERA_WRITE(308);
+    ERA_WRITE(309);
+    ERA_WRITE(310);
+    ERA_WRITE(311);
+    ERA_WRITE(312);
+    ERA_WRITE(313);
+    ERA_WRITE(314);
+    ERA_WRITE(315);
+    ERA_WRITE(316);
+    ERA_WRITE(317);
+    ERA_WRITE(318);
+    ERA_WRITE(319);
+    ERA_WRITE(320);
+    ERA_WRITE(321);
+    ERA_WRITE(322);
+    ERA_WRITE(323);
+    ERA_WRITE(324);
+    ERA_WRITE(325);
+    ERA_WRITE(326);
+    ERA_WRITE(327);
+    ERA_WRITE(328);
+    ERA_WRITE(329);
+    ERA_WRITE(330);
+    ERA_WRITE(331);
+    ERA_WRITE(332);
+    ERA_WRITE(333);
+    ERA_WRITE(334);
+    ERA_WRITE(335);
+    ERA_WRITE(336);
+    ERA_WRITE(337);
+    ERA_WRITE(338);
+    ERA_WRITE(339);
+    ERA_WRITE(340);
+    ERA_WRITE(341);
+    ERA_WRITE(342);
+    ERA_WRITE(343);
+    ERA_WRITE(344);
+    ERA_WRITE(345);
+    ERA_WRITE(346);
+    ERA_WRITE(347);
+    ERA_WRITE(348);
+    ERA_WRITE(349);
+    ERA_WRITE(350);
+    ERA_WRITE(351);
+    ERA_WRITE(352);
+    ERA_WRITE(353);
+    ERA_WRITE(354);
+    ERA_WRITE(355);
+    ERA_WRITE(356);
+    ERA_WRITE(357);
+    ERA_WRITE(358);
+    ERA_WRITE(359);
+    ERA_WRITE(360);
+    ERA_WRITE(361);
+    ERA_WRITE(362);
+    ERA_WRITE(363);
+    ERA_WRITE(364);
+    ERA_WRITE(365);
+    ERA_WRITE(366);
+    ERA_WRITE(367);
+    ERA_WRITE(368);
+    ERA_WRITE(369);
+    ERA_WRITE(370);
+    ERA_WRITE(371);
+    ERA_WRITE(372);
+    ERA_WRITE(373);
+    ERA_WRITE(374);
+    ERA_WRITE(375);
+    ERA_WRITE(376);
+    ERA_WRITE(377);
+    ERA_WRITE(378);
+    ERA_WRITE(379);
+    ERA_WRITE(380);
+    ERA_WRITE(381);
+    ERA_WRITE(382);
+    ERA_WRITE(383);
+    ERA_WRITE(384);
+    ERA_WRITE(385);
+    ERA_WRITE(386);
+    ERA_WRITE(387);
+    ERA_WRITE(388);
+    ERA_WRITE(389);
+    ERA_WRITE(390);
+    ERA_WRITE(391);
+    ERA_WRITE(392);
+    ERA_WRITE(393);
+    ERA_WRITE(394);
+    ERA_WRITE(395);
+    ERA_WRITE(396);
+    ERA_WRITE(397);
+    ERA_WRITE(398);
+    ERA_WRITE(399);
+    ERA_WRITE(400);
+    ERA_WRITE(401);
+    ERA_WRITE(402);
+    ERA_WRITE(403);
+    ERA_WRITE(404);
+    ERA_WRITE(405);
+    ERA_WRITE(406);
+    ERA_WRITE(407);
+    ERA_WRITE(408);
+    ERA_WRITE(409);
+    ERA_WRITE(410);
+    ERA_WRITE(411);
+    ERA_WRITE(412);
+    ERA_WRITE(413);
+    ERA_WRITE(414);
+    ERA_WRITE(415);
+    ERA_WRITE(416);
+    ERA_WRITE(417);
+    ERA_WRITE(418);
+    ERA_WRITE(419);
+    ERA_WRITE(420);
+    ERA_WRITE(421);
+    ERA_WRITE(422);
+    ERA_WRITE(423);
+    ERA_WRITE(424);
+    ERA_WRITE(425);
+    ERA_WRITE(426);
+    ERA_WRITE(427);
+    ERA_WRITE(428);
+    ERA_WRITE(429);
+    ERA_WRITE(430);
+    ERA_WRITE(431);
+    ERA_WRITE(432);
+    ERA_WRITE(433);
+    ERA_WRITE(434);
+    ERA_WRITE(435);
+    ERA_WRITE(436);
+    ERA_WRITE(437);
+    ERA_WRITE(438);
+    ERA_WRITE(439);
+    ERA_WRITE(440);
+    ERA_WRITE(441);
+    ERA_WRITE(442);
+    ERA_WRITE(443);
+    ERA_WRITE(444);
+    ERA_WRITE(445);
+    ERA_WRITE(446);
+    ERA_WRITE(447);
+    ERA_WRITE(448);
+    ERA_WRITE(449);
+    ERA_WRITE(450);
+    ERA_WRITE(451);
+    ERA_WRITE(452);
+    ERA_WRITE(453);
+    ERA_WRITE(454);
+    ERA_WRITE(455);
+    ERA_WRITE(456);
+    ERA_WRITE(457);
+    ERA_WRITE(458);
+    ERA_WRITE(459);
+    ERA_WRITE(460);
+    ERA_WRITE(461);
+    ERA_WRITE(462);
+    ERA_WRITE(463);
+    ERA_WRITE(464);
+    ERA_WRITE(465);
+    ERA_WRITE(466);
+    ERA_WRITE(467);
+    ERA_WRITE(468);
+    ERA_WRITE(469);
+    ERA_WRITE(470);
+    ERA_WRITE(471);
+    ERA_WRITE(472);
+    ERA_WRITE(473);
+    ERA_WRITE(474);
+    ERA_WRITE(475);
+    ERA_WRITE(476);
+    ERA_WRITE(477);
+    ERA_WRITE(478);
+    ERA_WRITE(479);
+    ERA_WRITE(480);
+    ERA_WRITE(481);
+    ERA_WRITE(482);
+    ERA_WRITE(483);
+    ERA_WRITE(484);
+    ERA_WRITE(485);
+    ERA_WRITE(486);
+    ERA_WRITE(487);
+    ERA_WRITE(488);
+    ERA_WRITE(489);
+    ERA_WRITE(490);
+    ERA_WRITE(491);
+    ERA_WRITE(492);
+    ERA_WRITE(493);
+    ERA_WRITE(494);
+    ERA_WRITE(495);
+    ERA_WRITE(496);
+    ERA_WRITE(497);
+    ERA_WRITE(498);
+    ERA_WRITE(499);
+#endif
 
 ERA_PIN_READ(  );
 ERA_PIN_READ( 0);
@@ -856,6 +1348,252 @@ ERA_PIN_READ(49);
     ERA_PIN_READ(253);
     ERA_PIN_READ(254);
     ERA_PIN_READ(255);
+#endif
+#if defined(ERA_500_PINS)
+    ERA_PIN_READ(256);
+    ERA_PIN_READ(257);
+    ERA_PIN_READ(258);
+    ERA_PIN_READ(259);
+    ERA_PIN_READ(260);
+    ERA_PIN_READ(261);
+    ERA_PIN_READ(262);
+    ERA_PIN_READ(263);
+    ERA_PIN_READ(264);
+    ERA_PIN_READ(265);
+    ERA_PIN_READ(266);
+    ERA_PIN_READ(267);
+    ERA_PIN_READ(268);
+    ERA_PIN_READ(269);
+    ERA_PIN_READ(270);
+    ERA_PIN_READ(271);
+    ERA_PIN_READ(272);
+    ERA_PIN_READ(273);
+    ERA_PIN_READ(274);
+    ERA_PIN_READ(275);
+    ERA_PIN_READ(276);
+    ERA_PIN_READ(277);
+    ERA_PIN_READ(278);
+    ERA_PIN_READ(279);
+    ERA_PIN_READ(280);
+    ERA_PIN_READ(281);
+    ERA_PIN_READ(282);
+    ERA_PIN_READ(283);
+    ERA_PIN_READ(284);
+    ERA_PIN_READ(285);
+    ERA_PIN_READ(286);
+    ERA_PIN_READ(287);
+    ERA_PIN_READ(288);
+    ERA_PIN_READ(289);
+    ERA_PIN_READ(290);
+    ERA_PIN_READ(291);
+    ERA_PIN_READ(292);
+    ERA_PIN_READ(293);
+    ERA_PIN_READ(294);
+    ERA_PIN_READ(295);
+    ERA_PIN_READ(296);
+    ERA_PIN_READ(297);
+    ERA_PIN_READ(298);
+    ERA_PIN_READ(299);
+    ERA_PIN_READ(300);
+    ERA_PIN_READ(301);
+    ERA_PIN_READ(302);
+    ERA_PIN_READ(303);
+    ERA_PIN_READ(304);
+    ERA_PIN_READ(305);
+    ERA_PIN_READ(306);
+    ERA_PIN_READ(307);
+    ERA_PIN_READ(308);
+    ERA_PIN_READ(309);
+    ERA_PIN_READ(310);
+    ERA_PIN_READ(311);
+    ERA_PIN_READ(312);
+    ERA_PIN_READ(313);
+    ERA_PIN_READ(314);
+    ERA_PIN_READ(315);
+    ERA_PIN_READ(316);
+    ERA_PIN_READ(317);
+    ERA_PIN_READ(318);
+    ERA_PIN_READ(319);
+    ERA_PIN_READ(320);
+    ERA_PIN_READ(321);
+    ERA_PIN_READ(322);
+    ERA_PIN_READ(323);
+    ERA_PIN_READ(324);
+    ERA_PIN_READ(325);
+    ERA_PIN_READ(326);
+    ERA_PIN_READ(327);
+    ERA_PIN_READ(328);
+    ERA_PIN_READ(329);
+    ERA_PIN_READ(330);
+    ERA_PIN_READ(331);
+    ERA_PIN_READ(332);
+    ERA_PIN_READ(333);
+    ERA_PIN_READ(334);
+    ERA_PIN_READ(335);
+    ERA_PIN_READ(336);
+    ERA_PIN_READ(337);
+    ERA_PIN_READ(338);
+    ERA_PIN_READ(339);
+    ERA_PIN_READ(340);
+    ERA_PIN_READ(341);
+    ERA_PIN_READ(342);
+    ERA_PIN_READ(343);
+    ERA_PIN_READ(344);
+    ERA_PIN_READ(345);
+    ERA_PIN_READ(346);
+    ERA_PIN_READ(347);
+    ERA_PIN_READ(348);
+    ERA_PIN_READ(349);
+    ERA_PIN_READ(350);
+    ERA_PIN_READ(351);
+    ERA_PIN_READ(352);
+    ERA_PIN_READ(353);
+    ERA_PIN_READ(354);
+    ERA_PIN_READ(355);
+    ERA_PIN_READ(356);
+    ERA_PIN_READ(357);
+    ERA_PIN_READ(358);
+    ERA_PIN_READ(359);
+    ERA_PIN_READ(360);
+    ERA_PIN_READ(361);
+    ERA_PIN_READ(362);
+    ERA_PIN_READ(363);
+    ERA_PIN_READ(364);
+    ERA_PIN_READ(365);
+    ERA_PIN_READ(366);
+    ERA_PIN_READ(367);
+    ERA_PIN_READ(368);
+    ERA_PIN_READ(369);
+    ERA_PIN_READ(370);
+    ERA_PIN_READ(371);
+    ERA_PIN_READ(372);
+    ERA_PIN_READ(373);
+    ERA_PIN_READ(374);
+    ERA_PIN_READ(375);
+    ERA_PIN_READ(376);
+    ERA_PIN_READ(377);
+    ERA_PIN_READ(378);
+    ERA_PIN_READ(379);
+    ERA_PIN_READ(380);
+    ERA_PIN_READ(381);
+    ERA_PIN_READ(382);
+    ERA_PIN_READ(383);
+    ERA_PIN_READ(384);
+    ERA_PIN_READ(385);
+    ERA_PIN_READ(386);
+    ERA_PIN_READ(387);
+    ERA_PIN_READ(388);
+    ERA_PIN_READ(389);
+    ERA_PIN_READ(390);
+    ERA_PIN_READ(391);
+    ERA_PIN_READ(392);
+    ERA_PIN_READ(393);
+    ERA_PIN_READ(394);
+    ERA_PIN_READ(395);
+    ERA_PIN_READ(396);
+    ERA_PIN_READ(397);
+    ERA_PIN_READ(398);
+    ERA_PIN_READ(399);
+    ERA_PIN_READ(400);
+    ERA_PIN_READ(401);
+    ERA_PIN_READ(402);
+    ERA_PIN_READ(403);
+    ERA_PIN_READ(404);
+    ERA_PIN_READ(405);
+    ERA_PIN_READ(406);
+    ERA_PIN_READ(407);
+    ERA_PIN_READ(408);
+    ERA_PIN_READ(409);
+    ERA_PIN_READ(410);
+    ERA_PIN_READ(411);
+    ERA_PIN_READ(412);
+    ERA_PIN_READ(413);
+    ERA_PIN_READ(414);
+    ERA_PIN_READ(415);
+    ERA_PIN_READ(416);
+    ERA_PIN_READ(417);
+    ERA_PIN_READ(418);
+    ERA_PIN_READ(419);
+    ERA_PIN_READ(420);
+    ERA_PIN_READ(421);
+    ERA_PIN_READ(422);
+    ERA_PIN_READ(423);
+    ERA_PIN_READ(424);
+    ERA_PIN_READ(425);
+    ERA_PIN_READ(426);
+    ERA_PIN_READ(427);
+    ERA_PIN_READ(428);
+    ERA_PIN_READ(429);
+    ERA_PIN_READ(430);
+    ERA_PIN_READ(431);
+    ERA_PIN_READ(432);
+    ERA_PIN_READ(433);
+    ERA_PIN_READ(434);
+    ERA_PIN_READ(435);
+    ERA_PIN_READ(436);
+    ERA_PIN_READ(437);
+    ERA_PIN_READ(438);
+    ERA_PIN_READ(439);
+    ERA_PIN_READ(440);
+    ERA_PIN_READ(441);
+    ERA_PIN_READ(442);
+    ERA_PIN_READ(443);
+    ERA_PIN_READ(444);
+    ERA_PIN_READ(445);
+    ERA_PIN_READ(446);
+    ERA_PIN_READ(447);
+    ERA_PIN_READ(448);
+    ERA_PIN_READ(449);
+    ERA_PIN_READ(450);
+    ERA_PIN_READ(451);
+    ERA_PIN_READ(452);
+    ERA_PIN_READ(453);
+    ERA_PIN_READ(454);
+    ERA_PIN_READ(455);
+    ERA_PIN_READ(456);
+    ERA_PIN_READ(457);
+    ERA_PIN_READ(458);
+    ERA_PIN_READ(459);
+    ERA_PIN_READ(460);
+    ERA_PIN_READ(461);
+    ERA_PIN_READ(462);
+    ERA_PIN_READ(463);
+    ERA_PIN_READ(464);
+    ERA_PIN_READ(465);
+    ERA_PIN_READ(466);
+    ERA_PIN_READ(467);
+    ERA_PIN_READ(468);
+    ERA_PIN_READ(469);
+    ERA_PIN_READ(470);
+    ERA_PIN_READ(471);
+    ERA_PIN_READ(472);
+    ERA_PIN_READ(473);
+    ERA_PIN_READ(474);
+    ERA_PIN_READ(475);
+    ERA_PIN_READ(476);
+    ERA_PIN_READ(477);
+    ERA_PIN_READ(478);
+    ERA_PIN_READ(479);
+    ERA_PIN_READ(480);
+    ERA_PIN_READ(481);
+    ERA_PIN_READ(482);
+    ERA_PIN_READ(483);
+    ERA_PIN_READ(484);
+    ERA_PIN_READ(485);
+    ERA_PIN_READ(486);
+    ERA_PIN_READ(487);
+    ERA_PIN_READ(488);
+    ERA_PIN_READ(489);
+    ERA_PIN_READ(490);
+    ERA_PIN_READ(491);
+    ERA_PIN_READ(492);
+    ERA_PIN_READ(493);
+    ERA_PIN_READ(494);
+    ERA_PIN_READ(495);
+    ERA_PIN_READ(496);
+    ERA_PIN_READ(497);
+    ERA_PIN_READ(498);
+    ERA_PIN_READ(499);
 #endif
 
 ERA_PIN_WRITE(  );
@@ -1119,14 +1857,260 @@ ERA_PIN_WRITE(49);
     ERA_PIN_WRITE(254);
     ERA_PIN_WRITE(255);
 #endif
+#if defined(ERA_500_PINS)
+    ERA_PIN_WRITE(256);
+    ERA_PIN_WRITE(257);
+    ERA_PIN_WRITE(258);
+    ERA_PIN_WRITE(259);
+    ERA_PIN_WRITE(260);
+    ERA_PIN_WRITE(261);
+    ERA_PIN_WRITE(262);
+    ERA_PIN_WRITE(263);
+    ERA_PIN_WRITE(264);
+    ERA_PIN_WRITE(265);
+    ERA_PIN_WRITE(266);
+    ERA_PIN_WRITE(267);
+    ERA_PIN_WRITE(268);
+    ERA_PIN_WRITE(269);
+    ERA_PIN_WRITE(270);
+    ERA_PIN_WRITE(271);
+    ERA_PIN_WRITE(272);
+    ERA_PIN_WRITE(273);
+    ERA_PIN_WRITE(274);
+    ERA_PIN_WRITE(275);
+    ERA_PIN_WRITE(276);
+    ERA_PIN_WRITE(277);
+    ERA_PIN_WRITE(278);
+    ERA_PIN_WRITE(279);
+    ERA_PIN_WRITE(280);
+    ERA_PIN_WRITE(281);
+    ERA_PIN_WRITE(282);
+    ERA_PIN_WRITE(283);
+    ERA_PIN_WRITE(284);
+    ERA_PIN_WRITE(285);
+    ERA_PIN_WRITE(286);
+    ERA_PIN_WRITE(287);
+    ERA_PIN_WRITE(288);
+    ERA_PIN_WRITE(289);
+    ERA_PIN_WRITE(290);
+    ERA_PIN_WRITE(291);
+    ERA_PIN_WRITE(292);
+    ERA_PIN_WRITE(293);
+    ERA_PIN_WRITE(294);
+    ERA_PIN_WRITE(295);
+    ERA_PIN_WRITE(296);
+    ERA_PIN_WRITE(297);
+    ERA_PIN_WRITE(298);
+    ERA_PIN_WRITE(299);
+    ERA_PIN_WRITE(300);
+    ERA_PIN_WRITE(301);
+    ERA_PIN_WRITE(302);
+    ERA_PIN_WRITE(303);
+    ERA_PIN_WRITE(304);
+    ERA_PIN_WRITE(305);
+    ERA_PIN_WRITE(306);
+    ERA_PIN_WRITE(307);
+    ERA_PIN_WRITE(308);
+    ERA_PIN_WRITE(309);
+    ERA_PIN_WRITE(310);
+    ERA_PIN_WRITE(311);
+    ERA_PIN_WRITE(312);
+    ERA_PIN_WRITE(313);
+    ERA_PIN_WRITE(314);
+    ERA_PIN_WRITE(315);
+    ERA_PIN_WRITE(316);
+    ERA_PIN_WRITE(317);
+    ERA_PIN_WRITE(318);
+    ERA_PIN_WRITE(319);
+    ERA_PIN_WRITE(320);
+    ERA_PIN_WRITE(321);
+    ERA_PIN_WRITE(322);
+    ERA_PIN_WRITE(323);
+    ERA_PIN_WRITE(324);
+    ERA_PIN_WRITE(325);
+    ERA_PIN_WRITE(326);
+    ERA_PIN_WRITE(327);
+    ERA_PIN_WRITE(328);
+    ERA_PIN_WRITE(329);
+    ERA_PIN_WRITE(330);
+    ERA_PIN_WRITE(331);
+    ERA_PIN_WRITE(332);
+    ERA_PIN_WRITE(333);
+    ERA_PIN_WRITE(334);
+    ERA_PIN_WRITE(335);
+    ERA_PIN_WRITE(336);
+    ERA_PIN_WRITE(337);
+    ERA_PIN_WRITE(338);
+    ERA_PIN_WRITE(339);
+    ERA_PIN_WRITE(340);
+    ERA_PIN_WRITE(341);
+    ERA_PIN_WRITE(342);
+    ERA_PIN_WRITE(343);
+    ERA_PIN_WRITE(344);
+    ERA_PIN_WRITE(345);
+    ERA_PIN_WRITE(346);
+    ERA_PIN_WRITE(347);
+    ERA_PIN_WRITE(348);
+    ERA_PIN_WRITE(349);
+    ERA_PIN_WRITE(350);
+    ERA_PIN_WRITE(351);
+    ERA_PIN_WRITE(352);
+    ERA_PIN_WRITE(353);
+    ERA_PIN_WRITE(354);
+    ERA_PIN_WRITE(355);
+    ERA_PIN_WRITE(356);
+    ERA_PIN_WRITE(357);
+    ERA_PIN_WRITE(358);
+    ERA_PIN_WRITE(359);
+    ERA_PIN_WRITE(360);
+    ERA_PIN_WRITE(361);
+    ERA_PIN_WRITE(362);
+    ERA_PIN_WRITE(363);
+    ERA_PIN_WRITE(364);
+    ERA_PIN_WRITE(365);
+    ERA_PIN_WRITE(366);
+    ERA_PIN_WRITE(367);
+    ERA_PIN_WRITE(368);
+    ERA_PIN_WRITE(369);
+    ERA_PIN_WRITE(370);
+    ERA_PIN_WRITE(371);
+    ERA_PIN_WRITE(372);
+    ERA_PIN_WRITE(373);
+    ERA_PIN_WRITE(374);
+    ERA_PIN_WRITE(375);
+    ERA_PIN_WRITE(376);
+    ERA_PIN_WRITE(377);
+    ERA_PIN_WRITE(378);
+    ERA_PIN_WRITE(379);
+    ERA_PIN_WRITE(380);
+    ERA_PIN_WRITE(381);
+    ERA_PIN_WRITE(382);
+    ERA_PIN_WRITE(383);
+    ERA_PIN_WRITE(384);
+    ERA_PIN_WRITE(385);
+    ERA_PIN_WRITE(386);
+    ERA_PIN_WRITE(387);
+    ERA_PIN_WRITE(388);
+    ERA_PIN_WRITE(389);
+    ERA_PIN_WRITE(390);
+    ERA_PIN_WRITE(391);
+    ERA_PIN_WRITE(392);
+    ERA_PIN_WRITE(393);
+    ERA_PIN_WRITE(394);
+    ERA_PIN_WRITE(395);
+    ERA_PIN_WRITE(396);
+    ERA_PIN_WRITE(397);
+    ERA_PIN_WRITE(398);
+    ERA_PIN_WRITE(399);
+    ERA_PIN_WRITE(400);
+    ERA_PIN_WRITE(401);
+    ERA_PIN_WRITE(402);
+    ERA_PIN_WRITE(403);
+    ERA_PIN_WRITE(404);
+    ERA_PIN_WRITE(405);
+    ERA_PIN_WRITE(406);
+    ERA_PIN_WRITE(407);
+    ERA_PIN_WRITE(408);
+    ERA_PIN_WRITE(409);
+    ERA_PIN_WRITE(410);
+    ERA_PIN_WRITE(411);
+    ERA_PIN_WRITE(412);
+    ERA_PIN_WRITE(413);
+    ERA_PIN_WRITE(414);
+    ERA_PIN_WRITE(415);
+    ERA_PIN_WRITE(416);
+    ERA_PIN_WRITE(417);
+    ERA_PIN_WRITE(418);
+    ERA_PIN_WRITE(419);
+    ERA_PIN_WRITE(420);
+    ERA_PIN_WRITE(421);
+    ERA_PIN_WRITE(422);
+    ERA_PIN_WRITE(423);
+    ERA_PIN_WRITE(424);
+    ERA_PIN_WRITE(425);
+    ERA_PIN_WRITE(426);
+    ERA_PIN_WRITE(427);
+    ERA_PIN_WRITE(428);
+    ERA_PIN_WRITE(429);
+    ERA_PIN_WRITE(430);
+    ERA_PIN_WRITE(431);
+    ERA_PIN_WRITE(432);
+    ERA_PIN_WRITE(433);
+    ERA_PIN_WRITE(434);
+    ERA_PIN_WRITE(435);
+    ERA_PIN_WRITE(436);
+    ERA_PIN_WRITE(437);
+    ERA_PIN_WRITE(438);
+    ERA_PIN_WRITE(439);
+    ERA_PIN_WRITE(440);
+    ERA_PIN_WRITE(441);
+    ERA_PIN_WRITE(442);
+    ERA_PIN_WRITE(443);
+    ERA_PIN_WRITE(444);
+    ERA_PIN_WRITE(445);
+    ERA_PIN_WRITE(446);
+    ERA_PIN_WRITE(447);
+    ERA_PIN_WRITE(448);
+    ERA_PIN_WRITE(449);
+    ERA_PIN_WRITE(450);
+    ERA_PIN_WRITE(451);
+    ERA_PIN_WRITE(452);
+    ERA_PIN_WRITE(453);
+    ERA_PIN_WRITE(454);
+    ERA_PIN_WRITE(455);
+    ERA_PIN_WRITE(456);
+    ERA_PIN_WRITE(457);
+    ERA_PIN_WRITE(458);
+    ERA_PIN_WRITE(459);
+    ERA_PIN_WRITE(460);
+    ERA_PIN_WRITE(461);
+    ERA_PIN_WRITE(462);
+    ERA_PIN_WRITE(463);
+    ERA_PIN_WRITE(464);
+    ERA_PIN_WRITE(465);
+    ERA_PIN_WRITE(466);
+    ERA_PIN_WRITE(467);
+    ERA_PIN_WRITE(468);
+    ERA_PIN_WRITE(469);
+    ERA_PIN_WRITE(470);
+    ERA_PIN_WRITE(471);
+    ERA_PIN_WRITE(472);
+    ERA_PIN_WRITE(473);
+    ERA_PIN_WRITE(474);
+    ERA_PIN_WRITE(475);
+    ERA_PIN_WRITE(476);
+    ERA_PIN_WRITE(477);
+    ERA_PIN_WRITE(478);
+    ERA_PIN_WRITE(479);
+    ERA_PIN_WRITE(480);
+    ERA_PIN_WRITE(481);
+    ERA_PIN_WRITE(482);
+    ERA_PIN_WRITE(483);
+    ERA_PIN_WRITE(484);
+    ERA_PIN_WRITE(485);
+    ERA_PIN_WRITE(486);
+    ERA_PIN_WRITE(487);
+    ERA_PIN_WRITE(488);
+    ERA_PIN_WRITE(489);
+    ERA_PIN_WRITE(490);
+    ERA_PIN_WRITE(491);
+    ERA_PIN_WRITE(492);
+    ERA_PIN_WRITE(493);
+    ERA_PIN_WRITE(494);
+    ERA_PIN_WRITE(495);
+    ERA_PIN_WRITE(496);
+    ERA_PIN_WRITE(497);
+    ERA_PIN_WRITE(498);
+    ERA_PIN_WRITE(499);
+#endif
 
-typedef void (*ERaWriteHandler_t)(uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param);
-typedef void (*ERaPinReadHandler_t)(uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param, const ERaParam ERA_UNUSED &raw);
-typedef bool (*ERaPinWriteHandler_t)(uint8_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param, const ERaParam ERA_UNUSED &raw);
+typedef void (*ERaWriteHandler_t)(uint16_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param);
+typedef void (*ERaPinReadHandler_t)(uint16_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param, const ERaParam ERA_UNUSED &raw);
+typedef bool (*ERaPinWriteHandler_t)(uint16_t ERA_UNUSED &pin, const ERaParam ERA_UNUSED &param, const ERaParam ERA_UNUSED &raw);
 
-ERaWriteHandler_t getERaWriteHandler(uint8_t pin);
-ERaPinReadHandler_t getERaPinReadHandler(uint8_t pin);
-ERaPinWriteHandler_t getERaPinWriteHandler(uint8_t pin);
+ERaWriteHandler_t getERaWriteHandler(uint16_t pin);
+ERaPinReadHandler_t getERaPinReadHandler(uint16_t pin);
+ERaPinWriteHandler_t getERaPinWriteHandler(uint16_t pin);
 
 #ifdef __cplusplus
 }

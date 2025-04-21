@@ -20,6 +20,7 @@
 // #define ERA_LOCATION_SG
 
 // You should get Auth Token in the ERa App or ERa Dashboard
+// and not share this token with anyone.
 #define ERA_AUTH_TOKEN "ERA2706"
 #define ERA_USE_SSL
 
@@ -65,7 +66,15 @@ ERaSmart smart(ERa, syncTime);
         pthread_exit(NULL);
     }
 
-#if ERA_VERSION_NUMBER >= ERA_VERSION_VAL(1, 2, 0)
+#if ERA_VERSION_NUMBER >= ERA_VERSION_VAL(1, 6, 0)
+    static void eventButton(uint16_t pin, ButtonEventT event) {
+        if (event != ButtonEventT::BUTTON_ON_HOLD) {
+            return;
+        }
+        ERa.switchToConfig(ERA_ERASE_CONFIG);
+        (void)pin;
+    }
+#elif ERA_VERSION_NUMBER >= ERA_VERSION_VAL(1, 2, 0)
     static void eventButton(uint8_t pin, ButtonEventT event) {
         if (event != ButtonEventT::BUTTON_ON_HOLD) {
             return;

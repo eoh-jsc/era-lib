@@ -201,6 +201,10 @@ public:
         }
     }
 
+    virtual int availableForWrite() {
+        return 0;
+    }
+
 protected:
     __attribute__((constructor))
     static inline

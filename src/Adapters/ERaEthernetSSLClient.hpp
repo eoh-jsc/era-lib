@@ -10,7 +10,10 @@
 #endif
 
 #if !defined(ERA_AUTH_TOKEN)
-    #error "Please specify your ERA_AUTH_TOKEN"
+    #define ERA_SCAN_DEVICE
+    #pragma message "You did not define ERA_AUTH_TOKEN, switching to 'Scan Device' mode"
+
+    #include <Adapters/ERaConnecting.hpp>
 #endif
 
 #include <ERa/ERaProtocol.hpp>
@@ -23,6 +26,10 @@ class ERaFlash;
 template <class Transport>
 class ERaEthernet
     : public ERaProto<Transport, ERaFlash>
+#if defined(ERA_SCAN_DEVICE)
+    , public ERaConnecting<EthernetServer, EthernetClient,
+                           EthernetUDP, ERaFlash>
+#endif
 {
     enum EthernetModeT {
         ETH_MODE_DHCP = 0,
@@ -33,10 +40,17 @@ class ERaEthernet
     const char* TAG = "Ethernet";
     friend class ERaProto<Transport, ERaFlash>;
     typedef ERaProto<Transport, ERaFlash> Base;
+#if defined(ERA_SCAN_DEVICE)
+    typedef ERaConnecting<EthernetServer, EthernetClient,
+                          EthernetUDP, ERaFlash> ConnectBase;
+#endif
 
 public:
     ERaEthernet(Transport& _transp, ERaFlash& _flash)
         : Base(_transp, _flash)
+#if defined(ERA_SCAN_DEVICE)
+        , ConnectBase(_flash)
+#endif
         , client(tcpClient)
         , authToken(nullptr)
         , macUser(nullptr)
@@ -75,6 +89,8 @@ public:
                         const uint8_t mac[] = nullptr) {
         ERaWatchdogFeed();
 
+        this->setupConnectBase();
+
         ERA_LOG(TAG, ERA_PSTR("Connecting network..."));
         if (!Ethernet.begin(this->getMacAddress(auth, mac))) {
             ERA_LOG_ERROR(TAG, ERA_PSTR("Connect failed"));
@@ -95,6 +111,8 @@ public:
                         const uint8_t mac[] = nullptr) {
         ERaWatchdogFeed();
 
+        this->setupConnectBase();
+
         ERA_LOG(TAG, ERA_PSTR("Connecting network static IP..."));
         Ethernet.begin(this->getMacAddress(auth, mac), localIP);
         this->getTransp().setSSID(ERA_NETWORK_TYPE);
@@ -114,6 +132,8 @@ public:
                         IPAddress& subnet,
                         const uint8_t mac[] = nullptr) {
         ERaWatchdogFeed();
+
+        this->setupConnectBase();
 
         ERA_LOG(TAG, ERA_PSTR("Connecting network static IP..."));
         Ethernet.begin(this->getMacAddress(auth, mac),
@@ -240,8 +260,19 @@ public:
 
     void run() {
         switch (ERaState::get()) {
+#if defined(ERA_SCAN_DEVICE)
+            case StateT::STATE_SCAN_DEVICE:
+                ConnectBase::configMode();
+                this->config(ERaConfig.token, ERaConfig.host, ERaConfig.port,
+                             ERaConfig.username, ERaConfig.password);
+                break;
+#endif
             case StateT::STATE_CONNECTING_CLOUD:
                 if (Base::connect()) {
+#if defined(ERA_SCAN_DEVICE)
+                    ConnectBase::setConnected(true);
+                    ConnectBase::configSave();
+#endif
                     ERaOptConnected(this);
                     ERaState::set(StateT::STATE_CONNECTED);
                 }
@@ -258,8 +289,23 @@ public:
             case StateT::STATE_CONNECTING_NEW_NETWORK:
                 Base::connectNewNetworkResult();
                 break;
+#if defined(ERA_SCAN_DEVICE)
+            case StateT::STATE_RESET_CONFIG:
+                ConnectBase::configReset();
+                break;
+#endif
+            case StateT::STATE_RESET_CONFIG_REBOOT:
+#if defined(ERA_SCAN_DEVICE)
+                ConnectBase::configReset();
+#endif
+                ERaState::set(StateT::STATE_REBOOT);
+                break;
             case StateT::STATE_REQUEST_LIST_WIFI:
                 Base::responseListWiFi();
+                break;
+            case StateT::STATE_REBOOT:
+                ERaDelay(1000);
+                ERaRestart(false);
                 break;
             default:
                 if (this->netConnected() ||
@@ -272,6 +318,20 @@ public:
 
 protected:
 private:
+#if defined(ERA_SCAN_DEVICE)
+    void setupConnectBase() {
+        ConnectBase::configLoad();
+        ConnectBase::assignDeviceName(Base::getDeviceName());
+        ConnectBase::assignDeviceType(Base::getDeviceType());
+        ConnectBase::assignDeviceSecretKey(Base::getDeviceSecretKey());
+        this->config(ERaConfig.token, ERaConfig.host, ERaConfig.port,
+                     ERaConfig.username, ERaConfig.password);
+    }
+#else
+    void setupConnectBase() {
+    }
+#endif
+
     bool netConnected() const {
         return this->_connected;
     }
@@ -303,6 +363,10 @@ private:
         this->dnsUser = dns;
         this->gatewayUser = gateway;
         this->subnetUser = subnet;
+
+#if defined(ERA_SCAN_DEVICE)
+        ConnectBase::assignIPAddress(this->ipUser);
+#endif
     }
 
     void getLocalIP() {
@@ -311,6 +375,10 @@ private:
         ERA_LOG(TAG, ERA_PSTR("Connected to network"));
         ERA_LOG(TAG, ERA_PSTR("IP: %d.%d.%d.%d"), localIP[0], localIP[1],
                                                 localIP[2], localIP[3]);
+
+#if defined(ERA_SCAN_DEVICE)
+        ConnectBase::assignIPAddress(localIP);
+#endif
     }
 
     uint8_t* getMacAddress(const char* auth,
@@ -368,7 +436,11 @@ void ERaApi<Proto, Flash>::addInfo(cJSON* root) {
     IPAddress localIP = Ethernet.localIP();
     FormatString(ip, "%d.%d.%d.%d", localIP[0], localIP[1],
                                     localIP[2], localIP[3]);
+#if defined(ERA_SCAN_DEVICE)
+    cJSON_AddNumberToObject(root, INFO_PLUG_AND_PLAY, ERaConfig.getFlag(ConfigFlagT::CONFIG_FLAG_PNP));
+#else
     cJSON_AddNumberToObject(root, INFO_PLUG_AND_PLAY, 0);
+#endif
     cJSON_AddStringToObject(root, INFO_NETWORK_PROTOCOL, ERA_NETWORK_TYPE);
     cJSON_AddStringToObject(root, INFO_SSID, ERA_NETWORK_TYPE);
     cJSON_AddStringToObject(root, INFO_BSSID, ERA_NETWORK_TYPE);

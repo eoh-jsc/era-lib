@@ -21,7 +21,8 @@ namespace eras {
 
         virtual const char* getComponentSource() const;
 
-        uint32_t millis();
+        uint64_t millis();
+        uint16_t millisMajor();
 
     protected:
         friend class ERaSmart;
@@ -36,6 +37,7 @@ namespace eras {
 
         void sendNotify(ERaUInt_t automateId, ERaUInt_t notifyId);
         void sendEmail(ERaUInt_t automateId, ERaUInt_t emailId);
+        void sendWebhook(ERaUInt_t automateId, ERaUInt_t webhookId);
     };
 
 } /* namespace eras */

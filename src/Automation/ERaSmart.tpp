@@ -862,7 +862,7 @@ namespace eras {
             return;
         }
         auto pAction = new NotifyAction();
-        pAction->setNotify(automateId, id);
+        pAction->setAlert(automateId, id);
         pAction->setDelay(ERA_NOTIFY_DELAY);
         this->mCurrentActions.push_back(pAction);
     }
@@ -872,8 +872,18 @@ namespace eras {
             return;
         }
         auto pAction = new EmailAction();
-        pAction->setEmail(automateId, id);
+        pAction->setAlert(automateId, id);
         pAction->setDelay(ERA_EMAIL_DELAY);
+        this->mCurrentActions.push_back(pAction);
+    }
+
+    void ERaSmart::parseWebhookAction(uint32_t automateId, uint32_t id) {
+        if (!id) {
+            return;
+        }
+        auto pAction = new WebhookAction();
+        pAction->setAlert(automateId, id);
+        pAction->setDelay(ERA_WEBHOOK_DELAY);
         this->mCurrentActions.push_back(pAction);
     }
 
@@ -907,6 +917,10 @@ namespace eras {
         if (cJSON_IsNumber(emailScript)) {
             this->parseEmailAction(automateId, emailScript->valueint);
         }
+        cJSON* webhookScript = cJSON_GetObjectItem(root, AUTOMATION_ACTION_WEBHOOK_KEY);
+        if (cJSON_IsNumber(webhookScript)) {
+            this->parseWebhookAction(automateId, webhookScript->valueint);
+        }
         cJSON* smsScript = cJSON_GetObjectItem(root, AUTOMATION_ACTION_SMS_KEY);
         if (cJSON_IsObject(smsScript)) {
             this->parseSMSAction(smsScript);
@@ -919,6 +933,10 @@ namespace eras {
 
     void ERaSmart::sendEmail(ERaUInt_t automateId, ERaUInt_t emailId) {
         this->mApi.sendEmail(automateId, emailId);
+    }
+
+    void ERaSmart::sendWebhook(ERaUInt_t automateId, ERaUInt_t webhookId) {
+        this->mApi.sendWebhook(automateId, webhookId);
     }
 
 } /* namespace eras */

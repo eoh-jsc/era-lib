@@ -30,6 +30,7 @@ public:
     size_t readFlash(const char* key, void* buf, size_t maxLen);
     void writeFlash(const char* filename, const char* buf);
     size_t writeFlash(const char* key, const void* value, size_t len);
+    size_t getBytesSize(const char* key);
 
 protected:
     String encodeUnique(uint32_t number, size_t len);
@@ -174,6 +175,15 @@ size_t ERaFlash::writeFlash(const char* key, const void* value, size_t len) {
     }
 
     return this->mPreferences.putBytes(key, value, len);
+}
+
+inline
+size_t ERaFlash::getBytesSize(const char* key) {
+    if (!this->mInitialized) {
+        return 0;
+    }
+
+    return this->mPreferences.getBytesLength(key);
 }
 
 #if defined(ERA_PREFERENCES_STRING)

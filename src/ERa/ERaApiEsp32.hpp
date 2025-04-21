@@ -9,18 +9,18 @@
 #endif
 
 inline
-static int digitalReadEsp32(uint8_t pin) {
+static int digitalReadEsp32(uint16_t pin) {
     return digitalRead(pin);
 }
 
 inline
-static int analogReadEsp32(uint8_t pin) {
+static int analogReadEsp32(uint16_t pin) {
     return analogRead(pin);
 }
 
 #if (ESP_IDF_VERSION_MAJOR > 4)
     inline
-    static int ledcReadEsp32(uint8_t pin) {
+    static int ledcReadEsp32(uint16_t pin) {
         return ledcRead(pin);
     }
 #else
@@ -181,7 +181,7 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const ERaDataBuff& arrayTopi
     }
     ERaDataJson data(root);
     ERaParam param(data);
-    uint8_t pin = ERA_DECODE_PIN_NAME(str);
+    uint16_t pin = ERA_DECODE_PIN_NAME(str);
     ERA_CHECK_PIN_RETURN(pin);
     cJSON* item = cJSON_GetObjectItem(root, "value");
     if (cJSON_IsNumber(item) ||
@@ -196,20 +196,20 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const ERaDataBuff& arrayTopi
             value = ERaMapNumberRange((float)item->valuedouble, scale->min, scale->max, scale->rawMin, scale->rawMax);
         }
         switch (pMode) {
-            case VIRTUAL:
-            case ERA_VIRTUAL:
-                break;
-            default:
+            case PWM:
+            case OUTPUT:
+            case OUTPUT_OPEN_DRAIN:
                 raw = value;
                 if (this->callERaPinWriteHandler(pin, param, raw) ||
                     this->skipPinWrite) {
                     pMode = RAW_PIN;
                 }
                 break;
+            default:
+                break;
         }
         switch (pMode) {
             case PWM:
-            case ANALOG:
 #if (ESP_IDF_VERSION_MAJOR > 4)
                 ledcWrite(pin, value);
                 ERA_FORCE_UNUSED(channel);
@@ -220,14 +220,8 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const ERaDataBuff& arrayTopi
                 }
 #endif
                 break;
-            case RAW_PIN:
-                break;
-            case VIRTUAL:
-            case ERA_VIRTUAL:
-                this->callERaWriteHandler(pin, param);
-                break;
-            default:
-                pinMode(pin, OUTPUT);
+            case OUTPUT:
+            case OUTPUT_OPEN_DRAIN:
                 if (value == TOGGLE) {
                     ::digitalWrite(pin, ((digitalReadEsp32(pin) == LOW) ? HIGH : LOW));
                 }
@@ -235,11 +229,10 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const ERaDataBuff& arrayTopi
                     ::digitalWrite(pin, value ? HIGH : LOW);
                 }
                 break;
+            case RAW_PIN:
+            default:
+                break;
         }
-    }
-    else if (cJSON_IsString(item)) {
-        param.add_static(item->valuestring);
-        this->callERaWriteHandler(pin, param);
     }
 
     root = nullptr;
@@ -346,7 +339,6 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const ERaDataBuff& arrayTopi
                     ledcWrite(pin.pwm.channel, current->valueint);
                 }
     #endif
-                continue;
             }
         }
 

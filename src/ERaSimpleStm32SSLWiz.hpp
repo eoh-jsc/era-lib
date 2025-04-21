@@ -9,6 +9,7 @@
 
 #include <Ethernet.h>
 #include <EthernetClient.h>
+#include <EthernetUdp.h>
 #include <ERa/ERaTask.hpp>
 #include <ERa/ERaApiStm32Def.hpp>
 #include <Adapters/ERaEthernetSSLClient.hpp>
@@ -22,10 +23,10 @@
     #include <Time/ERaTimeC.hpp>
 
     static ERaFlash flash;
-    static ERaMqtt<BearSSLClient, MQTTClient> mqtt;
-    ERaEthernet< ERaMqtt<BearSSLClient, MQTTClient> > ERa(mqtt, flash);
+    static ERaMqtt<Client, MQTTClient> mqtt;
+    ERaEthernet< ERaMqtt<Client, MQTTClient> > ERa(mqtt, flash);
 #else
-    extern ERaEthernet< ERaMqtt<BearSSLClient, MQTTClient> > ERa;
+    extern ERaEthernet< ERaMqtt<Client, MQTTClient> > ERa;
 #endif
 
 #include <ERa/ERaStatic.hpp>

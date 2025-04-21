@@ -1300,6 +1300,57 @@ uint8_t SignalToPercentage(int16_t value) {
     return percentage;
 }
 
+size_t ERaUTF8ToUTF16(const char* input, uint16_t* output, size_t maxSizeOutput) {
+    if (input == nullptr) {
+        return 0;
+    }
+    if (output == nullptr) {
+        maxSizeOutput = 0xFFFFFFFFU;
+    }
+    size_t outputIndex {0};
+
+    while ((outputIndex < maxSizeOutput) && (*input != '\0')) {
+        uint8_t byte1 = *input++;
+        if ((byte1 & 0x80) == 0) {
+            (output != nullptr) ? (output[outputIndex++] = byte1) : (outputIndex++);
+        }
+        else if ((byte1 & 0xE0) == 0xC0) {
+            uint8_t byte2 = *input++;
+            (output != nullptr) ? (output[outputIndex++] = ((static_cast<uint16_t>(byte1 & 0x1F) << 6) |
+                                                            (static_cast<uint16_t>(byte2 & 0x3F)))) :
+                                  (outputIndex++);
+        }
+        else if ((byte1 & 0xF0) == 0xE0) {
+            uint8_t byte2 = *input++;
+            uint8_t byte3 = *input++;
+            (output != nullptr) ? (output[outputIndex++] = ((static_cast<uint16_t>(byte1 & 0x0F) << 12) |
+                                                            (static_cast<uint16_t>(byte2 & 0x3F) << 6) |
+                                                            (static_cast<uint16_t>(byte3 & 0x3F)))) :
+                                  (outputIndex++);
+        }
+        else if ((byte1 & 0xF8) == 0xF0) {
+            uint8_t byte2 = *input++;
+            uint8_t byte3 = *input++;
+            uint8_t byte4 = *input++;
+            uint32_t utf32 = ((static_cast<uint32_t>(byte1 & 0x07) << 18) |
+                              (static_cast<uint32_t>(byte2 & 0x3F) << 12) |
+                              (static_cast<uint32_t>(byte3 & 0x3F) << 6) |
+                              (static_cast<uint32_t>(byte4 & 0x3F)));
+            utf32 -= 0x10000;
+            uint16_t highWord = static_cast<uint16_t>((utf32 >> 10) + 0xD800);
+            uint16_t lowWord = static_cast<uint16_t>((utf32 & 0x3FF) + 0xDC00);
+            (output != nullptr) ? (output[outputIndex++] = highWord) : (outputIndex++);
+            (output != nullptr) ? (output[outputIndex++] = lowWord) : (outputIndex++);
+        }
+    }
+    if (output == nullptr) {
+    }
+    else if (outputIndex < maxSizeOutput) {
+        output[outputIndex] = 0x0000;
+    }
+    return outputIndex;
+}
+
 bool ERaIsNaN(double value) {
     return isnan(value);
 }
@@ -1320,29 +1371,29 @@ double ERaAtof(const char* str) {
     double sign, value, scale;
 
     while (white_space(*str)) {
-        str += 1;
+        str++;
     }
 
     sign = 1.0;
     if (*str == '-') {
         sign = -1.0;
-        str += 1;
+        str++;
     }
     else if (*str == '+') {
-        str += 1;
+        str++;
     }
 
-    for (value = 0.0; valid_digit(*str); str += 1) {
+    for (value = 0.0; valid_digit(*str); str++) {
         value = value * 10.0 + (*str - '0');
     }
 
     if (*str == '.') {
         double pow10 = 10.0;
-        str += 1;
+        str++;
         while (valid_digit(*str)) {
             value += (*str - '0') / pow10;
             pow10 *= 10.0;
-            str += 1;
+            str++;
         }
     }
 
@@ -1351,17 +1402,17 @@ double ERaAtof(const char* str) {
     if ((*str == 'e') || (*str == 'E')) {
         unsigned int expon;
 
-        str += 1;
+        str++;
         if (*str == '-') {
             frac = 1;
-            str += 1;
+            str++;
 
         }
         else if (*str == '+') {
-            str += 1;
+            str++;
         }
 
-        for (expon = 0; valid_digit(*str); str += 1) {
+        for (expon = 0; valid_digit(*str); str++) {
             expon = expon * 10 + (*str - '0');
         }
         if (expon > 308) { expon = 308; }
@@ -1375,10 +1426,28 @@ double ERaAtof(const char* str) {
 }
 
 long long ERaAtoll(const char* str) {
+    bool negative {false};
     long long value {0};
-    for (; *str; str++) {
+
+    while (white_space(*str)) {
+        str++;
+    }
+
+    if (*str == '-') {
+        negative = true;
+        str++;
+    }
+    else if (*str == '+') {
+        str++;
+    }
+
+    for (; valid_digit(*str); str++) {
         value = ((10 * value) + (*str - '0'));
     }
+    if (negative) {
+        value = -value;
+    }
+
     return value;
 }
 

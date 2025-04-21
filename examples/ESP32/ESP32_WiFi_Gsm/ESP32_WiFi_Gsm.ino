@@ -11,12 +11,31 @@
  *************************************************************/
 
 // Enable debug console
+// Set CORE_DEBUG_LEVEL = 3 first
 // #define ERA_DEBUG
 // #define ERA_SERIAL Serial
+
+/* Select your apn */
+#define APN_VIETTEL
+// #define APN_VINAPHONE
+// #define APN_MOBIFONE
+
+/* Select your modem */
+#define TINY_GSM_MODEM_SIM800
+// #define TINY_GSM_MODEM_SIM900
+// #define TINY_GSM_MODEM_SIM7600
+
+/* For override Modbus uart pin */
+// #define MODBUS_RXD_Pin 5
+// #define MODBUS_TXD_Pin 4
 
 /* Select ERa host location (VN: Viet Nam, SG: Singapore) */
 #define ERA_LOCATION_VN
 // #define ERA_LOCATION_SG
+
+// You should get Auth Token in the ERa App or ERa Dashboard
+// and not share this token with anyone.
+#define ERA_AUTH_TOKEN "ERA2706"
 
 /* Define setting button */
 // #define BUTTON_PIN              0
@@ -28,28 +47,54 @@
 
     // This directive is used to specify whether the configuration should be erased.
     // If it's set to true, the configuration will be erased.
-    #define ERA_ERASE_CONFIG    true
+    #define ERA_ERASE_CONFIG    false
 #endif
 
 #include <Arduino.h>
-#include <ERa.hpp>
+
+/* GPIO and Virtual Pin */
+#include <ERaSimpleEsp32.hpp>
+/* GPIO, Virtual Pin and Modbus */
+// #include <ERaSimpleMBEsp32.hpp>
+
+#include <Automation/ERaSmart.hpp>
+#include <Time/ERaEspTime.hpp>
 #if defined(BUTTON_PIN)
-    #include <GTimer.h>
+    #include <pthread.h>
     #include <ERa/ERaButton.hpp>
 #endif
 
+const char ssid[] = "YOUR_SSID";
+const char pass[] = "YOUR_PASSWORD";
+
 WiFiClient mbTcpClient;
+
+ERaEspTime syncTime;
+ERaSmart smart(ERa, syncTime);
+
+#include "ESP32_WiFi_Gsm.hpp"
 
 #if defined(BUTTON_PIN)
     ERaButton button;
-    const uint32_t timerIdButton {0};
+    pthread_t pthreadButton;
 
-    static void handlerButton(uint32_t data) {
-        button.run();
-        (void)data;
+    static void* handlerButton(void* args) {
+        for (;;) {
+            button.run();
+            ERaDelay(10);
+        }
+        pthread_exit(NULL);
     }
 
-#if ERA_VERSION_NUMBER >= ERA_VERSION_VAL(1, 2, 0)
+#if ERA_VERSION_NUMBER >= ERA_VERSION_VAL(1, 6, 0)
+    static void eventButton(uint16_t pin, ButtonEventT event) {
+        if (event != ButtonEventT::BUTTON_ON_HOLD) {
+            return;
+        }
+        ERa.switchToConfig(ERA_ERASE_CONFIG);
+        (void)pin;
+    }
+#elif ERA_VERSION_NUMBER >= ERA_VERSION_VAL(1, 2, 0)
     static void eventButton(uint8_t pin, ButtonEventT event) {
         if (event != ButtonEventT::BUTTON_ON_HOLD) {
             return;
@@ -68,9 +113,9 @@ WiFiClient mbTcpClient;
 
     void initButton() {
         pinMode(BUTTON_PIN, INPUT);
-        button.setButton(BUTTON_PIN, digitalReadArduino, eventButton,
+        button.setButton(BUTTON_PIN, digitalRead, eventButton,
                         BUTTON_INVERT).onHold(BUTTON_HOLD_TIMEOUT);
-        GTimer.begin(timerIdButton, (100 * 1000), handlerButton);
+        pthread_create(&pthreadButton, NULL, handlerButton, NULL);
     }
 #endif
 
@@ -98,24 +143,30 @@ void setup() {
 #if defined(BUTTON_PIN)
     /* Initializing button. */
     initButton();
+    /* Enable read/write WiFi credentials */
+    ERa.setPersistent(true);
 #endif
+
+    /* Init GSM */
+    initGsm();
 
     /* Set board id */
     // ERa.setBoardID("Board_1");
 
-    /* Setup Client for Modbus TCP/IP */
-    ERa.setModbusClient(mbTcpClient);
+    /* Set Non-Blocking mode */
+    ERa.setNonBlocking(true);
 
-    /* White labeling App (use this ONLY if you have a branded ERa App) */
-    // ERa.setVendorName("MyORG");
-    // ERa.setVendorPrefix("MyPrefix");
+    /* Set API task size. If this function is enabled,
+       the core API will run on a separate task after disconnecting from the server
+       (suitable for edge automation).*/
+    // ERa.setTaskSize(ERA_API_TASK_SIZE, true);
 
-    /* Set scan WiFi. If activated, the board will
-       check WiFi before connect. */
+    /* Set scan WiFi. If activated, the board will scan
+       and connect to the best quality WiFi. */
     ERa.setScanWiFi(true);
 
     /* Initializing the ERa library. */
-    ERa.begin();
+    ERa.begin(ssid, pass);
 
     /* Setup timer called function every second */
     ERa.addInterval(1000L, timerEvent);

@@ -1,6 +1,8 @@
 #ifndef INC_ERA_SIMPLE_ESP8266_PNP_HPP_
 #define INC_ERA_SIMPLE_ESP8266_PNP_HPP_
 
+#define ERA_NO_RTOS
+
 #define ERA_OTA_SSL
 #define ERA_DETECT_SSL
 

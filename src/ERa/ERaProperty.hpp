@@ -15,12 +15,10 @@
 #define ERA_PROPERTY_MIN_INTERVAL       500UL
 #define ERA_PROPERTY_MAX_INTERVAL       60000UL
 
+#define ERA_PROPERTY_MAX_ID_LENGTH      65
+
 #define addProperty(p, ...)             addPropertyReal(ERA_F(#p), p, __VA_ARGS__)
 #define addPropertyT(p, ...)            addPropertyRealT(ERA_F(#p), p, __VA_ARGS__)
-
-#define TOPIC_PROPERTY_DATA             "/zigbee/%s/data"
-#define PAYLOAD_PROPERTY_DATA           R"json({"type":"device_data","data":{"%s":%d}})json"
-#define PAYLOAD_PROPERTY_DATA_FLOAT     R"json({"type":"device_data","data":{"%s":%.2f}})json"
 
 enum PermissionT {
     PERMISSION_READ = 0x01,
@@ -185,7 +183,7 @@ public:
     ~ERaProperty()
     {}
 
-    iterator getPropertyVirtual(uint8_t pin) {
+    iterator getPropertyVirtual(uint16_t pin) {
         return iterator(this, this->isPropertyIdExist(pin));
     }
 
@@ -206,68 +204,68 @@ public:
         return this->addPropertyVirtual(pin, value, permission);
     }
 
-    iterator addPropertyVirtual(uint8_t pin, bool& value, PermissionT const permission) {
+    iterator addPropertyVirtual(uint16_t pin, bool& value, PermissionT const permission) {
         WrapperBase* wrapper = new WrapperBool(value);
         return iterator(this, this->setupProperty(pin, wrapper, permission));
     }
 
-    iterator addPropertyVirtual(uint8_t pin, int& value, PermissionT const permission) {
+    iterator addPropertyVirtual(uint16_t pin, int& value, PermissionT const permission) {
         WrapperBase* wrapper = new WrapperInt(value);
         return iterator(this, this->setupProperty(pin, wrapper, permission));
     }
 
-    iterator addPropertyVirtual(uint8_t pin, unsigned int& value, PermissionT const permission) {
+    iterator addPropertyVirtual(uint16_t pin, unsigned int& value, PermissionT const permission) {
         WrapperBase* wrapper = new WrapperUnsignedInt(value);
         return iterator(this, this->setupProperty(pin, wrapper, permission));
     }
 
-    iterator addPropertyVirtual(uint8_t pin, long& value, PermissionT const permission) {
+    iterator addPropertyVirtual(uint16_t pin, long& value, PermissionT const permission) {
         WrapperBase* wrapper = new WrapperLong(value);
         return iterator(this, this->setupProperty(pin, wrapper, permission));
     }
 
-    iterator addPropertyVirtual(uint8_t pin, unsigned long& value, PermissionT const permission) {
+    iterator addPropertyVirtual(uint16_t pin, unsigned long& value, PermissionT const permission) {
         WrapperBase* wrapper = new WrapperUnsignedLong(value);
         return iterator(this, this->setupProperty(pin, wrapper, permission));
     }
 
-    iterator addPropertyVirtual(uint8_t pin, long long& value, PermissionT const permission) {
+    iterator addPropertyVirtual(uint16_t pin, long long& value, PermissionT const permission) {
         WrapperBase* wrapper = new WrapperLongLong(value);
         return iterator(this, this->setupProperty(pin, wrapper, permission));
     }
 
-    iterator addPropertyVirtual(uint8_t pin, unsigned long long& value, PermissionT const permission) {
+    iterator addPropertyVirtual(uint16_t pin, unsigned long long& value, PermissionT const permission) {
         WrapperBase* wrapper = new WrapperUnsignedLongLong(value);
         return iterator(this, this->setupProperty(pin, wrapper, permission));
     }
 
-    iterator addPropertyVirtual(uint8_t pin, float& value, PermissionT const permission) {
+    iterator addPropertyVirtual(uint16_t pin, float& value, PermissionT const permission) {
         WrapperBase* wrapper = new WrapperFloat(value);
         return iterator(this, this->setupProperty(pin, wrapper, permission));
     }
 
-    iterator addPropertyVirtual(uint8_t pin, double& value, PermissionT const permission) {
+    iterator addPropertyVirtual(uint16_t pin, double& value, PermissionT const permission) {
         WrapperBase* wrapper = new WrapperDouble(value);
         return iterator(this, this->setupProperty(pin, wrapper, permission));
     }
 
-    iterator addPropertyVirtual(uint8_t pin, ERaDataJson& value, PermissionT const permission) {
+    iterator addPropertyVirtual(uint16_t pin, ERaDataJson& value, PermissionT const permission) {
         WrapperBase* wrapper = new WrapperObject(value);
         return iterator(this, this->setupProperty(pin, wrapper, permission));
     }
 
-    iterator addPropertyVirtual(uint8_t pin, ERaString& value, PermissionT const permission) {
+    iterator addPropertyVirtual(uint16_t pin, ERaString& value, PermissionT const permission) {
         WrapperBase* wrapper = new WrapperString(value);
         return iterator(this, this->setupProperty(pin, wrapper, permission));
     }
 
-    iterator addPropertyVirtual(uint8_t pin, WrapperBase& value, PermissionT const permission) {
+    iterator addPropertyVirtual(uint16_t pin, WrapperBase& value, PermissionT const permission) {
         return iterator(this, this->setupProperty(pin, &value, permission));
     }
 
 #if defined(ERA_HAS_TYPE_TRAITS_H)
     template <typename T, typename = enable_if_t<!std::is_base_of<WrapperBase, T>::value>>
-    iterator addPropertyVirtual(uint8_t pin, T& value, PermissionT const permission) {
+    iterator addPropertyVirtual(uint16_t pin, T& value, PermissionT const permission) {
         WrapperBase* wrapper = new WrapperNumber<T>(value);
         return iterator(this, this->setupProperty(pin, wrapper, permission));
     }
@@ -425,14 +423,14 @@ public:
 
 protected:
     void run();
-    void handler(uint8_t pin, const ERaParam& param);
+    void handler(uint16_t pin, const ERaParam& param);
     void handler(const char* id, const ERaParam& param);
     void updateProperty(const ERaPin<ERaReport>& pin);
     void publishAll(bool onlyNumber = false);
 
 #if !defined(ERA_VIRTUAL_WRITE_LEGACY)
     template <typename T>
-    void virtualWriteProperty(uint8_t pin, const T& value, bool send) {
+    void virtualWriteProperty(uint16_t pin, const T& value, bool send) {
         Property_t* pProp = this->isPropertyIdExist(pin);
         if (pProp == nullptr) {
         }
@@ -463,7 +461,7 @@ protected:
                                  publish(false).allocatorPointer(pValue);
     }
 
-    void virtualWriteProperty(uint8_t pin, const ERaParam& value, bool send) {
+    void virtualWriteProperty(uint16_t pin, const ERaParam& value, bool send) {
         if (value.isNumber()) {
             this->virtualWriteProperty(pin, value.getDouble(), send);
         }
@@ -475,7 +473,7 @@ protected:
         }
     }
 
-    void virtualWriteProperty(uint8_t pin, const ERaDataJson& value, bool send) {
+    void virtualWriteProperty(uint16_t pin, const ERaDataJson& value, bool send) {
         if (!value.isSendJSON()) {
             this->virtualWriteProperty(pin, const_cast<ERaDataJson&>(value).getString(), send);
         }
@@ -487,17 +485,17 @@ protected:
         }
     }
 
-    void virtualWriteProperty(uint8_t pin, const ERaString& value, bool send) {
+    void virtualWriteProperty(uint16_t pin, const ERaString& value, bool send) {
         this->virtualWriteProperty(pin, value.getString(), send);
     }
 
 #if defined(ERA_STRING_WRITE_LEGACY)
-    void virtualWriteProperty(uint8_t pin, const char* value, bool send) {
+    void virtualWriteProperty(uint16_t pin, const char* value, bool send) {
         this->thisApi().virtualWriteSingle(pin, value, false);
         ERA_FORCE_UNUSED(send);
     }
 #else
-    void virtualWriteProperty(uint8_t pin, const char* value, bool send) {
+    void virtualWriteProperty(uint16_t pin, const char* value, bool send) {
         Property_t* pProp = this->isPropertyIdExist(pin);
         if (pProp != nullptr) {
             (*pProp->value) = value;
@@ -526,20 +524,20 @@ protected:
     }
 #endif
 
-    void virtualWriteProperty(uint8_t pin, char* value, bool send) {
+    void virtualWriteProperty(uint16_t pin, char* value, bool send) {
         this->virtualWriteProperty(pin, (const char*)value, send);
     }
 
-    void virtualObjectProperty(uint8_t pin, const ERaDataJson& value, bool send) {
+    void virtualObjectProperty(uint16_t pin, const ERaDataJson& value, bool send) {
         this->virtualJsonProperty<WrapperObject>(pin, value, send);
     }
 
-    void virtualArrayProperty(uint8_t pin, const ERaDataJson& value, bool send) {
+    void virtualArrayProperty(uint16_t pin, const ERaDataJson& value, bool send) {
         this->virtualJsonProperty<WrapperArray>(pin, value, send);
     }
 
     template <typename T>
-    void virtualJsonProperty(uint8_t pin, const ERaDataJson& value, bool send) {
+    void virtualJsonProperty(uint16_t pin, const ERaDataJson& value, bool send) {
         Property_t* pProp = this->isPropertyIdExist(pin);
         if (pProp != nullptr) {
             (*pProp->value) = const_cast<ERaDataJson&>(value).getString();
@@ -570,7 +568,7 @@ protected:
 
 private:
     void updateValue(const Property_t* pProp);
-    Property_t* setupProperty(uint8_t pin, WrapperBase* value, PermissionT const permission);
+    Property_t* setupProperty(uint16_t pin, WrapperBase* value, PermissionT const permission);
     Property_t* setupProperty(const char* id, WrapperBase* value, PermissionT const permission);
 #if defined(ERA_HAS_PROGMEM)
     Property_t* setupProperty(const __FlashStringHelper* id, WrapperBase* value, PermissionT const permission);
@@ -727,7 +725,7 @@ void ERaProperty<Api>::updateValue(const Property_t* pProp) {
 }
 
 template <class Api>
-void ERaProperty<Api>::handler(uint8_t pin, const ERaParam& param) {
+void ERaProperty<Api>::handler(uint16_t pin, const ERaParam& param) {
     bool found {false};
     Property_t* pProp = nullptr;
     const PropertyIterator* e = this->ERaProp.end();
@@ -914,7 +912,7 @@ void ERaProperty<Api>::getValue(Property_t* pProp, const ERaParam& param) {
 }
 
 template <class Api>
-typename ERaProperty<Api>::Property_t* ERaProperty<Api>::setupProperty(uint8_t pin, WrapperBase* value,
+typename ERaProperty<Api>::Property_t* ERaProperty<Api>::setupProperty(uint16_t pin, WrapperBase* value,
                                                                     PermissionT const permission) {
     if (!this->isPropertyFree()) {
         return nullptr;
@@ -992,10 +990,7 @@ typename ERaProperty<Api>::Property_t* ERaProperty<Api>::setupProperty(const cha
         }
         PGM_P p = reinterpret_cast<PGM_P>(id);
         size_t size = strlen_P(p) + sizeof("");
-        char* str = (char*)malloc(size);
-        if (str == nullptr) {
-            return nullptr;
-        }
+        char str[size] {0};
         memcpy_P(str, p, size);
         return this->setupProperty(str, value, permission);
     }
@@ -1231,7 +1226,7 @@ void ERaProperty<Api>::onCallbackReal(const Property_t* const pProp) {
         return;
     }
     char topic[65] {0};
-    FormatString(topic, TOPIC_PROPERTY_DATA, arrayId.at(0).getString());
+    FormatString(topic, ERA_PUB_PREFIX_ZIGBEE_DATA_TOPIC, arrayId.at(0).getString());
 
     cJSON_AddStringToObject(root, "type", "device_data");
     cJSON_AddItemToObject(root, "data", dataItem);

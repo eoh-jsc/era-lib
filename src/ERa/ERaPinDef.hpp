@@ -16,7 +16,7 @@
 #endif
 
 typedef struct __PinConfig_t {
-    uint8_t pin;
+    uint16_t pin;
     uint8_t pinMode;
     ERaUInt_t configId;
     struct __PWMConfig_t {

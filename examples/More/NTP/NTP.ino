@@ -20,6 +20,7 @@
 // #define ERA_LOCATION_SG
 
 // You should get Auth Token in the ERa App or ERa Dashboard
+// and not share this token with anyone.
 #define ERA_AUTH_TOKEN "ERA2706"
 
 #include <Arduino.h>
@@ -61,7 +62,7 @@ void setup() {
     // ERa.setBoardID("Board_1");
 
     /* Set timezone +7 */
-    syncTime.setTimeZone(7);
+    syncTime.setTimeZone(7L);
     syncTime.begin();
 
     /* Initializing the ERa library. */

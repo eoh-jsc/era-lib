@@ -77,6 +77,8 @@ public:
         , transp(_transp)
         , pLogger(nullptr)
         , pServerCallbacks(nullptr)
+        , nonBlocking(false)
+        , initialized(false)
         , _connected(false)
         , heartbeat(ERA_HEARTBEAT_INTERVAL * 12UL)
         , lastHeartbeat(0UL)
@@ -100,11 +102,16 @@ public:
 #if defined(ERA_AUTOMATION)
         Base::initAutomation(auth, this->ERA_TOPIC, this->messageCb);
 #endif
+        Base::initSyncer(auth, this->ERA_TOPIC, this->messageCb);
         Handler::setAuth(auth);
         Handler::setTopic(this->ERA_TOPIC);
         Handler::onMessage(this->messageCb);
         Handler::onStateChange(this->connectedCb,
                                this->disconnectedCb);
+        if (!this->initialized) {
+            Base::begin();
+            this->initialized = true;
+        }
     }
 
     void run() {
@@ -120,32 +127,36 @@ public:
 
     void sendCommand(const char* auth, ERaRsp_t& rsp, ApiData_t data = nullptr);
 
-    void setServerCallbacks(ERaServerCallbacks& callbacks) override {
-        this->pServerCallbacks = &callbacks;
+    void setServerCallbacks(ERaServerCallbacks& rCallbacks) override {
+        this->pServerCallbacks = &rCallbacks;
     }
 
     void setServerCallbacks(ERaServerCallbacks* pCallbacks) override {
         this->pServerCallbacks = pCallbacks;
     }
 
-    void setERaTransp(ERaTransp& _transp) override {
-        Handler::addTransp(_transp);
+    void setERaTransp(ERaTransp& rTransp) override {
+        Handler::addTransp(rTransp);
     }
 
-    void setERaTransp(ERaTransp* _pTransp) override {
-        Handler::addTransp(_pTransp);
+    void setERaTransp(ERaTransp* pTransp) override {
+        Handler::addTransp(pTransp);
     }
 
-    void setERaLogger(ERaLogger& _logger) override {
-        this->pLogger = &_logger;
+    void setERaLogger(ERaLogger& rLog) override {
+        this->pLogger = &rLog;
     }
 
-    void setERaLogger(ERaLogger* _pLogger) override {
-        this->pLogger = _pLogger;
+    void setERaLogger(ERaLogger* pLog) override {
+        this->pLogger = pLog;
     }
 
     ERaLogger* getERaLogger() const {
         return this->pLogger;
+    }
+
+    void setRootCA(const char* ca) {
+        this->transp.setRootCA(ca);
     }
 
     void setBoardID(const char* boardID) {
@@ -173,6 +184,14 @@ public:
 
     void setDropOverflow(bool enabled = false) {
         this->transp.dropOverflow(enabled);
+    }
+
+    void setNonBlocking(bool enable) {
+        this->nonBlocking = enable;
+        this->transp.setNonBlocking(enable);
+        if (enable) {
+            Base::setAppLoop(enable);
+        }
     }
 
     void setHeartbeat(unsigned long interval) {
@@ -221,15 +240,12 @@ public:
 
 protected:
     void init() {
-        Base::begin();
+        /* Base::begin(); */
     }
 
     bool connect(FunctionCallback_t fn = nullptr) {
         if (!this->transp.connect(fn)) {
             return false;
-        }
-        if (this->pLogger != nullptr) {
-            this->pLogger->begin();
         }
         this->printBanner();
         this->sendInfo();
@@ -238,10 +254,6 @@ protected:
 
     void runEdge() {
         Handler::run();
-        if (this->pLogger == nullptr) {
-            return;
-        }
-        this->pLogger->run();
     }
 
     virtual void requestListWiFi() override;
@@ -254,7 +266,8 @@ protected:
     bool publishData(const char* prefixTopic, const char* payload,
                             bool retained, bool extended = false);
     bool clearRetainedData(const char* prefixTopic);
-    bool isConfigMode();
+    bool isConfigMode() const;
+    bool isNonBlocking() const;
     void onConnected();
     void onDisconnected();
 
@@ -293,11 +306,13 @@ private:
     bool sendPinData(ERaRsp_t& rsp);
     bool sendPinMultiData(ERaRsp_t& rsp);
     bool sendConfigIdData(ERaRsp_t& rsp);
+    bool sendConfigIdLogger(ERaRsp_t& rsp, bool status,
+                            char* buf, size_t len);
     bool sendConfigIdMultiData(ERaRsp_t& rsp);
     bool sendNotifyData(ERaRsp_t& rsp);
     bool sendEmailData(ERaRsp_t& rsp);
+    bool sendWebhookData(ERaRsp_t& rsp);
     bool sendSelfData(ERaRsp_t& rsp);
-    bool sendTransport(ERaRsp_t& rsp);
 #if defined(ERA_AUTOMATION)
     bool sendAutomation(ERaRsp_t& rsp);
 #endif
@@ -361,6 +376,8 @@ private:
     Transp& transp;
     ERaLogger* pLogger;
     ERaServerCallbacks* pServerCallbacks;
+    bool nonBlocking;
+    bool initialized;
     bool _connected;
 
     unsigned long heartbeat;
@@ -385,7 +402,7 @@ void ERaProto<Transp, Flash>::printBanner() {
 }
 
 template <class Transp, class Flash>
-bool ERaProto<Transp, Flash>::isConfigMode() {
+bool ERaProto<Transp, Flash>::isConfigMode() const {
     switch (ERaState::get()) {
         case StateT::STATE_SWITCH_TO_AP:
         case StateT::STATE_RESET_CONFIG:
@@ -395,6 +412,11 @@ bool ERaProto<Transp, Flash>::isConfigMode() {
         default:
             return false;
     }
+}
+
+template <class Transp, class Flash>
+bool ERaProto<Transp, Flash>::isNonBlocking() const {
+    return this->nonBlocking;
 }
 
 template <class Transp, class Flash>
@@ -475,6 +497,7 @@ void ERaProto<Transp, Flash>::processRequest(const char* topic, const char* payl
     if (this->pServerCallbacks != nullptr) {
         this->pServerCallbacks->onWrite(arrayTopic, payload);
     }
+    Base::SyncerHandler::message(arrayTopic, payload);
 
 #if defined(ERA_DEBUG_PREFIX)
     const char* debug = ERA_DEBUG_PREFIX;
@@ -525,13 +548,7 @@ void ERaProto<Transp, Flash>::processDownAction(const char* payload, cJSON* root
         ERaState::set(StateT::STATE_OTA_UPGRADE);
     }
     else if (ERaStrCmp(item->valuestring, "reset_eeprom")) {
-        Base::removePinConfig();
-#if defined(ERA_BT)
-        Base::removeBluetoothConfig();
-#endif
-#if defined(ERA_MODBUS)
-        Base::Modbus::removeConfigFromFlash();
-#endif
+        Base::eraseAllConfigs();
         ERaDelay(1000);
         ERaState::set(StateT::STATE_RESET_CONFIG_REBOOT);
     }
@@ -667,6 +684,10 @@ bool ERaProto<Transp, Flash>::processActionChip(const char* payload, cJSON* root
             else if (cJSON_IsBool(item)) {
                 paramAction = (item->valueint ? MODBUS_SINGLE_COIL_ON :
                                                 MODBUS_SINGLE_COIL_OFF);
+                typeAction = ModbusActionTypeT::MODBUS_ACTION_PARAMS;
+            }
+            else if (cJSON_IsString(item) && strlen(item->valuestring)) {
+                paramAction = atol(item->valuestring);
                 typeAction = ModbusActionTypeT::MODBUS_ACTION_PARAMS;
             }
             item = cJSON_GetObjectItem(dataItem, "commands");
@@ -1221,6 +1242,8 @@ bool ERaProto<Transp, Flash>::sendData(ERaRsp_t& rsp) {
             return this->sendNotifyData(rsp);
         case ERaTypeWriteT::ERA_WRITE_EMAIL:
             return this->sendEmailData(rsp);
+        case ERaTypeWriteT::ERA_WRITE_WEBHOOK:
+            return this->sendWebhookData(rsp);
         case ERaTypeWriteT::ERA_WRITE_SELF_DATA:
             return this->sendSelfData(rsp);
 #if defined(ERA_MODBUS)
@@ -1391,12 +1414,30 @@ bool ERaProto<Transp, Flash>::sendConfigIdData(ERaRsp_t& rsp) {
     if (payload != nullptr) {
         status = this->transp.publishData(topicName, payload, rsp.retained);
         Handler::publishData(topicName, payload);
+        this->sendConfigIdLogger(rsp, status, topicName, strlen(topicName));
     }
     cJSON_Delete(root);
     free(payload);
     root = nullptr;
     payload = nullptr;
     return status;
+}
+
+template <class Transp, class Flash>
+bool ERaProto<Transp, Flash>::sendConfigIdLogger(ERaRsp_t& rsp, bool status,
+                                                 char* buf, size_t len) {
+    if (this->pLogger == nullptr) {
+        return false;
+    }
+    if (!rsp.param.isNumber()) {
+        return false;
+    }
+
+    ERaDataBuff param(buf, 0, len);
+    param.add(rsp.id.getInt());
+    param.add(rsp.param.getDouble());
+    this->pLogger->put("logger", param.at(0).getString(), param.at(1).getString(), status);
+    return true;
 }
 
 template <class Transp, class Flash>
@@ -1424,39 +1465,19 @@ bool ERaProto<Transp, Flash>::sendEmailData(ERaRsp_t& rsp) {
 }
 
 template <class Transp, class Flash>
+bool ERaProto<Transp, Flash>::sendWebhookData(ERaRsp_t& rsp) {
+    char topic[MAX_TOPIC_LENGTH] {0};
+    FormatString(topic, this->ERA_TOPIC);
+    FormatString(topic, ERA_PUB_PREFIX_WEBHOOK_DATA_TOPIC,
+                 rsp.id.getInt(), rsp.param.getInt());
+    return this->transp.publishData(topic, "{}", rsp.retained);
+}
+
+template <class Transp, class Flash>
 bool ERaProto<Transp, Flash>::sendSelfData(ERaRsp_t& rsp) {
     this->selfInfo = 0UL;
     return this->publishData(ERA_PUB_PREFIX_SELF_SENSOR_TOPIC,
                                     rsp.param, rsp.retained);
-}
-
-template <class Transp, class Flash>
-bool ERaProto<Transp, Flash>::sendTransport(ERaRsp_t& rsp) {
-    switch (rsp.type) {
-        case ERaTypeWriteT::ERA_WRITE_VIRTUAL_PIN: {
-            ERaInt_t configId = Base::getPinRp().findVPinConfigId(rsp.id.getInt(), rsp.param);
-            if (configId < 0) {
-                return false;
-            }
-            rsp.id = configId;
-        }
-            break;
-        case ERaTypeWriteT::ERA_WRITE_PIN: {
-            ERaInt_t configId = Base::getPinRp().findConfigId(rsp.id.getInt(), rsp.param);
-            if (configId < 0) {
-                return false;
-            }
-            rsp.id = configId;
-        }
-            break;
-        case ERaTypeWriteT::ERA_WRITE_CONFIG_ID:
-        case ERaTypeWriteT::ERA_WRITE_CONFIG_ID_AND_TRIGGER:
-            break;
-        default:
-            return false;
-    }
-
-    return this->sendConfigIdData(rsp);
 }
 
 #if defined(ERA_AUTOMATION)
@@ -1692,11 +1713,6 @@ void ERaProto<Transp, Flash>::sendCommand(ERaRsp_t& rsp, ApiData_t data) {
 #if defined(ERA_AUTOMATION)
     this->sendAutomation(rsp);
 #endif
-
-    if (!this->connected()) {
-        this->sendTransport(rsp);
-        return;
-    }
 
     switch (rsp.type) {
         case ERaTypeWriteT::ERA_WRITE_VIRTUAL_PIN_MULTI: {

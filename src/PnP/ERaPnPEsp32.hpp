@@ -9,17 +9,24 @@
 #include <WiFiClient.h>
 #include <WebServer.h>
 #include <DNSServer.h>
+#include <ESPmDNS.h>
 #include <ERa/ERaProtocol.hpp>
 #include <ERa/ERaApiEsp32.hpp>
 #include <MQTT/ERaMqtt.hpp>
 #include <Modbus/ERaModbusEsp32.hpp>
 #include <Zigbee/ERaZigbeeEsp32.hpp>
 #include <Storage/ERaFlashEsp32.hpp>
+#include <PnP/ERaConnectedHandler.hpp>
+#include <PnP/ERaCaptiveIndex.hpp>
 #include <PnP/ERaWeb.hpp>
 
 #if defined(ERA_DETECT_SSL)
     #include <WiFiClientSecure.h>
 #endif
+
+#define MDNS_SERVICE                  "plugandplay"
+#define MDNS_PROTOCOL                 "tcp"
+#define MDNS_PORT                     80
 
 #define CONFIG_AP_URL                 "era.setup"
 
@@ -127,8 +134,18 @@ enum ConfigFlagT {
 template <class Transport>
 class ERaPnP
     : public ERaProto<Transport, ERaFlash>
+    , public ERaConnectedHandler<Transport>
 {
-    typedef std::function<bool(void)> NetworkCallback_t;
+    enum WiFiStateT {
+        WIFI_STATE_IDLE = 0x00,
+        WIFI_STATE_STARTED = 0x01,
+        WIFI_STATE_CONNECTING = 0x02,
+        WIFI_STATE_CONNECTED = 0x03,
+        WIFI_STATE_RETRYING = 0x04,
+        WIFI_STATE_FAILED = 0x05,
+    };
+
+    typedef std::function<void(void)> FunctionCallback_t;
     typedef std::function<void(WiFiEvent_t, WiFiEventInfo_t)> WiFiEventCallback_t;
 
 #if defined(ERA_DETECT_SSL)
@@ -136,30 +153,43 @@ class ERaPnP
 #endif
 
     const char* TAG = "WiFi";
-    const char* HOSTNAME = "ERa";
     friend class ERaProto<Transport, ERaFlash>;
     typedef ERaProto<Transport, ERaFlash> Base;
+    typedef ERaConnectedHandler<Transport> ConnectedHandler;
 
 public:
     ERaPnP(Transport& _transp, ERaFlash& _flash)
         : Base(_transp, _flash)
+        , ConnectedHandler(_transp)
         , authToken(nullptr)
         , specSSID(WIFI_SPEC_SSID)
         , specPass(WIFI_SPEC_PASS)
-        , hasNetworkCallback(false)
         , scanWiFiConnect(false)
         , persistent(false)
+        , wifiPersistent(false)
+        , useCaptivePortal(false)
         , scanWiFiRetry(1UL)
         , prevMillisScan(0UL)
         , server(80)
         , udpERa(Udp)
         , newWiFi {}
+        , wifiState(WiFiStateT::WIFI_STATE_IDLE)
 #if defined(ERA_DETECT_SSL)
         , pClient(nullptr)
 #endif
-    {}
+    {
+        ConnectedHandler::setDefaultSSID(ERaConfig.ssid);
+    }
     ~ERaPnP()
     {}
+
+    void connectWiFiPersistent(const char* ssid, const char* pass) {
+        this->configLoad();
+        if (ERaConfig.getFlag(ConfigFlagT::CONFIG_FLAG_VALID)) {
+            return;
+        }
+        this->connectWiFi(ssid, pass);
+    }
 
     void config(const char* auth,
                 const char* host = ERA_MQTT_HOST,
@@ -180,7 +210,7 @@ public:
                 uint16_t port,
                 const char* username,
                 const char* password) {
-        WiFi.persistent(false);
+        WiFi.persistent(this->wifiPersistent);
         WiFi.onEvent(this->wifiCb);
         this->setupHostname();
         WiFi.mode(WIFI_STA);
@@ -207,7 +237,7 @@ public:
         }
 
         this->connectWiFi(ERaConfig.ssid, ERaConfig.pass);
-        if (this->netConnected()) {
+        if (this->netConnected(false)) {
             if (Base::connect()) {
                 ERaOptConnected(this);
                 ERaState::set(StateT::STATE_CONNECTED);
@@ -217,7 +247,6 @@ public:
             }
         }
         else if (Base::isConfigMode()) {
-            return;
         }
         else {
             this->configInit();
@@ -241,15 +270,6 @@ public:
                     ERA_MQTT_USERNAME, ERA_MQTT_PASSWORD);
     }
 
-    void setNetworkCallbacks(NetworkCallback_t callback) {
-        this->netCb = callback;
-        this->hasNetworkCallback = true;
-    }
-
-    void setGsmCallbacks(NetworkCallback_t callback) {
-        this->gsmCb = callback;
-    }
-
     void setWiFiCallbacks(WiFiEventCallback_t callback) {
         this->wifiCb = callback;
     }
@@ -259,6 +279,10 @@ public:
         this->clientCb = callback;
     }
 #endif
+
+    void setIdentifyCallbacks(FunctionCallback_t callback) {
+        this->identifyCb = callback;
+    }
 
     void setSpecSSID(const char* ssid, const char* pass = "") {
         this->specSSID = ssid;
@@ -274,6 +298,10 @@ public:
 
     void setPersistent(bool enable) {
         this->persistent = enable;
+    }
+
+    void setWiFiPersistent(bool enable) {
+        this->wifiPersistent = enable;
     }
 
     void switchToConfig(bool erase = false, bool execute = false) {
@@ -302,21 +330,25 @@ private:
     void configLoadDefault();
     void configSave();
     void configReset();
+    void configBegin();
     void configMode();
     void waitHandle(unsigned long ms);
-    int scanNetworks();
+    int scanNetworks(bool nonBlocking = false);
     bool scanNetwork(const char* ssid);
     bool scanNetworks(const char* ssid);
     cJSON* scanNetworksJson(int nets, bool compact = false);
+    String findArg(const String& arg);
+    String bodyFindArg(const String& body, const String& arg);
     void reFlagNewNetwork(const char* ssid);
     void copyNewNetwork();
     void connectNetwork();
     void connectNewNetwork();
     void connectNewNetworkResult() override;
     void connectCloud();
-    void connectWiFi(const char* ssid, const char* pass);
+    void connectWiFi(const char* ssid, const char* pass, bool nonBlocking = false);
     void connectNewWiFi(const char* ssid, const char* pass) override;
     void connectWiFiBackup();
+    void checkConnectWiFi(const char* ssid);
     void requestListWiFi() override;
     void responseListWiFi() override;
     void switchToAP();
@@ -325,7 +357,9 @@ private:
 
     void setupHostname();
 
+    String getDeviceName();
     String getChipID(size_t len = 0UL);
+    void handleScanDevice();
 
 #if defined(ERA_DETECT_SSL)
     void createClient(uint16_t port);
@@ -337,29 +371,37 @@ private:
     void getImeiChip(char(&ptr)[size]);
     void replace(char* buf, char src, char dst);
 
-    bool wifiConnected() const {
-        return (WiFi.status() == WL_CONNECTED);
+    bool wifiConnected(bool skipState = false) const {
+        if (WiFi.status() == WL_CONNECTED) {
+            ConnectedHandler::switchClient(nullptr, skipState);
+            return true;
+        }
+        return false;
     }
 
-    bool netConnected() const {
-        return (this->netCb() || (WiFi.status() == WL_CONNECTED) || this->gsmCb());
+    bool priorityConnected(bool skipState = false) const {
+        return (ConnectedHandler::beforeWiFiConnected(skipState) ||
+                this->wifiConnected(skipState));
+    }
+
+    bool netConnected(bool skipState = false) const {
+        return (this->priorityConnected(skipState) ||
+                ConnectedHandler::afterWiFiConnected(skipState));
     }
 
     void onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info);
 
-    static bool networkCallbackDummy() {
-        return false;
+    static inline
+    void functionCallbackDummy() {
     }
 
 #if defined(ERA_DETECT_SSL)
-    static Client* clientCallbackDummy(uint16_t port) {
+    static inline
+    Client* clientCallbackDummy(uint16_t port) {
         (void)port;
         return nullptr;
     }
 #endif
-
-    NetworkCallback_t netCb = this->networkCallbackDummy;
-    NetworkCallback_t gsmCb = this->networkCallbackDummy;
 
 #if defined(ERA_DETECT_SSL)
     ClientCallback_t clientCb = this->clientCallbackDummy;
@@ -369,12 +411,15 @@ private:
         this->onWiFiEvent(event, info);
     };
 
+    FunctionCallback_t identifyCb = this->functionCallbackDummy;
+
     const char* authToken;
     const char* specSSID;
     const char* specPass;
-    bool hasNetworkCallback;
     bool scanWiFiConnect;
     bool persistent;
+    bool wifiPersistent;
+    bool useCaptivePortal;
     unsigned long scanWiFiRetry;
     unsigned long prevMillisScan;
     WebServer   server;
@@ -382,6 +427,8 @@ private:
     WiFiUDP     Udp;
     ERaUdp<WiFiUDP> udpERa;
     WiFiConfig_t    newWiFi;
+
+    WiFiStateT      wifiState;
 
 #if defined(ERA_DETECT_SSL)
     Client*         pClient;
@@ -391,9 +438,9 @@ private:
 template <class Transport>
 void ERaPnP<Transport>::begin(const char* auth) {
     this->authToken = auth;
-    WiFi.persistent(false);
-    WiFi.enableSTA(true);
+    WiFi.persistent(this->wifiPersistent);
     WiFi.onEvent(this->wifiCb);
+    WiFi.enableSTA(true);
     WiFi.status();
 
     Base::init();
@@ -405,6 +452,7 @@ void ERaPnP<Transport>::run() {
     switch (ERaState::get()) {
         case StateT::STATE_WAIT_CONFIG:
         case StateT::STATE_CONFIGURING:
+        case StateT::STATE_SCAN_DEVICE:
             this->configMode();
             break;
         case StateT::STATE_SWITCH_TO_AP:
@@ -417,8 +465,7 @@ void ERaPnP<Transport>::run() {
             this->switchToAPSTA();
             break;
         case StateT::STATE_CONNECTING_NETWORK:
-            if (this->netCb() ||
-                this->wifiConnected()) {
+            if (this->priorityConnected(false)) {
                 ERaState::set(StateT::STATE_CONNECTING_CLOUD);
             }
             else {
@@ -435,10 +482,7 @@ void ERaPnP<Transport>::run() {
             ERaState::set(StateT::STATE_RUNNING);
             break;
         case StateT::STATE_RUNNING:
-            if (this->netConnected()) {
-                Base::run();
-            }
-            else {
+            if (!this->netConnected(false)) {
                 ERaWatchdogFeed();
 
                 Base::onDisconnected();
@@ -446,6 +490,11 @@ void ERaPnP<Transport>::run() {
                 ERaWatchdogFeed();
 
                 ERaState::set(StateT::STATE_DISCONNECTED);
+            }
+            else if (!ERaState::is(StateT::STATE_RUNNING)) {
+            }
+            else {
+                Base::run();
             }
             break;
         case StateT::STATE_DISCONNECTED:
@@ -496,18 +545,26 @@ void ERaPnP<Transport>::configApi() {
 
     this->server.on("/api/config", [&, this]() {
         ERA_LOG(ERA_PSTR("Config"), ERA_PSTR("Configuration..."));
-        String ssid = this->server.arg("ssid");
-        String pass = this->server.arg("pass");
-        String backupSsid = this->server.arg("backup_ssid");
-        String backupPass = this->server.arg("backup_pass");
+        String ssid = this->findArg("ssid");
+        String pass = this->findArg("pass");
+        String backupSsid = this->findArg("backup_ssid");
+        String backupPass = this->findArg("backup_pass");
 
-        String token = this->server.arg("token");
-        String host = this->server.arg("host");
-        String port = this->server.arg("port");
-        String username = this->server.arg("username");
-        String password = this->server.arg("password");
+        String token = this->findArg("token");
+        String host = this->findArg("host");
+        String port = this->findArg("port");
+        String username = this->findArg("username");
+        String password = this->findArg("password");
 
         String content;
+
+        if (!token.length()) {
+            content = ERA_F(R"json({"status":"error","message":"Invalid token"})json");
+            this->server.send(400, ERA_F("application/json"), content);
+            return;
+        }
+
+        ERaConfig.forceSave = !!this->findArg("save").toInt();
 
         if (ssid.length()) {
             CopyToArray(ssid, ERaConfig.ssid);
@@ -545,13 +602,35 @@ void ERaPnP<Transport>::configApi() {
             CopyToArray(ERaConfig.token, ERaConfig.password);
         }
 
-        content = ERA_F(R"json({"status":"ok","message":"Connecting wifi..."})json");
-        this->server.send(200, "application/json", content);
-        if (ssid.length()) {
+        if (ERaConfig.forceSave) {
+            content = ERA_F(R"json({"status":"ok","message":"Configuration saved"})json");
+        }
+        else {
+            content = ERA_F(R"json({"status":"ok","message":"Connecting wifi..."})json");
+        }
+        if (this->useCaptivePortal) {
+            this->server.sendHeader(ERA_F("Location"), ERA_F("/wifi?save"));
+            this->server.send(302, ERA_F("text/plain"), "");
+        }
+        else {
+            this->server.send(200, ERA_F("application/json"), content);
+        }
+
+        if (ssid.length() || ERaConfig.forceSave ||
+            this->priorityConnected(true)) {
             ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_PNP, true);
             ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_VALID, true);
             ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_STORE, true);
-            ERaState::set(StateT::STATE_SWITCH_TO_STA);
+            if (this->priorityConnected(true)) {
+                WiFi.enableAP(false);
+                ERaState::set(StateT::STATE_CONNECTING_CLOUD);
+            }
+            else {
+                ERaState::set(StateT::STATE_SWITCH_TO_STA);
+            }
+        }
+        if (ERaConfig.forceSave) {
+            this->configSave();
         }
     });
 
@@ -563,6 +642,10 @@ void ERaPnP<Transport>::configApi() {
             cJSON_AddStringToObject(root, INFO_BOARD, ERA_BOARD_TYPE);
             cJSON_AddStringToObject(root, INFO_MODEL, ERA_MODEL_TYPE);
             cJSON_AddStringToObject(root, INFO_IMEI, imei);
+            cJSON_AddStringToObject(root, INFO_AUTH_TOKEN, ERaConfig.token);
+            cJSON_AddStringToObject(root, INFO_DEVICE_NAME, this->getDeviceName().c_str());
+            cJSON_AddStringToObject(root, INFO_DEVICE_TYPE, Base::getDeviceType());
+            cJSON_AddStringToObject(root, INFO_DEVICE_SECRET, Base::getDeviceSecretKey());
             cJSON_AddStringToObject(root, INFO_BUILD_DATE, BUILD_DATE_TIME);
             cJSON_AddStringToObject(root, INFO_VERSION, ERA_VERSION);
             cJSON_AddStringToObject(root, INFO_FIRMWARE_VERSION, ERA_FIRMWARE_VERSION);
@@ -580,7 +663,14 @@ void ERaPnP<Transport>::configApi() {
             root = nullptr;
             ptr = nullptr;
         }
-        this->server.send(200, "application/json", content);
+        if (content.length()) {
+            this->server.send(200, ERA_F("application/json"), content);
+            this->identifyCb();
+        }
+        else {
+            content = ERA_F(R"json({"status":"error","message":"Unable to retrieve board information"})json");
+            this->server.send(500, ERA_F("application/json"), content);
+        }
     });
 
     this->server.on("/api/wifi_scan.json", HTTP_GET, [&, this]() {
@@ -589,7 +679,7 @@ void ERaPnP<Transport>::configApi() {
         int nets = this->scanNetworks();
 
         if (nets < 0) {
-            this->server.send(200, "application/json", "[]");
+            this->server.send(200, ERA_F("application/json"), content);
             return;
         }
 
@@ -624,31 +714,39 @@ void ERaPnP<Transport>::configApi() {
             ptr = nullptr;
         }
 
-        this->server.send(200, "application/json", content);
+        this->server.send(200, ERA_F("application/json"), content);
     });
 
     this->server.on("/api/reset", [&, this]() {
         String content = ERA_F(R"json({"status":"ok","message":"Configuration reset"})json");
-        this->server.send(200, "application/json", content);
+        this->server.send(200, ERA_F("application/json"), content);
         ERaState::set(StateT::STATE_RESET_CONFIG);
     });
 
     this->server.on("/api/reboot", [&, this]() {
         String content = ERA_F(R"json({"status":"ok","message":"Rebooting..."})json");
-        this->server.send(200, "application/json", content);
+        this->server.send(200, ERA_F("application/json"), content);
         ERaState::set(StateT::STATE_REBOOT);
     });
 
+    this->server.on("/api/identify", [&, this]() {
+        String content = ERA_F(R"json({"status":"ok","message":"Identifying..."})json");
+        this->server.send(200, ERA_F("application/json"), content);
+        this->identifyCb();
+    });
+
     this->server.on("/", [&, this]() {
+        this->useCaptivePortal = false;
         String content = ERA_FPSTR(webIndex);
         content += ERA_FPSTR(webScript);
         content += ERA_FPSTR(webStyle);
         WebProcessor(content);
-        this->server.send(200, "text/html", content);
+        this->server.send(200, ERA_F("text/html"), content);
     });
 
     this->server.on("/network", [&, this]() {
         ERA_LOG(ERA_PSTR("Config"), ERA_PSTR("Configuration..."));
+        this->useCaptivePortal = false;
         String ssid = this->server.arg("ssid");
         String pass = this->server.arg("pass");
         String backupSsid = this->server.arg("backup_ssid");
@@ -861,31 +959,27 @@ void ERaPnP<Transport>::configApi() {
         content += ERA_FPSTR(webStyle);
 
         WebProcessor(content);
-        this->server.send(200, "text/html", content);
-        if (ERaConfig.forceSave) {
+        this->server.send(200, ERA_F("text/html"), content);
+        if ((ssid.length() && hasConnect) || ERaConfig.forceSave) {
             ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_PNP, false);
             ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_VALID, true);
             ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_STORE, true);
-            this->configSave();
             ERaState::set(StateT::STATE_SWITCH_TO_STA);
         }
-        else if (ssid.length() && hasConnect) {
-            ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_PNP, false);
-            ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_VALID, true);
-            ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_STORE, true);
-            ERaState::set(StateT::STATE_SWITCH_TO_STA);
+        if (ERaConfig.forceSave) {
+            this->configSave();
         }
     });
 
     this->server.on("/network/reset", [&, this]() {
-        this->server.sendHeader("Location", "/");
-        this->server.send(302, "text/plain", "");
+        this->server.sendHeader(ERA_F("Location"), ERA_F("/"));
+        this->server.send(302, ERA_F("text/plain"), "");
         ERaState::set(StateT::STATE_RESET_CONFIG);
     });
 
     this->server.on("/network/status", HTTP_POST, [&, this]() {
         String content;
-        if (this->wifiConnected()) {
+        if (this->wifiConnected(true)) {
             content += LANGUAGE_CONNECTED(LANGUAGE_EN);
             content += ERA_F(" ");
             content += WiFi.SSID();
@@ -893,59 +987,69 @@ void ERaPnP<Transport>::configApi() {
         else {
             content += ERA_F("--");
         }
-        this->server.send(200, "text/plane", content);
+        this->server.send(200, ERA_F("text/plane"), content);
     });
 
     this->server.on("/network/ip", HTTP_POST, [&, this]() {
         String content;
-        if (this->wifiConnected()) {
+        if (this->wifiConnected(true)) {
             content += WiFi.localIP().toString();
         }
         else {
             content += ERA_F("--");
         }
-        this->server.send(200, "text/plane", content);
+        this->server.send(200, ERA_F("text/plane"), content);
     });
 
     this->server.on("/network/ssid", HTTP_POST, [&, this]() {
         String content;
-        if (this->wifiConnected()) {
+        if (this->wifiConnected(true)) {
             content += WiFi.SSID();
         }
         else {
             content += ERA_F("--");
         }
-        this->server.send(200, "text/plane", content);
+        this->server.send(200, ERA_F("text/plane"), content);
     });
 
     this->server.on("/network/rssi", HTTP_POST, [&, this]() {
         String content;
-        if (this->wifiConnected()) {
+        if (this->wifiConnected(true)) {
             content += WiFi.RSSI();
         }
         else {
             content += ERA_F("--");
         }
-        this->server.send(200, "text/plane", content);
+        this->server.send(200, ERA_F("text/plane"), content);
     });
 
     this->server.on("/network/mac", HTTP_POST, [&, this]() {
         String content;
         content += WiFi.macAddress();
-        this->server.send(200, "text/plane", content);
+        this->server.send(200, ERA_F("text/plane"), content);
+    });
+
+    this->server.on("/wifi", [&, this]() {
+        this->useCaptivePortal = true;
+        this->server.setContentLength(sizeof(ERA_CAPTIVE_INDEX));
+        this->server.sendHeader(ERA_F("Content-Encoding"), ERA_F("gzip"));
+        this->server.send(200, ERA_F("text/html"), "");
+
+        WiFiClient client = this->server.client();
+        client.write(ERA_CAPTIVE_INDEX, sizeof(ERA_CAPTIVE_INDEX));
     });
 
     this->server.on("/mqtt/connected", HTTP_POST, [&, this]() {
         String content;
-        content += (Base::connected() ? "online" : "offline");
-        this->server.send(200, "text/plane", content);
+        content += (Base::connected() ? ERA_F("online") : ERA_F("offline"));
+        this->server.send(200, ERA_F("text/plane"), content);
     });
 
     this->server.on("/system/memory", HTTP_POST, [&, this]() {
         String content;
         content += ERaFreeRam();
         content += ERA_F(" Bytes");
-        this->server.send(200, "text/plane", content);
+        this->server.send(200, ERA_F("text/plane"), content);
     });
 
     this->server.on("/system/uptime", HTTP_POST, [&, this]() {
@@ -960,7 +1064,7 @@ void ERaPnP<Transport>::configApi() {
         seconds -= (minutes * 60);
         FormatString(upTime, "%02d:%02d:%02d:%02lu", days, hours, minutes, seconds);
         content += upTime;
-        this->server.send(200, "text/plane", content);
+        this->server.send(200, ERA_F("text/plane"), content);
     });
 
     this->server.on("/system/token", HTTP_POST, [&, this]() {
@@ -978,11 +1082,11 @@ void ERaPnP<Transport>::configApi() {
         else {
             content += ERA_F("--");
         }
-        this->server.send(200, "text/plane", content);
+        this->server.send(200, ERA_F("text/plane"), content);
     });
 
     this->server.on("/system/restart", HTTP_POST, [&, this]() {
-        ERaRestart(true);
+        ERaState::set(StateT::STATE_REBOOT);
     });
 
     this->server.on("/ota/update", HTTP_POST, [&, this]() {
@@ -993,7 +1097,10 @@ void ERaPnP<Transport>::configApi() {
         else {
             content = LANGUAGE_UPDATE_SUCCESS(LanguageWebT::LANGUAGE_EN);
         }
-        this->server.send(200, "text/plane", content);
+        this->server.send(200, ERA_F("text/plane"), content);
+        if (this->useCaptivePortal) {
+            ERaState::set(StateT::STATE_REBOOT);
+        }
     }, [&, this]() {
         HTTPUpload& upload = this->server.upload();
         switch (upload.status) {
@@ -1027,12 +1134,12 @@ void ERaPnP<Transport>::configApi() {
         content += ERA_FPSTR(webOTA);
         content += ERA_FPSTR(webStyle);
         WebProcessor(content);
-        this->server.send(200, "text/html", content);
+        this->server.send(200, ERA_F("text/html"), content);
     });
 
     this->server.onNotFound([&, this]() {
-        this->server.sendHeader("Location", "/");
-        this->server.send(302, "text/plain", "Not found");
+        this->server.sendHeader(ERA_F("Location"), ERA_F("/"));
+        this->server.send(302, ERA_F("text/plain"), ERA_F("Not found"));
     });
 
     this->udpERa.on("connect/wifi", [&, this]() {
@@ -1049,6 +1156,14 @@ void ERaPnP<Transport>::configApi() {
         String password = this->udpERa.arg("password").c_str();
 
         String content;
+
+        if (this->udpERa.hasArg("token") && !token.length()) {
+            content = ERA_F(R"json({"status":"error","message":"Invalid token"})json");
+            this->udpERa.sendAndStop(content.c_str());
+            return;
+        }
+
+        ERaConfig.forceSave = !!this->udpERa.arg("save").toInt();
 
         if (ssid.length()) {
             CopyToArray(ssid, ERaConfig.ssid);
@@ -1092,9 +1207,16 @@ void ERaPnP<Transport>::configApi() {
             ClearArray(ERaConfig.pass);
         }
 
-        content = ERA_F(R"json({"status":"ok","message":"Connecting wifi..."})json");
+        if (ERaConfig.forceSave) {
+            content = ERA_F(R"json({"status":"ok","message":"Configuration saved"})json");
+        }
+        else {
+            content = ERA_F(R"json({"status":"ok","message":"Connecting wifi..."})json");
+        }
         ERA_FORCE_UNUSED(content);
-        if (ssid.length()) {
+
+        if (ssid.length() || ERaConfig.forceSave ||
+            this->priorityConnected(true)) {
             // this->udpERa.send(content.c_str());
             ERaDelay(100);
             /* TODO: send first time */
@@ -1103,12 +1225,27 @@ void ERaPnP<Transport>::configApi() {
             ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_PNP, true);
             ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_VALID, true);
             ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_STORE, true);
-            ERaState::set(StateT::STATE_SWITCH_TO_AP_STA);
+            if (this->priorityConnected(true)) {
+                WiFi.enableAP(false);
+                ERaState::set(StateT::STATE_CONNECTING_CLOUD);
+            }
+            else {
+                ERaState::set(StateT::STATE_SWITCH_TO_AP_STA);
+            }
+        }
+        if (ERaConfig.forceSave) {
+            this->configSave();
         }
     });
 
     this->udpERa.on("connect/token", [&, this]() {
         String token = this->udpERa.arg("token").c_str();
+
+        if (!token.length()) {
+            String content = ERA_F(R"json({"status":"error","message":"Invalid token"})json");
+            this->udpERa.sendAndStop(content.c_str());
+            return;
+        }
 
         if (token.length()) {
             CopyToArray(token, ERaConfig.token);
@@ -1179,19 +1316,26 @@ void ERaPnP<Transport>::configApi() {
         this->udpERa.send(content.c_str());
         ERaState::set(StateT::STATE_REBOOT);
     });
+
+    this->udpERa.on("system/identify", [&, this]() {
+        String content = ERA_F(R"json({"status":"ok","message":"Identifying..."})json");
+        this->udpERa.send(content.c_str());
+        this->identifyCb();
+    });
 }
 
 template <class Transport>
 void ERaPnP<Transport>::configInit() {
     this->configLoad();
     this->config(ERaConfig.token, ERaConfig.host, ERaConfig.port,
-                 ERaConfig.username, ERaConfig.password);
+                ERaConfig.username, ERaConfig.password);
     if (ERaConfig.getFlag(ConfigFlagT::CONFIG_FLAG_VALID)) {
         ERaState::set(StateT::STATE_CONNECTING_NETWORK);
     }
-    else if (this->netCb() ||
-            this->wifiConnected()) {
-        ERaState::set(StateT::STATE_CONNECTING_CLOUD);
+    else if (this->priorityConnected(true)) {
+        ERA_LOG(TAG, ERA_PSTR("Switching to Scan device..."));
+        ERaState::set(StateT::STATE_SCAN_DEVICE);
+        ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_API, true);
     }
     else {
         ERaState::set(StateT::STATE_SWITCH_TO_AP);
@@ -1244,13 +1388,13 @@ void ERaPnP<Transport>::configReset() {
 }
 
 template <class Transport>
-void ERaPnP<Transport>::configMode() {
+void ERaPnP<Transport>::configBegin() {
     this->configApi();
 
     ERA_LOG(TAG, ERA_PSTR("Config mode"));
 
     ERaWatchdogFeed();
-    this->scanNetworks();
+    this->scanNetworks(true);
     ERaWatchdogFeed();
 
     this->dnsServer.start(DNS_PORT, CONFIG_AP_URL, WiFi.softAPIP());
@@ -1259,10 +1403,36 @@ void ERaPnP<Transport>::configMode() {
     this->server.begin();
     this->udpERa.setERaORG(Base::getERaORG());
     this->udpERa.setERaModel(Base::getERaModel());
-    this->udpERa.begin((this->authToken == nullptr) ? ERaConfig.token : this->authToken);
+    this->udpERa.setDeviceName(this->getDeviceName().c_str());
+    this->udpERa.setDeviceType(Base::getDeviceType());
+    this->udpERa.setDeviceSecretKey(Base::getDeviceSecretKey());
+    this->udpERa.begin((this->authToken == nullptr) ?
+                        ERaConfig.token : this->authToken);
 
-    MillisTime_t tick = ERaMillis();
-    while (ERaState::is(StateT::STATE_WAIT_CONFIG) || ERaState::is(StateT::STATE_CONFIGURING)) {
+    if (MDNS.begin(this->getDeviceName().c_str())) {
+        MDNS.addService(MDNS_SERVICE, MDNS_PROTOCOL, MDNS_PORT);
+        MDNS.addServiceTxt(MDNS_SERVICE, MDNS_PROTOCOL,
+                           "path", "/");
+        MDNS.addServiceTxt(MDNS_SERVICE, MDNS_PROTOCOL,
+                           INFO_DEVICE_NAME, this->getDeviceName().c_str());
+        MDNS.addServiceTxt(MDNS_SERVICE, MDNS_PROTOCOL,
+                           INFO_DEVICE_TYPE, Base::getDeviceType());
+        MDNS.addServiceTxt(MDNS_SERVICE, MDNS_PROTOCOL,
+                           INFO_DEVICE_SECRET, Base::getDeviceSecretKey());
+    }
+}
+
+template <class Transport>
+void ERaPnP<Transport>::configMode() {
+    static bool configStarted {false};
+    static MillisTime_t startMillis {0UL};
+    if (!configStarted) {
+        this->configBegin();
+        configStarted = true;
+        startMillis = ERaMillis();
+    }
+
+    while (ERaState::isConfiguring()) {
         ERaDelay(10);
         this->udpERa.run();
         this->server.handleClient();
@@ -1270,47 +1440,77 @@ void ERaPnP<Transport>::configMode() {
         ERaWatchdogFeed();
         Base::appLoop();
         ERaWatchdogFeed();
+
+        this->handleScanDevice();
+        if (!ERaState::is(StateT::STATE_SCAN_DEVICE)) {
+        }
+        else if (this->priorityConnected(true)) {
+            if (Base::isNonBlocking()) {
+                return;
+            }
+            continue;
+        }
+        else {
+            ERaState::set(StateT::STATE_SWITCH_TO_AP);
+        }
+
         if (ERaState::is(StateT::STATE_CONFIGURING) && !WiFi.softAPgetStationNum()) {
             ERaState::set(StateT::STATE_WAIT_CONFIG);
         }
         else if (!WiFi.softAPgetStationNum()) {
-            this->scanNetworks();
+            this->scanNetworks(true);
         }
-        if (ERaState::is(StateT::STATE_WAIT_CONFIG) && this->netCb()) {
+
+        if (!this->priorityConnected(true)) {
+        }
+        else if (!ERaConfig.getFlag(ConfigFlagT::CONFIG_FLAG_VALID)) {
+            ERaState::set(StateT::STATE_SCAN_DEVICE);
+        }
+        else if (ERaState::is(StateT::STATE_WAIT_CONFIG)) {
             WiFi.enableAP(false);
             ERaState::set(StateT::STATE_CONNECTING_CLOUD);
-            break;
         }
+
         if (ERaState::is(StateT::STATE_SWITCH_TO_AP_STA)) {
         }
-        else if (ERaConfig.getFlag(ConfigFlagT::CONFIG_FLAG_VALID)) {
-            if (!ERaRemainingTime(tick, WIFI_NET_CHECK_TIMEOUT)) {
-                ERaState::set(StateT::STATE_SWITCH_TO_STA);
-                break;
-            }
+        else if (!ERaConfig.getFlag(ConfigFlagT::CONFIG_FLAG_VALID)) {
         }
+        else if (!ERaRemainingTime(startMillis, WIFI_NET_CHECK_TIMEOUT)) {
+            ERaState::set(StateT::STATE_SWITCH_TO_STA);
+        }
+
+        if (Base::isNonBlocking()) {
+            break;
+        }
+    }
+
+    if (ERaState::isConfiguring()) {
+        return;
     }
 
     this->waitHandle(1000UL);
 
     if (!strlen(ERaConfig.ssid) &&
-        this->hasNetworkCallback &&
+        ConnectedHandler::hasBeforeWiFi() &&
         ERaState::is(StateT::STATE_SWITCH_TO_AP_STA)) {
-        tick = ERaMillis();
+        startMillis = ERaMillis();
         ERA_LOG(TAG, ERA_PSTR("Wait network connected..."));
         do {
-            if (this->netCb()) {
+            if (ConnectedHandler::beforeWiFiConnected(true)) {
                 break;
             }
             ERaDelay(10);
             ERaWatchdogFeed();
-        } while (ERaRemainingTime(tick, 10000UL));
+        } while (ERaRemainingTime(startMillis, 10000UL));
     }
 
     ERaDelay(1000);
     WiFi.scanDelete();
     this->server.stop();
     this->dnsServer.stop();
+    MDNS.end();
+
+    configStarted = false;
 }
 
 template <class Transport>
@@ -1330,7 +1530,7 @@ void ERaPnP<Transport>::waitHandle(unsigned long ms) {
 }
 
 template <class Transport>
-int ERaPnP<Transport>::scanNetworks() {
+int ERaPnP<Transport>::scanNetworks(bool nonBlocking) {
     int nets = WiFi.scanComplete();
     unsigned long currentMillis = ERaMillis();
     if ((nets >= 0) && ((currentMillis - this->prevMillisScan) < WIFI_SCAN_INTERVAL)) {
@@ -1342,6 +1542,11 @@ int ERaPnP<Transport>::scanNetworks() {
 
     nets = WiFi.scanNetworks(true, true, false,
                     WIFI_SCAN_CHANNEL_TIMEOUT);
+
+    if (nonBlocking) {
+        return nets;
+    }
+
     MillisTime_t tick = ERaMillis();
     while ((nets < 0) && ERaRemainingTime(tick, WIFI_SCAN_TIMEOUT)) {
         ERaDelay(20);
@@ -1506,6 +1711,43 @@ cJSON* ERaPnP<Transport>::scanNetworksJson(int nets, bool compact) {
 }
 
 template <class Transport>
+String ERaPnP<Transport>::findArg(const String& arg) {
+    String value = this->server.arg(arg);
+    if (!value.length()) {
+        value = this->bodyFindArg(this->server.arg("plain"), arg);
+    }
+    return value;
+}
+
+template <class Transport>
+String ERaPnP<Transport>::bodyFindArg(const String& body, const String& arg) {
+    cJSON* root = cJSON_Parse(body.c_str());
+    if (!cJSON_IsObject(root)) {
+        cJSON_Delete(root);
+        root = nullptr;
+        return String("");
+    }
+
+    String data = "";
+
+    cJSON* item = cJSON_GetObjectItem(root, arg.c_str());
+    if (cJSON_IsString(item)) {
+        data = item->valuestring;
+    }
+    else if (cJSON_IsNumber(item)) {
+        data = String(item->valueint);
+    }
+    else if (cJSON_IsBool(item)) {
+        data = String(item->valueint);
+    }
+
+    cJSON_Delete(root);
+    root = nullptr;
+    item = nullptr;
+    return data;
+}
+
+template <class Transport>
 void ERaPnP<Transport>::reFlagNewNetwork(const char* ssid) {
     if (this->newWiFi.flag == WiFiFlagT::WIFI_FLAG_INVALID) {
         return;
@@ -1535,9 +1777,29 @@ void ERaPnP<Transport>::copyNewNetwork() {
 
 template <class Transport>
 void ERaPnP<Transport>::connectNetwork() {
-    this->connectWiFi(ERaConfig.ssid, ERaConfig.pass);
-    this->connectWiFiBackup();
-    if (this->netConnected()) {
+    static bool connectBackup {false};
+
+    if (!connectBackup) {
+        this->connectWiFi(ERaConfig.ssid, ERaConfig.pass, Base::isNonBlocking());
+        this->checkConnectWiFi(ERaConfig.ssid);
+    }
+    else {
+        this->connectWiFiBackup();
+    }
+
+    if ((this->wifiState == WiFiStateT::WIFI_STATE_CONNECTING) ||
+        (this->wifiState == WiFiStateT::WIFI_STATE_RETRYING)) {
+        return;
+    }
+    else if (this->wifiState == WiFiStateT::WIFI_STATE_CONNECTED) {
+    }
+    else if (!connectBackup && ERaConfig.hasBackup) {
+        connectBackup = true;
+        this->wifiState = WiFiStateT::WIFI_STATE_IDLE;
+        return;
+    }
+
+    if (this->netConnected(false)) {
         /* Udp */
         if (ERaConfig.getFlag(ConfigFlagT::CONFIG_FLAG_UDP)) {
             String content = ERA_F(R"json({"status":"ok","message":"Connected to WiFi"})json");
@@ -1555,7 +1817,6 @@ void ERaPnP<Transport>::connectNetwork() {
         ERaState::set(StateT::STATE_CONNECTING_CLOUD);
     }
     else if (Base::isConfigMode()) {
-        return;
     }
     else {
         /* Udp */
@@ -1570,6 +1831,9 @@ void ERaPnP<Transport>::connectNetwork() {
         ERaState::set(StateT::STATE_SWITCH_TO_AP);
         ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_API, true);
     }
+
+    connectBackup = false;
+    this->wifiState = WiFiStateT::WIFI_STATE_IDLE;
 }
 
 template <class Transport>
@@ -1599,7 +1863,7 @@ void ERaPnP<Transport>::connectNewNetwork() {
     }
 
     this->connectWiFi(this->newWiFi.ssid, this->newWiFi.pass);
-    if (this->wifiConnected()) {
+    if (this->wifiConnected(true)) {
         this->newWiFi.flag = WiFiFlagT::WIFI_FLAG_CONNECTED;
         ERaState::set(StateT::STATE_CONNECTING_CLOUD);
     }
@@ -1638,33 +1902,44 @@ void ERaPnP<Transport>::connectNewNetworkResult() {
 
 template <class Transport>
 void ERaPnP<Transport>::connectCloud() {
-    ERA_LOG(TAG, ERA_PSTR("Connecting cloud..."));
-    this->config(ERaConfig.token, ERaConfig.host, ERaConfig.port,
-                ERaConfig.username, ERaConfig.password);
+    static bool configStarted {false};
+    if (!configStarted) {
+        ERA_LOG(TAG, ERA_PSTR("Connecting cloud..."));
+        this->config(ERaConfig.token, ERaConfig.host, ERaConfig.port,
+                    ERaConfig.username, ERaConfig.password);
+        configStarted = true;
+    }
+
     if (Base::connect()) {
         ERaConfig.connected = true;
-        this->configSave();
         ERaOptConnected(this);
         this->connectNewNetworkResult();
+        this->configSave();
         ERaState::set(StateT::STATE_CONNECTED);
     }
     else if (Base::isConfigMode()) {
-        return;
     }
     else if ((ERaConfig.connected || ERaConfig.forceSave) &&
         this->getTransp().connectionDenied()) {
         ERaState::set(StateT::STATE_SWITCH_TO_AP);
         ERaConfig.setFlag(ConfigFlagT::CONFIG_FLAG_API, true);
     }
-    else {
+    else if (this->getTransp().reachedConnectionLimit()) {
         ERaState::set(StateT::STATE_CONNECTING_NETWORK);
+    }
+
+    if (!ERaState::is(StateT::STATE_CONNECTING_CLOUD)) {
+        configStarted = false;
     }
 }
 
 template <class Transport>
-void ERaPnP<Transport>::connectWiFi(const char* ssid, const char* pass) {
-    if (this->netCb() ||
-        this->wifiConnected()) {
+void ERaPnP<Transport>::connectWiFi(const char* ssid, const char* pass, bool nonBlocking) {
+    if (this->wifiState == WiFiStateT::WIFI_STATE_CONNECTING) {
+        return;
+    }
+    if (this->priorityConnected(true)) {
+        this->wifiState = WiFiStateT::WIFI_STATE_CONNECTED;
         return;
     }
     if (ssid == nullptr) {
@@ -1673,7 +1948,8 @@ void ERaPnP<Transport>::connectWiFi(const char* ssid, const char* pass) {
     if (!strlen(ssid)) {
         return;
     }
-    if (!this->scanNetworks(ssid)) {
+    if (this->wifiState == WiFiStateT::WIFI_STATE_RETRYING) {
+    } else if (!this->scanNetworks(ssid)) {
         return;
     }
 
@@ -1703,7 +1979,15 @@ void ERaPnP<Transport>::connectWiFi(const char* ssid, const char* pass) {
 
         ERaWatchdogFeed();
 
+        if (this->wifiState != WiFiStateT::WIFI_STATE_RETRYING) {
+            this->wifiState = WiFiStateT::WIFI_STATE_STARTED;
+        }
+        if (nonBlocking) {
+            return;
+        }
+
         MillisTime_t startMillis = ERaMillis();
+        this->wifiState = WiFiStateT::WIFI_STATE_CONNECTING;
         while (status != WL_CONNECTED) {
             ERaDelay(10);
             ERaWatchdogFeed();
@@ -1713,11 +1997,13 @@ void ERaPnP<Transport>::connectWiFi(const char* ssid, const char* pass) {
             if (Base::isConfigMode() ||
                 !ERaRemainingTime(started, WIFI_NET_CONNECT_TIMEOUT)) {
                 WiFi.disconnect();
+                this->wifiState = WiFiStateT::WIFI_STATE_FAILED;
                 ERA_LOG_ERROR(TAG, ERA_PSTR("Connect %s failed"), ssid);
                 return;
             }
-            else if (!ERaRemainingTime(startMillis, 20000)) {
+            else if (!ERaRemainingTime(startMillis, 20000UL)) {
                 WiFi.disconnect();
+                this->wifiState = WiFiStateT::WIFI_STATE_RETRYING;
                 ERA_LOG_ERROR(TAG, ERA_PSTR("Connect %s timeout"), ssid);
                 break;
             }
@@ -1730,6 +2016,8 @@ void ERaPnP<Transport>::connectWiFi(const char* ssid, const char* pass) {
     IPAddress localIP = WiFi.localIP();
     ERA_FORCE_UNUSED(localIP);
     ERA_LOG(TAG, ERA_PSTR("IP: %s"), localIP.toString().c_str());
+
+    this->wifiState = WiFiStateT::WIFI_STATE_CONNECTED;
 }
 
 template <class Transport>
@@ -1764,7 +2052,57 @@ void ERaPnP<Transport>::connectWiFiBackup() {
     if (!ERaConfig.hasBackup) {
         return;
     }
-    this->connectWiFi(ERaConfig.backupSSID, ERaConfig.backupPass);
+    this->connectWiFi(ERaConfig.backupSSID, ERaConfig.backupPass, Base::isNonBlocking());
+    this->checkConnectWiFi(ERaConfig.backupSSID);
+}
+
+template <class Transport>
+void ERaPnP<Transport>::checkConnectWiFi(const char* ssid) {
+    static MillisTime_t startRetry {0UL};
+    static MillisTime_t startMillis {0UL};
+
+    if (!Base::isNonBlocking()) {
+        return;
+    }
+
+    if (this->wifiState == WiFiStateT::WIFI_STATE_STARTED) {
+        startRetry = ERaMillis();
+        startMillis = ERaMillis();
+        this->wifiState = WiFiStateT::WIFI_STATE_CONNECTING;
+    }
+    else if (this->wifiState == WiFiStateT::WIFI_STATE_RETRYING) {
+        startRetry = ERaMillis();
+        this->wifiState = WiFiStateT::WIFI_STATE_CONNECTING;
+    }
+    else if (this->wifiState != WiFiStateT::WIFI_STATE_CONNECTING) {
+    }
+    else if (!ERaRemainingTime(startMillis, WIFI_NET_CONNECT_TIMEOUT)) {
+        WiFi.disconnect();
+        this->wifiState = WiFiStateT::WIFI_STATE_FAILED;
+        ERA_LOG_ERROR(TAG, ERA_PSTR("Connect %s failed"), ssid);
+    }
+    else if (!ERaRemainingTime(startRetry, 20000UL)) {
+        WiFi.disconnect();
+        this->wifiState = WiFiStateT::WIFI_STATE_RETRYING;
+        ERA_LOG_ERROR(TAG, ERA_PSTR("Connect %s timeout"), ssid);
+    }
+
+    ERaWatchdogFeed();
+    Base::appLoop();
+    ERaWatchdogFeed();
+
+    if (!this->wifiConnected(true)) {
+        return;
+    }
+    this->reFlagNewNetwork(ssid);
+    this->getTransp().setSSID(ssid);
+    ERA_LOG(TAG, ERA_PSTR("Connected to WiFi"));
+
+    IPAddress localIP = WiFi.localIP();
+    ERA_FORCE_UNUSED(localIP);
+    ERA_LOG(TAG, ERA_PSTR("IP: %s"), localIP.toString().c_str());
+
+    this->wifiState = WiFiStateT::WIFI_STATE_CONNECTED;
 }
 
 template <class Transport>
@@ -1775,7 +2113,7 @@ void ERaPnP<Transport>::requestListWiFi() {
 template <class Transport>
 void ERaPnP<Transport>::responseListWiFi() {
     int nets = this->scanNetworks();
-    cJSON* root = this->scanNetworksJson(nets);
+    cJSON* root = this->scanNetworksJson(nets, false);
     WiFi.scanDelete();
 
     if (root == nullptr) {
@@ -1844,7 +2182,7 @@ void ERaPnP<Transport>::switchToAPSTA() {
     ERaDelay(100);
     WiFi.mode(WIFI_AP_STA);
     ERaWatchdogFeed();
-    
+
     ERaState::set(StateT::STATE_CONNECTING_NETWORK);
 }
 
@@ -1866,6 +2204,14 @@ void ERaPnP<Transport>::setupHostname() {
 }
 
 template <class Transport>
+String ERaPnP<Transport>::getDeviceName() {
+    String deviceName = Base::getDeviceName();
+    deviceName += "-";
+    deviceName += this->getChipID(4UL);
+    return deviceName;
+}
+
+template <class Transport>
 String ERaPnP<Transport>::getChipID(size_t len) {
     char id[20] {0};
     uint64_t unique {0};
@@ -1882,12 +2228,17 @@ String ERaPnP<Transport>::getChipID(size_t len) {
     return String(id);
 }
 
+template <class Transport>
+void ERaPnP<Transport>::handleScanDevice() {
+    /* Handle MDNS - not used on ESP32 */
+}
+
 #if defined(ERA_DETECT_SSL)
     template <class Transport>
     void ERaPnP<Transport>::createClient(uint16_t port) {
         Client* _pClient = this->clientCb(port);
         if (_pClient != nullptr) {
-            this->getTransp().setClient(_pClient);
+            ConnectedHandler::updateClient(_pClient);
             return;
         }
 
@@ -1913,7 +2264,7 @@ String ERaPnP<Transport>::getChipID(size_t len) {
             this->pClient = new WiFiClient;
         }
         prevPort = port;
-        this->getTransp().setClient(this->pClient);
+        ConnectedHandler::updateClient(this->pClient);
     }
 #endif
 

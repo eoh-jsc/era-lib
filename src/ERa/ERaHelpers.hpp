@@ -3,12 +3,19 @@
 
 #include <ERa/ERaDetect.hpp>
 
+#define ERA_SINGLETON(T, name, ...)         \
+    static inline                           \
+    T& name() {                             \
+        static T instance {__VA_ARGS__};    \
+        return instance;                    \
+    }
+
 template <class S, typename... Args>
 class StaticHelper {
 public:
     static inline
     S& instance(Args... tail) {
-        static S _instance(tail...);
+        static S _instance {tail...};
         return _instance;
     }
 };
@@ -18,7 +25,7 @@ class StaticRefHelper {
 public:
     static inline
     S& instance(Args&... tail) {
-        static S _instance(tail...);
+        static S _instance {tail...};
         return _instance;
     }
 };

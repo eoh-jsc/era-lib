@@ -7,6 +7,10 @@
 
     #include <Storage/ERaFlashPreferences.hpp>
 
+#elif defined(ERA_HAS_FLASH_DB_H)
+
+    #include <Storage/ERaFlashDB.hpp>
+
 #else
 
     #include <Storage/ERaFlashLittleFS.hpp>

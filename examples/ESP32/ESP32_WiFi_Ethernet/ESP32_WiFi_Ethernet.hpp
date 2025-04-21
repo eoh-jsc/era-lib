@@ -113,6 +113,7 @@ void onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info) {
     }
 #endif
 
+/* This function is triggered whenever the board information is sent */
 ERA_INFO() {
     if (!ethConnected) {
         return;
@@ -126,6 +127,7 @@ ERA_INFO() {
     ERaSetString(root, INFO_LOCAL_IP, ETH.localIP().toString().c_str());
 }
 
+/* This function is triggered whenever the Modbus information is sent */
 ERA_MODBUS_INFO() {
     if (!ethConnected) {
         return;

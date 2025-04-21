@@ -67,6 +67,8 @@ int16_t GSMToRSSI(uint8_t value);
 uint8_t GSMToPercentage(uint8_t value);
 uint8_t SignalToPercentage(int16_t value);
 
+size_t ERaUTF8ToUTF16(const char* input, uint16_t* output = nullptr, size_t maxSizeOutput = 0U);
+
 bool ERaIsNaN(double value);
 bool ERaIsInf(double value);
 bool ERaIsSpN(double value);
@@ -79,19 +81,19 @@ char* ERaDtostrf(double number, int decimal, char* str);
 template <typename T>
 inline
 const T& ERaMin(const T& a, const T& b) {
-    return (b < a) ? b : a;
+    return ((b < a) ? b : a);
 }
 
 template <typename T>
 inline
 const T& ERaMax(const T& a, const T& b) {
-    return (b < a) ? a : b;
+    return ((b < a) ? a : b);
 }
 
 template <typename T>
 inline
 T ERaMathClamp(T val, T low, T high) {
-    return (val < low) ? low : ((val > high) ? high : val);
+    return ((val < low) ? low : ((val > high) ? high : val));
 }
 
 template <typename T>

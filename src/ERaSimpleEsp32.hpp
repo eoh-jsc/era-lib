@@ -7,10 +7,10 @@
 #if !defined(NO_GLOBAL_INSTANCES) && !defined(NO_GLOBAL_ERA)
     static ERaFlash flash;
     static WiFiClient ERaWiFiClient;
-    static ERaMqtt<WiFiClient, MQTTClient> mqtt(ERaWiFiClient);
-    ERaPnP< ERaMqtt<WiFiClient, MQTTClient> > ERa(mqtt, flash);
+    static ERaMqtt<Client, MQTTClient> mqtt(ERaWiFiClient);
+    ERaPnP< ERaMqtt<Client, MQTTClient> > ERa(mqtt, flash);
 #else
-    extern ERaPnP< ERaMqtt<WiFiClient, MQTTClient> > ERa;
+    extern ERaPnP< ERaMqtt<Client, MQTTClient> > ERa;
 #endif
 
 #include <ERa/ERaStatic.hpp>

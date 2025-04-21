@@ -13,7 +13,7 @@
     }
 
 static inline
-unsigned long pulseIn(uint8_t pin, uint8_t state,
+unsigned long pulseIn(uint16_t pin, uint8_t state,
                     unsigned long timeout = 1000000UL) {
     const uint32_t startTime = micros();
     WAIT_FOR_PIN_STATE(!state);
@@ -24,7 +24,7 @@ unsigned long pulseIn(uint8_t pin, uint8_t state,
 }
 
 static inline
-unsigned long pulseInLong(uint8_t pin, uint8_t state,
+unsigned long pulseInLong(uint16_t pin, uint8_t state,
                     unsigned long timeout = 1000000UL) {
     return pulseIn(pin, state, timeout);
 }

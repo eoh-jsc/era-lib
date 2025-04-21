@@ -13,8 +13,8 @@ public:
     virtual ~ERaComponent()
     {}
 
-    virtual void begin() = 0;
-    virtual void run() = 0;
+    virtual void begin() {}
+    virtual void run() {}
 
     ERaComponent* getNext() const {
         return this->next;

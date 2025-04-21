@@ -13,10 +13,10 @@
 
 #if !defined(NO_GLOBAL_INSTANCES) && !defined(NO_GLOBAL_ERA)
     static ERaFlash flash;
-    static ERaMqtt<BearSSLClient, MQTTClient> mqtt;
-    ERaParticle< ERaMqtt<BearSSLClient, MQTTClient> > ERa(mqtt, flash);
+    static ERaMqtt<Client, MQTTClient> mqtt;
+    ERaParticle< ERaMqtt<Client, MQTTClient> > ERa(mqtt, flash);
 #else
-    extern ERaParticle< ERaMqtt<BearSSLClient, MQTTClient> > ERa;
+    extern ERaParticle< ERaMqtt<Client, MQTTClient> > ERa;
 #endif
 
 #include <ERa/ERaStatic.hpp>

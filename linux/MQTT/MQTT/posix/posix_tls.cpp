@@ -7,9 +7,60 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <signal.h>
 #include <string.h>
 
 #include "posix_tls.hpp"
+
+static void net_prepare(void) {
+  signal(SIGPIPE, SIG_IGN);
+}
+
+static int lwmqtt_mbedtls_net_connect(mbedtls_net_context *ctx, const char *host, const char *port, int proto) {
+  int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+  struct addrinfo hints, *addr_list, *cur;
+
+  // prepare network
+  net_prepare();
+
+  // do name resolution with both IPv6 and IPv4
+  memset(&hints, 0, sizeof(hints));
+  hints.ai_family = AF_UNSPEC;
+  hints.ai_socktype = proto == MBEDTLS_NET_PROTO_UDP ? SOCK_DGRAM : SOCK_STREAM;
+  hints.ai_protocol = proto == MBEDTLS_NET_PROTO_UDP ? IPPROTO_UDP : IPPROTO_TCP;
+
+  if (getaddrinfo(host, port, &hints, &addr_list) != 0) {
+    return MBEDTLS_ERR_NET_UNKNOWN_HOST;
+  }
+
+  // try the sockaddrs until a connection succeeds
+  ret = MBEDTLS_ERR_NET_UNKNOWN_HOST;
+  for (cur = addr_list; cur != NULL; cur = cur->ai_next) {
+    ctx->fd = (int)socket(cur->ai_family, cur->ai_socktype, cur->ai_protocol);
+    if (ctx->fd < 0) {
+      ret = MBEDTLS_ERR_NET_SOCKET_FAILED;
+      continue;
+    }
+
+    int rc = fcntl(ctx->fd, F_SETFL, fcntl(ctx->fd, F_GETFL, 0) | O_NONBLOCK);
+    if (rc < 0) {
+    }
+    else {
+      rc = connect(ctx->fd, cur->ai_addr, cur->ai_addrlen);
+    }
+    if (rc == 0 || errno == EINPROGRESS) {
+      ret = 0;
+      break;
+    }
+
+    mbedtls_net_close(ctx);
+    ret = MBEDTLS_ERR_NET_CONNECT_FAILED;
+  }
+
+  freeaddrinfo(addr_list);
+
+  return ret;
+}
 
 void lwmqtt_posix_tls_network_init(lwmqtt_posix_tls_network_t *network, bool verify, const uint8_t *ca_buf, size_t ca_len) {
   if (!network) {
@@ -52,7 +103,7 @@ lwmqtt_err_t lwmqtt_posix_tls_network_connect(lwmqtt_posix_tls_network_t *networ
   }
 
   // connect socket
-  ret = mbedtls_net_connect(&network->socket, host, port_string, MBEDTLS_NET_PROTO_TCP);
+  ret = lwmqtt_mbedtls_net_connect(&network->socket, host, port_string, MBEDTLS_NET_PROTO_TCP);
   if (ret != 0) {
     return LWMQTT_NETWORK_FAILED_CONNECT;
   }
@@ -101,7 +152,7 @@ lwmqtt_err_t lwmqtt_posix_tls_network_connect(lwmqtt_posix_tls_network_t *networ
 
   // perform handshake
   ret = mbedtls_ssl_handshake(&network->ssl);
-  if (ret != 0) {
+  if (ret != 0 && ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE) {
     return LWMQTT_NETWORK_FAILED_CONNECT;
   }
 

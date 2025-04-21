@@ -22,8 +22,7 @@ namespace eras {
         item->component = component;
         item->name = name;
         item->timeout = timeout;
-        item->lastExecution = now;
-        item->lastExecutionMajor = this->mMillisMajor;
+        item->nextExecution = now + timeout;
         item->callback = std::move(func);
         item->remove = false;
         this->push(item);
@@ -57,17 +56,13 @@ namespace eras {
         while (!this->empty()) {
             {
                 auto item = this->mItems[0];
-                if ((now - item->lastExecution) < item->timeout) {
-                    break;
-                }
-                uint8_t major = item->nextExecutionMajor();
-                if ((this->mMillisMajor - major) > 1) {
+                if (item->nextExecution > now) {
                     break;
                 }
 
     #if defined(ERA_DEBUG_TIMER)
-                ERA_LOG(TAG, ERA_PSTR("Running Timeout '%s: %s' with timeout = %" PRIu32 " lastExecution = %" PRIu32 " (now = %" PRIu32 ")"),
-                            item->component->getComponentSource(), item->name.c_str(), item->timeout, item->lastExecution, now);
+                ERA_LOG(TAG, ERA_PSTR("Running Timeout '%s: %s' with timeout = %" PRIu32 " nextExecution = %" PRIu32 " (now = %" PRIu32 ")"),
+                            item->getSource(), item->name.c_str(), item->timeout, item->nextExecution, now);
     #endif  /* ERA_DEBUG_TIMER */
 
                 item->callback();
@@ -173,29 +168,22 @@ namespace eras {
         return ret;
     }
 
-    uint32_t Timer::millis() {
+    uint64_t Timer::millis() {
         const uint32_t now = ERaMillis();
         if (now < this->mLastMillis) {
             this->mMillisMajor++;
         }
         this->mLastMillis = now;
-        return now;
+        return (now + (static_cast<uint64_t>(this->mMillisMajor) << 32));
+    }
+
+    uint16_t Timer::millisMajor() {
+        return this->mMillisMajor;
     }
 
     bool Timer::TimerItem::cmp(TimerItem* a, TimerItem* b) {
         /* Min-heap */
-        uint32_t a_nextExec = a->nextExecution();
-        uint8_t a_nextExecMajor = a->nextExecutionMajor();
-        uint32_t b_nextExec = b->nextExecution();
-        uint8_t b_nextExecMajor = b->nextExecutionMajor();
-
-        if (a_nextExecMajor != b_nextExecMajor) {
-            uint8_t diff1 = (a_nextExecMajor - b_nextExecMajor);
-            uint8_t diff2 = (b_nextExecMajor - a_nextExecMajor);
-            return (diff1 < diff2);
-        }
-
-        return (a_nextExec > b_nextExec);
+        return a->nextExecution > b->nextExecution;
     }
 
 } /* namespace eras */

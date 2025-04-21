@@ -24,12 +24,14 @@ public:
     {}
 
 #if defined(ERA_SPECIFIC)
-    virtual void specificWrite(const char* id, cJSON* value) {
-        return this->specificDataWrite(id, value, true, false);
+    virtual void specificWrite(const char* id, cJSON* value,
+                               bool retained = false) {
+        this->specificDataWrite(id, value, true, retained);
     }
 
-    virtual void specificWrite(const char* id, const char* value) {
-        return this->specificDataWrite(id, value, true, false);
+    virtual void specificWrite(const char* id, const char* value,
+                               bool retained = false) {
+        this->specificDataWrite(id, value, true, retained);
     }
 
     virtual void specificDataWrite(const char* id, cJSON* value,
@@ -63,6 +65,12 @@ public:
         ERA_LOG_WARNING(TAG, ERA_PSTR("sendEmail default."));
         ERA_FORCE_UNUSED(automateId);
         ERA_FORCE_UNUSED(emailId);
+    }
+
+    virtual void sendWebhook(ERaUInt_t automateId, ERaUInt_t webhookId) {
+        ERA_LOG_WARNING(TAG, ERA_PSTR("sendWebhook default."));
+        ERA_FORCE_UNUSED(automateId);
+        ERA_FORCE_UNUSED(webhookId);
     }
 
     virtual void beginFlash() {
@@ -103,20 +111,27 @@ public:
         ERA_FORCE_UNUSED(force);
     }
 
-    virtual void callERaWriteHandler(uint8_t pin, const ERaParam& param) {
+    virtual size_t getBytesSizeFromFlash(const char* key, bool force = false) {
+        ERA_LOG_WARNING(TAG, ERA_PSTR("getBytesSizeFromFlash default."));
+        ERA_FORCE_UNUSED(key);
+        ERA_FORCE_UNUSED(force);
+        return 0;
+    }
+
+    virtual void callERaWriteHandler(uint16_t pin, const ERaParam& param) {
         ERA_LOG_WARNING(TAG, ERA_PSTR("callERaWriteHandler default."));
         ERA_FORCE_UNUSED(pin);
         ERA_FORCE_UNUSED(param);
     }
 
-    virtual void callERaPinReadHandler(uint8_t pin, const ERaParam& param, const ERaParam& raw) {
+    virtual void callERaPinReadHandler(uint16_t pin, const ERaParam& param, const ERaParam& raw) {
         ERA_LOG_WARNING(TAG, ERA_PSTR("callERaPinReadHandler default."));
         ERA_FORCE_UNUSED(pin);
         ERA_FORCE_UNUSED(param);
         ERA_FORCE_UNUSED(raw);
     }
 
-    virtual bool callERaPinWriteHandler(uint8_t pin, const ERaParam& param, const ERaParam& raw) {
+    virtual bool callERaPinWriteHandler(uint16_t pin, const ERaParam& param, const ERaParam& raw) {
         ERA_LOG_WARNING(TAG, ERA_PSTR("callERaPinWriteHandler default."));
         ERA_FORCE_UNUSED(pin);
         ERA_FORCE_UNUSED(param);

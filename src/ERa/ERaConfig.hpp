@@ -116,6 +116,7 @@
 
 #define ERA_MQTT_NOTIFY_RETAINED        false
 #define ERA_MQTT_EMAIL_RETAINED         false
+#define ERA_MQTT_WEBHOOK_RETAINED       false
 
 #if defined(DEFAULT_SOCKET_TIMEOUT)
     #define ERA_SOCKET_TIMEOUT          DEFAULT_SOCKET_TIMEOUT
@@ -141,6 +142,18 @@
     #define ERA_MODEL_NAME              "era"
 #endif
 
+#if !defined(ERA_DEVICE_NAME)
+    #define ERA_DEVICE_NAME             "ERa"
+#endif
+
+#if !defined(ERA_DEVICE_TYPE)
+    #define ERA_DEVICE_TYPE             "gateway"
+#endif
+
+#if !defined(ERA_DEVICE_SECRET)
+    #define ERA_DEVICE_SECRET           "era"
+#endif
+
 #if !defined(ERA_NETWORK_TYPE)
     #define ERA_NETWORK_TYPE            "WiFi"
 #endif
@@ -161,6 +174,9 @@
 #define INFO_BOARD_ID                   "board_id"
 #define INFO_IMEI                       "imei"
 #define INFO_AUTH_TOKEN                 "auth_token"
+#define INFO_DEVICE_NAME                "name"
+#define INFO_DEVICE_TYPE                "type"
+#define INFO_DEVICE_SECRET              "secret"
 #define INFO_BUILD_DATE                 "build"
 #define INFO_VERSION                    "version"
 #define INFO_MCU_VERSION                "mcu_version"

@@ -15,8 +15,12 @@ namespace eras {
         return "unknown";
     }
 
-    uint32_t Component::millis() {
+    uint64_t Component::millis() {
         return ERaSmart::instance()->timer().millis();
+    }
+
+    uint16_t Component::millisMajor() {
+        return ERaSmart::instance()->timer().millisMajor();
     }
 
     bool Component::hasOverriddenRun() const {
@@ -57,6 +61,10 @@ namespace eras {
 
     void Component::sendEmail(ERaUInt_t automateId, ERaUInt_t emailId) {
         ERaSmart::instance()->sendEmail(automateId, emailId);
+    }
+
+    void Component::sendWebhook(ERaUInt_t automateId, ERaUInt_t webhookId) {
+        ERaSmart::instance()->sendWebhook(automateId, webhookId);
     }
 
 } /* namespace eras */

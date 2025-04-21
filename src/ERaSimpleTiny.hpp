@@ -15,10 +15,10 @@
 
 #if !defined(NO_GLOBAL_INSTANCES) && !defined(NO_GLOBAL_ERA)
     static ERaFlash flash;
-    static ERaMqtt<TinyGsmClient, MQTTClient> mqtt;
-    ERaPnP< ERaMqtt<TinyGsmClient, MQTTClient> > ERa(mqtt, flash);
+    static ERaMqtt<Client, MQTTClient> mqtt;
+    ERaPnP< ERaMqtt<Client, MQTTClient> > ERa(mqtt, flash);
 #else
-    extern ERaPnP< ERaMqtt<TinyGsmClient, MQTTClient> > ERa;
+    extern ERaPnP< ERaMqtt<Client, MQTTClient> > ERa;
 #endif
 
 #include <ERa/ERaStatic.hpp>

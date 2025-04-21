@@ -58,8 +58,9 @@ public:
     virtual ~ERaTime()
     {}
 
-    virtual void begin() {};
-    virtual void run() {};
+    virtual void begin() {}
+    virtual void run() {}
+    virtual void sync() {}
 
     virtual void setTimeZone(long tz = DEFAULT_TIMEZONE) {
         this->timeZone = tz;
@@ -69,11 +70,25 @@ public:
         return this->timeZone;
     }
 
-    void setSetTimeCallback(SetTimeCallback_t cb) {
+    long getTimeZoneOffset() {
+        return (this->timeZone * SECS_PER_HOUR);
+    }
+
+    void setSetTimeCallback(SetTimeCallback_t cb, bool override = false) {
+        if (override) {
+        }
+        else if (this->setTimeCb != NULL) {
+            return;
+        }
         this->setTimeCb = cb;
     }
 
-    void setGetTimeCallback(GetTimeCallback_t cb) {
+    void setGetTimeCallback(GetTimeCallback_t cb, bool override = false) {
+        if (override) {
+        }
+        else if (this->getTimeCb != NULL) {
+            return;
+        }
         this->getTimeCb = cb;
     }
 
@@ -92,7 +107,8 @@ public:
         return this->getSysTime(true);
     }
 
-    void setTime(time_t _time) {
+    void setTime(time_t _time, long offset = 0L) {
+        _time += offset;
         if (this->setTimeCb != NULL) {
             this->setTimeCb(_time);
         }
@@ -100,7 +116,7 @@ public:
         this->prevMillis = ERaMillis();
     }
 
-    void setTime(int hour, int min, int secs, int day, int month, int year) {
+    void setTime(int hour, int min, int secs, int day, int month, int year, long offset = 0L) {
         if (year > 99) {
             year = year - 1970;
         }
@@ -114,7 +130,7 @@ public:
         this->time.hour = hour;
         this->time.minute = min;
         this->time.second = secs;
-        this->setTime(this->makeTime());
+        this->setTime(this->makeTime(), offset);
     }
 
     void getTime(TimeElement_t& tm) {
@@ -314,7 +330,7 @@ protected:
         else if (this->getTimeCb != NULL) {
             this->sysTime = this->getTimeCb();
         }
-        return this->sysTime;
+        return (this->sysTime + (this->timeZone * SECS_PER_HOUR));
     }
 
     time_t sysTime;

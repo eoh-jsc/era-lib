@@ -93,6 +93,7 @@ namespace eras {
         void parseDelayAction(uint32_t delay);
         void parseNotificationAction(uint32_t automateId, uint32_t id);
         void parseEmailAction(uint32_t automateId, uint32_t id);
+        void parseWebhookAction(uint32_t automateId, uint32_t id);
         void parseSMSAction(const cJSON* const root);
 
         void parseActionScript(const cJSON* const root, const cJSON* const data);
@@ -101,6 +102,7 @@ namespace eras {
 
         void sendNotify(ERaUInt_t automateId, ERaUInt_t notifyId);
         void sendEmail(ERaUInt_t automateId, ERaUInt_t emailId);
+        void sendWebhook(ERaUInt_t automateId, ERaUInt_t webhookId);
 
         static ERaSmart*& instance() {
             static ERaSmart* smart = nullptr;

@@ -48,7 +48,6 @@ public:
     time_t getTimeRTC() {
         ::time_t now;
         ::time(&now);
-        now += (this->timeZone * SECS_PER_HOUR);
         return (time_t)now;
     }
 

@@ -176,7 +176,7 @@ ERaReport::Report_t* ERaReport::setupReport(unsigned long minInterval, unsigned 
 
 ERaReport::Report_t* ERaReport::setupReport(unsigned long minInterval, unsigned long maxInterval,
                                             float minChange, ReportCallback_p_t cb,
-                                            uint8_t pin, uint8_t pinMode, ERaUInt_t configId) {
+                                            uint16_t pin, uint8_t pinMode, ERaUInt_t configId) {
     if (!this->isReportFree()) {
         return nullptr;
     }
@@ -238,7 +238,7 @@ bool ERaReport::changeReportableChange(Report_t* pReport, unsigned long minInter
 
 bool ERaReport::changeReportableChange(Report_t* pReport, unsigned long minInterval,
                                         unsigned long maxInterval, float minChange,
-                                        ReportCallback_p_t cb, uint8_t pin, uint8_t pinMode,
+                                        ReportCallback_p_t cb, uint16_t pin, uint8_t pinMode,
                                         ERaUInt_t configId) {
     if (!this->isValidReport(pReport)) {
         return false;

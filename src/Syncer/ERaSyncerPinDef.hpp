@@ -1,0 +1,14 @@
+#ifndef INC_ERA_SYNCER_PIN_DEFINE_HPP_
+#define INC_ERA_SYNCER_PIN_DEFINE_HPP_
+
+#define ERA_SYNCER_INTERVAL             60000UL
+
+#define ERA_SYNCER_PIN_KEY              "pin_state"
+#define ERA_SYNCER_PIN_PREFIX           "arduino_pin"
+#define ERA_SYNCER_PIN_DOWN_TOPIC       ERA_PUB_PREFIX_ARDUINO_DOWN_TOPIC
+
+#define ERA_SYNCER_VIRTUAL_KEY          "virtual_state"
+#define ERA_SYNCER_VIRTUAL_PREFIX       "virtual_pin"
+#define ERA_SYNCER_VIRTUAL_DOWN_TOPIC   ERA_PUB_PREFIX_VIRTUAL_DOWN_TOPIC
+
+#endif /* INC_ERA_SYNCER_PIN_DEFINE_HPP_ */

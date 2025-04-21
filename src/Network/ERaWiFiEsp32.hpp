@@ -48,7 +48,7 @@
                 ERA_LOG(TAG, ERA_PSTR("AP STA Connected"));
                 break;
             case SYSTEM_EVENT_AP_STADISCONNECTED:
-                ERA_LOG(TAG, ERA_PSTR("AP STA Disconnected"));
+                ERA_LOG_WARNING(TAG, ERA_PSTR("AP STA Disconnected"));
                 break;
             case SYSTEM_EVENT_AP_STAIPASSIGNED:
                 ERA_LOG(TAG, ERA_PSTR("AP STA IP Assigned"));
@@ -96,7 +96,7 @@
                 break;
 #if (ESP_IDF_VERSION_MAJOR > 4)
             case ARDUINO_EVENT_ETH_LOST_IP:
-                ERA_LOG(TAG, ERA_PSTR("ETH Lost IP"));
+                ERA_LOG_WARNING(TAG, ERA_PSTR("ETH Lost IP"));
                 break;
 #endif
             case ARDUINO_EVENT_ETH_DISCONNECTED:
@@ -109,11 +109,31 @@
                 ERA_LOG(TAG, ERA_PSTR("AP STA Connected"));
                 break;
             case ARDUINO_EVENT_WIFI_AP_STADISCONNECTED:
-                ERA_LOG(TAG, ERA_PSTR("AP STA Disconnected"));
+                ERA_LOG_WARNING(TAG, ERA_PSTR("AP STA Disconnected"));
                 break;
             case ARDUINO_EVENT_WIFI_AP_STAIPASSIGNED:
                 ERA_LOG(TAG, ERA_PSTR("AP STA IP Assigned"));
                 break;
+#if (ESP_IDF_VERSION_MAJOR > 4)
+            case ARDUINO_EVENT_PPP_START:
+                ERA_LOG(TAG, ERA_PSTR("PPP Started"));
+                break;
+            case ARDUINO_EVENT_PPP_CONNECTED:
+                ERA_LOG(TAG, ERA_PSTR("PPP Connected"));
+                break;
+            case ARDUINO_EVENT_PPP_GOT_IP:
+                ERA_LOG(TAG, ERA_PSTR("PPP Got IP"));
+                break;
+            case ARDUINO_EVENT_PPP_LOST_IP:
+                ERA_LOG_WARNING(TAG, ERA_PSTR("PPP Lost IP"));
+                break;
+            case ARDUINO_EVENT_PPP_DISCONNECTED:
+                ERA_LOG_WARNING(TAG, ERA_PSTR("PPP Disconnected"));
+                break;
+            case ARDUINO_EVENT_PPP_STOP:
+                ERA_LOG_WARNING(TAG, ERA_PSTR("PPP Stopped"));
+                break;
+#endif
             default:
                 break;
         }

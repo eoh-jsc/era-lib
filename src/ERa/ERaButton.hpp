@@ -19,13 +19,13 @@ enum ButtonEventT {
 class ERaButton
 {
 #if defined(ERA_HAS_FUNCTIONAL_H)
-    typedef std::function<void(uint8_t, ButtonEventT)> ButtonCallback_t;
-    typedef std::function<void(uint8_t, ButtonEventT, void*)> ButtonCallback_p_t;
-    typedef std::function<int(uint8_t)> ReadPinHandler_t;
+    typedef std::function<void(uint16_t, ButtonEventT)> ButtonCallback_t;
+    typedef std::function<void(uint16_t, ButtonEventT, void*)> ButtonCallback_p_t;
+    typedef std::function<int(uint16_t)> ReadPinHandler_t;
 #else
-    typedef void (*ButtonCallback_t)(uint8_t, ButtonEventT);
-    typedef void (*ButtonCallback_p_t)(uint8_t, ButtonEventT, void*);
-    typedef int (*ReadPinHandler_t)(uint8_t);
+    typedef void (*ButtonCallback_t)(uint16_t, ButtonEventT);
+    typedef void (*ButtonCallback_p_t)(uint16_t, ButtonEventT, void*);
+    typedef int (*ReadPinHandler_t)(uint16_t);
 #endif
 
     const static int MAX_BUTTONS = 5;
@@ -40,7 +40,7 @@ class ERaButton
         ERaButton::ButtonCallback_p_t callback_p;
         void* param;
         uint8_t flag;
-        uint8_t pin;
+        uint16_t pin;
         bool invert;
         bool state;
         bool prevState;
@@ -187,12 +187,12 @@ public:
 
     void run();
 
-    iterator setButton(uint8_t pin, ERaButton::ReadPinHandler_t readPin,
+    iterator setButton(uint16_t pin, ERaButton::ReadPinHandler_t readPin,
                         ERaButton::ButtonCallback_t cb, bool invert = false) {
         return iterator(this, this->setupButton(pin, readPin, cb, invert));
     }
 
-    iterator setButton(uint8_t pin, ERaButton::ReadPinHandler_t readPin,
+    iterator setButton(uint16_t pin, ERaButton::ReadPinHandler_t readPin,
                         ERaButton::ButtonCallback_p_t cb, void* args, bool invert = false) {
         return iterator(this, this->setupButton(pin, readPin, cb, args, invert));
     }
@@ -225,9 +225,9 @@ public:
 
 protected:
 private:
-    Button_t* setupButton(uint8_t pin, ERaButton::ReadPinHandler_t readPin,
+    Button_t* setupButton(uint16_t pin, ERaButton::ReadPinHandler_t readPin,
                         ERaButton::ButtonCallback_t cb, bool invert = false);
-    Button_t* setupButton(uint8_t pin, ERaButton::ReadPinHandler_t readPin,
+    Button_t* setupButton(uint16_t pin, ERaButton::ReadPinHandler_t readPin,
                         ERaButton::ButtonCallback_p_t cb, void* args, bool invert = false);
     bool deleteHandler();
     bool isButtonFree();

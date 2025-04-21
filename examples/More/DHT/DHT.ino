@@ -29,6 +29,7 @@
 // #define ERA_LOCATION_SG
 
 // You should get Auth Token in the ERa App or ERa Dashboard
+// and not share this token with anyone.
 #define ERA_AUTH_TOKEN "ERA2706"
 
 #include <Arduino.h>
@@ -73,7 +74,7 @@ void timerEvent() {
     ERa.virtualWrite(V0, humidity);
     ERa.virtualWrite(V1, temperature);
 
-    ERA_LOG("Timer", "Uptime: %d", ERaMillis() / 1000L);
+    ERA_LOG(ERA_PSTR("Timer"), ERA_PSTR("Uptime: %d"), ERaMillis() / 1000L);
 }
 
 void setup() {

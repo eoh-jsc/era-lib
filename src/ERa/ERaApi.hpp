@@ -14,6 +14,7 @@
 #include <ERa/ERaTimer.hpp>
 #include <ERa/ERaApiHandler.hpp>
 #include <ERa/ERaComponentHandler.hpp>
+#include <ERa/ERaSyncerHandler.hpp>
 #include <Utility/ERaQueue.hpp>
 #include <Modbus/ERaModbusSimple.hpp>
 #include <Zigbee/ERaZigbeeSimple.hpp>
@@ -24,6 +25,7 @@ template <class Proto, class Flash>
 class ERaApi
     : public ERaApiHandler
     , public ERaComponentHandler
+    , public ERaSyncerHandler
 #if !defined(ERA_ABBR)
     , public ERaProperty< ERaApi<Proto, Flash> >
 #endif
@@ -53,6 +55,7 @@ class ERaApi
     typedef ERaComponentHandler ComponentHandler;
 
 protected:
+    typedef ERaSyncerHandler SyncerHandler;
 #if !defined(ERA_ABBR)
     friend class ERaProperty< ERaApi<Proto, Flash> >;
     typedef ERaProperty< ERaApi<Proto, Flash> > Property;
@@ -240,13 +243,24 @@ public:
         this->emailWrite(automateId, emailId);
     }
 
-#if defined(ERA_SPECIFIC)
-    void specificWrite(const char* id, cJSON* value) override {
-        return this->specificDataWrite(id, value, true, false);
+    void sendWebhook(ERaUInt_t automateId, ERaUInt_t webhookId) override {
+#if ERA_MAX_EVENTS
+        if (this->eventWebhookAdd(automateId, webhookId)) {
+            return;
+        }
+#endif
+        this->webhookWrite(automateId, webhookId);
     }
 
-    void specificWrite(const char* id, const char* value) override {
-        return this->specificDataWrite(id, value, true, false);
+#if defined(ERA_SPECIFIC)
+    void specificWrite(const char* id, const ERaString& value,
+                       bool retained = false) {
+        this->specificDataWrite(id, value.getString(), true, retained);
+    }
+
+    void specificWrite(const char* id, const ERaDataJson& value,
+                       bool retained = false) {
+        this->specificDataWrite(id, const_cast<ERaDataJson&>(value).getString(), true, retained);
     }
 
     void specificDataWrite(const char* id, cJSON* value,
@@ -368,6 +382,14 @@ public:
         }
     }
 
+    size_t getBytesSizeFromFlash(const char* key, bool force = false) {
+        size_t size {0};
+        if (!this->thisProto().getTransp().getAskConfig() || force) {
+            size = this->flash.getBytesSize(key);
+        }
+        return size;
+    }
+
     bool setVirtualNextRetained(int pin, bool nextRetained) {
         return this->ERaPinRp.setVPinNextRetained(pin, nextRetained);
     }
@@ -409,21 +431,29 @@ public:
     }
 
 #if defined(ERA_AUTOMATION)
-    void setERaAutomation(ERaAutomation& _automation) override {
-        this->automation = &_automation;
+    void setERaAutomation(ERaAutomation& rAutomation) override {
+        this->automation = &rAutomation;
     }
 
-    void setERaAutomation(ERaAutomation* _pAutomation) override {
-        this->automation = _pAutomation;
+    void setERaAutomation(ERaAutomation* pAutomation) override {
+        this->automation = pAutomation;
     }
 #endif
 
-    void setERaComponent(ERaComponent& _component) override {
-        ComponentHandler::addComponent(_component);
+    void addERaComponent(ERaComponent& rComponent) override {
+        ComponentHandler::addComponent(rComponent);
     }
 
-    void setERaComponent(ERaComponent* _pComponent) override {
-        ComponentHandler::addComponent(_pComponent);
+    void addERaComponent(ERaComponent* pComponent) override {
+        ComponentHandler::addComponent(pComponent);
+    }
+
+    void addERaSyncer(ERaSyncer& rSyncer) override {
+        SyncerHandler::addSyncer(rSyncer);
+    }
+
+    void addERaSyncer(ERaSyncer* pSyncer) override {
+        SyncerHandler::addSyncer(pSyncer);
     }
 
     void callERaProHandler(const char* deviceId, const cJSON* const root);
@@ -471,6 +501,8 @@ protected:
     void storeBluetoothConfig(const char* str);
     void removeBluetoothConfig();
 #endif
+
+    void initSyncer(const char* auth, const char* topic, MessageCallback_t cb);
 
 #if defined(LINUX)
     static void* apiTask(void* args);
@@ -658,7 +690,7 @@ protected:
     }
 #endif
 
-    void callERaWriteHandler(uint8_t pin, const ERaParam& param) override {
+    void callERaWriteHandler(uint16_t pin, const ERaParam& param) override {
 #if !defined(ERA_ABBR)
         Property::handler(pin, param);
 #endif
@@ -672,7 +704,7 @@ protected:
         }
     }
 
-    void callERaPinReadHandler(uint8_t pin, const ERaParam& param, const ERaParam& raw) override {
+    void callERaPinReadHandler(uint16_t pin, const ERaParam& param, const ERaParam& raw) override {
         ERaPinReadHandler_t handle = getERaPinReadHandler(pin);
         if ((handle != nullptr) &&
             (handle != ERaWidgetPinRead)) {
@@ -683,7 +715,7 @@ protected:
         }
     }
 
-    bool callERaPinWriteHandler(uint8_t pin, const ERaParam& param, const ERaParam& raw) override {
+    bool callERaPinWriteHandler(uint16_t pin, const ERaParam& param, const ERaParam& raw) override {
         ERaPinWriteHandler_t handle = getERaPinWriteHandler(pin);
         if ((handle != nullptr) &&
             (handle != ERaWidgetPinWrite)) {
@@ -826,14 +858,14 @@ private:
         this->thisProto().sendCommand(rsp);
     }
 
-    void notifyWrite(ERaUInt_t automateId, ERaUInt_t emailId,
+    void notifyWrite(ERaUInt_t automateId, ERaUInt_t notifyId,
                      bool retained = ERA_MQTT_NOTIFY_RETAINED) {
         ERaRsp_t rsp;
         rsp.type = ERaTypeWriteT::ERA_WRITE_NOTIFY;
         rsp.json = false;
         rsp.retained = retained;
         rsp.id = automateId;
-        rsp.param = emailId;
+        rsp.param = notifyId;
         this->thisProto().sendCommand(rsp);
     }
 
@@ -848,6 +880,17 @@ private:
         this->thisProto().sendCommand(rsp);
     }
 
+    void webhookWrite(ERaUInt_t automateId, ERaUInt_t webhookId,
+                      bool retained = ERA_MQTT_WEBHOOK_RETAINED) {
+        ERaRsp_t rsp;
+        rsp.type = ERaTypeWriteT::ERA_WRITE_WEBHOOK;
+        rsp.json = false;
+        rsp.retained = retained;
+        rsp.id = automateId;
+        rsp.param = webhookId;
+        this->thisProto().sendCommand(rsp);
+    }
+
     void onLED();
     void offLED();
 
@@ -856,7 +899,7 @@ private:
     void getPinConfig(const cJSON* const root, PinConfig_t& pin);
     uint8_t getPinMode(const cJSON* const root, const uint8_t defaultMode = VIRTUAL);
     bool isReadPinMode(uint8_t pMode);
-    bool getGPIOPin(const cJSON* const root, const char* key, uint8_t& pin);
+    bool getGPIOPin(const cJSON* const root, const char* key, uint16_t& pin);
     uint8_t getTypeConfigId(bool trigger);
 
     void sendPinEvent(void* args);
@@ -915,11 +958,17 @@ private:
                         bool retained = ERA_MQTT_PUBLISH_RETAINED);
     void eventConfigIdWrite(ERaEvent_t& event);
 
+    bool eventAlertAdd(ERaUInt_t automateId, ERaUInt_t alertId,
+                       uint8_t type, bool retained = ERA_MQTT_PUBLISH_RETAINED);
+
     bool eventNotifyAdd(ERaUInt_t automateId, ERaUInt_t notifyId);
     void eventNotifyWrite(ERaEvent_t& event);
 
     bool eventEmailAdd(ERaUInt_t automateId, ERaUInt_t emailId);
     void eventEmailWrite(ERaEvent_t& event);
+
+    bool eventWebhookAdd(ERaUInt_t automateId, ERaUInt_t webhookId);
+    void eventWebhookWrite(ERaEvent_t& event);
 
 #if defined(ERA_MODBUS)
     bool eventModbusAdd(ERaDataBuff* value);
@@ -1073,7 +1122,7 @@ void ERaApi<Proto, Flash>::processVirtualPinRequest(const ERaDataBuff& arrayTopi
     }
     ERaDataJson data(root);
     ERaParam param(data);
-    uint8_t pin = ERA_DECODE_PIN_NAME(str);
+    uint16_t pin = ERA_DECODE_PIN_NAME(str);
     cJSON* item = cJSON_GetObjectItem(root, "value");
     if (cJSON_IsBool(item)) {
         param.add(item->valueint);
@@ -1389,6 +1438,14 @@ void ERaApi<Proto, Flash>::sendSMS(const char* to, const char* message) {
 
 template <class Proto, class Flash>
 inline
+void ERaApi<Proto, Flash>::initSyncer(const char* auth, const char* topic, MessageCallback_t cb) {
+    SyncerHandler::setAuth(auth);
+    SyncerHandler::setTopic(topic);
+    SyncerHandler::onMessage(cb);
+}
+
+template <class Proto, class Flash>
+inline
 void ERaApi<Proto, Flash>::getScaleConfig(const cJSON* const root, PinConfig_t& pin) {
     if (!cJSON_IsObject(root)) {
         return;
@@ -1528,7 +1585,7 @@ bool ERaApi<Proto, Flash>::isReadPinMode(uint8_t pMode) {
 
 template <class Proto, class Flash>
 inline
-bool ERaApi<Proto, Flash>::getGPIOPin(const cJSON* const root, const char* key, uint8_t& pin) {
+bool ERaApi<Proto, Flash>::getGPIOPin(const cJSON* const root, const char* key, uint16_t& pin) {
     if (root == nullptr || key == nullptr) {
         return false;
     }
@@ -1711,6 +1768,9 @@ void ERaApi<Proto, Flash>::callERaProHandler(const char* deviceId, const cJSON* 
             case ERaTypeWriteT::ERA_WRITE_EMAIL:
                 this->eventEmailWrite(event);
                 break;
+            case ERaTypeWriteT::ERA_WRITE_WEBHOOK:
+                this->eventWebhookWrite(event);
+                break;
 #if defined(ERA_MODBUS)
             case ERaTypeWriteT::ERA_WRITE_MODBUS_DATA:
                 this->eventModbusWrite(event);
@@ -1831,7 +1891,8 @@ void ERaApi<Proto, Flash>::eventConfigIdWrite(ERaEvent_t& event) {
 
 template <class Proto, class Flash>
 inline
-bool ERaApi<Proto, Flash>::eventNotifyAdd(ERaUInt_t automateId, ERaUInt_t notifyId) {
+bool ERaApi<Proto, Flash>::eventAlertAdd(ERaUInt_t automateId, ERaUInt_t alertId,
+                                         uint8_t type, bool retained) {
     if (!this->queue.writeable()) {
         return false;
     }
@@ -1848,17 +1909,24 @@ bool ERaApi<Proto, Flash>::eventNotifyAdd(ERaUInt_t automateId, ERaUInt_t notify
         id = nullptr;
         return false;
     }
-    (*data) = notifyId;
+    (*data) = alertId;
 
     ERaEvent_t event;
-    event.type = ERaTypeWriteT::ERA_WRITE_NOTIFY;
+    event.type = type;
     event.specific = false;
     event.json = false;
-    event.retained = ERA_MQTT_NOTIFY_RETAINED;
+    event.retained = retained;
     event.id = (void*)id;
     event.data = (void*)data;
     this->queue += event;
     return true;
+}
+
+template <class Proto, class Flash>
+inline
+bool ERaApi<Proto, Flash>::eventNotifyAdd(ERaUInt_t automateId, ERaUInt_t notifyId) {
+    return this->eventAlertAdd(automateId, notifyId, ERaTypeWriteT::ERA_WRITE_NOTIFY,
+                               ERA_MQTT_NOTIFY_RETAINED);
 }
 
 template <class Proto, class Flash>
@@ -1882,33 +1950,8 @@ void ERaApi<Proto, Flash>::eventNotifyWrite(ERaEvent_t& event) {
 template <class Proto, class Flash>
 inline
 bool ERaApi<Proto, Flash>::eventEmailAdd(ERaUInt_t automateId, ERaUInt_t emailId) {
-    if (!this->queue.writeable()) {
-        return false;
-    }
-
-    ERaUInt_t* id = (ERaUInt_t*)malloc(sizeof(ERaUInt_t));
-    if (id == nullptr) {
-        return false;
-    }
-    (*id) = automateId;
-
-    ERaUInt_t* data = (ERaUInt_t*)malloc(sizeof(ERaUInt_t));
-    if (data == nullptr) {
-        free(id);
-        id = nullptr;
-        return false;
-    }
-    (*data) = emailId;
-
-    ERaEvent_t event;
-    event.type = ERaTypeWriteT::ERA_WRITE_EMAIL;
-    event.specific = false;
-    event.json = false;
-    event.retained = ERA_MQTT_EMAIL_RETAINED;
-    event.id = (void*)id;
-    event.data = (void*)data;
-    this->queue += event;
-    return true;
+    return this->eventAlertAdd(automateId, emailId, ERaTypeWriteT::ERA_WRITE_EMAIL,
+                               ERA_MQTT_EMAIL_RETAINED);
 }
 
 template <class Proto, class Flash>
@@ -1922,6 +1965,31 @@ void ERaApi<Proto, Flash>::eventEmailWrite(ERaEvent_t& event) {
     this->emailWrite((*(static_cast<ERaUInt_t*>(event.id))),
                      (*(static_cast<ERaUInt_t*>(event.data))),
                      event.retained);
+
+    free(event.id);
+    free(event.data);
+    event.id = nullptr;
+    event.data = nullptr;
+}
+
+template <class Proto, class Flash>
+inline
+bool ERaApi<Proto, Flash>::eventWebhookAdd(ERaUInt_t automateId, ERaUInt_t webhookId) {
+    return this->eventAlertAdd(automateId, webhookId, ERaTypeWriteT::ERA_WRITE_WEBHOOK,
+                               ERA_MQTT_WEBHOOK_RETAINED);
+}
+
+template <class Proto, class Flash>
+inline
+void ERaApi<Proto, Flash>::eventWebhookWrite(ERaEvent_t& event) {
+    if ((event.id == nullptr) ||
+        (event.data == nullptr)) {
+        return;
+    }
+
+    this->webhookWrite((*(static_cast<ERaUInt_t*>(event.id))),
+                       (*(static_cast<ERaUInt_t*>(event.data))),
+                       event.retained);
 
     free(event.id);
     free(event.data);

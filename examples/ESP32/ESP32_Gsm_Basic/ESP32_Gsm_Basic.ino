@@ -34,6 +34,7 @@
 // #define ERA_LOCATION_SG
 
 // You should get Auth Token in the ERa App or ERa Dashboard
+// and not share this token with anyone.
 #define ERA_AUTH_TOKEN "ERA2706"
 
 #include <Arduino.h>
@@ -77,14 +78,13 @@ const int gsmTxPin = 17;
 const int pwrPin = 1;
 
 void getTimeFromGsm() {
-    float timezone {0};
     int year, month, day, hour, minute, second {0};
     bool status = modem.getNetworkTime(
-        &year, &month, &day, &hour, &minute, &second, &timezone
+        &year, &month, &day, &hour, &minute, &second, nullptr
     );
     if (status) {
-        syncTime.setTimeZone(DEFAULT_TIMEZONE - (long)timezone);
-        syncTime.setTime(hour, minute, second, day, month, year);
+        long offset = syncTime.getTimeZoneOffset();
+        syncTime.setTime(hour, minute, second, day, month, year, -offset);
     }
 }
 

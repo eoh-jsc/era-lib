@@ -60,7 +60,8 @@ class ERaMqtt
 
 public:
     ERaMqtt()
-        : client(NULL)
+        : rootCA(NULL)
+        , client(NULL)
         , mqtt(0)
         , host(ERA_MQTT_HOST)
         , port(ERA_MQTT_PORT)
@@ -75,17 +76,25 @@ public:
         , signalQuality(0)
         , askConfig(false)
         , needPubState(false)
+        , nonBlocking(false)
+        , reachedLimit(false)
         , _connected(false)
         , mutex(NULL)
         , appCb(NULL)
         , connectedCb(NULL)
         , disconnectedCb(NULL)
     {
+#if defined(ERA_MQTT_SSL)
+        this->setRootCA(
+            #include <Certs/mqttRootCA.hpp>
+        );
+#endif
         this->mqtt.setKeepAlive(ERA_MQTT_KEEP_ALIVE);
         memset(this->willTopic, 0, sizeof(this->willTopic));
     }
     ERaMqtt(Client& _client)
-        : client(NULL)
+        : rootCA(NULL)
+        , client(NULL)
         , mqtt(0)
         , host(ERA_MQTT_HOST)
         , port(ERA_MQTT_PORT)
@@ -96,14 +105,23 @@ public:
         , ERaAuth(ERA_AUTHENTICATION_TOKEN)
         , ssid(NULL)
         , ping(0L)
+        , lastPublish(0L)
         , signalQuality(0)
         , askConfig(false)
+        , needPubState(false)
+        , nonBlocking(false)
+        , reachedLimit(false)
         , _connected(false)
         , mutex(NULL)
         , appCb(NULL)
         , connectedCb(NULL)
         , disconnectedCb(NULL)
     {
+#if defined(ERA_MQTT_SSL)
+        this->setRootCA(
+            #include <Certs/mqttRootCA.hpp>
+        );
+#endif
         this->setClient(&_client);
         this->mqtt.setKeepAlive(ERA_MQTT_KEEP_ALIVE);
         memset(this->willTopic, 0, sizeof(this->willTopic));
@@ -118,6 +136,17 @@ public:
 
     Client* getClient() {
         return this->client;
+    }
+
+    void setRootCA(const char* ca) {
+        this->rootCA = ca;
+#if defined(ERA_MQTT_IDF)
+        this->mqtt.setSkipCertCnCheck(ca == NULL);
+        if (ca == NULL) {
+            ca = "";
+        }
+        this->mqtt.setCaCertificate(ca);
+#endif
     }
 
     void begin(const char* _host, uint16_t _port,
@@ -144,6 +173,10 @@ public:
                     QoST qos = (QoST)ERA_MQTT_PUBLISH_QOS) override;
     bool publishState(bool online);
     bool syncConfig();
+
+    void setNonBlocking(bool enable) {
+        this->nonBlocking = enable;
+    }
 
     void setConnected(bool enable) {
         this->_connected = enable;
@@ -250,13 +283,25 @@ public:
         this->disconnectedCb = offCb;
     }
 
+    bool reachedConnectionLimit() {
+        return this->reachedLimit;
+    }
+
     bool connectionDenied() {
+        if (!this->reachedLimit) {
+            return false;
+        }
         return ((this->mqtt.lastError() == lwmqtt_err_t::LWMQTT_MISSING_OR_WRONG_PACKET) ||
                 (this->mqtt.lastError() == lwmqtt_err_t::LWMQTT_CONNECTION_DENIED));
     }
 
 protected:
+    virtual void configRootCA() {}
+    const char* rootCA;
+
 private:
+    bool connectBlocking(const char* id);
+    bool connectNonBlocking(const char* id);
     void delays(MillisTime_t ms);
     bool publishLWT(bool sync);
     bool publishLWT(bool sync, bool retained);
@@ -281,6 +326,8 @@ private:
     int16_t signalQuality;
     bool askConfig;
     bool needPubState;
+    bool nonBlocking;
+    bool reachedLimit;
     bool _connected;
     char willTopic[MAX_TOPIC_LENGTH];
     ERaMutex_t mutex;
@@ -300,6 +347,7 @@ void ERaMqtt<Client, MQTT>::config(const char* _host, uint16_t _port,
     ClearArray(this->willTopic);
     FormatString(this->willTopic, this->ERaTopic);
     FormatString(this->willTopic, LWT_TOPIC);
+    this->configRootCA();
     this->mqtt.init(ERA_MQTT_RX_BUFFER_SIZE,
                     ERA_MQTT_TX_BUFFER_SIZE);
     this->mqtt.setWill(this->willTopic, OFFLINE_MESSAGE, LWT_RETAINED, LWT_QOS);
@@ -309,40 +357,26 @@ void ERaMqtt<Client, MQTT>::config(const char* _host, uint16_t _port,
 template <class Client, class MQTT>
 inline
 bool ERaMqtt<Client, MQTT>::connect(FunctionCallback_t fn) {
-    size_t count {0};
-    char _clientID[74] {0};
+    bool status {false};
+    char id[74] {0};
     if (this->clientID != NULL) {
-        FormatString(_clientID, this->ERaAuth);
+        FormatString(id, this->ERaAuth);
         if (!ERaStrCmp(this->clientID, this->ERaAuth) &&
             strlen(this->clientID)) {
-            FormatString(_clientID, "_%s", this->clientID);
+            FormatString(id, "_%s", this->clientID);
         }
     }
 
     ERaWatchdogFeed();
 
-    this->mqtt.disconnect();
-    this->_connected = false;
-
-    ERaWatchdogFeed();
-
-    while (this->mqtt.connect(_clientID, this->username, this->password) == false) {
-        if (++count >= LIMIT_CONNECT_BROKER_MQTT) {
-            return false;
-        }
-
-        ERaWatchdogFeed();
-
-        ERA_LOG_ERROR(TAG, ERA_PSTR("MQTT(%d): Connect failed (%d), retrying in 5 seconds"),
-                                    count, this->mqtt.lastError());
-
-        this->delays(5000);
-
-        ERaWatchdogFeed();
-
-        if (this->mqtt.lastError() == lwmqtt_err_t::LWMQTT_NETWORK_FAILED_CONNECT) {
-            return false;
-        }
+    if (this->nonBlocking) {
+        status = this->connectNonBlocking(id);
+    }
+    else {
+        status = this->connectBlocking(id);
+    }
+    if (!status) {
+        return false;
     }
 
     ERaWatchdogFeed();
@@ -392,7 +426,7 @@ bool ERaMqtt<Client, MQTT>::connect(FunctionCallback_t fn) {
 
     this->subscribeTopic(this->ERaTopic, LWT_TOPIC);
     ERA_LOG(TAG, ERA_PSTR(R"(Connected: "%s:%d", Client ID: "%s", Username: "%s", Password: "%s")"),
-                            this->host, this->port, _clientID, this->username, this->password);
+                            this->host, this->port, id, this->username, this->password);
 
     ERaWatchdogFeed();
 
@@ -401,6 +435,79 @@ bool ERaMqtt<Client, MQTT>::connect(FunctionCallback_t fn) {
     ERaWatchdogFeed();
 
     return true;
+}
+
+template <class Client, class MQTT>
+inline
+bool ERaMqtt<Client, MQTT>::connectBlocking(const char* id) {
+    size_t connectCount {0};
+
+    this->mqtt.disconnect();
+    this->_connected = false;
+    this->reachedLimit = false;
+
+    ERaWatchdogFeed();
+
+    while (!this->mqtt.connect(id, this->username, this->password)) {
+        if (++connectCount >= LIMIT_CONNECT_BROKER_MQTT) {
+            this->reachedLimit = true;
+            return false;
+        }
+
+        ERaWatchdogFeed();
+
+        ERA_LOG_ERROR(TAG, ERA_PSTR("MQTT(%d): Connect failed (%d), retrying in 5 seconds"),
+                                    connectCount, this->mqtt.lastError());
+
+        this->delays(5000);
+
+        ERaWatchdogFeed();
+
+        if (this->mqtt.lastError() == lwmqtt_err_t::LWMQTT_NETWORK_FAILED_CONNECT) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+template <class Client, class MQTT>
+inline
+bool ERaMqtt<Client, MQTT>::connectNonBlocking(const char* id) {
+    bool status {false};
+    static size_t connectCount {0};
+    static unsigned long lastMillis {0};
+    if (!this->reachedLimit && ((ERaMillis() - lastMillis) < 5000)) {
+        this->delays(10);
+        return false;
+    }
+
+    if (!connectCount) {
+        this->mqtt.disconnect();
+        this->_connected = false;
+        this->reachedLimit = false;
+    }
+
+    ERaWatchdogFeed();
+
+    status = this->mqtt.connect(id, this->username, this->password);
+
+    ERaWatchdogFeed();
+
+    if (status) {
+        connectCount = 0;
+    }
+    else if (++connectCount >= LIMIT_CONNECT_BROKER_MQTT) {
+        connectCount = 0;
+        this->reachedLimit = true;
+    }
+    else {
+        ERA_LOG_ERROR(TAG, ERA_PSTR("MQTT(%d): Connect failed (%d), retrying in 5 seconds"),
+                                    connectCount, this->mqtt.lastError());
+    }
+
+    lastMillis = ERaMillis();
+    return status;
 }
 
 template <class Client, class MQTT>

@@ -10,12 +10,12 @@ using namespace mbed;
 #if defined(ARDUINO)
 
     inline
-    static int analogReadMbed(uint8_t pin) {
+    static int analogReadMbed(uint16_t pin) {
         return analogRead(pin);
     }
 
     inline
-    static void pwmWrite(uint8_t pin, uint8_t value) {
+    static void pwmWrite(uint16_t pin, uint8_t value) {
 #if !defined(ERA_IGNORE_ANALOG_WRITE)
         analogWrite(pin, value);
 #else
@@ -25,43 +25,43 @@ using namespace mbed;
     }
 
     inline
-    static int digitalReadMbed(uint8_t pin) {
+    static int digitalReadMbed(uint16_t pin) {
         return digitalRead(pin);
     }
 
     inline
-    static int digitalOutRead(uint8_t pin) {
+    static int digitalOutRead(uint16_t pin) {
         return digitalRead(pin);
     }
 
 #else
 
     inline
-    static int analogReadMbed(uint8_t pin) {
+    static int analogReadMbed(uint16_t pin) {
         AnalogIn p((PinName)pin);
         return int(p.read() * 4095);
     }
 
     inline
-    static void pwmWrite(uint8_t pin, uint8_t value) {
+    static void pwmWrite(uint16_t pin, uint8_t value) {
         PwmOut p((PinName)pin);
         p.write(value / 100.0f);
     }
 
     inline
-    static int digitalReadMbed(uint8_t pin) {
+    static int digitalReadMbed(uint16_t pin) {
         DigitalIn p((PinName)pin);
         return int(p);
     }
 
     inline
-    static int digitalOutRead(uint8_t pin) {
+    static int digitalOutRead(uint16_t pin) {
         DigitalOut p((PinName)pin);
         return int(p);
     }
 
     inline
-    static void digitalWrite(uint8_t pin, int value) {
+    static void digitalWrite(uint16_t pin, int value) {
         DigitalOut p((PinName)pin);
         p = value;
     }
@@ -216,7 +216,7 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const ERaDataBuff& arrayTopi
     }
     ERaDataJson data(root);
     ERaParam param(data);
-    uint8_t pin = ERA_DECODE_PIN_NAME(str);
+    uint16_t pin = ERA_DECODE_PIN_NAME(str);
     ERA_CHECK_PIN_RETURN(pin);
     cJSON* item = cJSON_GetObjectItem(root, "value");
     if (cJSON_IsNumber(item) ||
@@ -233,35 +233,27 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const ERaDataBuff& arrayTopi
             }
         }
         switch (pMode) {
-            case VIRTUAL:
-            case ERA_VIRTUAL:
-                break;
-            default:
+            case PWM:
+            case OUTPUT:
+            case V_OUTPUT_OPEN_DRAIN:
                 raw = value;
                 if (this->callERaPinWriteHandler(pin, param, raw) ||
                     this->skipPinWrite) {
                     pMode = RAW_PIN;
                 }
                 break;
+            default:
+                break;
         }
         switch (pMode) {
             case PWM:
-            case ANALOG:
                 ::pwmWrite(pin, value);
                 if (rp != nullptr) {
                     rp->updateReport(value, true);
                 }
                 break;
-            case RAW_PIN:
-                break;
-            case VIRTUAL:
-            case ERA_VIRTUAL:
-                this->callERaWriteHandler(pin, param);
-                break;
-            default:
-#if defined(ARDUINO)
-                pinMode(pin, OUTPUT);
-#endif
+            case OUTPUT:
+            case V_OUTPUT_OPEN_DRAIN:
                 if (value == TOGGLE) {
                     ::digitalWrite(pin, ((digitalOutRead(pin) == LOW) ? HIGH : LOW));
                 }
@@ -269,11 +261,10 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const ERaDataBuff& arrayTopi
                     ::digitalWrite(pin, value ? HIGH : LOW);
                 }
                 break;
+            case RAW_PIN:
+            default:
+                break;
         }
-    }
-    else if (cJSON_IsString(item)) {
-        param.add_static(item->valuestring);
-        this->callERaWriteHandler(pin, param);
     }
 
     root = nullptr;
@@ -380,7 +371,6 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const ERaDataBuff& arrayTopi
             if (this->getGPIOPin(current, "pwm_pin", pin.pin)) {
                 ERA_CHECK_PIN(pin.pin);
                 ::pwmWrite(pin.pin, current->valueint);
-                continue;
             }
         }
 

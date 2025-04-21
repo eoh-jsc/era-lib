@@ -16,6 +16,7 @@
 #include <TinyGsmClient.hpp>
 #include <ERa/ERaProtocol.hpp>
 #include <MQTT/ERaMqtt.hpp>
+#include <Adapters/ERaSMSDef.hpp>
 
 #define GSM_NET_CONNECT_TIMEOUT       3 * 60000
 
@@ -261,7 +262,10 @@ protected:
             if (arrayTo[i].isEmpty()) {
                 continue;
             }
-            this->modem->sendSMS(arrayTo[i].trim_str(), message);
+            const char* phone = arrayTo[i].trim_str();
+            if (!ERaWidgetWriteSMS(phone, message)) {
+                this->modem->sendSMS(phone, message);
+            }
             ERaWatchdogFeed();
         }
     }
@@ -322,6 +326,7 @@ private:
 
     void restart() {
         if (this->powerPin < 0) {
+            this->softwareReset();
             return;
         }
 
@@ -334,9 +339,14 @@ private:
 
         ERaWatchdogFeed();
 
-        if (this->softRestart) {
-            this->modem->restart(this->pinCode);
+        this->softwareReset();
+    }
+
+    void softwareReset() {
+        if (!this->softRestart) {
+            return;
         }
+        this->modem->restart();
     }
 
     void powerOn() {
@@ -366,7 +376,7 @@ private:
         return this->queue.isEmpty();
     }
 
-    ERaQueue<SMSInfo_t, 10> queue;
+    ERaQueue<SMSInfo_t, ERA_MAX_SMS> queue;
 #endif
 
     TinyGsm* modem;
