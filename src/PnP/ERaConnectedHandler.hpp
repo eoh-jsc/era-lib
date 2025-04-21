@@ -226,7 +226,7 @@ protected:
         this->mLastConn = pConn;
     }
 
-    void updateClient(Client* targetClient) const {
+    void updateClient(Client* targetClient) {
         ERaConnected* conn = this->mFirstConn;
         while (conn != NULL) {
             if (conn->getClient() == this->mDefaultClient) {
