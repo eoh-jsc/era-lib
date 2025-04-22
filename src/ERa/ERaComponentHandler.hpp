@@ -17,13 +17,18 @@ public:
     ERaComponentHandler()
         : firstComponent(NULL)
         , lastComponent(NULL)
+        , initialized(false)
     {}
     ~ERaComponentHandler()
     {}
 
 protected:
     void begin() {
+        if (this->initialized) {
+            return;
+        }
         ERA_TEMPLATABLE_COMPONENT_LOOP(begin);
+        this->initialized = true;
     }
 
     void run() {
@@ -47,6 +52,7 @@ protected:
 private:
     ERaComponent* firstComponent;
     ERaComponent* lastComponent;
+    bool initialized;
 };
 
 #endif /* INC_ERA_COMPONENT_HANDLER_HPP_ */

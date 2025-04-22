@@ -525,6 +525,10 @@ protected:
         this->initERaApiTask();
 
         ERaWatchdogFeed();
+    }
+
+    void postBegin() {
+        ERaWatchdogFeed();
 
         ComponentHandler::begin();
 

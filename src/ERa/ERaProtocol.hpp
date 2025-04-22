@@ -78,7 +78,6 @@ public:
         , pLogger(nullptr)
         , pServerCallbacks(nullptr)
         , nonBlocking(false)
-        , initialized(false)
         , _connected(false)
         , heartbeat(ERA_HEARTBEAT_INTERVAL * 12UL)
         , lastHeartbeat(0UL)
@@ -108,10 +107,7 @@ public:
         Handler::onMessage(this->messageCb);
         Handler::onStateChange(this->connectedCb,
                                this->disconnectedCb);
-        if (!this->initialized) {
-            Base::begin();
-            this->initialized = true;
-        }
+        Base::postBegin();
     }
 
     void run() {
@@ -240,7 +236,7 @@ public:
 
 protected:
     void init() {
-        /* Base::begin(); */
+        Base::begin();
     }
 
     bool connect(FunctionCallback_t fn = nullptr) {
@@ -377,7 +373,6 @@ private:
     ERaLogger* pLogger;
     ERaServerCallbacks* pServerCallbacks;
     bool nonBlocking;
-    bool initialized;
     bool _connected;
 
     unsigned long heartbeat;
