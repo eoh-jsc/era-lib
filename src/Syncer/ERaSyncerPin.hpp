@@ -7,8 +7,7 @@
 #include <Syncer/ERaSyncerPinDef.hpp>
 
 class ERaSyncerPin
-    : public ERaSyncer
-    , public ERaComponent
+    : public ERaComponent
 {
     typedef struct __PinState_t {
         __PinState_t()
@@ -39,7 +38,6 @@ public:
         , mSyncInterval(syncInterval)
     {
         this->mApi.addERaComponent(this);
-        this->mApi.addERaSyncer(this);
     }
     virtual ~ERaSyncerPin()
     {}

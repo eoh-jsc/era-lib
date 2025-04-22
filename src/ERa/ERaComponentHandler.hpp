@@ -3,36 +3,46 @@
 
 #include <ERa/ERaComponent.hpp>
 
-#define ERA_TEMPLATABLE_COMPONENT_LOOP(method, ...) \
-    ERaComponent* component = this->firstComponent; \
-    while (component != NULL) {                     \
-        ERaComponent* next = component->getNext();  \
-        component->method(__VA_ARGS__);             \
-        component = next;                           \
+#define ERA_TEMPLATABLE_COMPONENT_LOOP(method, ...)  \
+    ERaComponent* component = this->mFirstComponent; \
+    while (component != NULL) {                      \
+        ERaComponent* next = component->getNext();   \
+        component->method(__VA_ARGS__);              \
+        component = next;                            \
     }
 
 class ERaComponentHandler
 {
+#if defined(ERA_HAS_FUNCTIONAL_H)
+    typedef std::function<void(const char*, const char*)> MessageCallback_t;
+#else
+    typedef void (*MessageCallback_t)(const char*, const char*);
+#endif
+
 public:
     ERaComponentHandler()
-        : firstComponent(NULL)
-        , lastComponent(NULL)
-        , initialized(false)
+        : mFirstComponent(NULL)
+        , mLastComponent(NULL)
+        , mInitialized(false)
     {}
     ~ERaComponentHandler()
     {}
 
 protected:
     void begin() {
-        if (this->initialized) {
+        if (this->mInitialized) {
             return;
         }
         ERA_TEMPLATABLE_COMPONENT_LOOP(begin);
-        this->initialized = true;
+        this->mInitialized = true;
     }
 
     void run() {
         ERA_TEMPLATABLE_COMPONENT_LOOP(run);
+    }
+
+    void message(const ERaDataBuff& topic, const char* payload) {
+        ERA_TEMPLATABLE_COMPONENT_LOOP(message, topic, payload)
     }
 
     void addComponent(ERaComponent& component) {
@@ -40,19 +50,31 @@ protected:
     }
 
     void addComponent(ERaComponent* pComponent) {
-        if (this->lastComponent == NULL) {
-            this->firstComponent = pComponent;
+        if (this->mLastComponent == NULL) {
+            this->mFirstComponent = pComponent;
         }
         else {
-            this->lastComponent->setNext(pComponent);
+            this->mLastComponent->setNext(pComponent);
         }
-        this->lastComponent = pComponent;
+        this->mLastComponent = pComponent;
+    }
+
+    void setAuth(const char* auth) {
+        ERA_TEMPLATABLE_COMPONENT_LOOP(setAuth, auth)
+    }
+
+    void setTopic(const char* topic) {
+        ERA_TEMPLATABLE_COMPONENT_LOOP(setTopic, topic)
+    }
+
+    void onMessage(MessageCallback_t cb) {
+        ERA_TEMPLATABLE_COMPONENT_LOOP(onMessage, cb)
     }
 
 private:
-    ERaComponent* firstComponent;
-    ERaComponent* lastComponent;
-    bool initialized;
+    ERaComponent* mFirstComponent;
+    ERaComponent* mLastComponent;
+    bool mInitialized;
 };
 
 #endif /* INC_ERA_COMPONENT_HANDLER_HPP_ */

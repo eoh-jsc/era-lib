@@ -14,7 +14,6 @@
 #include <ERa/ERaTimer.hpp>
 #include <ERa/ERaApiHandler.hpp>
 #include <ERa/ERaComponentHandler.hpp>
-#include <ERa/ERaSyncerHandler.hpp>
 #include <Utility/ERaQueue.hpp>
 #include <Modbus/ERaModbusSimple.hpp>
 #include <Zigbee/ERaZigbeeSimple.hpp>
@@ -25,7 +24,6 @@ template <class Proto, class Flash>
 class ERaApi
     : public ERaApiHandler
     , public ERaComponentHandler
-    , public ERaSyncerHandler
 #if !defined(ERA_ABBR)
     , public ERaProperty< ERaApi<Proto, Flash> >
 #endif
@@ -55,7 +53,6 @@ class ERaApi
     typedef ERaComponentHandler ComponentHandler;
 
 protected:
-    typedef ERaSyncerHandler SyncerHandler;
 #if !defined(ERA_ABBR)
     friend class ERaProperty< ERaApi<Proto, Flash> >;
     typedef ERaProperty< ERaApi<Proto, Flash> > Property;
@@ -448,14 +445,6 @@ public:
         ComponentHandler::addComponent(pComponent);
     }
 
-    void addERaSyncer(ERaSyncer& rSyncer) override {
-        SyncerHandler::addSyncer(rSyncer);
-    }
-
-    void addERaSyncer(ERaSyncer* pSyncer) override {
-        SyncerHandler::addSyncer(pSyncer);
-    }
-
     void callERaProHandler(const char* deviceId, const cJSON* const root);
 
 protected:
@@ -502,7 +491,8 @@ protected:
     void removeBluetoothConfig();
 #endif
 
-    void initSyncer(const char* auth, const char* topic, MessageCallback_t cb);
+    void initComponent(const char* auth, const char* topic, MessageCallback_t cb);
+    void messageComponent(const ERaDataBuff& topic, const char* payload);
 
 #if defined(LINUX)
     static void* apiTask(void* args);
@@ -1442,10 +1432,16 @@ void ERaApi<Proto, Flash>::sendSMS(const char* to, const char* message) {
 
 template <class Proto, class Flash>
 inline
-void ERaApi<Proto, Flash>::initSyncer(const char* auth, const char* topic, MessageCallback_t cb) {
-    SyncerHandler::setAuth(auth);
-    SyncerHandler::setTopic(topic);
-    SyncerHandler::onMessage(cb);
+void ERaApi<Proto, Flash>::initComponent(const char* auth, const char* topic, MessageCallback_t cb) {
+    ComponentHandler::setAuth(auth);
+    ComponentHandler::setTopic(topic);
+    ComponentHandler::onMessage(cb);
+}
+
+template <class Proto, class Flash>
+inline
+void ERaApi<Proto, Flash>::messageComponent(const ERaDataBuff& topic, const char* payload) {
+    ComponentHandler::message(topic, payload);
 }
 
 template <class Proto, class Flash>

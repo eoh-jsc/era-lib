@@ -5,7 +5,6 @@
 #include <stdint.h>
 #include <ERa/ERaAutomationDet.hpp>
 #include <ERa/ERaComponent.hpp>
-#include <ERa/ERaSyncer.hpp>
 #include <ERa/ERaTransp.hpp>
 #include <ERa/ERaLogger.hpp>
 #include <ERa/ERaCallbacks.hpp>
@@ -53,16 +52,6 @@ public:
     virtual void addERaComponent(ERaComponent* pComponent) {
         ERA_LOG_WARNING(TAG, ERA_PSTR("addERaComponent callback default."));
         ERA_FORCE_UNUSED(pComponent);
-    }
-
-    virtual void addERaSyncer(ERaSyncer& rSyncer) {
-        ERA_LOG_WARNING(TAG, ERA_PSTR("addERaSyncer callback default."));
-        ERA_FORCE_UNUSED(rSyncer);
-    }
-
-    virtual void addERaSyncer(ERaSyncer* pSyncer) {
-        ERA_LOG_WARNING(TAG, ERA_PSTR("addERaSyncer callback default."));
-        ERA_FORCE_UNUSED(pSyncer);
     }
 
     virtual void setERaTransp(ERaTransp& rTransp) {

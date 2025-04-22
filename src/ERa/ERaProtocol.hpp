@@ -101,7 +101,7 @@ public:
 #if defined(ERA_AUTOMATION)
         Base::initAutomation(auth, this->ERA_TOPIC, this->messageCb);
 #endif
-        Base::initSyncer(auth, this->ERA_TOPIC, this->messageCb);
+        Base::initComponent(auth, this->ERA_TOPIC, this->messageCb);
         Handler::setAuth(auth);
         Handler::setTopic(this->ERA_TOPIC);
         Handler::onMessage(this->messageCb);
@@ -335,6 +335,7 @@ private:
     void clearRetainedConfigIdData(ERaInt_t configId);
 
     void processRequest(const char* topic, const char* payload);
+    void processExternalRequest(const ERaDataBuff& topic, const char* payload);
 #if !defined(ERA_HAS_FUNCTIONAL_H)
     static void _onConnected();
     static void _onDisconnected();
@@ -444,19 +445,18 @@ void ERaProto<Transp, Flash>::processRequest(const char* topic, const char* payl
 
     ERA_LOG(this->transp.getTag(), ERA_PSTR("Message %s (% 3d): %s"), topic, strlen(payload), payload);
 
-    if (ERaFindStr(topic, this->ERA_TOPIC) != topic) {
-        if (this->pServerCallbacks != nullptr) {
-            this->pServerCallbacks->onWrite(topic, payload);
-        }
-        return;
-    }
-
     char copy[MAX_TOPIC_LENGTH] {0};
     CopyToString(ERaFindStr(topic, BASE_TOPIC) + strlen(BASE_TOPIC) + 1, copy);
     ERaDataBuff arrayTopic(copy, strlen(copy) + 1, MAX_TOPIC_LENGTH);
     this->splitString(copy, "/");
 
+    if (ERaFindStr(topic, this->ERA_TOPIC) != topic) {
+        this->processExternalRequest(arrayTopic, payload);
+        return;
+    }
+
     if (arrayTopic.size() < 2) {
+        this->processExternalRequest(arrayTopic, payload);
         return;
     }
 
@@ -489,10 +489,7 @@ void ERaProto<Transp, Flash>::processRequest(const char* topic, const char* payl
     }
 #endif
 
-    if (this->pServerCallbacks != nullptr) {
-        this->pServerCallbacks->onWrite(arrayTopic, payload);
-    }
-    Base::SyncerHandler::message(arrayTopic, payload);
+    this->processExternalRequest(arrayTopic, payload);
 
 #if defined(ERA_DEBUG_PREFIX)
     const char* debug = ERA_DEBUG_PREFIX;
@@ -506,6 +503,14 @@ void ERaProto<Transp, Flash>::processRequest(const char* topic, const char* payl
         this->processPinRequest(arrayTopic, payload, 3);
     }
 #endif
+}
+
+template <class Transp, class Flash>
+void ERaProto<Transp, Flash>::processExternalRequest(const ERaDataBuff& topic, const char* payload) {
+    if (this->pServerCallbacks != nullptr) {
+        this->pServerCallbacks->onWrite(topic, payload);
+    }
+    Base::messageComponent(topic, payload);
 }
 
 template <class Transp, class Flash>

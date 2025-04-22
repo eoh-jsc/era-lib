@@ -30,8 +30,8 @@ ERaIndicator	KEYWORD1
 ERaServerCallbacks	KEYWORD1
 ERaZigbeeCallbacks	KEYWORD1
 ERaSmart	KEYWORD1
-ERaSyncer	KEYWORD1
 ERaSyncerPin	KEYWORD1
+ERaSyncerVirtual	KEYWORD1
 PinEntry	KEYWORD1
 TimerEntry	KEYWORD1
 ReportEntry	KEYWORD1
@@ -158,7 +158,6 @@ setServerCallbacks	KEYWORD2
 setZigbeeCallbacks	KEYWORD2
 setERaAutomation	KEYWORD2
 addERaComponent	KEYWORD2
-addERaSyncer	KEYWORD2
 setERaTransp	KEYWORD2
 setERaLogger	KEYWORD2
 getERaLogger	KEYWORD2
