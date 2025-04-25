@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string>
 #include <vector>
 #include <ERa/ERaAutomation.hpp>
 #include <ERa/ERaApiHandler.hpp>
@@ -99,6 +100,9 @@ namespace eras {
         void parseActionScript(const cJSON* const root, const cJSON* const data);
         void parseActions(const cJSON* const root, uint32_t automateId);
         void parseAction(const cJSON* const root, uint32_t automateId);
+
+        void getDate(std::string& date);
+        void getTime(std::string& time);
 
         void sendNotify(ERaUInt_t automateId, ERaUInt_t notifyId);
         void sendEmail(ERaUInt_t automateId, ERaUInt_t emailId);

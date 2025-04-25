@@ -13,6 +13,7 @@
 
 namespace eras {
 
+    std::string str_snprintf(const char* format, size_t len, ...);
     bool StringReplace(std::string& str, const std::string& from, const std::string& to);
 
     class Mutex

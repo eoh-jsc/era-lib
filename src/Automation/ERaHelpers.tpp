@@ -1,7 +1,24 @@
 #include <float.h>
+#include <stdarg.h>
 #include <Automation/ERaHelpers.hpp>
 
 namespace eras {
+
+    std::string str_snprintf(const char* format, size_t len, ...) {
+        std::string str;
+        va_list args;
+
+        str.resize(len);
+        va_start(args, len);
+        size_t outLength = vsnprintf(&str[0], len + 1, format, args);
+        va_end(args);
+
+        if (outLength < len) {
+            str.resize(outLength);
+        }
+
+        return str;
+    }
 
     bool StringReplace(std::string& str, const std::string& from, const std::string& to) {
         size_t startPos = str.find(from);

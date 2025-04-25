@@ -468,10 +468,16 @@ namespace eras {
         if (cJSON_IsString(date)) {
             dateTime = date->valuestring;
         }
+        else {
+            this->getDate(dateTime);
+        }
         cJSON* time = cJSON_GetObjectItem(root, AUTOMATION_SCHEDULE_TIME_KEY);
         if (cJSON_IsString(time)) {
             dateTime += " ";
             dateTime += time->valuestring;
+        }
+        else {
+            this->getTime(dateTime);
         }
 
         if (ERaStrCmp(type->valuestring, "once")) {
@@ -925,6 +931,24 @@ namespace eras {
         if (cJSON_IsObject(smsScript)) {
             this->parseSMSAction(smsScript);
         }
+    }
+
+    void ERaSmart::getDate(std::string& date) {
+        TimeElement_t tm {};
+        this->mTime->getTime(tm);
+        if (tm.year > 30) {
+            tm.year -= 30; // Offset from 1970
+        }
+        else {
+            tm.year = 25;  // Start year of 2025
+        }
+        date += str_snprintf("2%03d-%02d-%02d", 10, tm.year, tm.month, tm.day);
+    }
+
+    void ERaSmart::getTime(std::string& time) {
+        TimeElement_t tm {};
+        this->mTime->getTime(tm);
+        time += str_snprintf(" %02d:%02d:%02d", 9, tm.hour, tm.minute, tm.second);
     }
 
     void ERaSmart::sendNotify(ERaUInt_t automateId, ERaUInt_t notifyId) {
