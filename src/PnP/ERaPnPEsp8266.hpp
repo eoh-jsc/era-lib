@@ -329,6 +329,8 @@ public:
     void begin(const char* auth = nullptr);
     void run();
 
+    using Base::connected;
+
 protected:
 private:
     void configApi();
