@@ -192,7 +192,7 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const ERaDataBuff& arrayTopi
         switch (pMode) {
             case PWM:
             case OUTPUT:
-            case OUTPUT_OPEN_DRAIN:
+            /* case OUTPUT_OPEN_DRAIN: */
                 raw = value;
                 if (this->callERaPinWriteHandler(pin, param, raw) ||
                     this->skipPinWrite) {
@@ -213,7 +213,7 @@ void ERaApi<Proto, Flash>::processArduinoPinRequest(const ERaDataBuff& arrayTopi
                 ::analogWrite(pin, value);
                 break;
             case OUTPUT:
-            case OUTPUT_OPEN_DRAIN:
+            /* case OUTPUT_OPEN_DRAIN: */
                 if (value == TOGGLE) {
                     ::digitalWrite(pin, ((digitalReadPi(pin) == LOW) ? HIGH : LOW));
                 }
