@@ -62,7 +62,7 @@ void setup() {
     // ERa.setBoardID("Board_1");
 
     /* Set timezone +7 */
-    syncTime.setTimeZone(7L);
+    syncTime.setTimezone(7L);
     syncTime.begin();
 
     /* Initializing the ERa library. */

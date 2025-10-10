@@ -83,7 +83,7 @@ void getTimeFromGsm() {
         &year, &month, &day, &hour, &minute, &second, nullptr
     );
     if (status) {
-        long offset = syncTime.getTimeZoneOffset();
+        long offset = syncTime.getTimezoneOffset();
         syncTime.setTime(hour, minute, second, day, month, year, -offset);
     }
 }
