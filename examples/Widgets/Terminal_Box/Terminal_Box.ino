@@ -21,7 +21,7 @@
  *************************************************************/
 
 // Enable debug console
-// Set CORE_DEBUG_LEVEL = 3 first
+// Recommended: use CORE_DEBUG_LEVEL = 3
 // #define ERA_DEBUG
 // #define ERA_SERIAL Serial
 

@@ -4,16 +4,12 @@ on:
   pull_request:
     paths:
       - ".github/workflows/compile-examples.yml"
-      - "library.properties"
       - "examples/**"
-      - "linux/**"
       - "src/**"
   push:
     paths:
       - ".github/workflows/compile-examples.yml"
-      - "library.properties"
       - "examples/**"
-      - "linux/**"
       - "src/**"
   schedule:
     # Run every Tuesday at 7:AM GSM +7 to catch breakage caused by changes to external resources (libraries, platforms).
@@ -189,6 +185,8 @@ jobs:
             fqbn: "rp2040:rp2040:rpipico"
             platform-name: rp2040:rp2040
             sketch-paths: examples/Raspberry
+            cli-compile-flags: |
+              --build-property "build.extra_flags=-D__FREERTOS=1"
             libraries: |
               - source-path: ./
               - name: TinyGSM
@@ -245,6 +243,7 @@ jobs:
           libraries: ${{ matrix.board.libraries }}
           enable-deltas-report: 'true'
           sketches-report-path: ${{ env.SKETCHES_REPORTS_PATH }}
+          cli-compile-flags: ${{ matrix.board.cli-compile-flags }}
 
       - name: Save memory usage change report as artifact
         if: github.event_name == 'pull_request'

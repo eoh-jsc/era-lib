@@ -17,6 +17,9 @@
         ERA_LOG_ERROR(TAG, ERA_PSTR("Publish (error %d #%d) %s (% 3d): %s"), errorCode, this->mqtt.lastPacketID(), topic, strlen(payload), payload);    \
     }
 
+#define ERA_MQTT_DIS_LOG(cmd)                                                                                                                           \
+    ERA_LOG_ERROR(TAG, ERA_PSTR(# cmd " (disconnected) %s (% 3d): %s"), topic, strlen(payload), payload);
+
 #define ERA_MQTT_SUB_LOG(status, errorCode)                                                                                                             \
     if (status) {                                                                                                                                       \
         ERA_LOG(TAG, ERA_PSTR("Subscribe (ok #%d): %s, QoS: %d"), this->mqtt.lastPacketID(), topicName, qos);                                           \
@@ -90,6 +93,7 @@ public:
         );
 #endif
         this->mqtt.setKeepAlive(ERA_MQTT_KEEP_ALIVE);
+        this->mqtt.setCleanSession(ERA_MQTT_CLEAN_SESSION);
         memset(this->willTopic, 0, sizeof(this->willTopic));
     }
     ERaMqtt(Client& _client)
@@ -124,6 +128,7 @@ public:
 #endif
         this->setClient(&_client);
         this->mqtt.setKeepAlive(ERA_MQTT_KEEP_ALIVE);
+        this->mqtt.setCleanSession(ERA_MQTT_CLEAN_SESSION);
         memset(this->willTopic, 0, sizeof(this->willTopic));
     }
     ~ERaMqtt()
@@ -192,6 +197,10 @@ public:
 
     void setKeepAlive(uint16_t keepAlive) {
         this->mqtt.setKeepAlive(keepAlive);
+    }
+
+    void setCleanSession(bool cleanSession) {
+        this->mqtt.setCleanSession(cleanSession);
     }
 
     void setDropOverflow(bool enabled = false) {
@@ -395,6 +404,7 @@ bool ERaMqtt<Client, MQTT>::connect(FunctionCallback_t fn) {
     this->subscribeTopic(this->ERaTopic, ERA_SUB_PREFIX_DOWN_TOPIC);
     this->subscribeTopic(this->ERaTopic, ERA_SUB_PREFIX_ASK_WIFI_TOPIC);
     this->subscribeTopic(this->ERaTopic, ERA_SUB_PREFIX_CHANGE_WIFI_TOPIC);
+    this->subscribeTopic(this->ERaTopic, ERA_SUB_PREFIX_TIMESTAMP_TOPIC);
 
 #if defined(ERA_AUTOMATION)
     this->subscribeTopic(this->ERaTopic, ERA_SUB_PREFIX_AUTOMATION_TOPIC);
@@ -464,6 +474,7 @@ bool ERaMqtt<Client, MQTT>::connectBlocking(const char* id) {
         ERaWatchdogFeed();
 
         if (this->mqtt.lastError() == lwmqtt_err_t::LWMQTT_NETWORK_FAILED_CONNECT) {
+            this->reachedLimit = true;
             return false;
         }
     }
@@ -595,6 +606,7 @@ inline
 bool ERaMqtt<Client, MQTT>::publishData(const char* topic, const char* payload,
                                         bool retained, QoST qos) {
     if (!this->_connected) {
+        ERA_MQTT_DIS_LOG(Publish)
         return false;
     }
 
@@ -606,6 +618,9 @@ bool ERaMqtt<Client, MQTT>::publishData(const char* topic, const char* payload,
         status = this->mqtt.publish(topic, payload, retained, qos);
         this->ping = (ERaMillis() - this->lastPublish);
         ERA_MQTT_PUB_LOG(status, this->mqtt.lastError())
+    }
+    else {
+        ERA_MQTT_DIS_LOG(Publish)
     }
     this->unlock();
 
@@ -672,6 +687,9 @@ bool ERaMqtt<Client, MQTT>::publishLWT(bool sync, bool retained, QoST qos) {
         status = this->mqtt.publish(topic, payload, retained, qos);
         this->ping = (ERaMillis() - this->lastPublish);
         ERA_MQTT_PUB_LOG(status, this->mqtt.lastError())
+    }
+    else {
+        ERA_MQTT_DIS_LOG(PublishLWT)
     }
     this->unlock();
 

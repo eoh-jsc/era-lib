@@ -17,6 +17,7 @@ Topic format:
 #define ERA_SUB_PREFIX_VIRTUAL_TOPIC                "/virtual_pin/+"
 #define ERA_SUB_PREFIX_ASK_WIFI_TOPIC               "/wifi/ask"
 #define ERA_SUB_PREFIX_CHANGE_WIFI_TOPIC            "/wifi/change"
+#define ERA_SUB_PREFIX_TIMESTAMP_TOPIC              "/timestamp"
 #define ERA_SUB_PREFIX_AUTOMATION_TOPIC             "/local_control"
 
 #if defined(ERA_ZIGBEE) ||  \
@@ -35,6 +36,7 @@ Topic format:
 #define ERA_PUB_PREFIX_SELF_SENSOR_TOPIC            "/self_sensor"
 #define ERA_PUB_PREFIX_LIST_WIFI_TOPIC              "/wifi/list"
 #define ERA_PUB_PREFIX_CHANGE_RESULT_WIFI_TOPIC     "/wifi/change_result"
+#define ERA_PUB_PREFIX_ASK_TIMESTAMP_TOPIC          "/timestamp/ask"
 #define ERA_PUB_PREFIX_NOTIFY_DATA_TOPIC            "/automate/" ERA_INTEGER_C_TYPE \
                                                     "/send_notify/" ERA_INTEGER_C_TYPE
 #define ERA_PUB_PREFIX_EMAIL_DATA_TOPIC             "/automate/" ERA_INTEGER_C_TYPE \

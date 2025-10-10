@@ -24,9 +24,12 @@ namespace eras {
         explicit ERaSmart(ERaApiHandler& api)
             : ERaAutomation()
             , mApi(api)
+            , mTime(nullptr)
         {
             ERaSmart::instance() = this;
+#if defined(ERA_AUTOMATION)
             this->mApi.setERaAutomation(this);
+#endif
         }
 
         explicit ERaSmart(ERaApiHandler& api, ERaTime& time)
@@ -35,7 +38,9 @@ namespace eras {
             , mTime(&time)
         {
             ERaSmart::instance() = this;
+#if defined(ERA_AUTOMATION)
             this->mApi.setERaAutomation(this);
+#endif
         }
 
         void setTime(ERaTime* time) {

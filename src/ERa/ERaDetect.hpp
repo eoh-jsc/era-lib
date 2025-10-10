@@ -1017,8 +1017,9 @@
     #define ERA_GET_SIGNAL_TIMEOUT          60000UL
 #endif
 
+#define ERA_ASK_TIMESTAMP_INTERVAL          60000UL
 #define ERA_FATALITY_TIMEOUT                10000UL
-#define ERA_HEARTBEAT_INTERVAL              3600000UL
+#define ERA_INFO_INTERVAL                   3600000UL
 #define ERA_SELF_INFO_INTERVAL              60000UL
 
 #define ERA_STRING_REPORT_ON_WRITE

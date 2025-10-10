@@ -1,5 +1,5 @@
-#ifndef INC_ERA_CALLBACKS_HELPER_HPP_
-#define INC_ERA_CALLBACKS_HELPER_HPP_
+#ifndef INC_ERA_CALLBACK_SETTER_HPP_
+#define INC_ERA_CALLBACK_SETTER_HPP_
 
 #include <stdlib.h>
 #include <stdint.h>
@@ -74,7 +74,29 @@ public:
         ERA_FORCE_UNUSED(pLog);
     }
 
+    virtual ERaLogger* getERaLogger() const {
+        ERA_LOG_WARNING(TAG, ERA_PSTR("getERaLogger callback default."));
+        return nullptr;
+    }
+
+    virtual void setERaTime(ERaTime& rTime, bool enableUpdate = false) {
+        ERA_LOG_WARNING(TAG, ERA_PSTR("setERaTime callback default."));
+        ERA_FORCE_UNUSED(rTime);
+        ERA_FORCE_UNUSED(enableUpdate);
+    }
+
+    virtual void setERaTime(ERaTime* pTime, bool enableUpdate = false) {
+        ERA_LOG_WARNING(TAG, ERA_PSTR("setERaTime callback default."));
+        ERA_FORCE_UNUSED(pTime);
+        ERA_FORCE_UNUSED(enableUpdate);
+    }
+
+    virtual ERaTime* getERaTime() const {
+        ERA_LOG_WARNING(TAG, ERA_PSTR("getERaTime callback default."));
+        return nullptr;
+    }
+
     ERaApiHandler& Api;
 };
 
-#endif /* INC_ERA_CALLBACKS_HELPER_HPP_ */
+#endif /* INC_ERA_CALLBACK_SETTER_HPP_ */

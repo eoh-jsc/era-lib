@@ -50,7 +50,7 @@ protected:
 public:
     ERaTime()
         : sysTime(0L)
-        , timeZone(DEFAULT_TIMEZONE)
+        , timezone(DEFAULT_TIMEZONE)
         , prevMillis(0L)
         , setTimeCb(NULL)
         , getTimeCb(NULL)
@@ -62,16 +62,16 @@ public:
     virtual void run() {}
     virtual void sync() {}
 
-    virtual void setTimeZone(long tz = DEFAULT_TIMEZONE) {
-        this->timeZone = tz;
+    virtual void setTimezone(long tz = DEFAULT_TIMEZONE) {
+        this->timezone = tz;
     }
 
-    virtual long getTimeZone() {
-        return this->timeZone;
+    virtual long getTimezone() {
+        return this->timezone;
     }
 
-    long getTimeZoneOffset() {
-        return (this->timeZone * SECS_PER_HOUR);
+    long getTimezoneOffset() {
+        return (this->timezone * SECS_PER_HOUR);
     }
 
     void setSetTimeCallback(SetTimeCallback_t cb, bool override = false) {
@@ -92,19 +92,19 @@ public:
         this->getTimeCb = cb;
     }
 
-    time_t now() {
+    time_t now(bool utc = false) {
         this->run();
 
         unsigned long currentMillis = ERaMillis();
         if ((currentMillis - this->prevMillis) < 1000L) {
-            return this->getSysTime(false);
+            return this->getSysTime(false, utc);
         }
 
         unsigned long skipTimes = (currentMillis - this->prevMillis) / 1000L;
         this->prevMillis += (1000L * skipTimes);
         this->sysTime += skipTimes;
 
-        return this->getSysTime(true);
+        return this->getSysTime(true, utc);
     }
 
     void setTime(time_t _time, long offset = 0L) {
@@ -182,7 +182,7 @@ public:
     }
 
     static inline
-    time_t getTimeFromStringNumber(const char* input, long timeZone = 0L) {
+    time_t getTimeFromStringNumber(const char* input, long timezone = 0L) {
         if (input == NULL) {
             return 0;
         }
@@ -238,13 +238,13 @@ public:
 
         ERA_FORCE_UNUSED(TAG);
 
-        long offset = (timeZone * SECS_PER_HOUR);
+        long offset = (timezone * SECS_PER_HOUR);
 
         return (mktime(&t) + offset);
     }
 
     static inline
-    time_t getTimeCompile(long timeZone = 0L) {
+    time_t getTimeCompile(long timezone = 0L) {
         static const char* input = __DATE__ " " __TIME__;
         static time_t buildTime {0};
 
@@ -285,11 +285,13 @@ public:
         t.tm_sec  = sec;
         t.tm_isdst = -1;
 
-        long offset = (timeZone * SECS_PER_HOUR);
+        long offset = (timezone * SECS_PER_HOUR);
 
         buildTime = (mktime(&t) + offset);
         return buildTime;
     }
+
+    using time_type_t = time_t;
 
 protected:
     time_t makeTime() {
@@ -324,17 +326,20 @@ protected:
                 (((1970 + (year)) % 100) || !((1970 + (year)) % 400)));
     }
 
-    time_t getSysTime(bool call) {
+    time_t getSysTime(bool call, bool utc = false) {
         if (!call) {
         }
         else if (this->getTimeCb != NULL) {
             this->sysTime = this->getTimeCb();
         }
-        return (this->sysTime + (this->timeZone * SECS_PER_HOUR));
+        if (utc) {
+            return this->sysTime;
+        }
+        return (this->sysTime + (this->timezone * SECS_PER_HOUR));
     }
 
     time_t sysTime;
-    long timeZone;
+    long timezone;
     unsigned long prevMillis;
     TimeElement_t time;
     const uint8_t monthDays[12] {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};

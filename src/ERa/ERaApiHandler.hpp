@@ -139,6 +139,16 @@ public:
         return false;
     }
 
+    virtual void updateTopic(const char* auth) {
+        ERA_LOG_WARNING(TAG, ERA_PSTR("updateTopic default."));
+        ERA_FORCE_UNUSED(auth);
+    }
+
+    virtual void setBaseTopic(const char* topic) {
+        ERA_LOG_WARNING(TAG, ERA_PSTR("setBaseTopic default."));
+        ERA_FORCE_UNUSED(topic);
+    }
+
     template <typename... Args>
     ERaTimer::iterator addInterval(unsigned long interval, Args... tail) {
         return this->ERaTm.setInterval(interval, tail...);

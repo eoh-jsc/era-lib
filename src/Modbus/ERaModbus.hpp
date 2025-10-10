@@ -3,6 +3,7 @@
 
 #include <math.h>
 #include <ERa/ERaParam.hpp>
+#include <ERa/ERaTimestampType.hpp>
 #include <Utility/ERaUtility.hpp>
 #include <Modbus/ERaModbusState.hpp>
 #include <Modbus/ERaParse.hpp>
@@ -210,8 +211,8 @@ protected:
         for (;;) {
             this->getModbusAction(true);
             this->getModbusActionRaw(true);
-#if defined(ERA_PNP_MODBUS)
-            this->processModbusControl();
+#if ERA_MODBUS_WRITE_AFTER_CONFIG
+            this->processModbusAfterConfig();
 #endif
             this->writeAllModbusWithOption();
             if (!forever) {
@@ -275,7 +276,7 @@ protected:
             this->thisApi().writeToFlash(FILENAME_CONTROL, buf);
             ERA_LOG(TAG, ERA_PSTR("Modbus control stored to flash"));
             ERaWriteConfig(ERaConfigTypeT::ERA_MODBUS_CONTROL);
-#if !defined(ERA_PNP_MODBUS)
+#if !ERA_MODBUS_WRITE_AFTER_CONFIG
             this->modbusControl->updated();
 #endif
         }
@@ -306,6 +307,10 @@ protected:
         ERaGuardUnlock(this->mutex);
         this->thisApi().removeFlash(FILENAME_CONFIG);
         this->thisApi().removeFlash(FILENAME_CONTROL);
+    }
+
+    void addTimestampModbus(cJSON* const root) {
+        this->thisApi().addTimestampFor(root, TimestampKindT::MODBUS);
     }
 
     void configIdModbusWrite(ERaInt_t configId, float value) override {
@@ -582,8 +587,8 @@ private:
     ModbusConfig_t* getModbusConfigWithAddress(uint8_t addr);
     void addScanData();
     void processModbusScan();
-#if defined(ERA_PNP_MODBUS)
-    void processModbusControl();
+#if ERA_MODBUS_WRITE_AFTER_CONFIG
+    void processModbusAfterConfig();
 #endif
     void writeAllModbusWithOption(bool execute = false);
     bool actionModbus(ModbusAction_t& request);
@@ -615,6 +620,17 @@ private:
         return (this->modbusConfig->modbusConfigParam.isEmpty() &&
                 this->modbusControl->modbusConfigParam.isEmpty());
     }
+
+#if ERA_MODBUS_WRITE_AFTER_CONFIG
+    bool isEmptyAlias() const {
+        return (this->modbusConfig->modbusConfigAliasParam.isEmpty() &&
+                this->modbusControl->modbusConfigAliasParam.isEmpty());
+    }
+
+    bool isWriteAfterConfig() const {
+        return (this->modbusControl->updated() && this->isEmptyAlias());
+    }
+#endif
 
     bool isStateUpdate() const {
         return (ModbusState::is(ModbusStateT::STATE_MB_PARSE) ||
@@ -967,9 +983,9 @@ void ERaModbus<Api>::processModbusScan() {
     this->executeNow();
 }
 
-#if defined(ERA_PNP_MODBUS)
+#if ERA_MODBUS_WRITE_AFTER_CONFIG
     template <class Api>
-    void ERaModbus<Api>::processModbusControl() {
+    void ERaModbus<Api>::processModbusAfterConfig() {
         if (this->modbusControl->modbusConfigParam.isEmpty()) {
             return;
         }
@@ -978,7 +994,7 @@ void ERaModbus<Api>::processModbusScan() {
         }
 
         static bool wrote {true};
-        if (!this->modbusControl->updated() && wrote) {
+        if (!this->isWriteAfterConfig() && wrote) {
             return;
         }
         wrote = false;

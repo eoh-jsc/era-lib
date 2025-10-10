@@ -26,7 +26,7 @@ public:
 
     void config(long tz, const char* sv1, const char* sv2 = NULL,
                                         const char* sv3 = NULL) {
-        this->timeZone = tz;
+        this->timezone = tz;
         this->server1 = sv1;
         this->server2 = sv2;
         this->server3 = sv3;

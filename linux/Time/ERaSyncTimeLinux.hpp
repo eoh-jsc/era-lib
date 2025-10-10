@@ -50,7 +50,6 @@ private:
 
         gettimeofday(&now, NULL);
         timestamp = now.tv_sec;
-        timestamp += (this->timeZone * SECS_PER_HOUR);
         this->setTime(timestamp);
     }
 

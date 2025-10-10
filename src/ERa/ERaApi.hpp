@@ -12,6 +12,7 @@
 #include <ERa/ERaAutomationDet.hpp>
 #include <ERa/ERaTransp.hpp>
 #include <ERa/ERaTimer.hpp>
+#include <ERa/ERaTimestampType.hpp>
 #include <ERa/ERaApiHandler.hpp>
 #include <ERa/ERaComponentHandler.hpp>
 #include <Utility/ERaQueue.hpp>
@@ -85,8 +86,10 @@ public:
         , _apiTask(NULL)
 #endif
 #if defined(ERA_AUTOMATION)
-        , automation(NULL)
+        , pAutomation(NULL)
 #endif
+        , pTime(NULL)
+        , enableUpdateTime(false)
     {}
     ~ERaApi()
     {}
@@ -429,11 +432,11 @@ public:
 
 #if defined(ERA_AUTOMATION)
     void setERaAutomation(ERaAutomation& rAutomation) override {
-        this->automation = &rAutomation;
+        this->pAutomation = &rAutomation;
     }
 
     void setERaAutomation(ERaAutomation* pAutomation) override {
-        this->automation = pAutomation;
+        this->pAutomation = pAutomation;
     }
 #endif
 
@@ -443,6 +446,20 @@ public:
 
     void addERaComponent(ERaComponent* pComponent) override {
         ComponentHandler::addComponent(pComponent);
+    }
+
+    void setERaTime(ERaTime* time, bool enableUpdate = false) override {
+        this->pTime = time;
+        this->enableUpdateTime = enableUpdate;
+    }
+
+    void setERaTime(ERaTime& time, bool enableUpdate = false) override {
+        this->pTime = &time;
+        this->enableUpdateTime = enableUpdate;
+    }
+
+    ERaTime* getERaTime() const override {
+        return this->pTime;
     }
 
     void callERaProHandler(const char* deviceId, const cJSON* const root);
@@ -494,6 +511,20 @@ protected:
     void initComponent(const char* auth, const char* topic, MessageCallback_t cb);
     void messageComponent(const ERaDataBuff& topic, const char* payload);
 
+    bool hasTime() const;
+    void initTime();
+    void updateTime(unsigned long timestamp);
+    void addTimestamp(cJSON* const root, MillisTime_t& msAnchor,
+                      ERaTime::time_type_t& lastSec, double& lastTimestamp);
+    void addTimestampFor(cJSON* const root, TimestampKindT kind);
+    void addTimestampConfigValue(cJSON* const root);
+    void addTimestampOther(cJSON* const root);
+
+    TimestampState_t& getTimestampState(TimestampKindT kind) {
+        static TimestampState_t states[static_cast<size_t>(TimestampKindT::COUNT)] {};
+        return states[static_cast<size_t>(kind)];
+    }
+
 #if defined(LINUX)
     static void* apiTask(void* args);
 #else
@@ -502,6 +533,7 @@ protected:
 
     void begin() {
         this->flash.begin();
+        this->initTime();
         this->initPinConfig();
 #if defined(ERA_AUTOMATION)
         this->initAutomationConfig();
@@ -568,8 +600,8 @@ protected:
         }
 
 #if defined(ERA_AUTOMATION)
-        if (this->automation != nullptr) {
-            this->automation->run();
+        if (this->pAutomation != nullptr) {
+            this->pAutomation->run();
         }
 #endif
 
@@ -784,8 +816,8 @@ protected:
         bool ret {false};
 #if defined(ERA_MODBUS) && defined(ERA_AUTOMATION)
         bool need {false};
-        if (this->automation != nullptr) {
-            need = this->automation->isConfigUpdated(true);
+        if (this->pAutomation != nullptr) {
+            need = this->pAutomation->isConfigUpdated(true);
         }
         ret |= Modbus::isNeedFinalize(need);
 #endif
@@ -1048,8 +1080,11 @@ private:
 #endif
 
 #if defined(ERA_AUTOMATION)
-    ERaAutomation* automation;
+    ERaAutomation* pAutomation;
 #endif
+
+    ERaTime* pTime;
+    bool enableUpdateTime;
 };
 
 template <class Proto, class Flash>
@@ -1253,7 +1288,7 @@ void ERaApi<Proto, Flash>::sendSMS(const char* to, const char* message) {
     template <class Proto, class Flash>
     inline
     bool ERaApi<Proto, Flash>::hasAutomation() const {
-        return (this->automation != nullptr);
+        return (this->pAutomation != nullptr);
     }
 
     template <class Proto, class Flash>
@@ -1264,25 +1299,25 @@ void ERaApi<Proto, Flash>::sendSMS(const char* to, const char* message) {
         }
 
         bool trigger = (rsp.type == ERaTypeWriteT::ERA_WRITE_CONFIG_ID_AND_TRIGGER);
-        this->automation->updateValue(rsp.id.getInt(), rsp.param.getDouble(), trigger);
+        this->pAutomation->updateValue(rsp.id.getInt(), rsp.param.getDouble(), trigger);
     }
 
     template <class Proto, class Flash>
     inline
     void ERaApi<Proto, Flash>::initAutomation(const char* auth, const char* topic, MessageCallback_t cb) {
-        if (this->automation == nullptr) {
+        if (this->pAutomation == nullptr) {
             return;
         }
 
-        this->automation->setAuth(auth);
-        this->automation->setTopic(topic);
-        this->automation->onMessage(cb);
+        this->pAutomation->setAuth(auth);
+        this->pAutomation->setTopic(topic);
+        this->pAutomation->onMessage(cb);
     }
 
     template <class Proto, class Flash>
     inline
     void ERaApi<Proto, Flash>::initAutomationConfig() {
-        if (this->automation == nullptr) {
+        if (this->pAutomation == nullptr) {
             return;
         }
 
@@ -1301,7 +1336,7 @@ void ERaApi<Proto, Flash>::sendSMS(const char* to, const char* message) {
             return;
         }
 
-        this->automation->begin(item);
+        this->pAutomation->begin(item);
     }
 
     template <class Proto, class Flash>
@@ -1316,7 +1351,7 @@ void ERaApi<Proto, Flash>::sendSMS(const char* to, const char* message) {
 
         cJSON* item = cJSON_GetObjectItem(root, "hash_id");
         if (cJSON_IsString(item)) {
-            this->automation->updateHashID(item->valuestring);
+            this->pAutomation->updateHashID(item->valuestring);
         }
         item = cJSON_GetObjectItem(root, "configuration");
         if (cJSON_IsObject(item)) {
@@ -1333,14 +1368,14 @@ void ERaApi<Proto, Flash>::sendSMS(const char* to, const char* message) {
     template <class Proto, class Flash>
     inline
     void ERaApi<Proto, Flash>::processAutomationConfig(cJSON* root, const char* hash, const char* buf) {
-        if (this->automation == nullptr) {
+        if (this->pAutomation == nullptr) {
             return;
         }
 
-        if (!this->automation->updateHashID(hash)) {
+        if (!this->pAutomation->updateHashID(hash)) {
             return;
         }
-        this->automation->begin(root);
+        this->pAutomation->begin(root);
         this->storeAutomationConfig(buf);
         ERaWriteConfig(ERaConfigTypeT::ERA_AUTO_CONFIG);
     }
@@ -1359,8 +1394,8 @@ void ERaApi<Proto, Flash>::sendSMS(const char* to, const char* message) {
     template <class Proto, class Flash>
     inline
     void ERaApi<Proto, Flash>::removeAutomationConfig() {
-        if (this->automation != nullptr) {
-            this->automation->deleteAll();
+        if (this->pAutomation != nullptr) {
+            this->pAutomation->deleteAll();
         }
         this->removeFlash(FILENAME_AUTO_CFG);
     }
@@ -1442,6 +1477,89 @@ template <class Proto, class Flash>
 inline
 void ERaApi<Proto, Flash>::messageComponent(const ERaDataBuff& topic, const char* payload) {
     ComponentHandler::message(topic, payload);
+}
+
+template <class Proto, class Flash>
+inline
+bool ERaApi<Proto, Flash>::hasTime() const {
+    return (this->pTime != nullptr);
+}
+
+template <class Proto, class Flash>
+inline
+void ERaApi<Proto, Flash>::initTime() {
+    if (this->pTime == nullptr) {
+        this->pTime = new ERaTime();
+        this->enableUpdateTime = true;
+    }
+    if (this->pTime != nullptr) {
+        this->pTime->begin();
+    }
+}
+
+template <class Proto, class Flash>
+inline
+void ERaApi<Proto, Flash>::updateTime(unsigned long timestamp) {
+    if (!this->enableUpdateTime || (this->pTime == nullptr)) {
+        return;
+    }
+
+    this->pTime->setTime(timestamp);
+}
+
+template <class Proto, class Flash>
+inline
+void ERaApi<Proto, Flash>::addTimestamp(cJSON* const root, MillisTime_t& msAnchor,
+                                        ERaTime::time_type_t& lastSec, double& lastTimestamp) {
+    ERaTime::time_type_t nowSec = this->pTime->now(true);
+    if (nowSec <= SECS_YR_2023) {
+        return;
+    }
+
+    MillisTime_t msNow = ERaMillis();
+    if (nowSec != lastSec) {
+        lastSec = nowSec;
+        msAnchor = msNow;
+    }
+
+    MillisTime_t diffMs = (msNow - msAnchor);
+    if (diffMs > 999) {
+        diffMs = 999;
+    }
+
+    double timestamp = (static_cast<double>(nowSec) + (diffMs / 1000.0));
+    if (timestamp <= lastTimestamp) {
+        timestamp = (lastTimestamp + 1e-5);
+        double cap = (floor(lastTimestamp) + 0.99999);
+        if (timestamp > cap) {
+            timestamp = cap;
+        }
+    }
+    lastTimestamp = timestamp;
+    cJSON_AddNumberWithDecimalToObject(root, "time", timestamp, 5);
+}
+
+template <class Proto, class Flash>
+inline
+void ERaApi<Proto, Flash>::addTimestampFor(cJSON* const root, TimestampKindT kind) {
+    if (this->pTime == nullptr) {
+        return;
+    }
+
+    TimestampState_t& state = this->getTimestampState(kind);
+    this->addTimestamp(root, state.msAnchor, state.lastSec, state.lastTimestamp);
+}
+
+template <class Proto, class Flash>
+inline
+void ERaApi<Proto, Flash>::addTimestampConfigValue(cJSON* const root) {
+    this->addTimestampFor(root, TimestampKindT::CONFIG_VALUE);
+}
+
+template <class Proto, class Flash>
+inline
+void ERaApi<Proto, Flash>::addTimestampOther(cJSON* const root) {
+    this->addTimestampFor(root, TimestampKindT::OTHER);
 }
 
 template <class Proto, class Flash>

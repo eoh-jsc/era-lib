@@ -90,6 +90,12 @@
     #define ERA_MQTT_KEEP_ALIVE         60
 #endif
 
+#if defined(DEFAULT_MQTT_CLEAN_SESSION)
+    #define ERA_MQTT_CLEAN_SESSION      DEFAULT_MQTT_CLEAN_SESSION
+#else
+    #define ERA_MQTT_CLEAN_SESSION      true
+#endif
+
 #if defined(DEFAULT_MQTT_SUBSCRIBE_QOS)
     #define ERA_MQTT_SUBSCRIBE_QOS      DEFAULT_MQTT_SUBSCRIBE_QOS
 #else

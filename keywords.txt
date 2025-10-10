@@ -143,8 +143,11 @@ setBoardID	KEYWORD2
 getBoardID	KEYWORD2
 setSkipACK	KEYWORD2
 setKeepAlive	KEYWORD2
+setCleanSession	KEYWORD2
 setDropOverflow	KEYWORD2
-setHeartbeat	KEYWORD2
+setAskTimestampInterval	KEYWORD2
+setInfoInterval	KEYWORD2
+setSelfInfoInterval	KEYWORD2
 setSpecSSID	KEYWORD2
 setScanWiFi	KEYWORD2
 setPersistent	KEYWORD2
@@ -161,6 +164,8 @@ addERaComponent	KEYWORD2
 setERaTransp	KEYWORD2
 setERaLogger	KEYWORD2
 getERaLogger	KEYWORD2
+setERaTime	KEYWORD2
+getERaTime	KEYWORD2
 setLogInterval	KEYWORD2
 setSIMPinCode	KEYWORD2
 setPropertyPublishSettings	KEYWORD2
@@ -180,7 +185,6 @@ setConnectWiFiModbus	KEYWORD2
 setActionOnReadTaskModbus	KEYWORD2
 setZigbeeStream	KEYWORD2
 setZigbeeStreamTimeout	KEYWORD2
-setZigbeeTime	KEYWORD2
 setZigbeeEncrypt	KEYWORD2
 setZigbeePin	KEYWORD2
 setZigbeeLED	KEYWORD2

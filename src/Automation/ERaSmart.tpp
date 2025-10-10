@@ -73,6 +73,10 @@ namespace eras {
     }
 
     void ERaSmart::begin(void* args) {
+        if (this->mTime == nullptr) {
+            this->mTime = this->mApi.getERaTime();
+        }
+
         this->deleteAll();
 
         LockGuard guard {this->mLock};

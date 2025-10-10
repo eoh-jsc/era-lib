@@ -14,6 +14,7 @@
 #include <Storage/ERaFlashDef.hpp>
 #include <ERa/ERaConfig.hpp>
 #include <ERa/ERaProtocolDef.hpp>
+#include <ERa/ERaProtocolType.hpp>
 #include <ERa/ERaHandlers.hpp>
 #include <ERa/ERaState.hpp>
 #include <ERa/ERaApi.hpp>
@@ -79,19 +80,17 @@ public:
         , pServerCallbacks(nullptr)
         , nonBlocking(false)
         , _connected(false)
-        , heartbeat(ERA_HEARTBEAT_INTERVAL * 12UL)
-        , lastHeartbeat(0UL)
-        , selfInfo(ERA_SELF_INFO_INTERVAL * 10UL)
-        , lastSelfInfo(0UL)
     {
         memset(this->ERA_TOPIC, 0, sizeof(this->ERA_TOPIC));
+        this->setAskTimestampInterval(ERA_ASK_TIMESTAMP_INTERVAL * 10UL);
+        this->setInfoInterval(ERA_INFO_INTERVAL * 12UL);
+        this->setSelfInfoInterval(ERA_SELF_INFO_INTERVAL * 10UL);
     }
     ~ERaProto()
     {}
 
     void begin(const char* auth) {
-        ClearArray(this->ERA_TOPIC);
-        FormatString(this->ERA_TOPIC, "%s/%s", BASE_TOPIC, auth);
+        this->updateTopic(auth);
         this->transp.setAuth(auth);
         this->transp.setTopic(this->ERA_TOPIC);
         this->transp.onAppLoop(Base::appCb);
@@ -117,11 +116,19 @@ public:
         if (Base::isNeedSyncConfig()) {
             this->syncConfig();
         }
-        this->publishHeartbeat();
+        this->publishAskTimestamp();
+        this->publishInfo();
         this->publishSelfInfo();
     }
 
-    void sendCommand(const char* auth, ERaRsp_t& rsp, ApiData_t data = nullptr);
+    void updateTopic(const char* auth) override {
+        ClearArray(this->ERA_TOPIC);
+        FormatString(this->ERA_TOPIC, "%s/%s", this->BASE_TOPIC, auth);
+    }
+
+    void setBaseTopic(const char* topic) override {
+        this->BASE_TOPIC = topic;
+    }
 
     void setServerCallbacks(ERaServerCallbacks& rCallbacks) override {
         this->pServerCallbacks = &rCallbacks;
@@ -147,7 +154,7 @@ public:
         this->pLogger = pLog;
     }
 
-    ERaLogger* getERaLogger() const {
+    ERaLogger* getERaLogger() const override {
         return this->pLogger;
     }
 
@@ -178,6 +185,10 @@ public:
         this->transp.setKeepAlive(keepAlive);
     }
 
+    void setCleanSession(bool cleanSession) {
+        this->transp.setCleanSession(cleanSession);
+    }
+
     void setDropOverflow(bool enabled = false) {
         this->transp.dropOverflow(enabled);
     }
@@ -190,22 +201,37 @@ public:
         }
     }
 
-    void setHeartbeat(unsigned long interval) {
+    void setAskTimestampInterval(unsigned long interval) {
         if (!interval) {
         }
-        else if (interval < ERA_HEARTBEAT_INTERVAL) {
-            interval = ERA_HEARTBEAT_INTERVAL;
+        else if (interval < ERA_ASK_TIMESTAMP_INTERVAL) {
+            interval = ERA_ASK_TIMESTAMP_INTERVAL;
         }
-        this->heartbeat = interval;
+        this->setPublishInterval(
+            PublishIntervalKindT::ASK_TIMESTAMP, interval
+        );
     }
 
-    void setSelfInfo(unsigned long interval) {
+    void setInfoInterval(unsigned long interval) {
+        if (!interval) {
+        }
+        else if (interval < ERA_INFO_INTERVAL) {
+            interval = ERA_INFO_INTERVAL;
+        }
+        this->setPublishInterval(
+            PublishIntervalKindT::INFO, interval
+        );
+    }
+
+    void setSelfInfoInterval(unsigned long interval) {
         if (!interval) {
         }
         else if (interval < ERA_SELF_INFO_INTERVAL) {
             interval = ERA_SELF_INFO_INTERVAL;
         }
-        this->selfInfo = interval;
+        this->setPublishInterval(
+            PublishIntervalKindT::SELF_INFO, interval
+        );
     }
 
     const char* getAuth() const {
@@ -234,6 +260,8 @@ public:
         return (this->_connected && this->transp.connected());
     }
 
+    void sendCommand(const char* auth, ERaRsp_t& rsp, ApiData_t data = nullptr);
+
 protected:
     void init() {
         Base::begin();
@@ -244,6 +272,7 @@ protected:
             return false;
         }
         this->printBanner();
+        this->sendAskTimestamp();
         this->sendInfo();
         return true;
     }
@@ -280,6 +309,7 @@ private:
     void processIOPin(cJSON* root);
     void processPinRequest(const ERaDataBuff& arrayTopic, const char* payload, size_t index);
     void processWiFiRequest(const ERaDataBuff& arrayTopic, const char* payload);
+    void processTimestampRequest(const ERaDataBuff& arrayTopic, const char* payload);
     void processChangeWiFi(const char* payload);
 #if defined(ERA_AUTOMATION)
     void processAutomationRequest(const ERaDataBuff& arrayTopic, const char* payload);
@@ -294,8 +324,13 @@ private:
     void processActionZigbee(const char* ieeeAddr, const char* payload, uint8_t type);
 #endif
     void processState(const ERaDataBuff& arrayTopic, const char* payload);
-    void publishHeartbeat();
+    void publishIntervalData(unsigned long& inteval, unsigned long& lastMillis,
+                             bool (ERaProto::*SendData)());
+    void publishIntervalDataFor(bool (ERaProto::*SendData)(), PublishIntervalKindT kind);
+    void publishAskTimestamp();
+    void publishInfo();
     void publishSelfInfo();
+    bool sendAskTimestamp();
     bool sendInfo();
     bool sendSelfInfo();
     bool sendData(ERaRsp_t& rsp);
@@ -344,6 +379,16 @@ private:
 
     size_t splitString(char* strInput, const char* delims);
 
+    void setPublishInterval(PublishIntervalKindT kind, unsigned long interval) {
+        PublishIntervalState_t& state = this->getPublishIntervalState(kind);
+        state.interval = interval;
+    }
+
+    PublishIntervalState_t& getPublishIntervalState(PublishIntervalKindT kind) {
+        static PublishIntervalState_t states[static_cast<size_t>(PublishIntervalKindT::COUNT)] {};
+        return states[static_cast<size_t>(kind)];
+    }
+
     void onWrite(const char* topic, const char* payload) override {
         this->processRequest(topic, payload);
     }
@@ -375,11 +420,6 @@ private:
     ERaServerCallbacks* pServerCallbacks;
     bool nonBlocking;
     bool _connected;
-
-    unsigned long heartbeat;
-    unsigned long lastHeartbeat;
-    unsigned long selfInfo;
-    unsigned long lastSelfInfo;
 };
 
 template <class Transp, class Flash>
@@ -476,6 +516,9 @@ void ERaProto<Transp, Flash>::processRequest(const char* topic, const char* payl
 #endif
     else if (arrayTopic.at(1) == "wifi") {
         this->processWiFiRequest(arrayTopic, payload);
+    }
+    else if (arrayTopic.at(1) == "timestamp") {
+        this->processTimestampRequest(arrayTopic, payload);
     }
     else if (arrayTopic.at(1) == "is_online") {
         this->processState(arrayTopic, payload);
@@ -837,6 +880,16 @@ void ERaProto<Transp, Flash>::processWiFiRequest(const ERaDataBuff& arrayTopic, 
 }
 
 template <class Transp, class Flash>
+void ERaProto<Transp, Flash>::processTimestampRequest(const ERaDataBuff& arrayTopic, const char* payload) {
+    if (arrayTopic.size() != 2) {
+        return;
+    }
+
+    unsigned long timestamp = (unsigned long)atol(payload);
+    Base::updateTime(timestamp);
+}
+
+template <class Transp, class Flash>
 void ERaProto<Transp, Flash>::processChangeWiFi(const char* payload) {
     cJSON* root = cJSON_Parse(payload);
     if (!cJSON_IsObject(root)) {
@@ -1069,41 +1122,45 @@ void ERaProto<Transp, Flash>::processState(const ERaDataBuff& arrayTopic, const 
 }
 
 template <class Transp, class Flash>
-void ERaProto<Transp, Flash>::publishHeartbeat() {
-    if (!this->heartbeat) {
+void ERaProto<Transp, Flash>::publishIntervalData(unsigned long& inteval, unsigned long& lastMillis,
+                                                  bool (ERaProto::*SendData)()) {
+    if (!inteval) {
         return;
     }
 
     unsigned long currentMillis = ERaMillis();
-    if ((currentMillis - this->lastHeartbeat) < this->heartbeat) {
+    if ((currentMillis - lastMillis) < inteval) {
         return;
     }
-    unsigned long skipTimes = ((currentMillis - this->lastHeartbeat) / this->heartbeat);
+    unsigned long skipTimes = ((currentMillis - lastMillis) / inteval);
     // update time
-    this->lastHeartbeat += (this->heartbeat * skipTimes);
+    lastMillis += (inteval * skipTimes);
 
     if (this->connected()) {
-        this->sendInfo();
+        (this->*SendData)();
     }
 }
 
 template <class Transp, class Flash>
+void ERaProto<Transp, Flash>::publishIntervalDataFor(bool (ERaProto::*SendData)(),
+                                                     PublishIntervalKindT kind) {
+    PublishIntervalState_t& state = this->getPublishIntervalState(kind);
+    this->publishIntervalData(state.interval, state.lastPublish, SendData);
+}
+
+template <class Transp, class Flash>
+void ERaProto<Transp, Flash>::publishAskTimestamp() {
+    this->publishIntervalDataFor(&ERaProto::sendAskTimestamp, PublishIntervalKindT::ASK_TIMESTAMP);
+}
+
+template <class Transp, class Flash>
+void ERaProto<Transp, Flash>::publishInfo() {
+    this->publishIntervalDataFor(&ERaProto::sendInfo, PublishIntervalKindT::INFO);
+}
+
+template <class Transp, class Flash>
 void ERaProto<Transp, Flash>::publishSelfInfo() {
-    if (!this->selfInfo) {
-        return;
-    }
-
-    unsigned long currentMillis = ERaMillis();
-    if ((currentMillis - this->lastSelfInfo) < this->selfInfo) {
-        return;
-    }
-    unsigned long skipTimes = ((currentMillis - this->lastSelfInfo) / this->selfInfo);
-    // update time
-    this->lastSelfInfo += (this->selfInfo * skipTimes);
-
-    if (this->connected()) {
-        this->sendSelfInfo();
-    }
+    this->publishIntervalDataFor(&ERaProto::sendSelfInfo, PublishIntervalKindT::SELF_INFO);
 }
 
 template <class Transp, class Flash>
@@ -1143,6 +1200,11 @@ bool ERaProto<Transp, Flash>::sendChangeResultWiFi(const char* payload) {
 }
 
 template <class Transp, class Flash>
+bool ERaProto<Transp, Flash>::sendAskTimestamp() {
+    return this->publishData(ERA_PUB_PREFIX_ASK_TIMESTAMP_TOPIC, "{}", false);
+}
+
+template <class Transp, class Flash>
 bool ERaProto<Transp, Flash>::sendInfo() {
     bool status {false};
     cJSON* root = cJSON_CreateObject();
@@ -1174,9 +1236,8 @@ bool ERaProto<Transp, Flash>::sendInfo() {
     cJSON_AddBoolToObject(root, INFO_ABBR, false);
 #endif
 
-    if (this->heartbeat) {
-        cJSON_AddNumberToObject(root, INFO_UPTIME, (ERaMillis() / 1000UL));
-    }
+    cJSON_AddNumberToObject(root, INFO_UPTIME, (ERaMillis() / 1000UL));
+    Base::addTimestampOther(root);
 
     char* payload = cJSON_PrintUnformatted(root);
 
@@ -1210,6 +1271,7 @@ bool ERaProto<Transp, Flash>::sendSelfInfo() {
     cJSON_AddNumberToObject(root, SELF_TEMPERATURE, 0);
 
     Base::addSelfInfo(root);
+    Base::addTimestampOther(root);
 
     char* payload = cJSON_PrintUnformatted(root);
 
@@ -1410,6 +1472,7 @@ bool ERaProto<Transp, Flash>::sendConfigIdData(ERaRsp_t& rsp) {
     else if (rsp.param.isObject()) {
         cJSON_AddStringToObject(root, "v", rsp.param.getObject()->getString());
     }
+    Base::addTimestampConfigValue(root);
     payload = cJSON_PrintUnformatted(root);
     if (payload != nullptr) {
         status = this->transp.publishData(topicName, payload, rsp.retained);
@@ -1442,6 +1505,14 @@ bool ERaProto<Transp, Flash>::sendConfigIdLogger(ERaRsp_t& rsp, bool status,
 
 template <class Transp, class Flash>
 bool ERaProto<Transp, Flash>::sendConfigIdMultiData(ERaRsp_t& rsp) {
+    if (!Base::hasTime()) {
+        // Skip timestamp when no time source is available.
+    }
+    else if (rsp.param.isString()) {
+        ERaDataJson param = rsp.param.toJSON();
+        Base::addTimestampConfigValue(const_cast<cJSON*>(param.getObject()));
+        rsp.param = param.getObject();
+    }
     return this->publishData(ERA_PUB_PREFIX_MULTI_CONFIG_DATA_TOPIC,
                                             rsp.param, rsp.retained);
 }
@@ -1475,7 +1546,7 @@ bool ERaProto<Transp, Flash>::sendWebhookData(ERaRsp_t& rsp) {
 
 template <class Transp, class Flash>
 bool ERaProto<Transp, Flash>::sendSelfData(ERaRsp_t& rsp) {
-    this->selfInfo = 0UL;
+    this->setSelfInfoInterval(0UL);
     return this->publishData(ERA_PUB_PREFIX_SELF_SENSOR_TOPIC,
                                     rsp.param, rsp.retained);
 }
@@ -1851,6 +1922,7 @@ void ERaProto<Transp, Flash>::sendCommandVirtual(ERaRsp_t& rsp, ERaDataJson* dat
         if (mbScan != nullptr) {
             cJSON_AddStringToObject(root, INFO_MB_SCAN, mbScan);
         }
+        Base::addTimestampModbus(root);
         free(mbData);
         free(mbAck);
         mbData = nullptr;

@@ -44,7 +44,6 @@ void onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info) {
             ERA_LOG("Event", ERA_PSTR("WiFi Got IP: %s, MAC: %s"),
                                     WiFi.localIP().toString().c_str(),
                                     WiFi.macAddress().c_str());
-            mqtt.setSSID(ERaConfig.ssid);
             break;
         case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
             ERA_LOG_WARNING("Event", ERA_PSTR("WiFi Disconnected"));
