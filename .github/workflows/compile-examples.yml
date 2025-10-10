@@ -186,7 +186,8 @@ jobs:
             platform-name: rp2040:rp2040
             sketch-paths: examples/Raspberry
             cli-compile-flags: |
-              --build-property build.extra_flags=-D__FREERTOS=1
+              - --build-property
+              - build.extra_flags=-D__FREERTOS=1
             libraries: |
               - source-path: ./
               - name: TinyGSM
