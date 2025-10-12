@@ -6,6 +6,8 @@
 
     #if defined(ERA_BLE_ESP32_ORIGIN)
         /* OK, use the specified value */
+    #elif defined(ERA_BLE_ESP32_NIM)
+        #include <BLE/ERaNimBLETranspEsp32.hpp>
     #elif defined(__has_include)
         #if __has_include(<NimBLEDevice.h>)
             #include <BLE/ERaNimBLETranspEsp32.hpp>

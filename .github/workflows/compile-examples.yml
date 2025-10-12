@@ -123,8 +123,12 @@ jobs:
               - examples/ESP32/ESP32_Ethernet_SPI
               - examples/ESP32/ESP32_Ethernet_SSL_SPI
               - examples/ESP32/ESP32_Gsm_Basic
+            cli-compile-flags: |
+              - --build-property
+              - compiler.cpp.extra_flags=-DERA_BLE_ESP32_NIM
             libraries: |
               - source-path: ./
+              - name: NimBLE-Arduino
               - name: TinyGSM
           - name: "Espressif8266"
             fqbn: "esp8266:esp8266:nodemcuv2"
@@ -187,7 +191,9 @@ jobs:
             sketch-paths: examples/Raspberry
             cli-compile-flags: |
               - --build-property
-              - build.extra_flags=-D__FREERTOS=1
+              - compiler.c.extra_flags=-D__FREERTOS=1
+              - --build-property
+              - compiler.cpp.extra_flags=-D__FREERTOS=1
             libraries: |
               - source-path: ./
               - name: TinyGSM
