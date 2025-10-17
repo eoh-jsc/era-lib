@@ -1536,7 +1536,7 @@ void ERaApi<Proto, Flash>::addTimestamp(cJSON* const root, MillisTime_t& msAncho
         }
     }
     lastTimestamp = timestamp;
-    cJSON_AddNumberWithDecimalToObject(root, "time", timestamp, 5);
+    cJSON_SetNumberWithDecimalToObject(root, "time", timestamp, 5);
 }
 
 template <class Proto, class Flash>
