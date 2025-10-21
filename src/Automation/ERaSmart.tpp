@@ -333,7 +333,7 @@ namespace eras {
             return this->parseValueEvaluation(root, id);
         }
 
-        double threshold;
+        double threshold {NAN};
         cJSON* value = cJSON_GetObjectItem(root, AUTOMATION_VALUE_CHANGE_VALUE_KEY);
         if (cJSON_IsNumber(value)) {
             threshold = value->valuedouble;
