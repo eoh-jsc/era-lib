@@ -4,6 +4,9 @@
 #define byte uint8_t
 
 #include <TinyGsmClient.hpp>
+
+#undef byte
+
 #include <Utility/ERaPeriod.hpp>
 
 #if defined(APN_VIETTEL)
